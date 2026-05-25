@@ -96,7 +96,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMathMatrixCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMathMatrix(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -345,11 +345,11 @@ public abstract class GameEventScriptJsonConformanceTestBase
     protected static void RunJsonConformanceCase(GameEventScriptConformanceCase testCase)
         => GameEventScriptConformanceRunner.RunCase(testCase);
 
-    protected void RunNewVirtualMachineConformanceCase(GameEventScriptConformanceCase testCase)
+    protected void RunNewVirtualMachineConformanceCase(GameEventScriptConformanceCase testCase, bool softRun = NewVirtualMachineConformanceSoftAssertions)
     {
         var outcome = RunNewVirtualMachineCase(testCase);
         TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
-        if (!NewVirtualMachineConformanceSoftAssertions && !outcome.Passed)
+        if (!softRun && !outcome.Passed)
         {
             Assert.Fail($"{outcome.Status}: {testCase}: {outcome.Detail}");
         }

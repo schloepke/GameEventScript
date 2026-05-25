@@ -597,7 +597,7 @@ internal static class GesValueOperations
             {
                 value = rightHasUnit
                     ? ToGameEventScriptFloat(result, rightUnit)
-                    : ToGameEventScriptPercentage(result);
+                    : ToGameEventScriptNumber(result);
                 return true;
             }
 

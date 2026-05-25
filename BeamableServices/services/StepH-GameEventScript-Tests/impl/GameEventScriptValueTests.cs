@@ -225,7 +225,7 @@ public class GameEventScriptValueScenarios
     {
         AssertPercentage(0.15d + 0.15d, EvaluatePercentageBinary(GesPercentage(0.15d), "+", GesPercentage(0.15d)));
         AssertPercentage(0.15d - 0.05d, EvaluatePercentageBinary(GesPercentage(0.15d), "-", GesPercentage(0.05d)));
-        AssertPercentage(0.15d * 2d, EvaluatePercentageBinary(GesPercentage(0.15d), "*", GesInteger(2)));
+        AssertFloat(0.15d * 2d, EvaluatePercentageBinary(GesPercentage(0.15d), "*", GesInteger(2)));
         AssertPercentage(0.15d / 3d, EvaluatePercentageBinary(GesPercentage(0.15d), "/", GesInteger(3)));
         AssertFloat(0.30d, EvaluatePercentageBinary(GesInteger(2), "*", GesPercentage(0.15d)));
         AssertPercentage(0.15d * 0.15d, EvaluatePercentageBinary(GesPercentage(0.15d), "*", GesPercentage(0.15d)));

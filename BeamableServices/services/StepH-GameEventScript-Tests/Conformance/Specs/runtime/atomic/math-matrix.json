@@ -2278,15 +2278,15 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":percentage",
+                  "type": ":float",
                   "value": "0.1"
                 },
                 "float": {
-                  "type": ":percentage",
+                  "type": ":float",
                   "value": "1.03"
                 },
                 "integer": {
-                  "type": ":percentage",
+                  "type": ":integer",
                   "value": "1"
                 },
                 "meter": {
@@ -2314,7 +2314,7 @@
                   "value": "NaN"
                 },
                 "tagPi": {
-                  "type": ":percentage",
+                  "type": ":float",
                   "value": "0.314159265358979"
                 },
                 "textInvalid": {
@@ -2322,7 +2322,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":percentage",
+                  "type": ":float",
                   "value": "1.03"
                 },
                 "vector": {

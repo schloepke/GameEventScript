@@ -291,6 +291,9 @@ modulo, or remainder write numeric `NaN` unless a direct operand is `nothing`.
 `UnaryAbs` preserves percentage values as percentages and preserves quantity
 units on numeric quantities. Finite exactly integral numeric results are stored
 as integer values when they fit signed 64-bit.
+Percentage multiplication with a non-percentage scalar or quantity treats the
+percentage as its stored ratio and writes a numeric result in the other
+operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |

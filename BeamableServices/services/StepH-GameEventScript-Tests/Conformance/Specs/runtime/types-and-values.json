@@ -721,7 +721,7 @@
                   "value": "1"
                 },
                 "percentScaleRight": {
-                  "type": ":percentage",
+                  "type": ":float",
                   "value": "0.3"
                 },
                 "percentSubtract": {

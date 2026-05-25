@@ -7668,7 +7668,7 @@ internal readonly record struct BytecodeVmValue(
             case "*":
                 if (GesValueOperations.TryMultiplyFinite(leftNumber, rightNumber, out var product))
                 {
-                    value = leftIsPercentage && rightIsPercentage || leftIsPercentage && rightUnit is null
+                    value = leftIsPercentage && rightIsPercentage
                         ? Percentage(product)
                         : Float(product, leftIsPercentage ? rightUnit : leftUnit);
                     return true;
@@ -7801,7 +7801,7 @@ internal readonly record struct BytecodeVmValue(
         {
             return rightUnit is { } unit
                 ? FromFloatNumeric(result, unit)
-                : FromPercentageNumeric(result);
+                : FromFloatNumeric(result, null);
         }
 
         return FromFloatNumeric(result, leftUnit);

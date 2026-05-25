@@ -466,6 +466,11 @@ the non-percentage value must be on the left:
 50% + 10m     // invalid numeric result
 ```
 
+In multiplication with a non-percentage scalar or quantity, percentages behave
+as their stored ratio and the result follows the other operand's value family:
+`10% * 10` and `10 * 10%` both produce numeric `1`, while `10% * 10m` and
+`10m * 10%` both produce `1m`.
+
 ### Text and Tags
 
 Text is quoted. Tags are lowercase symbolic values:

@@ -637,6 +637,10 @@ Numeric opcodes preserve value families where the source language does:
 `UnaryAbs` keeps percentages as `Percentage`, keeps quantity units on numeric
 quantities, and finite exactly integral numeric results are represented as
 integer values when they fit signed 64-bit.
+Percentage multiplication with a non-percentage scalar or quantity treats the
+percentage as its stored ratio and writes a numeric result in the other
+operand's value family, for example `10% * 10` and `10 * 10%` both write
+numeric `1`, while `10% * 10m` and `10m * 10%` both write `1m`.
 
 Logical operations use three-valued truth tables with `nothing` as unknown.
 Runtime truth tests and false tests both fail for `nothing`.

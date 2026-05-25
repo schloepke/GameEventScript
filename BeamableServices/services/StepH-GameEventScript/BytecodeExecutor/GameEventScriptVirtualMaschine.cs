@@ -281,8 +281,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmRemainder(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Min:
+                    _vmState.Register(instruction.DestinationSlot).VmMin(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Max:
+                    _vmState.Register(instruction.DestinationSlot).VmMax(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryNegate:
                     _vmState.Register(instruction.DestinationSlot).VmNegate(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);

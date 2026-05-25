@@ -573,14 +573,29 @@ internal static class VmRegisterMath
                 }
                 else dst.SetFloat(double.NaN);
                 return;
+            case Integer or Float when b.Kind is Percentage:
+                if (TryQuotientUnit(ref a, ref b, out var percentageRightUnit))
+                {
+                    var result = Math.Floor(a.AsNumberValue / b.FloatValue);
+                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageRightUnit);
+                    else dst.SetFloat(result, percentageRightUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
+            case Percentage when b.Kind is Integer or Float or Percentage:
+                if (TryQuotientUnit(ref a, ref b, out var percentageLeftUnit))
+                {
+                    var result = Math.Floor(a.FloatValue / b.AsNumberValue);
+                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageLeftUnit);
+                    else dst.SetFloat(result, percentageLeftUnit);
+                }
+                else dst.SetFloat(double.NaN);
+                return;
             case Vector or Point:
                 if (b.Kind is Nothing) dst.SetNothing();
                 else dst.SetFloat(double.NaN);
                 return;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
-                dst.SetFloat(double.NaN);
-                return;
-            case Percentage when b.Kind is Integer or Float or Percentage:
                 dst.SetFloat(double.NaN);
                 return;
             case Nothing:
@@ -594,7 +609,7 @@ internal static class VmRegisterMath
             return;
         }
 
-        if (b.Kind is Vector or Point || a.Kind is Percentage || b.Kind is Percentage || !TryQuotientUnit(ref a, ref b, out var unit))
+        if (b.Kind is Vector or Point || !TryQuotientUnit(ref a, ref b, out var unit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -821,6 +836,16 @@ internal static class VmRegisterMath
         }
 
         dst.SetFloat(double.IsInfinity(right) ? left : left % right, unit);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmMin(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmMax(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+    {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

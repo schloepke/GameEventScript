@@ -283,6 +283,11 @@ numeric source operand is `nothing`, the result slot receives `nothing`.
 Otherwise, a present but non-computable numeric operation writes numeric `NaN`
 to the result slot. Scalar `Divide` keeps IEEE floating-point behavior for zero
 denominators; `Modulo` and `Remainder` by zero write `NaN`.
+Vector arithmetic supports compatible vector addition/subtraction, scalar
+multiplication from either side, and vector-by-scalar division. Point arithmetic
+supports only affine operations: point plus/minus vector and point minus point.
+Point scaling, scalar divided by point, and point operands in integer division,
+modulo, or remainder write numeric `NaN` unless a direct operand is `nothing`.
 `UnaryAbs` preserves percentage values as percentages and preserves quantity
 units on numeric quantities. Finite exactly integral numeric results are stored
 as integer values when they fit signed 64-bit.

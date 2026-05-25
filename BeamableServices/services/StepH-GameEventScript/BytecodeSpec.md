@@ -625,6 +625,14 @@ by zero. Scalar `Divide` follows IEEE floating-point behavior, so zero
 denominators may produce `Infinity`, `-Infinity`, or `NaN` instead of
 `nothing`.
 
+Vector/point bytecode arithmetic follows the source affine model. Vectors may
+add/subtract compatible vectors, multiply with a scalar on either side, and
+divide by a scalar. Points may add/subtract compatible vectors, and
+`point - point` yields a vector. Point scaling and scalar-over-point division
+are invalid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
+`scalar / point`, and any point operand in `IntegerDivide`, `Modulo`, or
+`Remainder` write numeric `NaN` unless a direct source operand is `nothing`.
+
 Numeric opcodes preserve value families where the source language does:
 `UnaryAbs` keeps percentages as `Percentage`, keeps quantity units on numeric
 quantities, and finite exactly integral numeric results are represented as

@@ -405,6 +405,15 @@ operators, incompatible quantity units, invalid vector or point arithmetic, and
 `mod`/`rem` by zero. Scalar `/` follows IEEE floating-point behavior, so
 division by zero can produce `Infinity`, `-Infinity`, or `NaN`.
 
+Vector and point arithmetic is intentionally not symmetric. Vectors support
+`vector + vector`, `vector - vector`, `vector * scalar`, `scalar * vector`, and
+`vector / scalar` when units are compatible and the scalar is computable.
+Points support affine operations only: `point + vector` and `point - vector`
+produce points, while `point - point` produces a vector. Point scaling is not
+valid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
+`scalar / point`, and point operands in `div`, `mod`, or `rem` produce numeric
+`NaN` unless one operand is `nothing`, in which case the result is `nothing`.
+
 Numeric checks are keyword constructs, not `:` type tags:
 
 ```ges
@@ -480,6 +489,10 @@ let p be :point(x: 10m, y: 20m, z: 0m)
 
 let x be p.x
 ```
+
+Vectors describe deltas and may be scaled by scalar numeric values. Points
+describe positions and may only be translated by vectors or subtracted from
+points; points are not scalar-multiplied or scalar-divided.
 
 ### Range
 

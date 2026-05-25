@@ -211,8 +211,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Percentage when b.Kind is Point:
-                if (b.ObjectValue is VmFloatTriplet percentagePoint) dst.SetObject(Point, new VmFloatTriplet(a.FloatValue * percentagePoint.X, a.FloatValue * percentagePoint.Y, a.FloatValue * percentagePoint.Z), b.Unit);
-                else dst.SetFloat(double.NaN);
+                dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
                 if (a.ObjectValue is VmFloatTriplet vectorInt && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue), unit);
@@ -234,25 +233,11 @@ internal static class VmRegisterMath
                 if (a.ObjectValue is VmFloatTriplet vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar), unit);
                 else dst.SetFloat(double.NaN);
                 return;
-            case Point when b.Kind is Integer:
-                if (a.ObjectValue is VmFloatTriplet pointInt && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointInt.X * b.IntegerValue, pointInt.Y * b.IntegerValue, pointInt.Z * b.IntegerValue), unit);
-                else dst.SetFloat(double.NaN);
-                return;
-            case Point when b.Kind is Float:
-                if (a.ObjectValue is VmFloatTriplet pointFloat && double.IsFinite(b.FloatValue) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointFloat.X * b.FloatValue, pointFloat.Y * b.FloatValue, pointFloat.Z * b.FloatValue), unit);
-                else dst.SetFloat(double.NaN);
-                return;
-            case Point when b.Kind is Percentage:
-                if (a.ObjectValue is VmFloatTriplet pointPercent) dst.SetObject(Point, new VmFloatTriplet(pointPercent.X * b.FloatValue, pointPercent.Y * b.FloatValue, pointPercent.Z * b.FloatValue), a.Unit);
-                else dst.SetFloat(double.NaN);
-                return;
             case Point when b.Kind is Nothing:
                 dst.SetNothing();
                 return;
             case Point:
-                var pointScalar = b.ReadNumericOrNan(ref textTable);
-                if (a.ObjectValue is VmFloatTriplet point && !double.IsNaN(pointScalar) && double.IsFinite(pointScalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(point.X * pointScalar, point.Y * pointScalar, point.Z * pointScalar), unit);
-                else dst.SetFloat(double.NaN);
+                dst.SetFloat(double.NaN);
                 return;
             case Integer or Float when b.Kind is Vector:
                 var scalar = a.AsNumberValue;
@@ -260,9 +245,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Integer or Float when b.Kind is Point:
-                scalar = a.AsNumberValue;
-                if (b.ObjectValue is VmFloatTriplet rightPoint && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(scalar * rightPoint.X, scalar * rightPoint.Y, scalar * rightPoint.Z), unit);
-                else dst.SetFloat(double.NaN);
+                dst.SetFloat(double.NaN);
                 return;
             case Percentage:
                 if (b.Kind is Nothing)
@@ -310,8 +293,7 @@ internal static class VmRegisterMath
             }
             case Point:
             {
-                if (b.ObjectValue is VmFloatTriplet point && double.IsFinite(fallbackLeft) && TryProductUnit(ref a, ref b, out var pointUnit)) dst.SetObject(Point, new VmFloatTriplet(fallbackLeft * point.X, fallbackLeft * point.Y, fallbackLeft * point.Z), pointUnit);
-                else dst.SetFloat(double.NaN);
+                dst.SetFloat(double.NaN);
                 return;
             }
         }
@@ -379,25 +361,11 @@ internal static class VmRegisterMath
                 if (a.ObjectValue is VmFloatTriplet vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Vector, new VmFloatTriplet(vector.X / vectorDivisor, vector.Y / vectorDivisor, vector.Z / vectorDivisor), unit);
                 else dst.SetFloat(double.NaN);
                 return;
-            case Point when b.Kind is Integer:
-                if (a.ObjectValue is VmFloatTriplet pointInt && b.IntegerValue != 0 && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointInt.X / b.IntegerValue, pointInt.Y / b.IntegerValue, pointInt.Z / b.IntegerValue), unit);
-                else dst.SetFloat(double.NaN);
-                return;
-            case Point when b.Kind is Float:
-                if (a.ObjectValue is VmFloatTriplet pointFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(pointFloat.X / b.FloatValue, pointFloat.Y / b.FloatValue, pointFloat.Z / b.FloatValue), unit);
-                else dst.SetFloat(double.NaN);
-                return;
-            case Point when b.Kind is Percentage:
-                if (a.ObjectValue is VmFloatTriplet pointPercent && b.FloatValue != 0d) dst.SetObject(Point, new VmFloatTriplet(pointPercent.X / b.FloatValue, pointPercent.Y / b.FloatValue, pointPercent.Z / b.FloatValue), a.Unit);
-                else dst.SetFloat(double.NaN);
-                return;
             case Point when b.Kind is Nothing:
                 dst.SetNothing();
                 return;
             case Point:
-                var pointDivisor = b.ReadNumericOrNan(ref textTable);
-                if (a.ObjectValue is VmFloatTriplet point && !double.IsNaN(pointDivisor) && double.IsFinite(pointDivisor) && pointDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit)) dst.SetObject(Point, new VmFloatTriplet(point.X / pointDivisor, point.Y / pointDivisor, point.Z / pointDivisor), unit);
-                else dst.SetFloat(double.NaN);
+                dst.SetFloat(double.NaN);
                 return;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
                 dst.SetFloat(double.NaN);

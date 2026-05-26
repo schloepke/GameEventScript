@@ -32,13 +32,13 @@ internal static class VmRegisterMapping
             case GameEventScriptValueKind.Vector:
             {
                 var vector = (GameEventScriptVectorValue)argument;
-                destination.SetObject(Vector, new VmFloatTriplet(vector.X, vector.Y, vector.Z), vector.Unit);
+                destination.SetVector(vector.X, vector.Y, vector.Z, vector.Unit);
                 break;
             }
             case GameEventScriptValueKind.Point:
             {
                 var point = (GameEventScriptPointValue)argument;
-                destination.SetObject(Point, new VmFloatTriplet(point.X, point.Y, point.Z), point.Unit);
+                destination.SetPoint(point.X, point.Y, point.Z, point.Unit);
                 break;
             }
             case GameEventScriptValueKind.Number:

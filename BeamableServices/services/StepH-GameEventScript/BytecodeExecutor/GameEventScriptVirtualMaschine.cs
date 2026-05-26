@@ -204,11 +204,11 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case TypeConstructor:
                     break;
                 case CreateVector:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateTripleFloat(instruction.ImmediateX, ref _vmState, Vector);
+                    _vmState.Register(instruction.DestinationSlot).VmCreateVector(instruction.ImmediateX, ref _vmState);
                     _vmState.ClearStage();
                     break;
                 case CreatePoint:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateTripleFloat(instruction.ImmediateX, ref _vmState, Point);
+                    _vmState.Register(instruction.DestinationSlot).VmCreatePoint(instruction.ImmediateX, ref _vmState);
                     _vmState.ClearStage();
                     break;
                 case Or:
@@ -344,12 +344,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case RangeWithStep:
                     break;
                 case RangeIterator:
-                    _vmState.Register(instruction.DestinationSlot).SetObject(Stream, new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
                     break;
                 case RangeIteratorWithStep:
                     break;
                 case RangeIteratorShort:
-                    _vmState.Register(instruction.DestinationSlot).SetObject(Stream, new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                     break;
                 case CollectionIterator:
                     break;

@@ -9,38 +9,47 @@ internal static class VmRegisterBooleanLogic
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
-        if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(a.IsTrue || b.IsTrue);
-        else if (a.IsNothing && b.IsTrue || a.IsTrue && b.IsNothing) dst.SetBoolean(true);
+        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache(ref textTable);
+        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache(ref textTable);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue || b.IsTrue);
+        else if (a.IsTruthIndeterminate && b.IsTrue || a.IsTrue && b.IsTruthIndeterminate) dst.SetBoolean(true);
         else dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
-        if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(a.IsTrue && b.IsTrue);
-        else if (a.IsNothing && b.IsFalse || a.IsFalse && b.IsNothing) dst.SetBoolean(false);
+        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache(ref textTable);
+        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache(ref textTable);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue && b.IsTrue);
+        else if (a.IsTruthIndeterminate && b.IsFalse || a.IsFalse && b.IsTruthIndeterminate) dst.SetBoolean(false);
         else dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmImplies(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
-        if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(!a.IsTrue || b.IsTrue);
-        else if (a.IsFalse && b.IsNothing || a.IsNothing && b.IsTrue) dst.SetBoolean(true);
+        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache(ref textTable);
+        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache(ref textTable);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(!a.IsTrue || b.IsTrue);
+        else if (a.IsFalse && b.IsTruthIndeterminate || a.IsTruthIndeterminate && b.IsTrue) dst.SetBoolean(true);
         else dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
-        if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(a.IsTrue ^ b.IsTrue);
+        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache(ref textTable);
+        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache(ref textTable);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue ^ b.IsTrue);
         else dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmNot(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
-        if (a.IsNotNothing) dst.SetBoolean(!a.IsTrue);
+        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache(ref textTable);
+        if (a.IsTruthDeterminate) dst.SetBoolean(!a.IsTrue);
         else dst.SetNothing();
     }
 

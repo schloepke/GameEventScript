@@ -23,7 +23,7 @@ internal static class VmRegisterMessages
         {
             argumentNames.Add(vmState.Binary.TextConstantTable.Resolve(shape[index]));
         }
-        dest.SetObject(Handler, GameEventScriptMessageSignature.Create(messageName, argumentNames));
+        dest.SetMessageHandler(GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -42,7 +42,7 @@ internal static class VmRegisterMessages
                 vmState.Binary.TextConstantTable.Resolve(shape[index + 1]),
                 vmState.Register(argumentSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable));
         }
-        dest.SetObject(Message, GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
+        dest.SetMessage(GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,7 +61,7 @@ internal static class VmRegisterMessages
         }
         if (signature.TryCreateMessage(arguments, out var message))
         {
-            dest.SetObject(Message, message);
+            dest.SetMessage(message);
         }
         else
         {

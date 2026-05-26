@@ -37,11 +37,11 @@ internal static class VmRegisterTypeCastCheck
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector:
-                if (xSlot.ObjectValue is VmFloatTriplet vector && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetObject(Vector, vector, unit);
+                if (xSlot.ObjectValue is VmFloatTriplet vector && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetVector(vector, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Point:
-                if (xSlot.ObjectValue is VmFloatTriplet point && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetObject(Point, point, unit);
+                if (xSlot.ObjectValue is VmFloatTriplet point && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetPoint(point, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             default:
@@ -229,19 +229,19 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetTextPointer((ushort)xSlot.IntegerValue);
                 return;
             case Tag when xSlot.ObjectValue is string tag:
-                dst.SetObject(Text, tag);
+                dst.SetText(tag);
                 return;
             case Integer:
-                dst.SetObject(Text, xSlot.IntegerValue.ToString(CultureInfo.InvariantCulture));
+                dst.SetText(xSlot.IntegerValue.ToString(CultureInfo.InvariantCulture));
                 return;
             case Float:
-                dst.SetObject(Text, xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+                dst.SetText(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
                 return;
             case Percentage:
-                dst.SetObject(Text, xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+                dst.SetText(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:
-                dst.SetObject(Text, xSlot.IsTrue ? "true" : "false");
+                dst.SetText(xSlot.IsTrue ? "true" : "false");
                 return;
             default:
                 dst.SetNothing();
@@ -261,19 +261,19 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetTagPointer((ushort)xSlot.IntegerValue);
                 return;
             case Text when xSlot.ObjectValue is string text:
-                dst.SetObject(Tag, text);
+                dst.SetTag(text);
                 return;
             case Integer:
-                dst.SetObject(Tag, xSlot.IntegerValue.ToString(CultureInfo.InvariantCulture));
+                dst.SetTag(xSlot.IntegerValue.ToString(CultureInfo.InvariantCulture));
                 return;
             case Float:
-                dst.SetObject(Tag, xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+                dst.SetTag(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
                 return;
             case Percentage:
-                dst.SetObject(Tag, xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+                dst.SetTag(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:
-                dst.SetObject(Tag, xSlot.IsTrue ? "true" : "false");
+                dst.SetTag(xSlot.IsTrue ? "true" : "false");
                 return;
             default:
                 dst.SetNothing();

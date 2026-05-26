@@ -1,4 +1,5 @@
 using System.Runtime.CompilerServices;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -6,7 +7,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterBooleanLogic
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(a.IsTrue || b.IsTrue);
         else if (a.IsNothing && b.IsTrue || a.IsTrue && b.IsNothing) dst.SetBoolean(true);
@@ -14,7 +15,7 @@ internal static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(a.IsTrue && b.IsTrue);
         else if (a.IsNothing && b.IsFalse || a.IsFalse && b.IsNothing) dst.SetBoolean(false);
@@ -22,7 +23,7 @@ internal static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmImplies(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmImplies(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(!a.IsTrue || b.IsTrue);
         else if (a.IsFalse && b.IsNothing || a.IsNothing && b.IsTrue) dst.SetBoolean(true);
@@ -30,14 +31,14 @@ internal static class VmRegisterBooleanLogic
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b)
+    internal static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.IsNotNothing && b.IsNotNothing) dst.SetBoolean(a.IsTrue ^ b.IsTrue);
         else dst.SetNothing();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmNot(ref this VmValue dst, ref VmValue a)
+    internal static void VmNot(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         if (a.IsNotNothing) dst.SetBoolean(!a.IsTrue);
         else dst.SetNothing();

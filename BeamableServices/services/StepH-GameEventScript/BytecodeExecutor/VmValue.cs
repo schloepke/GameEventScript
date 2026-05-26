@@ -35,6 +35,8 @@ public struct VmValue
     public bool IsTrue => (Flags & VmValueFlags.IsTrue) != 0;
     public bool IsFalse => (Flags & VmValueFlags.IsFalse) != 0;
     public bool IsNotTrue => (Flags & VmValueFlags.IsTrue) == 0;
+    public bool IsTruthDeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) != 0;
+    public bool IsTruthIndeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) == 0;
     
     public bool IsNothing => Kind is Nothing;
     public bool IsNotNothing => Kind is not Nothing;

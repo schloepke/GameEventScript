@@ -75,4 +75,38 @@ internal static class VmRegisterCollections
         dst.SetMap(new VmMapObject(map));
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmCreateListBuilder(ref this VmValue dst)
+    {
+        dst.CreateListBuilder();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmListBuilderAdd(ref this VmValue listBuilder, ref VmValue value)
+    {
+        if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder)
+        {
+            builder.Add(value);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmListBuilderFinish(ref this VmValue dst, ref VmValue listBuilder)
+    {
+        if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder)
+        {
+            var list = new VmListObject(builder.Count);
+            for (var i = 0; i < builder.Count; i++)
+            {
+                list.Items[i] = builder[i];
+            }
+            dst.SetList(list);
+            return;
+        }
+        
+        dst.SetNothing();
+    }
+
+
+
 }

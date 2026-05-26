@@ -144,6 +144,7 @@ public enum GameEventScriptBytecodeTypeKind : ushort
     List = 0x20,
     Dice = 0x21,
     Map = 0x22,
+    ListBuilder = 0x23,
 
     Stream = 0x30,
     Series = 0x31,

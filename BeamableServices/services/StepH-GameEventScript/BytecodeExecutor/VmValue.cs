@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using StepH.GameEventScript.Api;
@@ -268,6 +269,15 @@ public struct VmValue
         Unit = UnitNone;
         IntegerValue = list.Length;
         ObjectValue = list;
+    }
+
+    internal void CreateListBuilder()
+    {
+        Kind = List;
+        Flags = VmValueFlags.StorageObject;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = new List<VmValue>();
     }
 
     internal void SetMap(VmMapObject map)

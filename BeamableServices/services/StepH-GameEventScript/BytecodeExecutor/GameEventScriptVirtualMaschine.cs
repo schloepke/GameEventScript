@@ -380,10 +380,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmBuildMap(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
                     break;
                 case CollectionBuilderList:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateListBuilder();
                     break;
                 case CollectionBuilderAdd:
+                    _vmState.Register(instruction.XSlot).VmListBuilderAdd(ref _vmState.Register(instruction.YSlot));
                     break;
                 case CollectionBuilderFinish:
+                    _vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref _vmState.Register(instruction.XSlot));
                     break;
                 case GameEventScriptBytecodeOpCode.Dice:
                     _vmState.Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);

@@ -343,6 +343,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field List = 32
   enum-field Dice = 33
   enum-field Map = 34
+  enum-field ListBuilder = 35
   enum-field Stream = 48
   enum-field Series = 49
   enum-field Custom = 255

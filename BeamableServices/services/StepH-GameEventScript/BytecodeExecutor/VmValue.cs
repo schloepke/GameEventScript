@@ -38,7 +38,7 @@ public struct VmValue
     public bool IsNotTrue => (Flags & VmValueFlags.IsTrue) == 0;
     public bool IsTruthDeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) != 0;
     public bool IsTruthIndeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) == 0;
-    
+
     public bool IsNothing => Kind is Nothing;
     public bool IsNotNothing => Kind is not Nothing;
 
@@ -51,27 +51,38 @@ public struct VmValue
     {
         if (IsTruthIndeterminate)
         {
-            switch(Kind) 
+            switch (Kind)
             {
-                case Text or Tag when IsStoragePointer:
-                    var resolvedText = textTable.Resolve((ushort)IntegerValue) ;
-                    if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1")
-                    {
-                        Flags |= VmValueFlags.IsTrue;
-                    }
-                    Flags |= VmValueFlags.IsFalse;
+                case Text:
+                    var resolvedText = IsStoragePointer ? textTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+                    if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1") Flags |= VmValueFlags.IsTrue;
+                    else Flags |= VmValueFlags.IsFalse;
                     break;
-                case Text or Tag when IsStorageObject && ObjectValue is string storedText:
-                    if (storedText.Equals("true", StringComparison.OrdinalIgnoreCase) || storedText == "1")
+                case Tag:
+                    if ((IsStoragePointer ? textTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
+                        {
+                            "true" => true,
+                            "infinity" => true,
+                            "negativeinfinity" => true,
+                            "pi" => true,
+                            "e" => true,
+                            "tau" => true,
+                            "phi" => true,
+                            _ => false
+                        })
                     {
                         Flags |= VmValueFlags.IsTrue;
                     }
-                    Flags |= VmValueFlags.IsFalse;
+                    else
+                    {
+                        Flags |= VmValueFlags.IsFalse;
+                    }
+
                     break;
             }
         }
     }
-    
+
     public void SetNothing()
     {
         Kind = Nothing;
@@ -115,6 +126,7 @@ public struct VmValue
             Flags = value != 0 && double.IsFinite(value) && !double.IsNaN(value) ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
             FloatValue = value;
         }
+
         Unit = unit;
         ObjectValue = null;
     }
@@ -131,6 +143,7 @@ public struct VmValue
             Kind = Float;
             Flags = double.IsNaN(ratio) ? VmValueFlags.None : VmValueFlags.IsTrue;
         }
+
         Unit = UnitNone;
         FloatValue = ratio;
         ObjectValue = null;
@@ -198,7 +211,7 @@ public struct VmValue
         IntegerValue = 0;
         ObjectValue = new VmFloatTriplet(x, y, z);
     }
-    
+
     internal void SetPoint(VmFloatTriplet point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Point;
@@ -248,9 +261,27 @@ public struct VmValue
         ObjectValue = value;
     }
 
+    internal void SetList(VmListObject list)
+    {
+        Kind = List;
+        Flags = VmValueFlags.StorageObject;
+        Unit = UnitNone;
+        IntegerValue = list.Length;
+        ObjectValue = list;
+    }
+
+    internal void SetMap(VmMapObject map)
+    {
+        Kind = Map;
+        Flags = VmValueFlags.StorageObject;
+        Unit = UnitNone;
+        IntegerValue = map.Length;
+        ObjectValue = map;
+    }
+
     public bool TryGetInteger(out long intValue)
     {
-        switch(Kind)
+        switch (Kind)
         {
             case Integer:
                 intValue = IntegerValue;
@@ -261,16 +292,16 @@ public struct VmValue
             default:
                 intValue = 0;
                 return false;
-        };   
+        }
     }
-    
+
     public double AsNumberValue => Kind switch
     {
         Float or Percentage => FloatValue,
         Integer => IntegerValue,
         _ => double.NaN,
     };
-    
+
     public double AsNumberValueWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
     {
         unit = Unit;

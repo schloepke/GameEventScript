@@ -40,7 +40,7 @@ internal class VmListObject(int size) : IVmLengthAccess, IVmIndexAccess<VmValue>
     }
 }
 
-internal class VmDictionaryObject(IReadOnlyDictionary<string, VmValue> entries) : IVmLengthAccess, IVmKeyAccess<VmValue>
+internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmLengthAccess, IVmKeyAccess<VmValue>
 {
     public int Length => entries.Count;
 

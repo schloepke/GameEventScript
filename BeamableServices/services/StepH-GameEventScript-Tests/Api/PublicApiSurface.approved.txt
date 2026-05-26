@@ -585,15 +585,20 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   method System.Boolean TryGetInteger(System.Int64& intValue)
   method System.Double AsNumberValueWithUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
   method System.Void SetBoolean(System.Boolean value)
+  method System.Void SetDice(System.Int64[] values)
   method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Void SetMessageHandler(StepH.GameEventScript.Api.GameEventScriptMessageSignature handler)
   method System.Void SetNothing()
-  method System.Void SetObject(StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, System.Object value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetPercentage(System.Double ratio)
+  method System.Void SetPoint(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Void SetTag(System.String tag)
   method System.Void SetTagPointer(System.UInt16 pointer)
   method System.Void SetText(System.String text)
   method System.Void SetTextPointer(System.UInt16 pointer)
+  method System.Void SetVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void UpdatedTextTruthinessCache(StepH.GameEventScript.Api.GameEventScriptTextTable& textTable)
   property System.Boolean HasUnit { get }
   property System.Boolean IsFalse { get }
   property System.Boolean IsNotNothing { get }
@@ -991,6 +996,7 @@ sealed class StepH.GameEventScript.Types.GameEventScriptSeriesValue
   property System.String SignatureId { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptTagValue
   field static StepH.GameEventScript.Types.GameEventScriptTagValue Empty
+  method System.Boolean AsBoolean()
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
   method System.Double AsNumber()

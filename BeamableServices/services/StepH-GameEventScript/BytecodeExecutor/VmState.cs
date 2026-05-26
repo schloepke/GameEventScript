@@ -145,6 +145,9 @@ internal struct VmState
         RegisterFrameStart = 0;
         RegisterFrameLength = 0;
         RandomGeneratorsPointer = 0;
+        for (var i = 0; i < RegisterSlots.Length; i++) {
+            RegisterSlots[i].SetNothing();
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

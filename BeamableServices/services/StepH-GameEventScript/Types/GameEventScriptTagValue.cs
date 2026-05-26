@@ -27,6 +27,27 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
 
     public override string AsText() => Value;
 
+    public override bool AsBoolean()
+    {
+        if (string.Equals(Value, "true", StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (string.Equals(Value, "false", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (TryConvertToNumber(out var value))
+        {
+            var number = value.AsNumber();
+            return number != 0d && !double.IsNaN(number);
+        }
+
+        return false;
+    }
+
     public override double AsNumber() => TryConvertToNumber(out var value) ? value.AsNumber() : 0d;
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => CreateCharacterList(Value);

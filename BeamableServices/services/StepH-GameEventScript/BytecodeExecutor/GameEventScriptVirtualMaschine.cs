@@ -374,8 +374,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PipelineIterator:
                     break;
                 case BuildList:
+                    _vmState.Register(instruction.DestinationSlot).VmBuildList(instruction.ListIndex, ref _vmState);
                     break;
                 case BuildMap:
+                    _vmState.Register(instruction.DestinationSlot).VmBuildMap(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
                     break;
                 case CollectionBuilderList:
                     break;

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -42,4 +43,36 @@ internal static class VmRegisterCollections
     {
         if (iterator is { Kind: GameEventScriptBytecodeTypeKind.Stream, ObjectValue: IDisposable it }) it.Dispose();
     }
+    
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmBuildList(ref this VmValue dst, ushort slotsIndex, ref VmState vmState)
+    {
+        var itemSlots = vmState.Binary.Uint16ConstantTable.Resolve(slotsIndex);
+        var list = new VmListObject(itemSlots.Length);
+        for (var i = 0; i < itemSlots.Length; i++)
+        {
+            list.Items[i] = vmState.Register(itemSlots[i]);
+        }
+        dst.SetList(list);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmBuildMap(ref this VmValue dst, ushort keySlotsIndex, ushort itemSlotsIndex, ref VmState vmState)
+    {
+        var keyNames = vmState.Binary.Uint16ConstantTable.Resolve(keySlotsIndex);
+        var itemSlots = vmState.Binary.Uint16ConstantTable.Resolve(itemSlotsIndex);
+        if (keyNames.Length != itemSlots.Length)
+        {
+            dst.SetNothing();
+            return;
+        }
+        var map = new Dictionary<string, VmValue>(itemSlots.Length);
+        for (var i = 0; i < itemSlots.Length; i++)
+        {
+            map[vmState.Binary.TextConstantTable.Resolve(keyNames[i])] = vmState.Register(itemSlots[i]);
+        }
+        dst.SetMap(new VmMapObject(map));
+    }
+
 }

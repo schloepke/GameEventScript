@@ -1304,14 +1304,13 @@ internal sealed class GesLinearBytecodeBuilder
 
         var left = EmitSourceExpression(binary.Left, context, state);
         resultSlot = AllocateSlot(state);
-        if (binary.Operator == GesBinaryOperator.Implies)
+        var combineOp = binary.Operator switch
         {
-            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Implies, dest: resultSlot, a: left, b: left));
-        }
-        else
-        {
-            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: resultSlot, a: left));
-        }
+            GesBinaryOperator.Or => GameEventScriptBytecodeOpCode.Or,
+            GesBinaryOperator.And => GameEventScriptBytecodeOpCode.And,
+            _ => GameEventScriptBytecodeOpCode.Implies
+        };
+        Emit(CreateInstruction(combineOp, dest: resultSlot, a: left, b: left));
 
         var branch = binary.Operator switch
         {
@@ -1321,12 +1320,6 @@ internal sealed class GesLinearBytecodeBuilder
         };
         var jump = Emit(CreateJumpInstruction(branch, conditionSlot: left));
         var right = EmitSourceExpression(binary.Right, context, state);
-        var combineOp = binary.Operator switch
-        {
-            GesBinaryOperator.Or => GameEventScriptBytecodeOpCode.Or,
-            GesBinaryOperator.And => GameEventScriptBytecodeOpCode.And,
-            _ => GameEventScriptBytecodeOpCode.Implies
-        };
         Emit(CreateInstruction(combineOp, dest: resultSlot, a: left, b: right));
         PatchTarget(jump, _code.Count);
         return true;

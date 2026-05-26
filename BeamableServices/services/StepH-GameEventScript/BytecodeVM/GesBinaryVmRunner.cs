@@ -595,7 +595,7 @@ internal readonly struct GesBinaryVmValue
         => value switch
         {
             GameEventScriptNumberValue { IsIntegerValue: true } integer => Integer(integer.IntegerValue, integer.Unit),
-            GameEventScriptNumberValue number when number.HasSemanticValue() => Number(number.NumberValue, number.Unit),
+            GameEventScriptNumberValue { IsInfinityValue: false } number when number.HasSemanticValue() => Number(number.NumberValue, number.Unit),
             GameEventScriptPercentageValue percentage => Percentage(percentage.Ratio),
             GameEventScriptBooleanValue boolean => Boolean(boolean.Value),
             GameEventScriptTextValue text => Text(text.Value),

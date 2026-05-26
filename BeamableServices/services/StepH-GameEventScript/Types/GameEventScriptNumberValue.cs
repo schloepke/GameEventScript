@@ -73,7 +73,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
             IsInfinityValue ? IsNegativeInfinityValue ? double.MinValue : double.MaxValue :
             IsIntegerValue ? IntegerValue : NumberValue;
 
-    public override bool HasSemanticValue() => !IsNaNValue && !IsInfinityValue;
+    public override bool HasSemanticValue() => !IsNaNValue;
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {

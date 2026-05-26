@@ -680,7 +680,7 @@ internal static class GesOptimizer
                 value = ToGameEventScriptNumber(NegateNumeric(numeric));
                 return true;
             case GesUnaryOperator.Not:
-                if (operand.IsNothing())
+                if (IsTruthIndeterminate(operand))
                 {
                     value = GameEventScriptNothingValue.Instance;
                     return true;
@@ -1103,7 +1103,7 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesBoolean(false);
         }
 
-        return left.IsNothing() || right.IsNothing()
+        return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
             ? GameEventScriptNothingValue.Instance
             : GameEventScriptValueFactory.GesBoolean(true);
     }
@@ -1115,13 +1115,13 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesBoolean(true);
         }
 
-        return left.IsNothing() || right.IsNothing()
+        return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
             ? GameEventScriptNothingValue.Instance
             : GameEventScriptValueFactory.GesBoolean(false);
     }
 
     private static GameEventScriptValue EvaluateLogicalXor(GameEventScriptValue left, GameEventScriptValue right)
-        => left.IsNothing() || right.IsNothing()
+        => IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
             ? GameEventScriptNothingValue.Instance
             : GameEventScriptValueFactory.GesBoolean(IsTrue(left) ^ IsTrue(right));
 
@@ -1132,7 +1132,7 @@ internal static class GesOptimizer
             return GameEventScriptValueFactory.GesBoolean(true);
         }
 
-        if (left.IsNothing() || right.IsNothing())
+        if (IsTruthIndeterminate(left) || IsTruthIndeterminate(right))
         {
             return GameEventScriptNothingValue.Instance;
         }
@@ -1141,10 +1141,16 @@ internal static class GesOptimizer
     }
 
     private static bool IsTrue(GameEventScriptValue value)
-        => !value.IsNothing() && value.AsBoolean();
+        => !IsTruthIndeterminate(value) && value.AsBoolean();
 
     private static bool IsFalse(GameEventScriptValue value)
-        => !value.IsNothing() && !value.AsBoolean();
+        => !IsTruthIndeterminate(value) && !value.AsBoolean();
+
+    private static bool IsTruthIndeterminate(GameEventScriptValue value)
+        => value.Kind is GameEventScriptValueKind.Nothing or
+            GameEventScriptValueKind.List or
+            GameEventScriptValueKind.Map or
+            GameEventScriptValueKind.Dice;
 
     private static GameEventScriptValue EvaluateNumericComparison(GameEventScriptValue left, GameEventScriptValue right, Func<int, bool> predicate)
     {

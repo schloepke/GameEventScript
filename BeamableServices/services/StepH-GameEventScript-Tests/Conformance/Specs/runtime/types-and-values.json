@@ -2048,7 +2048,7 @@
                 },
                 "hasInfinity": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "isEmptyOpt": {
                   "type": ":boolean",

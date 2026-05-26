@@ -602,6 +602,8 @@ struct StepH.GameEventScript.BytecodeExecutor.VmValue
   property System.Boolean IsStorageObject { get }
   property System.Boolean IsStoragePointer { get }
   property System.Boolean IsTrue { get }
+  property System.Boolean IsTruthDeterminate { get }
+  property System.Boolean IsTruthIndeterminate { get }
   property System.Double AsNumberValue { get }
 enum StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueFlags
   enum-field None = 0

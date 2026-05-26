@@ -4423,7 +4423,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Boolean(false);
         }
 
-        return left.IsNothing() || right.IsNothing()
+        return left.IsTruthIndeterminate() || right.IsTruthIndeterminate()
             ? BytecodeVmValue.Nothing
             : BytecodeVmValue.Boolean(true);
     }
@@ -4435,13 +4435,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Boolean(true);
         }
 
-        return left.IsNothing() || right.IsNothing()
+        return left.IsTruthIndeterminate() || right.IsTruthIndeterminate()
             ? BytecodeVmValue.Nothing
             : BytecodeVmValue.Boolean(false);
     }
 
     private static BytecodeVmValue EvaluateLogicalXor(in BytecodeVmValue left, in BytecodeVmValue right)
-        => left.IsNothing() || right.IsNothing()
+        => left.IsTruthIndeterminate() || right.IsTruthIndeterminate()
             ? BytecodeVmValue.Nothing
             : BytecodeVmValue.Boolean(left.IsTrue() ^ right.IsTrue());
 
@@ -4452,7 +4452,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.Boolean(true);
         }
 
-        if (left.IsNothing() || right.IsNothing())
+        if (left.IsTruthIndeterminate() || right.IsTruthIndeterminate())
         {
             return BytecodeVmValue.Nothing;
         }
@@ -5013,13 +5013,19 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateNotUnary(GameEventScriptValue operand)
     {
-        if (operand.IsNothing())
+        if (IsTruthIndeterminate(operand))
         {
             return GameEventScriptNothingValue.Instance;
         }
 
         return GesBoolean(!operand.AsBoolean());
     }
+
+    private static bool IsTruthIndeterminate(GameEventScriptValue value)
+        => value.Kind is GameEventScriptValueKind.Nothing or
+            GameEventScriptValueKind.List or
+            GameEventScriptValueKind.Map or
+            GameEventScriptValueKind.Dice;
 
     private GameEventScriptValue EvaluateLenUnary(GameEventScriptValue operand)
     {
@@ -6945,7 +6951,7 @@ internal readonly record struct BytecodeVmValue(
         {
             GameEventScriptBooleanValue boolean => Boolean(boolean.Value),
             GameEventScriptNumberValue { IsIntegerValue: true } integer => Integer(integer.IntegerValue, integer.Unit),
-            GameEventScriptNumberValue floatValue when floatValue.HasSemanticValue() => Float(floatValue.NumberValue, floatValue.Unit),
+            GameEventScriptNumberValue { IsInfinityValue: false } floatValue when floatValue.HasSemanticValue() => Float(floatValue.NumberValue, floatValue.Unit),
             GameEventScriptPercentageValue percentage => Percentage(percentage.Ratio),
             _ => Reference(value)
         };
@@ -6966,20 +6972,29 @@ internal readonly record struct BytecodeVmValue(
         {
             BytecodeVmValueKind.Boolean => BooleanValue,
             BytecodeVmValueKind.Integer => IntegerValue != 0,
-            BytecodeVmValueKind.Float => Number != 0d,
-            BytecodeVmValueKind.Percentage => Number != 0d,
+            BytecodeVmValueKind.Float => Number != 0d && !double.IsNaN(Number),
+            BytecodeVmValueKind.Percentage => Number != 0d && !double.IsNaN(Number),
             BytecodeVmValueKind.Reference => ReferenceValue?.AsBoolean() ?? false,
             _ => false
         };
 
     public bool IsTrue()
-        => !IsNothing() && AsBoolean();
+        => !IsTruthIndeterminate() && AsBoolean();
 
     public bool IsFalse()
-        => !IsNothing() && !AsBoolean();
+        => !IsTruthIndeterminate() && !AsBoolean();
 
     public bool IsNothing()
         => IsNothingLike();
+
+    public bool IsTruthIndeterminate()
+        => IsNothingLike() || ReferenceValue is { } value && IsTruthIndeterminate(value);
+
+    private static bool IsTruthIndeterminate(GameEventScriptValue value)
+        => value.Kind is GameEventScriptValueKind.Nothing or
+            GameEventScriptValueKind.List or
+            GameEventScriptValueKind.Map or
+            GameEventScriptValueKind.Dice;
 
     public bool TryGetFiniteNumber(out double value)
     {

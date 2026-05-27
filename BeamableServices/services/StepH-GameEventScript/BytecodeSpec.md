@@ -362,18 +362,18 @@ future decoders. The current groups are:
 0x00 Group 1: no-op, frame slots, jumps, calls, returns, emit operations
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
 0x20 Group 1 numeric helper casts/checks and reserved tail
-0x30 Group 2: loads, argument staging, type construction
-0x40 Group 2 continuation and reserved tail
+0x30 Group 2: loads, argument staging, value creation, type construction
+0x40 Group 2 value creation continuation and type construction tail
 0x50 Group 3: boolean, comparison, implication, presence checks
 0x60 Group 3 comparison reserved space
 0x70 Group 4: math and random
 0x80 Group 4 continuation and reserved tail
-0x90 Group 5: text/collection operators, range/iterator setup
-0xA0 Group 5 stream next/close/reduce/fold, series, PipelineIterator
-0xB0 Group 6: collection and value building
-0xC0 Group 7: pipeline materializers, transforms, membership terminals
-0xD0 Group 7 pipeline ordering, slicing, random terminals
-0xE0 Group 7 pipeline dice/pattern terminals and reserved tail
+0x90 Group 5: text/collection operators, iterators, streams, series
+0xA0 Group 5 stream next/close/reduce/fold, series, and reserved tail
+0xB0 reserved after moving value creation into Group 2
+0xC0 Group 6: pipeline stream adapter, materializers, transforms, membership terminals
+0xD0 Group 6 pipeline ordering, slicing, random terminals
+0xE0 Group 6 pipeline dice/pattern terminals, generated-list builders, and reserved tail
 0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
 
@@ -609,8 +609,8 @@ Required operations:
 - `StartsWith`, `EndsWith`
 - `Intersect`, `Combine`, `Except`, `Zip`
 - `Min`, `Max`
-- direct unary opcodes such as `UnaryNegate`, `UnaryNot`, `UnaryLength`,
-  `UnaryAbs`, and `UnaryNaturalLog`
+- direct unary opcodes such as `Negate`, `Not`, `Length`,
+  `Abs`, and `LogN`
 - `Clamp`
 
 Numeric operations must preserve the language distinction between absent input
@@ -632,7 +632,7 @@ divide by a scalar. Points may add/subtract compatible vectors, and
 are invalid mathematics: `point * scalar`, `scalar * point`, `point / scalar`,
 `scalar / point`, and any point operand in `IntegerDivide`, `Modulo`, or
 `Remainder` write numeric `NaN` unless a direct source operand is `nothing`.
-`UnaryNegate` negates vector components, but point negation is invalid
+`Negate` negates vector components, but point negation is invalid
 mathematics and writes numeric `NaN`.
 
 `Power` with quantity units is valid only for a unitless numeric exponent of
@@ -642,7 +642,7 @@ produces a unitless result, and all other quantity powers write numeric `NaN`
 unless a direct source operand is `nothing`.
 
 Numeric opcodes preserve value families where the source language does:
-`UnaryAbs` keeps percentages as `Percentage`, keeps quantity units on numeric
+`Abs` keeps percentages as `Percentage`, keeps quantity units on numeric
 quantities, and finite exactly integral numeric results are represented as
 integer values when they fit signed 64-bit.
 Percentage multiplication with a non-percentage scalar or quantity treats the
@@ -683,9 +683,9 @@ sequence.
 - `JumpIfTrue cond target`
 - `JumpIfFalse cond target`
 - `JumpIfNotTrue cond target`
-- `RangeIterator dst from to`
-- `RangeIteratorWithStep dst from to step`
-- `RangeIteratorShort dst fromI16 toI16 stepI16`
+- `CreateRangeIterator dst from to`
+- `CreateRangeIteratorWithStep dst from to step`
+- `CreateRangeIteratorShort dst fromI16 toI16 stepI16`
 - `CollectionIterator dst collection`
 - `StreamNext dst iterator noMoreTarget`
 - `StreamClose iterator`
@@ -720,7 +720,7 @@ condition is true. The public bytecode has no `GuardedChoice` layout.
 evaluated once, an iterator is stored in a temporary slot, `StreamNext` writes
 each item into an item slot and jumps to the close block when exhausted, and the
 body runs inside an iteration scope. Literal I16 ranges should use
-`RangeIteratorShort`; dynamic ranges and collection sources use the slot-based
+`CreateRangeIteratorShort`; dynamic ranges and collection sources use the slot-based
 iterator opcodes. Generated collections use the same iterator opcodes plus
 VM-internal collection builder opcodes.
 
@@ -775,7 +775,7 @@ Range loop shape:
 
 ```text
 @0200 SlotLocals locals+=loopLocalCount
-@0201 RangeIteratorShort dst=sIterator from=1 to=20 step=1
+@0201 CreateRangeIteratorShort dst=sIterator from=1 to=20 step=1
 @0202 StreamNext dst=sItem iterator=sIterator noMore=@0210
 @0203 SlotLocals locals+=iterationLocalCount
 @0204 MoveSlot dst=sIdentifier src=sItem
@@ -805,23 +805,26 @@ compiler-assigned iterator slot.
 
 ### Values and Containers
 
-- `BuildList dst itemSlotListIndex`
-- `BuildMap dst keyNameListIndex valueSlotListIndex`
 - `LoadMessage dst messageShapeIndex argumentSlotListIndex`
 - `BindHandler dst handlerSlot argumentSlotListIndex`
 - `MemberAccess dst nameIndex objectSlot`
 - `IndexedAccess dst selectorSlot objectSlot`
-- `Range dst fromSlot toSlot`
-- `RangeWithStep dst fromSlot toSlot stepSlot`
-- `Dice dst count sides`
-- `Random dst fromSlot toSlot`
+- `CreateDice dst count sides`
+- `CreateVector dst immediateX`
+- `CreatePoint dst immediateX`
+- `CreateList dst itemSlotListIndex`
+- `CreateMap dst keyNameListIndex valueSlotListIndex`
+- `CreateRange dst fromSlot toSlot`
+- `CreateRangeWithStep dst fromSlot toSlot stepSlot`
+- `RandomTake dst fromSlot toSlot`
 - `RandomPush seedSlot`
 - `RandomPushConstant seedI64`
 - `RandomPop`
-- `CreateVector dst immediateX`
-- `CreatePoint dst immediateX`
 - `TypeConstructor dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
 
+Dice, vector, point, list, map, and range creation opcodes live in Group 2 with
+other value-loading and construction instructions. `TypeConstructor` is kept at
+the end of Group 2 because it may bind external constructors and custom records.
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
 `StringPool` indexes, while slot lists contain frame slot indexes.
@@ -944,25 +947,25 @@ Core streaming shape:
 
 ```text
 CollectionIterator source -> iterator
-PipelineIterator transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
+PipelineStream transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
 PipelineCollectList dst iterator
 PipelineFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
 StreamReduce dst iterator itemBindingSlot reducerEntry
 StreamReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry
 StreamFold dst iterator seedSlot itemBindingSlot reducerEntry
-CollectionBuilderList builder
-CollectionBuilderAdd builder item
-CollectionBuilderFinish dst builder
+PipelineListCreateBuilder builder
+PipelineListBuilderAdd builder item
+PipelineListBuilderFinish dst builder
 ```
 
-`UnaryKeys`, `UnaryValues`, and `UnaryEntries` are strict map/custom-type
+`KeysOfMap`, `ValuesOfMap`, and `EntriesOfMap` are strict map/custom-type
 projection opcodes. They are not general enumerable materializers. Map-backed
 custom type values follow the same rules as maps. Successful projections use
 stable ordinal key order. If the operand is `nothing`, the result is
 `nothing`; any other non-map operand also yields `nothing`.
 
-`PipelineIterator` is a lazy one-time adapter over another VM iterator. Its
+`PipelineStream` is a lazy one-time adapter over another VM iterator. Its
 helper entry runs as an isolated helper frame: the current source item is bound
 to helper-local slot `AU` (normally slot `0`), and `BU` references a
 `UShortListPool` entry containing caller-frame capture slots copied when the
@@ -1012,29 +1015,29 @@ Streaming/materialization contract:
 Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
-CollectionBuilderList/Set builder
+PipelineListCreateBuilder builder
 SlotLocals locals+=collectionLocalCount
-RangeIterator* / CollectionIterator iterator
+CreateRangeIterator* / CollectionIterator iterator
 loop:
   StreamNext item iterator noMore
   SlotLocals locals+=iterationLocalCount
   MoveSlot identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
-  CollectionBuilderAdd builder projected
+  PipelineListBuilderAdd builder projected
   SlotLocals locals-=iterationLocalCount
   Jump loop
 noMore:
 StreamClose iterator
 SlotLocals locals-=collectionLocalCount
-CollectionBuilderFinish dst builder
+PipelineListBuilderFinish dst builder
 ```
 
 Direct ranges after `in` remain invalid at source level. Range iteration should
 use explicit range-source syntax.
 
 At runtime, collection builders are VM-internal values and are not visible as DSL
-values. `CollectionBuilderAdd` applies `MaxGeneratedCollectionItems` while
+values. `PipelineListBuilderAdd` applies `MaxGeneratedCollectionItems` while
 materializing the result.
 
 ### Diagnostics

@@ -94,7 +94,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.PipelineIterator:
+            case GameEventScriptBytecodeOpCode.PipelineStream:
                 return allowPipeline && CanExecuteLinearEntry(instruction.EntryAddress, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.StreamReduce:
@@ -534,7 +534,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.RangeIterator:
+            case GameEventScriptBytecodeOpCode.CreateRangeIterator:
                 if (!TryCreateRangeIterator(
                         ResolveSlot(instruction.XSlot),
                         ResolveSlot(instruction.YSlot),
@@ -552,7 +552,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+            case GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep:
                 if (!TryCreateRangeIterator(
                         ResolveSlot(instruction.XSlot),
                         ResolveSlot(instruction.YSlot),
@@ -570,7 +570,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+            case GameEventScriptBytecodeOpCode.CreateRangeIteratorShort:
                 if (!TryCreateRangeIterator(
                         instruction.ImmediateX,
                         instruction.ImmediateY,
@@ -611,7 +611,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+            case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:
                 if (!DefineSlot(instruction.DestinationSlot, BytecodeVmValue.CollectionBuilder(BytecodeVmCollectionBuilder.List())))
                 {
                     return false;
@@ -620,8 +620,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
-                if (!TryExecuteCollectionBuilderAdd(instruction))
+            case GameEventScriptBytecodeOpCode.PipelineListBuilderAdd:
+                if (!TryExecutePipelineListBuilderAdd(instruction))
                 {
                     return false;
                 }
@@ -629,8 +629,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
-                if (!TryExecuteCollectionBuilderFinish(instruction))
+            case GameEventScriptBytecodeOpCode.PipelineListBuilderFinish:
+                if (!TryExecutePipelineListBuilderFinish(instruction))
                 {
                     return false;
                 }
@@ -1034,17 +1034,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     instruction.DestinationSlot,
                     EvaluateProgramBinary(instruction.OpCode, ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot)));
 
-            case GameEventScriptBytecodeOpCode.UnaryNegate:
-            case GameEventScriptBytecodeOpCode.UnaryNot:
-            case GameEventScriptBytecodeOpCode.UnaryHasValue:
-            case GameEventScriptBytecodeOpCode.UnaryEmpty:
-            case GameEventScriptBytecodeOpCode.UnaryLength:
-            case GameEventScriptBytecodeOpCode.UnaryChance:
-            case GameEventScriptBytecodeOpCode.UnaryKeys:
-            case GameEventScriptBytecodeOpCode.UnaryValues:
-            case GameEventScriptBytecodeOpCode.UnaryEntries:
-            case GameEventScriptBytecodeOpCode.UnaryAbs:
-            case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
+            case GameEventScriptBytecodeOpCode.Negate:
+            case GameEventScriptBytecodeOpCode.Not:
+            case GameEventScriptBytecodeOpCode.HasValue:
+            case GameEventScriptBytecodeOpCode.IsEmpty:
+            case GameEventScriptBytecodeOpCode.Length:
+            case GameEventScriptBytecodeOpCode.Chance:
+            case GameEventScriptBytecodeOpCode.KeysOfMap:
+            case GameEventScriptBytecodeOpCode.ValuesOfMap:
+            case GameEventScriptBytecodeOpCode.EntriesOfMap:
+            case GameEventScriptBytecodeOpCode.Abs:
+            case GameEventScriptBytecodeOpCode.LogN:
                 return DefineSlot(
                     instruction.DestinationSlot,
                     EvaluateUnaryOperation(instruction.OpCode, ResolveSlot(instruction.XSlot)));
@@ -1054,7 +1054,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     instruction.DestinationSlot,
                     EvaluateClamp(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot), ResolveSlot(instruction.AU)));
 
-            case GameEventScriptBytecodeOpCode.Random:
+            case GameEventScriptBytecodeOpCode.RandomTake:
                 return DefineSlot(
                     instruction.DestinationSlot,
                     EvaluateRandomExpression(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot)));
@@ -1071,17 +1071,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 PopRandomScope();
                 return true;
 
-            case GameEventScriptBytecodeOpCode.Range:
+            case GameEventScriptBytecodeOpCode.CreateRange:
                 return DefineSlot(
                     instruction.DestinationSlot,
                     EvaluateRangeExpression(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot), BytecodeVmValue.Integer(1)));
 
-            case GameEventScriptBytecodeOpCode.RangeWithStep:
+            case GameEventScriptBytecodeOpCode.CreateRangeWithStep:
                 return DefineSlot(
                     instruction.DestinationSlot,
                     EvaluateRangeExpression(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot), ResolveSlot(instruction.AU)));
 
-            case GameEventScriptBytecodeOpCode.Dice:
+            case GameEventScriptBytecodeOpCode.CreateDice:
                 return DefineSlot(instruction.DestinationSlot, EvaluateDiceExpression(instruction.Count, instruction.ImmediateY));
 
             case GameEventScriptBytecodeOpCode.IndexedAccess:
@@ -1095,8 +1095,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 return DefineSlot(instruction.DestinationSlot, EvaluateMemberAccess(ResolveSlot(instruction.YSlot), member));
 
-            case GameEventScriptBytecodeOpCode.PipelineIterator:
-                return TryCreatePipelineIterator(instruction);
+            case GameEventScriptBytecodeOpCode.PipelineStream:
+                return TryCreatePipelineStream(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineCollectList:
                 return TryExecutePipelineCollect(instruction);
@@ -1224,7 +1224,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
             }
 
-            case GameEventScriptBytecodeOpCode.BuildList:
+            case GameEventScriptBytecodeOpCode.CreateList:
             {
                 if (!TryRentLinearOperands(instruction.ListIndex, out var collectionOperands, out var collectionOperandCount))
                 {
@@ -1241,7 +1241,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 }
             }
 
-            case GameEventScriptBytecodeOpCode.BuildMap:
+            case GameEventScriptBytecodeOpCode.CreateMap:
             {
                 if (!TryReadStringList(instruction.SecondaryListIndex, out var keys) ||
                     !TryRentLinearOperands(instruction.ListIndex, out var dictionaryOperands, out var dictionaryOperandCount))
@@ -2410,7 +2410,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryCreatePipelineIterator(GameEventScriptBytecodeInstruction instruction)
+    private bool TryCreatePipelineStream(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var sourceIterator) ||
             !TryGetUShortList(instruction.BU, out var captureSlots))
@@ -2428,7 +2428,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return DefineSlot(
             instruction.DestinationSlot,
-            BytecodeVmValue.Iterator(new BytecodeVmPipelineIterator(
+            BytecodeVmValue.Iterator(new BytecodeVmPipelineStream(
                 this,
                 sourceIterator,
                 instruction.EntryAddress,
@@ -2450,7 +2450,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    internal bool TryEvaluatePipelineIteratorEntry(
+    internal bool TryEvaluatePipelineStreamEntry(
         int entryAddress,
         int itemSlot,
         BytecodeVmValue item,
@@ -2475,7 +2475,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryEvaluateLinearIsolatedHelperEntry(entryAddress, item, captures, out yielded, out value);
     }
 
-    internal bool TryEvaluatePipelineIteratorEntry(
+    internal bool TryEvaluatePipelineStreamEntry(
         int entryAddress,
         int itemSlot,
         BytecodeVmValue item,
@@ -2541,7 +2541,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteCollectionBuilderAdd(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecutePipelineListBuilderAdd(GameEventScriptBytecodeInstruction instruction)
     {
         var builderValue = ResolveSlot(instruction.XSlot);
         if (builderValue.Kind != BytecodeVmValueKind.CollectionBuilder ||
@@ -2561,7 +2561,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecuteCollectionBuilderFinish(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecutePipelineListBuilderFinish(GameEventScriptBytecodeInstruction instruction)
     {
         var builderValue = ResolveSlot(instruction.XSlot);
         if (builderValue.Kind != BytecodeVmValueKind.CollectionBuilder ||
@@ -2776,7 +2776,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     return false;
                 }
 
-                if (!TryEvaluatePipelineIteratorEntry(reducerEntry, itemSlot, item, out var hasValue, out var reduced))
+                if (!TryEvaluatePipelineStreamEntry(reducerEntry, itemSlot, item, out var hasValue, out var reduced))
                 {
                     return false;
                 }
@@ -2823,7 +2823,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryEvaluatePipelineEntryValue(int entryAddress, int itemSlot, BytecodeVmValue item, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (!TryEvaluatePipelineIteratorEntry(entryAddress, itemSlot, item, out var hasValue, out value))
+        if (!TryEvaluatePipelineStreamEntry(entryAddress, itemSlot, item, out var hasValue, out value))
         {
             return false;
         }
@@ -4745,17 +4745,17 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var boxed = operand.ToGameEventScriptValue();
         return opCode switch
         {
-            GameEventScriptBytecodeOpCode.UnaryNegate => BytecodeVmValue.FromGameEventScriptValue(EvaluateNegateUnary(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryNot => BytecodeVmValue.FromGameEventScriptValue(EvaluateNotUnary(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryHasValue => BytecodeVmValue.Boolean(boxed.HasSemanticValue()),
-            GameEventScriptBytecodeOpCode.UnaryEmpty => BytecodeVmValue.Boolean(boxed.IsSemanticallyEmpty()),
-            GameEventScriptBytecodeOpCode.UnaryLength => BytecodeVmValue.FromGameEventScriptValue(EvaluateLenUnary(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryChance => BytecodeVmValue.FromGameEventScriptValue(EvaluateChanceUnary(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryKeys => BytecodeVmValue.Reference(GesKeys(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryValues => BytecodeVmValue.Reference(GesValues(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryEntries => BytecodeVmValue.Reference(GesEntries(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryAbs => BytecodeVmValue.FromGameEventScriptValue(EvaluateAbsUnary(boxed)),
-            GameEventScriptBytecodeOpCode.UnaryNaturalLog => BytecodeVmValue.FromGameEventScriptValue(EvaluateNaturalLogUnary(boxed)),
+            GameEventScriptBytecodeOpCode.Negate => BytecodeVmValue.FromGameEventScriptValue(EvaluateNegateUnary(boxed)),
+            GameEventScriptBytecodeOpCode.Not => BytecodeVmValue.FromGameEventScriptValue(EvaluateNotUnary(boxed)),
+            GameEventScriptBytecodeOpCode.HasValue => BytecodeVmValue.Boolean(boxed.HasSemanticValue()),
+            GameEventScriptBytecodeOpCode.IsEmpty => BytecodeVmValue.Boolean(boxed.IsSemanticallyEmpty()),
+            GameEventScriptBytecodeOpCode.Length => BytecodeVmValue.FromGameEventScriptValue(EvaluateLenUnary(boxed)),
+            GameEventScriptBytecodeOpCode.Chance => BytecodeVmValue.FromGameEventScriptValue(EvaluateChanceUnary(boxed)),
+            GameEventScriptBytecodeOpCode.KeysOfMap => BytecodeVmValue.Reference(GesKeys(boxed)),
+            GameEventScriptBytecodeOpCode.ValuesOfMap => BytecodeVmValue.Reference(GesValues(boxed)),
+            GameEventScriptBytecodeOpCode.EntriesOfMap => BytecodeVmValue.Reference(GesEntries(boxed)),
+            GameEventScriptBytecodeOpCode.Abs => BytecodeVmValue.FromGameEventScriptValue(EvaluateAbsUnary(boxed)),
+            GameEventScriptBytecodeOpCode.LogN => BytecodeVmValue.FromGameEventScriptValue(EvaluateNaturalLogUnary(boxed)),
             _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown unary opcode '{opCode}'.")
         };
 
@@ -8311,7 +8311,7 @@ internal sealed class BytecodeVmCollectionIterator(GameEventScriptValue sourceTa
     }
 }
 
-internal sealed class BytecodeVmPipelineIterator(
+internal sealed class BytecodeVmPipelineStream(
     GesBytecodeVmExecutionSession session,
     BytecodeVmIterator source,
     int entryAddress,
@@ -8334,7 +8334,7 @@ internal sealed class BytecodeVmPipelineIterator(
 
         while (source.TryMoveNext(out var item))
         {
-            if (!session.TryEvaluatePipelineIteratorEntry(entryAddress, itemSlot, item, captures, out var yielded, out value))
+            if (!session.TryEvaluatePipelineStreamEntry(entryAddress, itemSlot, item, captures, out var yielded, out value))
             {
                 Dispose();
                 value = BytecodeVmValue.Nothing;

@@ -298,18 +298,18 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.RandomPop:
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeIterator:
+            case GameEventScriptBytecodeOpCode.CreateRangeIterator:
                 AppendSlot(builder, "from", instruction.XSlot);
                 AppendSlot(builder, "to", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+            case GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep:
                 AppendSlot(builder, "from", instruction.XSlot);
                 AppendSlot(builder, "to", instruction.YSlot);
                 AppendSlot(builder, "step", instruction.AU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+            case GameEventScriptBytecodeOpCode.CreateRangeIteratorShort:
                 AppendSignedImmediate(builder, "from", instruction.ImmediateX);
                 AppendSignedImmediate(builder, "to", instruction.ImmediateY);
                 AppendSignedImmediate(builder, "step", instruction.AS);
@@ -328,15 +328,15 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+            case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
+            case GameEventScriptBytecodeOpCode.PipelineListBuilderAdd:
                 AppendSlot(builder, "builder", instruction.XSlot);
                 AppendSlot(builder, "item", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
+            case GameEventScriptBytecodeOpCode.PipelineListBuilderFinish:
                 AppendSlot(builder, "builder", instruction.XSlot);
                 break;
 
@@ -351,17 +351,17 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.MoveSlot:
-            case GameEventScriptBytecodeOpCode.UnaryNegate:
-            case GameEventScriptBytecodeOpCode.UnaryNot:
-            case GameEventScriptBytecodeOpCode.UnaryHasValue:
-            case GameEventScriptBytecodeOpCode.UnaryEmpty:
-            case GameEventScriptBytecodeOpCode.UnaryLength:
-            case GameEventScriptBytecodeOpCode.UnaryChance:
-            case GameEventScriptBytecodeOpCode.UnaryKeys:
-            case GameEventScriptBytecodeOpCode.UnaryValues:
-            case GameEventScriptBytecodeOpCode.UnaryEntries:
-            case GameEventScriptBytecodeOpCode.UnaryAbs:
-            case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
+            case GameEventScriptBytecodeOpCode.Negate:
+            case GameEventScriptBytecodeOpCode.Not:
+            case GameEventScriptBytecodeOpCode.HasValue:
+            case GameEventScriptBytecodeOpCode.IsEmpty:
+            case GameEventScriptBytecodeOpCode.Length:
+            case GameEventScriptBytecodeOpCode.Chance:
+            case GameEventScriptBytecodeOpCode.KeysOfMap:
+            case GameEventScriptBytecodeOpCode.ValuesOfMap:
+            case GameEventScriptBytecodeOpCode.EntriesOfMap:
+            case GameEventScriptBytecodeOpCode.Abs:
+            case GameEventScriptBytecodeOpCode.LogN:
                 AppendSlot(builder, "src", instruction.XSlot);
                 break;
 
@@ -377,7 +377,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "src", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.Dice:
+            case GameEventScriptBytecodeOpCode.CreateDice:
                 AppendSignedImmediate(builder, "dice", instruction.Count);
                 AppendSignedImmediate(builder, "sides", instruction.ImmediateY);
                 break;
@@ -406,12 +406,12 @@ public static class GameEventScriptBytecodeDumper
                 AppendIndex(builder, "tags", instruction.ListIndex);
                 break;
 
-            case GameEventScriptBytecodeOpCode.Range:
+            case GameEventScriptBytecodeOpCode.CreateRange:
                 AppendSlot(builder, "from", instruction.XSlot);
                 AppendSlot(builder, "to", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeWithStep:
+            case GameEventScriptBytecodeOpCode.CreateRangeWithStep:
                 AppendSlot(builder, "from", instruction.XSlot);
                 AppendSlot(builder, "to", instruction.YSlot);
                 AppendSlot(builder, "step", instruction.AU);
@@ -428,11 +428,11 @@ public static class GameEventScriptBytecodeDumper
                 AppendSignedImmediate(builder, "immediateX", instruction.ImmediateX);
                 break;
 
-            case GameEventScriptBytecodeOpCode.BuildList:
+            case GameEventScriptBytecodeOpCode.CreateList:
                 AppendSlotListPoolIndex(builder, "items", module, instruction.ListIndex);
                 break;
 
-            case GameEventScriptBytecodeOpCode.BuildMap:
+            case GameEventScriptBytecodeOpCode.CreateMap:
                 AppendStringListPoolIndex(builder, "keys", module, instruction.SecondaryListIndex);
                 AppendSlotListPoolIndex(builder, "values", module, instruction.ListIndex);
                 break;
@@ -464,7 +464,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "target", instruction.EntryAddress);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineIterator:
+            case GameEventScriptBytecodeOpCode.PipelineStream:
                 AppendSlot(builder, "source", instruction.XSlot);
                 AppendAddress(builder, "entry", instruction.EntryAddress);
                 AppendSlot(builder, "item", instruction.AU);
@@ -657,7 +657,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-            GameEventScriptBytecodeOpCode.CollectionBuilderAdd or
+            GameEventScriptBytecodeOpCode.PipelineListBuilderAdd or
             GameEventScriptBytecodeOpCode.StreamClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or

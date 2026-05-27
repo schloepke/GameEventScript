@@ -602,7 +602,7 @@ internal sealed class GesLinearBytecodeBuilder
     private int EmitSourceGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection, SourceContext context, ExpressionState state)
     {
         var builderOpCode = generatedCollection.CollectionType == "list"
-            ? GameEventScriptBytecodeOpCode.CollectionBuilderList
+            ? GameEventScriptBytecodeOpCode.PipelineListCreateBuilder
             : throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support generated collection type '{generatedCollection.CollectionType}'.");
 
         var builderSlot = AllocateSlot(state);
@@ -632,7 +632,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var projectionSlot = EmitSourceExpression(generatedCollection.Projection, iterationContext, state);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionBuilderAdd, a: builderSlot, b: projectionSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.PipelineListBuilderAdd, a: builderSlot, b: projectionSlot));
         if (skipProjectionJump >= 0)
         {
             PatchTarget(skipProjectionJump, _code.Count);
@@ -647,7 +647,7 @@ internal sealed class GesLinearBytecodeBuilder
         EndScope(outerScopeAddress);
 
         var resultSlot = AllocateSlot(state);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionBuilderFinish, dest: resultSlot, a: builderSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.PipelineListBuilderFinish, dest: resultSlot, a: builderSlot));
         return resultSlot;
     }
 
@@ -711,7 +711,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitSourceExtensionCall(extensionCall, context, state);
 
             case ListLiteralExpressionNode list:
-                return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.BuildList, list.Items, null, context, state);
+                return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.CreateList, list.Items, null, context, state);
 
             case MapLiteralExpressionNode dictionary:
                 return EmitSourceDictionary(dictionary, context, state);
@@ -737,7 +737,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var from = EmitSourceExpression(random.FromExpression, context, state);
                 var to = EmitSourceExpression(random.ToExpression, context, state);
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Random, from, to);
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.RandomTake, from, to);
             }
 
             case RangeExpressionNode range:
@@ -1166,7 +1166,7 @@ internal sealed class GesLinearBytecodeBuilder
         var valueSlotListIndex = ResolveSlotListIndex(valueSlots);
         return EmitValueInstruction(
             state,
-            GameEventScriptBytecodeOpCode.BuildMap,
+            GameEventScriptBytecodeOpCode.CreateMap,
             a: nameListIndex,
             b: valueSlotListIndex);
     }
@@ -1201,8 +1201,8 @@ internal sealed class GesLinearBytecodeBuilder
         var to = EmitSourceExpression(range.ToExpression, context, state);
         var step = range.StepExpression is null ? -1 : EmitSourceExpression(range.StepExpression, context, state);
         return step >= 0
-            ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.RangeWithStep, from, to, step)
-            : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Range, from, to);
+            ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.CreateRangeWithStep, from, to, step)
+            : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.CreateRange, from, to);
     }
 
     private int EmitSourceSeededRandomExpression(SeededRandomExpressionNode seededRandom, SourceContext context, ExpressionState state)
@@ -1659,28 +1659,28 @@ internal sealed class GesLinearBytecodeBuilder
         ExpressionState state)
         => selector switch
         {
-            FilterSelectorNode filter => EmitPipelineIterator(
+            FilterSelectorNode filter => EmitPipelineStream(
                 sourceIteratorSlot,
                 filter.Identifier,
                 filter.Predicate,
-                PipelineIteratorEntryKind.Filter,
+                PipelineStreamEntryKind.Filter,
                 context,
                 state),
-            SelectSelectorNode select => EmitPipelineIterator(
+            SelectSelectorNode select => EmitPipelineStream(
                 sourceIteratorSlot,
                 select.Identifier,
                 select.Projection,
-                PipelineIteratorEntryKind.Select,
+                PipelineStreamEntryKind.Select,
                 context,
                 state),
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support non-terminal selector node '{selector.GetType().Name}'.")
         };
 
-    private int EmitPipelineIterator(
+    private int EmitPipelineStream(
         int sourceIteratorSlot,
         string itemIdentifier,
         ExpressionNode expression,
-        PipelineIteratorEntryKind kind,
+        PipelineStreamEntryKind kind,
         SourceContext context,
         ExpressionState state)
     {
@@ -1688,7 +1688,7 @@ internal sealed class GesLinearBytecodeBuilder
         var captures = ResolvePipelineCaptures(expression, itemIdentifier, context);
         var captureSlotListIndex = ResolveSlotListIndex(captures.Select(capture => capture.SourceSlot).ToArray());
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.PipelineIterator,
+            GameEventScriptBytecodeOpCode.PipelineStream,
             dest: iteratorSlot,
             a: sourceIteratorSlot,
             c: 0,
@@ -1697,7 +1697,7 @@ internal sealed class GesLinearBytecodeBuilder
         {
             var helperContext = CreatePipelineHelperContext(itemIdentifier, captures);
             var helperState = new ExpressionState(helperContext.SlotCount);
-            var entryAddress = kind == PipelineIteratorEntryKind.Filter
+            var entryAddress = kind == PipelineStreamEntryKind.Filter
                 ? EmitPipelineFilterEntry(0, expression, helperContext, helperState)
                 : EmitSourceExpressionEntry(expression, helperContext, helperState);
             PatchB(instructionAddress, entryAddress);
@@ -1730,21 +1730,21 @@ internal sealed class GesLinearBytecodeBuilder
         {
             case SelectSelectorNode select:
                 return EmitPipelineCollect(
-                    EmitPipelineIterator(iteratorSlot, select.Identifier, select.Projection, PipelineIteratorEntryKind.Select, context, state),
+                    EmitPipelineStream(iteratorSlot, select.Identifier, select.Projection, PipelineStreamEntryKind.Select, context, state),
                     state);
 
             case FilterSelectorNode filter:
                 return EmitPipelineCollect(
-                    EmitPipelineIterator(iteratorSlot, filter.Identifier, filter.Predicate, PipelineIteratorEntryKind.Filter, context, state),
+                    EmitPipelineStream(iteratorSlot, filter.Identifier, filter.Predicate, PipelineStreamEntryKind.Filter, context, state),
                     state);
 
             case PredicateSelectorNode predicate:
             {
-                var predicateIterator = EmitPipelineIterator(
+                var predicateIterator = EmitPipelineStream(
                     iteratorSlot,
                     predicate.Identifier,
                     predicate.Predicate,
-                    PipelineIteratorEntryKind.Select,
+                    PipelineStreamEntryKind.Select,
                     context,
                     state);
                 return EmitValueInstruction(
@@ -1759,11 +1759,11 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 if (edge.Predicate is not null && !string.IsNullOrEmpty(edge.Identifier))
                 {
-                    iteratorSlot = EmitPipelineIterator(
+                    iteratorSlot = EmitPipelineStream(
                         iteratorSlot,
                         edge.Identifier!,
                         edge.Predicate,
-                        PipelineIteratorEntryKind.Filter,
+                        PipelineStreamEntryKind.Filter,
                         context,
                         state);
                 }
@@ -1781,11 +1781,11 @@ internal sealed class GesLinearBytecodeBuilder
 
             case CountSelectorNode count:
             {
-                var filteredIterator = EmitPipelineIterator(
+                var filteredIterator = EmitPipelineStream(
                     iteratorSlot,
                     count.Identifier,
                     count.Predicate,
-                    PipelineIteratorEntryKind.Filter,
+                    PipelineStreamEntryKind.Filter,
                     context,
                     state);
                 return EmitPipelineCount(filteredIterator, state);
@@ -1793,11 +1793,11 @@ internal sealed class GesLinearBytecodeBuilder
 
             case SumSelectorNode sum:
             {
-                var projectedIterator = EmitPipelineIterator(
+                var projectedIterator = EmitPipelineStream(
                     iteratorSlot,
                     sum.Identifier,
                     sum.Projection,
-                    PipelineIteratorEntryKind.Select,
+                    PipelineStreamEntryKind.Select,
                     context,
                     state);
                 return EmitPipelineSum(projectedIterator, state);
@@ -1805,11 +1805,11 @@ internal sealed class GesLinearBytecodeBuilder
 
             case AverageSelectorNode average:
             {
-                var projectedIterator = EmitPipelineIterator(
+                var projectedIterator = EmitPipelineStream(
                     iteratorSlot,
                     average.Identifier,
                     average.Projection,
-                    PipelineIteratorEntryKind.Select,
+                    PipelineStreamEntryKind.Select,
                     context,
                     state);
                 return EmitPipelineAverage(projectedIterator, state);
@@ -2011,11 +2011,11 @@ internal sealed class GesLinearBytecodeBuilder
     {
         if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
         {
-            iteratorSlot = EmitPipelineIterator(
+            iteratorSlot = EmitPipelineStream(
                 iteratorSlot,
                 choose.Identifier!,
                 choose.Predicate,
-                PipelineIteratorEntryKind.Filter,
+                PipelineStreamEntryKind.Filter,
                 context,
                 state);
         }
@@ -2274,7 +2274,7 @@ internal sealed class GesLinearBytecodeBuilder
         var captures = ResolvePipelineCaptures(pattern, context);
         var captureSlotListIndex = ResolveSlotListIndex(captures.Select(capture => capture.SourceSlot).ToArray());
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.PipelineIterator,
+            GameEventScriptBytecodeOpCode.PipelineStream,
             dest: matchIterator,
             a: iteratorSlot,
             c: 0,
@@ -2340,7 +2340,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var iteratorSlot = AllocateSlot(state);
                 var instruction = new GameEventScriptBytecodeInstruction { 
-                    OpCode = GameEventScriptBytecodeOpCode.RangeIteratorShort,
+                    OpCode = GameEventScriptBytecodeOpCode.CreateRangeIteratorShort,
                     DestinationSlot = ToUShortOperand(iteratorSlot, "iterator slot"),
                     ImmediateX = from,
                     ImmediateY = to,
@@ -2359,8 +2359,8 @@ internal sealed class GesLinearBytecodeBuilder
                     : EmitSourceExpression(range.RangeExpression.StepExpression, context, state);
                 var iteratorSlot = AllocateSlot(state);
                 Emit(stepSlot >= 0
-                    ? CreateInstruction(GameEventScriptBytecodeOpCode.RangeIteratorWithStep, dest: iteratorSlot, a: fromSlot, b: toSlot, c: stepSlot)
-                    : CreateInstruction(GameEventScriptBytecodeOpCode.RangeIterator, dest: iteratorSlot, a: fromSlot, b: toSlot));
+                    ? CreateInstruction(GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep, dest: iteratorSlot, a: fromSlot, b: toSlot, c: stepSlot)
+                    : CreateInstruction(GameEventScriptBytecodeOpCode.CreateRangeIterator, dest: iteratorSlot, a: fromSlot, b: toSlot));
                 return iteratorSlot;
             }
 
@@ -2454,7 +2454,7 @@ internal sealed class GesLinearBytecodeBuilder
         var dest = AllocateSlot(state);
         Emit(new GameEventScriptBytecodeInstruction
         {
-            OpCode = GameEventScriptBytecodeOpCode.Dice,
+            OpCode = GameEventScriptBytecodeOpCode.CreateDice,
             DestinationSlot = ToUShortOperand(dest, "destination operand"),
             Count = ToShortOperand(dice.DiceCount, "dice count"),
             ImmediateY = ToShortOperand(dice.SideCount, "dice side count")
@@ -2868,17 +2868,17 @@ internal sealed class GesLinearBytecodeBuilder
     private static GameEventScriptBytecodeOpCode ToUnaryOpCode(GesUnaryOperator operation)
         => operation switch
         {
-            GesUnaryOperator.Negate => GameEventScriptBytecodeOpCode.UnaryNegate,
-            GesUnaryOperator.Not => GameEventScriptBytecodeOpCode.UnaryNot,
-            GesUnaryOperator.HasValue => GameEventScriptBytecodeOpCode.UnaryHasValue,
-            GesUnaryOperator.Empty => GameEventScriptBytecodeOpCode.UnaryEmpty,
-            GesUnaryOperator.Length => GameEventScriptBytecodeOpCode.UnaryLength,
-            GesUnaryOperator.Chance => GameEventScriptBytecodeOpCode.UnaryChance,
-            GesUnaryOperator.Keys => GameEventScriptBytecodeOpCode.UnaryKeys,
-            GesUnaryOperator.Values => GameEventScriptBytecodeOpCode.UnaryValues,
-            GesUnaryOperator.Entries => GameEventScriptBytecodeOpCode.UnaryEntries,
-            GesUnaryOperator.Abs => GameEventScriptBytecodeOpCode.UnaryAbs,
-            GesUnaryOperator.NaturalLog => GameEventScriptBytecodeOpCode.UnaryNaturalLog,
+            GesUnaryOperator.Negate => GameEventScriptBytecodeOpCode.Negate,
+            GesUnaryOperator.Not => GameEventScriptBytecodeOpCode.Not,
+            GesUnaryOperator.HasValue => GameEventScriptBytecodeOpCode.HasValue,
+            GesUnaryOperator.Empty => GameEventScriptBytecodeOpCode.IsEmpty,
+            GesUnaryOperator.Length => GameEventScriptBytecodeOpCode.Length,
+            GesUnaryOperator.Chance => GameEventScriptBytecodeOpCode.Chance,
+            GesUnaryOperator.Keys => GameEventScriptBytecodeOpCode.KeysOfMap,
+            GesUnaryOperator.Values => GameEventScriptBytecodeOpCode.ValuesOfMap,
+            GesUnaryOperator.Entries => GameEventScriptBytecodeOpCode.EntriesOfMap,
+            GesUnaryOperator.Abs => GameEventScriptBytecodeOpCode.Abs,
+            GesUnaryOperator.NaturalLog => GameEventScriptBytecodeOpCode.LogN,
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support unary operator '{operation.ToSourceText()}'.")
         };
 
@@ -2974,7 +2974,7 @@ internal sealed class GesLinearBytecodeBuilder
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support binary operator '{operation.ToSourceText()}'.")
         };
 
-    private enum PipelineIteratorEntryKind
+    private enum PipelineStreamEntryKind
     {
         Filter,
         Select

@@ -226,7 +226,7 @@ not a second runtime dispatch step.
 | 0x23 | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
 | 0x24..0x2F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
-### Group 2 - Loads, Argument Staging, Type Construction
+### Group 2 - Loads, Argument Staging, Value Creation, Type Construction
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -249,10 +249,18 @@ not a second runtime dispatch step.
 | 0x40 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
 | 0x41 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
 | 0x42 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
-| 0x43 | `TypeConstructor` | - | result slot | `StringIndex`=type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a record/external value from named argument slots. |
+| 0x43 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
 | 0x44 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
 | 0x45 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 2. |
+| 0x46 | `CreateList` | - | result slot | - | `ListIndex`=item slots | - | Creates a list from slot-list operands. |
+| 0x47 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Creates a map from key names and value slots. |
+| 0x48 | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
+| 0x49 | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
+| 0x4A | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0x4B | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
+| 0x4C | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
+| 0x4D..0x4E | reserved | - | - | - | - | - | Reserved value-creation slots. |
+| 0x4F | `TypeConstructor` | - | result slot | `StringIndex`=type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a record/external value from named argument slots. |
 
 ### Group 3 - Boolean, Comparison, Presence
 
@@ -262,9 +270,9 @@ not a second runtime dispatch step.
 | 0x51 | `And` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
 | 0x52 | `Xor` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
 | 0x53 | `Implies` | - | result slot | `XSlot`=antecedent | `YSlot`=consequent | - | Binary implication combine. |
-| 0x54 | `UnaryNot` | - | result slot | `XSlot`=operand | - | - | Logical negation. |
-| 0x55 | `UnaryHasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check. |
-| 0x56 | `UnaryEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check. |
+| 0x54 | `Not` | - | result slot | `XSlot`=operand | - | - | Logical negation. |
+| 0x55 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check. |
+| 0x56 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check. |
 | 0x57 | `Equal` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
 | 0x58 | `NotEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
 | 0x59 | `ApproxEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Approximate equality. |
@@ -293,7 +301,7 @@ writes numeric `NaN`. `Power` preserves a left quantity unit only for a
 unitless exponent of `1`, including `true` after numeric coercion; unit exponent
 `0`, including `false`, produces a unitless result. Other quantity powers write
 numeric `NaN`.
-`UnaryAbs` preserves percentage values as percentages and preserves quantity
+`Abs` preserves percentage values as percentages and preserves quantity
 units on numeric quantities. Finite exactly integral numeric results are stored
 as integer values when they fit signed 64-bit.
 Percentage multiplication with a non-percentage scalar or quantity treats the
@@ -313,12 +321,12 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0x78..0x7E | reserved | - | - | - | - | - | Former integer arithmetic fast-path range. |
 | 0x7F | `Min` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
 | 0x80 | `Max` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
-| 0x81 | `UnaryNegate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |
-| 0x82 | `UnaryAbs` | - | result slot | `XSlot`=operand | - | - | Absolute value. |
-| 0x83 | `UnaryNaturalLog` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
-| 0x84 | `UnaryChance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
+| 0x81 | `Negate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |
+| 0x82 | `Abs` | - | result slot | `XSlot`=operand | - | - | Absolute value. |
+| 0x83 | `LogN` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
+| 0x84 | `Chance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
 | 0x85 | `Clamp` | - | result slot | `XSlot`=value | `YSlot`=minimum | `AU`=maximum slot | The only opcode with three direct source slots. |
-| 0x86 | `Random` | - | result slot | `XSlot`=from | `YSlot`=to | - | Uses current random scope. |
+| 0x86 | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a random value from the requested range using the current random scope. |
 | 0x87 | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
 | 0x88 | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
 | 0x89 | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
@@ -328,7 +336,7 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0x90 | `UnaryLength` | - | result slot | `XSlot`=operand | - | - | Length operation. |
+| 0x90 | `Length` | - | result slot | `XSlot`=operand | - | - | Length operation. |
 | 0x91 | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text operation. |
 | 0x92 | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text operation. |
 | 0x93 | `Contains` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection/text membership operation. |
@@ -337,14 +345,10 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0x96 | `Combine` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
 | 0x97 | `Except` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
 | 0x98 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
-| 0x99 | `UnaryKeys` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
-| 0x9A | `UnaryValues` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
-| 0x9B | `UnaryEntries` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
-| 0x9C | `Range` | - | result slot | `XSlot`=from | `YSlot`=to | - | Builds a range with implicit step `1`. |
-| 0x9D | `RangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Builds a range with explicit step. |
-| 0x9E | `RangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
-| 0x9F | `RangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
-| 0xA0 | `RangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
+| 0x99 | `KeysOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9A | `ValuesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9B | `EntriesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9C..0xA0 | reserved | - | - | - | - | - | Reserved space after map projections. |
 | 0xA1 | `CollectionIterator` | - | iterator slot | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
 | 0xA2 | `StreamNext` | - | item slot | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
 | 0xA3 | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
@@ -354,79 +358,70 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0xA7 | `SeriesTerm` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a series term. |
 | 0xA8 | `SeriesTake` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a series or list-like source. |
 | 0xA9 | `SeriesDrop` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a series or list-like source. |
-| 0xAA | `PipelineIterator` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=next | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
-| 0xAB..0xAF | reserved | - | - | - | - | - | Reserved tail of Group 5. |
+| 0xAA..0xAF | reserved | - | - | - | - | - | Reserved tail of Group 5. |
 
-### Group 6 - Collection And Value Building
-
-| Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xB0 | `BuildList` | - | result slot | - | `ListIndex`=item slots | - | Builds a list from slot-list operands. |
-| 0xB1 | `BuildMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Builds a map from key names and value slots. |
-| 0xB2 | reserved | - | - | - | - | - | Reserved slot in the collection/value-building group. |
-| 0xB3 | `CollectionBuilderList` | - | builder slot | - | - | - | Creates a VM-internal list builder. |
-| 0xB4 | `CollectionBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xB5 | `CollectionBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the builder as a list. |
-| 0xB6 | `Dice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | `X` and `Y` are not slots. |
-| 0xB7..0xBF | reserved | - | - | - | - | - | Reserved tail of Group 6. |
-
-### Group 7 - Pipeline Operations
+### Group 6 - Pipeline Operations
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xC0 | `PipelineCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xC1 | `PipelineFirst` | - | result slot | `XSlot`=iterator | - | - | Returns the first element or `nothing`. |
-| 0xC2 | `PipelineLast` | - | result slot | `XSlot`=iterator | - | - | Returns the last element or `nothing`. |
-| 0xC3 | `PipelineSingle` | - | result slot | `XSlot`=iterator | - | - | Returns the only element or `nothing`. |
-| 0xC4 | `PipelineHasAny` | - | result slot | `XSlot`=iterator | - | - | Tri-state `any` over projected predicate values. |
-| 0xC5 | `PipelineHasAll` | - | result slot | `XSlot`=iterator | - | - | Tri-state `all` over projected predicate values. |
-| 0xC6 | `PipelineContainsSingle` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains one value. |
-| 0xC7 | `PipelineContainsAny` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains any values from the needle collection. |
-| 0xC8 | `PipelineContainsAll` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains all values from the needle collection. |
-| 0xC9 | `PipelineMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Builds a map with each source item as the value. |
-| 0xCA | `PipelineMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Builds a map from key and value helper entries. |
-| 0xCB | `PipelineDistinct` | - | result slot | `XSlot`=iterator | - | - | Materializes distinct source items in source order. |
-| 0xCC | `PipelineDistinctBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. |
-| 0xCD | `PipelineGroupBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. |
-| 0xCE | `PipelineReverse` | - | result slot | `XSlot`=iterator | - | - | Materializes source items in reverse order. |
-| 0xCF | `PipelineSortAscending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items ascending. |
-| 0xD0 | `PipelineSortDescending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items descending. |
-| 0xD1 | `PipelineOrderByAscending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. |
-| 0xD2 | `PipelineOrderByDescending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. |
-| 0xD3 | `PipelineTakeFirst` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the first `Y` items. |
-| 0xD4 | `PipelineTakeLast` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the last `Y` items. |
-| 0xD5 | `PipelineTakeHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the highest `Y` items. |
-| 0xD6 | `PipelineTakeLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the lowest `Y` items. |
-| 0xD7 | `PipelineDropFirst` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the first `Y` items. |
-| 0xD8 | `PipelineDropLast` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the last `Y` items. |
-| 0xD9 | `PipelineDropHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the highest `Y` items. |
-| 0xDA | `PipelineDropLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the lowest `Y` items. |
-| 0xDB | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
-| 0xDC | `PipelineDraw` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Draws `Y` source items. |
-| 0xDD | `PipelineChoose` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Chooses up to `Y` source items. |
-| 0xDE | `PipelineChooseRandom` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Randomly chooses up to `Y` source items. |
-| 0xDF | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
-| 0xE0 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
-| 0xE1 | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
-| 0xE2 | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
-| 0xE3 | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
-| 0xE4 | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
-| 0xE5 | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
-| 0xE6 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
-| 0xE7 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xC0 | `PipelineStream` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=next | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
+| 0xC1 | `PipelineCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xC2 | `PipelineFirst` | - | result slot | `XSlot`=iterator | - | - | Returns the first element or `nothing`. |
+| 0xC3 | `PipelineLast` | - | result slot | `XSlot`=iterator | - | - | Returns the last element or `nothing`. |
+| 0xC4 | `PipelineSingle` | - | result slot | `XSlot`=iterator | - | - | Returns the only element or `nothing`. |
+| 0xC5 | `PipelineHasAny` | - | result slot | `XSlot`=iterator | - | - | Tri-state `any` over projected predicate values. |
+| 0xC6 | `PipelineHasAll` | - | result slot | `XSlot`=iterator | - | - | Tri-state `all` over projected predicate values. |
+| 0xC7 | `PipelineContainsSingle` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains one value. |
+| 0xC8 | `PipelineContainsAny` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains any values from the needle collection. |
+| 0xC9 | `PipelineContainsAll` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains all values from the needle collection. |
+| 0xCA | `PipelineMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Builds a map with each source item as the value. |
+| 0xCB | `PipelineMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Builds a map from key and value helper entries. |
+| 0xCC | `PipelineDistinct` | - | result slot | `XSlot`=iterator | - | - | Materializes distinct source items in source order. |
+| 0xCD | `PipelineDistinctBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. |
+| 0xCE | `PipelineGroupBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. |
+| 0xCF | `PipelineReverse` | - | result slot | `XSlot`=iterator | - | - | Materializes source items in reverse order. |
+| 0xD0 | `PipelineSortAscending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items ascending. |
+| 0xD1 | `PipelineSortDescending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items descending. |
+| 0xD2 | `PipelineOrderByAscending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. |
+| 0xD3 | `PipelineOrderByDescending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. |
+| 0xD4 | `PipelineTakeFirst` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the first `Y` items. |
+| 0xD5 | `PipelineTakeLast` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the last `Y` items. |
+| 0xD6 | `PipelineTakeHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the highest `Y` items. |
+| 0xD7 | `PipelineTakeLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the lowest `Y` items. |
+| 0xD8 | `PipelineDropFirst` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the first `Y` items. |
+| 0xD9 | `PipelineDropLast` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the last `Y` items. |
+| 0xDA | `PipelineDropHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the highest `Y` items. |
+| 0xDB | `PipelineDropLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the lowest `Y` items. |
+| 0xDC | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
+| 0xDD | `PipelineDraw` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Draws `Y` source items. |
+| 0xDE | `PipelineChoose` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Chooses up to `Y` source items. |
+| 0xDF | `PipelineChooseRandom` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Randomly chooses up to `Y` source items. |
+| 0xE0 | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
+| 0xE1 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
+| 0xE2 | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
+| 0xE3 | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
+| 0xE4 | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
+| 0xE5 | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
+| 0xE6 | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
+| 0xE7 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
+| 0xE8 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xE9 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
+| 0xEA | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xEB | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
 
 ### Reserved Opcode Space
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xE8..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
+| 0xB0..0xBF | reserved | - | - | - | - | - | Reserved after moving value creation into Group 2. |
+| 0xEC..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `Build*`, `BindHandler`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `CreateList`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
 | `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message

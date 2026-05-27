@@ -224,13 +224,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Implies:
                     _vmState.Register(instruction.DestinationSlot).VmImplies(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryNot:
+                case Not:
                     _vmState.Register(instruction.DestinationSlot).VmNot(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryHasValue:
+                case HasValue:
                     _vmState.Register(instruction.DestinationSlot).SetBoolean(_vmState.Register(instruction.XSlot).HasValue);
                     break;
-                case UnaryEmpty:
+                case IsEmpty:
                     _vmState.Register(instruction.DestinationSlot).VmEmpty(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case Equal:
@@ -288,22 +288,22 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Max:
                     _vmState.Register(instruction.DestinationSlot).VmMax(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryNegate:
+                case Negate:
                     _vmState.Register(instruction.DestinationSlot).VmNegate(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryAbs:
+                case Abs:
                     _vmState.Register(instruction.DestinationSlot).VmAbs(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryNaturalLog:
+                case LogN:
                     _vmState.Register(instruction.DestinationSlot).VmNaturalLog(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryChance:
+                case Chance:
                     _vmState.Register(instruction.DestinationSlot).VmChance(ref _vmState.Register(instruction.XSlot), ref _vmState);
                     break;
                 case Clamp:
                     _vmState.Register(instruction.DestinationSlot).VmClamp(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU), ref binary.TextConstantTable);
                     break;
-                case GameEventScriptBytecodeOpCode.Random:
+                case RandomTake:
                     _vmState.Register(instruction.DestinationSlot).VmRandom(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), _vmState.RandomGenerator, ref binary.TextConstantTable);
                     break;
                 case RandomPush:
@@ -316,7 +316,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case RandomPop:
                     _vmState.PopRandom();
                     break;
-                case UnaryLength:
+                case Length:
                     _vmState.Register(instruction.DestinationSlot).VmLength(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case StartsWith:
@@ -343,28 +343,28 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case Zip:
                     _vmState.Register(instruction.DestinationSlot).VmZip(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
-                case UnaryKeys:
+                case KeysOfMap:
                     _vmState.Register(instruction.DestinationSlot).VmKeys(ref _vmState.Register(instruction.XSlot));
                     break;
-                case UnaryValues:
+                case ValuesOfMap:
                     _vmState.Register(instruction.DestinationSlot).VmValues(ref _vmState.Register(instruction.XSlot));
                     break;
-                case UnaryEntries:
+                case EntriesOfMap:
                     _vmState.Register(instruction.DestinationSlot).VmEntries(ref _vmState.Register(instruction.XSlot));
                     break;
-                case GameEventScriptBytecodeOpCode.Range:
+                case CreateRange:
                     _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
-                case RangeWithStep:
+                case CreateRangeWithStep:
                     _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU));
                     break;
-                case RangeIterator:
+                case CreateRangeIterator:
                     _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, 1));
                     break;
-                case RangeIteratorWithStep:
+                case CreateRangeIteratorWithStep:
                     _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
                     break;
-                case RangeIteratorShort:
+                case CreateRangeIteratorShort:
                     _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                     break;
                 case CollectionIterator:
@@ -394,25 +394,25 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case SeriesDrop:
                     // FIXME: creating the real custom type here
                     break;
-                case PipelineIterator:
+                case PipelineStream:
                     // FIXME: creating the real custom type here
                     break;
-                case BuildList:
+                case CreateList:
                     _vmState.Register(instruction.DestinationSlot).VmBuildList(instruction.ListIndex, ref _vmState);
                     break;
-                case BuildMap:
+                case CreateMap:
                     _vmState.Register(instruction.DestinationSlot).VmBuildMap(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
                     break;
-                case CollectionBuilderList:
+                case PipelineListCreateBuilder:
                     _vmState.Register(instruction.DestinationSlot).VmCreateListBuilder();
                     break;
-                case CollectionBuilderAdd:
+                case PipelineListBuilderAdd:
                     _vmState.Register(instruction.XSlot).VmListBuilderAdd(ref _vmState.Register(instruction.YSlot));
                     break;
-                case CollectionBuilderFinish:
+                case PipelineListBuilderFinish:
                     _vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref _vmState.Register(instruction.XSlot));
                     break;
-                case GameEventScriptBytecodeOpCode.Dice:
+                case CreateDice:
                     _vmState.Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
                     break;
                 case PipelineCollectList:

@@ -365,18 +365,18 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlotListIndex(module, instruction.ListIndex, $"{context} tag slot list");
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeIterator:
+            case GameEventScriptBytecodeOpCode.CreateRangeIterator:
                 ValidateSlot(module, instruction.XSlot, $"{context} from slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeIteratorWithStep:
+            case GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep:
                 ValidateSlot(module, instruction.XSlot, $"{context} from slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 ValidateSlot(module, instruction.AU, $"{context} step slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeIteratorShort:
+            case GameEventScriptBytecodeOpCode.CreateRangeIteratorShort:
                 break;
 
             case GameEventScriptBytecodeOpCode.CollectionIterator:
@@ -405,7 +405,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.YSlot, $"{context} source slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineIterator:
+            case GameEventScriptBytecodeOpCode.PipelineStream:
                 ValidateSlot(module, instruction.XSlot, $"{context} source iterator slot");
                 ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} iterator entry");
                 ValidateSlot(module, instruction.AU, $"{context} item binding slot");
@@ -499,43 +499,43 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} series slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderList:
+            case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderAdd:
+            case GameEventScriptBytecodeOpCode.PipelineListBuilderAdd:
                 ValidateSlot(module, instruction.XSlot, $"{context} collection builder slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} collection item slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionBuilderFinish:
+            case GameEventScriptBytecodeOpCode.PipelineListBuilderFinish:
                 ValidateSlot(module, instruction.XSlot, $"{context} collection builder slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.Dice:
+            case GameEventScriptBytecodeOpCode.CreateDice:
                 ValidateNonNegative(instruction.Count, $"{context} dice count");
                 ValidateNonNegative(instruction.ImmediateY, $"{context} dice sides");
                 break;
 
-            case GameEventScriptBytecodeOpCode.UnaryNegate:
-            case GameEventScriptBytecodeOpCode.UnaryNot:
-            case GameEventScriptBytecodeOpCode.UnaryHasValue:
-            case GameEventScriptBytecodeOpCode.UnaryEmpty:
-            case GameEventScriptBytecodeOpCode.UnaryLength:
-            case GameEventScriptBytecodeOpCode.UnaryChance:
-            case GameEventScriptBytecodeOpCode.UnaryKeys:
-            case GameEventScriptBytecodeOpCode.UnaryValues:
-            case GameEventScriptBytecodeOpCode.UnaryEntries:
-            case GameEventScriptBytecodeOpCode.UnaryAbs:
-            case GameEventScriptBytecodeOpCode.UnaryNaturalLog:
+            case GameEventScriptBytecodeOpCode.Negate:
+            case GameEventScriptBytecodeOpCode.Not:
+            case GameEventScriptBytecodeOpCode.HasValue:
+            case GameEventScriptBytecodeOpCode.IsEmpty:
+            case GameEventScriptBytecodeOpCode.Length:
+            case GameEventScriptBytecodeOpCode.Chance:
+            case GameEventScriptBytecodeOpCode.KeysOfMap:
+            case GameEventScriptBytecodeOpCode.ValuesOfMap:
+            case GameEventScriptBytecodeOpCode.EntriesOfMap:
+            case GameEventScriptBytecodeOpCode.Abs:
+            case GameEventScriptBytecodeOpCode.LogN:
                 ValidateSlot(module, instruction.XSlot, $"{context} operand slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.Range:
+            case GameEventScriptBytecodeOpCode.CreateRange:
                 ValidateSlot(module, instruction.XSlot, $"{context} from slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.RangeWithStep:
+            case GameEventScriptBytecodeOpCode.CreateRangeWithStep:
                 ValidateSlot(module, instruction.XSlot, $"{context} from slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 ValidateSlot(module, instruction.AU, $"{context} step slot");
@@ -547,7 +547,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.AU, $"{context} maximum slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.Random:
+            case GameEventScriptBytecodeOpCode.RandomTake:
                 ValidateSlot(module, instruction.XSlot, $"{context} from slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 break;
@@ -569,11 +569,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSpatialComponentStart(instruction.ImmediateX, $"{context} component start");
                 break;
 
-            case GameEventScriptBytecodeOpCode.BuildList:
+            case GameEventScriptBytecodeOpCode.CreateList:
                 ValidateSlotListIndex(module, instruction.ListIndex, $"{context} item slots");
                 break;
 
-            case GameEventScriptBytecodeOpCode.BuildMap:
+            case GameEventScriptBytecodeOpCode.CreateMap:
                 ValidateStringListIndex(module, instruction.SecondaryListIndex, $"{context} keys");
                 ValidateSlotListIndex(module, instruction.ListIndex, $"{context} value slots");
                 ValidateMatchingListCounts(module, instruction.SecondaryListIndex, instruction.ListIndex, $"{context} map entries");
@@ -1098,7 +1098,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-            GameEventScriptBytecodeOpCode.CollectionBuilderAdd or
+            GameEventScriptBytecodeOpCode.PipelineListBuilderAdd or
             GameEventScriptBytecodeOpCode.StreamClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or

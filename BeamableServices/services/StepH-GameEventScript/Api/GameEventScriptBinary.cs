@@ -351,22 +351,22 @@ public enum GameEventScriptBytecodeOpCode : byte
     StreamReduceOrDefault = 0xA5,
     StreamFold = 0xA6,
     StreamCollectList = 0xA7,
+    StreamCollectMap = 0xA8,
+    StreamCollectMapValue = 0xA9,
+    StreamCollectFirst = 0xAA,
+    StreamCollectLast = 0xAB,
+    StreamCollectSingle = 0xAC,
 
     #endregion
 
     #region Group 4 - pipeline terminals and transforms
 
     PipelineStream = 0xC0,
-    PipelineFirst = 0xC2,
-    PipelineLast = 0xC3,
-    PipelineSingle = 0xC4,
     PipelineHasAny = 0xC5,
     PipelineHasAll = 0xC6,
     PipelineContainsSingle = 0xC7,
     PipelineContainsAny = 0xC8,
     PipelineContainsAll = 0xC9,
-    PipelineMap = 0xCA,
-    PipelineMapValue = 0xCB,
     PipelineDistinct = 0xCC,
     PipelineDistinctBy = 0xCD,
     PipelineGroupBy = 0xCE,

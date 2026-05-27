@@ -413,9 +413,9 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectList:
-            case GameEventScriptBytecodeOpCode.PipelineFirst:
-            case GameEventScriptBytecodeOpCode.PipelineLast:
-            case GameEventScriptBytecodeOpCode.PipelineSingle:
+            case GameEventScriptBytecodeOpCode.StreamCollectFirst:
+            case GameEventScriptBytecodeOpCode.StreamCollectLast:
+            case GameEventScriptBytecodeOpCode.StreamCollectSingle:
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
             case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
@@ -460,7 +460,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateEntryAddress(module, code, instruction.BU, $"{context} reducer entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineMap:
+            case GameEventScriptBytecodeOpCode.StreamCollectMap:
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
             case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
@@ -470,7 +470,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateEntryAddress(module, code, instruction.AU, $"{context} entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineMapValue:
+            case GameEventScriptBytecodeOpCode.StreamCollectMapValue:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.AU, $"{context} key entry");

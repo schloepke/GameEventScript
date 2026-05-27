@@ -345,7 +345,12 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0xA5 | `StreamReduceOrDefault` | - | accumulator/result slot | `XSlot`=iterator | `YSlot`=default | `AU`=item binding slot, `BU`=reducer entry address | Empty -> default; one item -> item; otherwise reducer combines accumulator and item. |
 | 0xA6 | `StreamFold` | - | accumulator/result slot | `XSlot`=iterator | `YSlot`=seed | `AU`=item binding slot, `BU`=reducer entry address | Starts with seed and runs reducer for every item. |
 | 0xA7 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xA8..0xAF | reserved | - | - | - | - | - | Reserved tail of Group 3. |
+| 0xA8 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
+| 0xA9 | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
+| 0xAA | `StreamCollectFirst` | - | result slot | `XSlot`=iterator | - | - | Returns the first stream element or `nothing`. Short-circuits after the first item. |
+| 0xAB | `StreamCollectLast` | - | result slot | `XSlot`=iterator | - | - | Returns the last stream element or `nothing`. Consumes the iterator. |
+| 0xAC | `StreamCollectSingle` | - | result slot | `XSlot`=iterator | - | - | Returns the only stream element or `nothing`. Consumes enough of the iterator to detect multiple items. |
+| 0xAD..0xAF | reserved | - | - | - | - | - | Reserved tail of Group 3. |
 
 ### Group 4 - Pipeline Operations
 
@@ -353,16 +358,13 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0xC0 | `PipelineStream` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=next | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
 | 0xC1 | reserved | - | - | - | - | - | Reserved after moving list materialization to `StreamCollectList`. |
-| 0xC2 | `PipelineFirst` | - | result slot | `XSlot`=iterator | - | - | Returns the first element or `nothing`. |
-| 0xC3 | `PipelineLast` | - | result slot | `XSlot`=iterator | - | - | Returns the last element or `nothing`. |
-| 0xC4 | `PipelineSingle` | - | result slot | `XSlot`=iterator | - | - | Returns the only element or `nothing`. |
+| 0xC2..0xC4 | reserved | - | - | - | - | - | Reserved after moving first/last/single terminals to `StreamCollectFirst`, `StreamCollectLast`, and `StreamCollectSingle`. |
 | 0xC5 | `PipelineHasAny` | - | result slot | `XSlot`=iterator | - | - | Tri-state `any` over projected predicate values. |
 | 0xC6 | `PipelineHasAll` | - | result slot | `XSlot`=iterator | - | - | Tri-state `all` over projected predicate values. |
 | 0xC7 | `PipelineContainsSingle` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains one value. |
 | 0xC8 | `PipelineContainsAny` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains any values from the needle collection. |
 | 0xC9 | `PipelineContainsAll` | - | result slot | `XSlot`=iterator | `YSlot`=needle | - | Tests whether the pipeline target contains all values from the needle collection. |
-| 0xCA | `PipelineMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Builds a map with each source item as the value. |
-| 0xCB | `PipelineMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Builds a map from key and value helper entries. |
+| 0xCA..0xCB | reserved | - | - | - | - | - | Reserved after moving map materialization to `StreamCollectMap*`. |
 | 0xCC | `PipelineDistinct` | - | result slot | `XSlot`=iterator | - | - | Materializes distinct source items in source order. |
 | 0xCD | `PipelineDistinctBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. |
 | 0xCE | `PipelineGroupBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. |

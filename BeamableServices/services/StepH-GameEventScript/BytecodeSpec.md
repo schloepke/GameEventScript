@@ -951,7 +951,9 @@ Core streaming shape:
 StreamCreate source -> iterator
 PipelineStream transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
 StreamCollectList dst iterator
-PipelineFirst/Last/Single dst iterator
+StreamCollectMap dst iterator itemBindingSlot keyEntry
+StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
+StreamCollectFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
 StreamReduce dst iterator itemBindingSlot reducerEntry
 StreamReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry

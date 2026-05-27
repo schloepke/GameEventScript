@@ -108,10 +108,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
             case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
             case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
-            case GameEventScriptBytecodeOpCode.PipelineMap:
+            case GameEventScriptBytecodeOpCode.StreamCollectMap:
                 return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.PipelineMapValue:
+            case GameEventScriptBytecodeOpCode.StreamCollectMapValue:
                 return allowPipeline &&
                        CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline) &&
                        CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
@@ -1101,13 +1101,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StreamCollectList:
                 return TryExecuteStreamCollectList(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineFirst:
+            case GameEventScriptBytecodeOpCode.StreamCollectFirst:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.First);
 
-            case GameEventScriptBytecodeOpCode.PipelineLast:
+            case GameEventScriptBytecodeOpCode.StreamCollectLast:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.Last);
 
-            case GameEventScriptBytecodeOpCode.PipelineSingle:
+            case GameEventScriptBytecodeOpCode.StreamCollectSingle:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.Single);
 
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
@@ -1130,9 +1130,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineContainsAll:
                 return TryExecutePipelineContains(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineMap:
-            case GameEventScriptBytecodeOpCode.PipelineMapValue:
-                return TryExecutePipelineMap(instruction);
+            case GameEventScriptBytecodeOpCode.StreamCollectMap:
+            case GameEventScriptBytecodeOpCode.StreamCollectMapValue:
+                return TryExecuteStreamCollectMap(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineDistinct:
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
@@ -2861,7 +2861,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecutePipelineMap(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteStreamCollectMap(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
@@ -2890,7 +2890,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     continue;
                 }
 
-                if (instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineMapValue)
+                if (instruction.OpCode == GameEventScriptBytecodeOpCode.StreamCollectMapValue)
                 {
                     if (!TryEvaluatePipelineEntryValue(instruction.BU, instruction.YSlot, item, out var projectedValue))
                     {

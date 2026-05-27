@@ -1796,9 +1796,9 @@ internal sealed class GesLinearBytecodeBuilder
                     state,
                     edge.Mode switch
                     {
-                        "last" => GameEventScriptBytecodeOpCode.PipelineLast,
-                        "single" => GameEventScriptBytecodeOpCode.PipelineSingle,
-                        _ => GameEventScriptBytecodeOpCode.PipelineFirst
+                        "last" => GameEventScriptBytecodeOpCode.StreamCollectLast,
+                        "single" => GameEventScriptBytecodeOpCode.StreamCollectSingle,
+                        _ => GameEventScriptBytecodeOpCode.StreamCollectFirst
                     },
                     a: iteratorSlot);
             }
@@ -1846,7 +1846,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitPipelineExtrema(iteratorSlot, context.RequireSlot(max.Identifier), max.Projection, isMax: true, context, state);
 
             case MapSelectorNode dictionary:
-                return EmitPipelineMap(
+                return EmitStreamCollectMap(
                     iteratorSlot,
                     context.RequireSlot(dictionary.Identifier),
                     dictionary.KeyProjection,
@@ -1955,7 +1955,7 @@ internal sealed class GesLinearBytecodeBuilder
         return resultSlot;
     }
 
-    private int EmitPipelineMap(
+    private int EmitStreamCollectMap(
         int iteratorSlot,
         int itemSlot,
         ExpressionNode keyProjection,
@@ -1965,7 +1965,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var resultSlot = AllocateSlot(state);
         var instructionAddress = Emit(CreateInstruction(
-            valueProjection is null ? GameEventScriptBytecodeOpCode.PipelineMap : GameEventScriptBytecodeOpCode.PipelineMapValue,
+            valueProjection is null ? GameEventScriptBytecodeOpCode.StreamCollectMap : GameEventScriptBytecodeOpCode.StreamCollectMapValue,
             dest: resultSlot,
             a: iteratorSlot,
             b: itemSlot));

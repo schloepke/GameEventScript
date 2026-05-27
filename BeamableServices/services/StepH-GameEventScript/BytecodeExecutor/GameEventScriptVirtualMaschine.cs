@@ -421,13 +421,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case StreamCollectList:
                     // FIXME: creating the real custom type here
                     break;
-                case PipelineFirst:
+                case StreamCollectFirst:
                     // FIXME: creating the real custom type here
                     break;
-                case PipelineLast:
+                case StreamCollectLast:
                     // FIXME: creating the real custom type here
                     break;
-                case PipelineSingle:
+                case StreamCollectSingle:
                     // FIXME: creating the real custom type here
                     break;
                 case PipelineHasAny:
@@ -445,10 +445,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PipelineContainsAll:
                     // FIXME: creating the real custom type here
                     break;
-                case PipelineMap:
+                case StreamCollectMap:
                     // FIXME: creating the real custom type here
                     break;
-                case PipelineMapValue:
+                case StreamCollectMapValue:
                     // FIXME: creating the real custom type here
                     break;
                 case PipelineDistinct:

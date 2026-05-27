@@ -478,9 +478,9 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectList:
-            case GameEventScriptBytecodeOpCode.PipelineFirst:
-            case GameEventScriptBytecodeOpCode.PipelineLast:
-            case GameEventScriptBytecodeOpCode.PipelineSingle:
+            case GameEventScriptBytecodeOpCode.StreamCollectFirst:
+            case GameEventScriptBytecodeOpCode.StreamCollectLast:
+            case GameEventScriptBytecodeOpCode.StreamCollectSingle:
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
             case GameEventScriptBytecodeOpCode.PipelineDistinct:
@@ -518,7 +518,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "needle", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineMap:
+            case GameEventScriptBytecodeOpCode.StreamCollectMap:
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
             case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
@@ -528,7 +528,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "entry", instruction.AU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineMapValue:
+            case GameEventScriptBytecodeOpCode.StreamCollectMapValue:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 AppendSlot(builder, "item", instruction.YSlot);
                 AppendAddress(builder, "keyEntry", instruction.AU);

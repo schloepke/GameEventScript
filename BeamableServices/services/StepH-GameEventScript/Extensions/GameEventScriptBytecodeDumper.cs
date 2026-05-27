@@ -315,7 +315,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSignedImmediate(builder, "step", instruction.AS);
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionIterator:
+            case GameEventScriptBytecodeOpCode.StreamCreate:
                 AppendSlot(builder, "collection", instruction.XSlot);
                 break;
 
@@ -417,8 +417,14 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "step", instruction.AU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.TypeConstructor:
+            case GameEventScriptBytecodeOpCode.CreateRecord:
                 AppendPoolIndex(builder, "type", module.StringPool, instruction.StringIndex);
+                AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
+                AppendSlotListPoolIndex(builder, "args", module, instruction.AU);
+                break;
+
+            case GameEventScriptBytecodeOpCode.CreateExternalType:
+                AppendExternalTypeConstructorReference(builder, "externalType", module, instruction.ExternalReferenceIndex);
                 AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
                 AppendSlotListPoolIndex(builder, "args", module, instruction.AU);
                 break;
@@ -471,7 +477,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlotListPoolIndex(builder, "captures", module, instruction.BU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineCollectList:
+            case GameEventScriptBytecodeOpCode.StreamCollectList:
             case GameEventScriptBytecodeOpCode.PipelineFirst:
             case GameEventScriptBytecodeOpCode.PipelineLast:
             case GameEventScriptBytecodeOpCode.PipelineSingle:
@@ -694,6 +700,20 @@ public static class GameEventScriptBytecodeDumper
         if ((uint)index < (uint)pool.Count)
         {
             builder.Append('(').Append(pool[index]).Append(')');
+        }
+    }
+
+    private static void AppendExternalTypeConstructorReference(StringBuilder builder, string name, GameEventScriptCompiled module, int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
+        if ((uint)index < (uint)module.ExternalTypeConstructorReferences.Count)
+        {
+            builder.Append('(').Append(module.ExternalTypeConstructorReferences[index].SignatureId).Append(')');
         }
     }
 

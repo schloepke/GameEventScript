@@ -189,7 +189,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             instruction.OpCode == GameEventScriptBytecodeOpCode.CreatePoint &&
             instruction.ImmediateX == 0));
         Assert.IsFalse(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.TypeConstructor &&
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRecord &&
             compiled.StringPool[(int)instruction.StringIndex] is "vector" or "point"));
     }
 
@@ -273,7 +273,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRangeIterator));
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CollectionIterator));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamCreate));
         Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamNext));
         Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamClose));
     }
@@ -351,7 +351,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream &&
             instruction.EntryAddress > 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineCollectList));
+            instruction.OpCode == GameEventScriptBytecodeOpCode.StreamCollectList));
     }
 
     [TestMethod]

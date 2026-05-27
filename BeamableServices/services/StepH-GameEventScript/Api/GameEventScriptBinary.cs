@@ -205,7 +205,7 @@ public struct GameEventScriptBytecodeInstruction
 
 public enum GameEventScriptBytecodeOpCode : byte
 {
-    #region Group 1 - control, calls, messages, types, access
+    #region Group 1 - control, calls, messages, types, values
 
     Nop = 0x00,
     SlotLocals = 0x01,
@@ -213,119 +213,124 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfTrue = 0x03,
     JumpIfFalse = 0x04,
     JumpIfNotTrue = 0x05,
+
     Call = 0x06,
     CallPredicate = 0x07,
     CallStandard = 0x08,
     CallStandardPredicate = 0x09,
     CallExternal = 0x0A,
     CallExternalPredicate = 0x0B,
+
     ReturnVoid = 0x0C,
     ReturnValue = 0x0D,
+
     EmitMessage = 0x0E,
     EmitMessageWithTags = 0x0F,
     EmitMessageValue = 0x10,
     EmitMessageValueWithTags = 0x11,
+
     PublishMessage = 0x12,
     PublishMessageWithTags = 0x13,
     PublishMessageValue = 0x14,
     PublishMessageValueWithTags = 0x15,
+
     Cast = 0x16,
     CastCustom = 0x17,
     CastUnit = 0x18,
     CastNumeric = 0x19,
+
     CheckType = 0x1A,
     CheckCustomType = 0x1B,
     CheckUnit = 0x1C,
     CheckNumeric = 0x1D,
-    CheckInteger = 0x22,
-    CheckFractional = 0x23,
-    MoveSlot = 0x1E,
-    MemberAccess = 0x1F,
-    IndexedAccess = 0x20,
-    BindHandler = 0x21,
+    CheckInteger = 0x1E,
+    CheckFractional = 0x1F,
+
+    MoveSlot = 0x20,
+    MemberAccess = 0x21,
+    IndexedAccess = 0x22,
+    BindHandler = 0x23,
+
+    LoadNothing = 0x24,
+    LoadTrue = 0x25,
+    LoadFalse = 0x26,
+    LoadInteger = 0x27,
+    LoadFloat = 0x28,
+    LoadPercentage = 0x29,
+    LoadText = 0x2A,
+    LoadTag = 0x2B,
+    LoadHandler = 0x2C,
+    LoadMessage = 0x2D,
+
+    StageRegister = 0x2E,
+    StageNothing = 0x2F,
+    StageTrue = 0x30,
+    StageFalse = 0x31,
+    StageInteger = 0x32,
+    StageFloat = 0x33,
+    StageText = 0x34,
+    StageTag = 0x35,
+    StagePercentage = 0x36,
+
+    CreateDice = 0x37,
+    CreateVector = 0x38,
+    CreatePoint = 0x39,
+    CreateList = 0x3A,
+    CreateMap = 0x3B,
+    CreateRange = 0x3C,
+    CreateRangeWithStep = 0x3D,
+    CreateRangeIterator = 0x3E,
+    CreateRangeIteratorWithStep = 0x3F,
+    CreateRangeIteratorShort = 0x40,
+    CreateRecord = 0x41,
+    CreateExternalType = 0x42,
+
+    HasValue = 0x43,
+    IsEmpty = 0x44,
+    Default = 0x45,
 
     #endregion
 
-    #region Group 2 - loads, staging, value creation, type construction
-
-    LoadNothing = 0x30,
-    LoadTrue = 0x31,
-    LoadFalse = 0x32,
-    LoadInteger = 0x33,
-    LoadFloat = 0x34,
-    LoadPercentage = 0x35,
-    LoadText = 0x36,
-    LoadTag = 0x37,
-    LoadHandler = 0x38,
-    LoadMessage = 0x39,
-    StageRegister = 0x3A,
-    StageNothing = 0x3B,
-    StageTrue = 0x3C,
-    StageFalse = 0x3D,
-    StageInteger = 0x3E,
-    StageFloat = 0x3F,
-    StageText = 0x40,
-    StageTag = 0x41,
-    StagePercentage = 0x42,
-    CreateDice = 0x43,
-    CreateVector = 0x44,
-    CreatePoint = 0x45,
-    CreateList = 0x46,
-    CreateMap = 0x47,
-    CreateRange = 0x48,
-    CreateRangeWithStep = 0x49,
-    CreateRangeIterator = 0x4A,
-    CreateRangeIteratorWithStep = 0x4B,
-    CreateRangeIteratorShort = 0x4C,
-    TypeConstructor = 0x4F,
-
-    #endregion
-
-    #region Group 3 - boolean, comparison, presence
+    #region Group 2 - boolean algebra, comparison, math and random
 
     Or = 0x50,
     And = 0x51,
     Xor = 0x52,
     Implies = 0x53,
     Not = 0x54,
-    HasValue = 0x55,
-    IsEmpty = 0x56,
-    Equal = 0x57,
-    NotEqual = 0x58,
-    ApproxEqual = 0x59,
-    Less = 0x5A,
-    Greater = 0x5B,
-    LessOrEqual = 0x5C,
-    GreaterOrEqual = 0x5D,
-    Default = 0x64,
+    Equal = 0x55,
+    NotEqual = 0x56,
+    ApproxEqual = 0x57,
+    Less = 0x58,
+    Greater = 0x59,
+    LessOrEqual = 0x5A,
+    GreaterOrEqual = 0x5B,
+    Add = 0x5C,
+    Subtract = 0x5D,
+    Multiply = 0x5E,
+    Divide = 0x5F,
+    Power = 0x60,
+    IntegerDivide = 0x61,
+    Modulo = 0x62,
+    Remainder = 0x63,
+    Min = 0x64,
+    Max = 0x65,
+    Negate = 0x66,
+    Abs = 0x67,
+    LogN = 0x68,
+    Chance = 0x69,
+    Clamp = 0x6A,
+    RandomTake = 0x6B,
+    RandomPush = 0x6C,
+    RandomPushConstant = 0x6D,
+    RandomPop = 0x6E,
+    SeriesTerm = 0x6F,
+    SeriesTake = 0x70,
+    SeriesDrop = 0x71,
 
     #endregion
 
-    #region Group 4 - math and random
-
-    Add = 0x70,
-    Subtract = 0x71,
-    Multiply = 0x72,
-    Divide = 0x73,
-    Power = 0x74,
-    IntegerDivide = 0x75,
-    Modulo = 0x76,
-    Remainder = 0x77,
-    Min = 0x7F,
-    Max = 0x80,
-    Negate = 0x81,
-    Abs = 0x82,
-    LogN = 0x83,
-    Chance = 0x84,
-    Clamp = 0x85,
-    RandomTake = 0x86,
-    RandomPush = 0x87,
-    RandomPushConstant = 0x88,
-    RandomPop = 0x89,
-
-    #endregion
-
-    #region Group 5 - text, collection, streams
+    #region Group 3 - text, collection, streams
 
     Length = 0x90,
     StartsWith = 0x91,
@@ -339,22 +344,19 @@ public enum GameEventScriptBytecodeOpCode : byte
     KeysOfMap = 0x99,
     ValuesOfMap = 0x9A,
     EntriesOfMap = 0x9B,
-    CollectionIterator = 0xA1,
+    StreamCreate = 0xA1,
     StreamNext = 0xA2,
     StreamClose = 0xA3,
     StreamReduce = 0xA4,
     StreamReduceOrDefault = 0xA5,
     StreamFold = 0xA6,
-    SeriesTerm = 0xA7,
-    SeriesTake = 0xA8,
-    SeriesDrop = 0xA9,
+    StreamCollectList = 0xA7,
 
     #endregion
 
-    #region Group 6 - pipeline terminals and transforms
+    #region Group 4 - pipeline terminals and transforms
 
     PipelineStream = 0xC0,
-    PipelineCollectList = 0xC1,
     PipelineFirst = 0xC2,
     PipelineLast = 0xC3,
     PipelineSingle = 0xC4,

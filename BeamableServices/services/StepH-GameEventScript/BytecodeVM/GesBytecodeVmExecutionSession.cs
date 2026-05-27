@@ -588,9 +588,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.CollectionIterator:
-                if (!TryCreateCollectionIterator(ResolveSlot(instruction.XSlot), out var collectionIterator) ||
-                    !DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Iterator(collectionIterator)))
+            case GameEventScriptBytecodeOpCode.StreamCreate:
+                if (!TryCreateStream(ResolveSlot(instruction.XSlot), out var stream) ||
+                    !DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Iterator(stream)))
                 {
                     return false;
                 }
@@ -1098,8 +1098,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineStream:
                 return TryCreatePipelineStream(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineCollectList:
-                return TryExecutePipelineCollect(instruction);
+            case GameEventScriptBytecodeOpCode.StreamCollectList:
+                return TryExecuteStreamCollectList(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineFirst:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.First);
@@ -1203,7 +1203,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.TypeConstructor:
+            case GameEventScriptBytecodeOpCode.CreateRecord:
             {
                 if (!TryReadStringPool(instruction.StringIndex, out var typeName) ||
                     !TryReadStringList(instruction.ListIndex, out var constructorArgumentNames) ||
@@ -1216,7 +1216,32 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 {
                     return DefineSlot(
                         instruction.DestinationSlot,
-                        EvaluateTypeConstructor(typeName, constructorArgumentNames, constructorOperands, 0, constructorOperandCount));
+                        EvaluateRecordConstructor(typeName, constructorArgumentNames, constructorOperands, 0, constructorOperandCount));
+                }
+                finally
+                {
+                    ReturnLinearOperands(constructorOperands, constructorOperandCount);
+                }
+            }
+
+            case GameEventScriptBytecodeOpCode.CreateExternalType:
+            {
+                if (!TryReadStringList(instruction.ListIndex, out var constructorArgumentNames) ||
+                    !TryRentLinearOperands(instruction.AU, out var constructorOperands, out var constructorOperandCount))
+                {
+                    return false;
+                }
+
+                try
+                {
+                    return DefineSlot(
+                        instruction.DestinationSlot,
+                        EvaluateExternalTypeConstructor(
+                            instruction.ExternalReferenceIndex,
+                            constructorArgumentNames,
+                            constructorOperands,
+                            0,
+                            constructorOperandCount));
                 }
                 finally
                 {
@@ -2399,14 +2424,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        iterator = new BytecodeVmCollectionIterator(range, range.AsEnumerable().GetEnumerator());
+        iterator = new BytecodeVmCollectionStream(range, range.AsEnumerable().GetEnumerator());
         return true;
     }
 
-    private bool TryCreateCollectionIterator(BytecodeVmValue source, out BytecodeVmIterator iterator)
+    private bool TryCreateStream(BytecodeVmValue source, out BytecodeVmIterator iterator)
     {
         var sourceValue = source.ToGameEventScriptValue();
-        iterator = new BytecodeVmCollectionIterator(sourceValue, sourceValue.AsEnumerable().GetEnumerator());
+        iterator = new BytecodeVmCollectionStream(sourceValue, sourceValue.AsEnumerable().GetEnumerator());
         return true;
     }
 
@@ -2600,7 +2625,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecutePipelineCollect(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteStreamCollectList(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out _, out var items))
         {
@@ -5360,7 +5385,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return (int)value;
     }
 
-    private BytecodeVmValue EvaluateTypeConstructor(
+    private BytecodeVmValue EvaluateRecordConstructor(
         string? typeName,
         string[]? labels,
         BytecodeVmValue[] inputs,
@@ -5370,16 +5395,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (string.IsNullOrEmpty(typeName))
         {
             return BytecodeVmValue.Nothing;
-        }
-
-        if (typeName is "vector" or "point")
-        {
-            return EvaluateSpatialConstructor(typeName, labels, inputs, start, count);
-        }
-
-        if (TryEvaluateExternalTypeConstructor(typeName, labels, inputs, start, count, out var externalValue))
-        {
-            return externalValue;
         }
 
         if (_compiledScript.TypeDefinitions.TryGetValue(typeName, out var typeDefinition))
@@ -5401,34 +5416,37 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return BytecodeVmValue.FromGameEventScriptValue(ConvertToCustomType(GesMap(values), typeDefinition));
         }
 
-        if (count != 1 || labels is not { Length: > 0 } || !string.Equals(labels[0], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        return BytecodeVmValue.Nothing;
+    }
+
+    private BytecodeVmValue EvaluateExternalTypeConstructor(
+        int referenceIndex,
+        string[]? labels,
+        BytecodeVmValue[] inputs,
+        int start,
+        int count)
+    {
+        if (labels is null || labels.Length < count || HasUnlabeledConstructorArgument(labels, count))
         {
             return BytecodeVmValue.Nothing;
         }
 
-        return TryConvertDeclaredType(typeName, inputs[start], out var converted)
-            ? converted
-            : BytecodeVmValue.Nothing;
-    }
-
-    private bool TryEvaluateExternalTypeConstructor(
-        string typeName,
-        string[]? labels,
-        BytecodeVmValue[] inputs,
-        int start,
-        int count,
-        out BytecodeVmValue value)
-    {
-        value = BytecodeVmValue.Nothing;
-        if (labels is null || labels.Length < count || HasUnlabeledConstructorArgument(labels, count) ||
-            !_compiledScript.TryGetBoundExternalTypeConstructor(typeName, labels, out var constructor))
+        if (!_compiledScript.TryGetBoundExternalTypeConstructor(referenceIndex, out var reference, out var constructor))
         {
-            return false;
+            var signature = (uint)referenceIndex < (uint)_compiledScript.BytecodeModule.ExternalTypeConstructorReferences.Count
+                ? _compiledScript.BytecodeModule.ExternalTypeConstructorReferences[referenceIndex].SignatureId
+                : referenceIndex.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            throw new GameEventScriptDynamicLinkException($"GameEventScript external type constructor ':{signature}' was not dynamically bound to reference slot '{referenceIndex}'.");
+        }
+
+        if (reference.ArgumentLabels.Count != count)
+        {
+            return BytecodeVmValue.Nothing;
         }
 
         if (constructor.Definition.Parameters.Count != count)
         {
-            return true;
+            return BytecodeVmValue.Nothing;
         }
 
         var arguments = new GameEventScriptValue[count];
@@ -5440,7 +5458,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 string.Equals(labels[argumentIndex], GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal) ||
                 !TryConvertDeclaredType(parameter.TypeName, inputs[start + argumentIndex], out var converted))
             {
-                return true;
+                return BytecodeVmValue.Nothing;
             }
 
             arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(
@@ -5448,8 +5466,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 parameter);
         }
 
-        value = BytecodeVmValue.FromGameEventScriptValue(constructor.Invoke(arguments));
-        return true;
+        return BytecodeVmValue.FromGameEventScriptValue(constructor.Invoke(arguments));
     }
 
     private static bool HasUnlabeledConstructorArgument(IReadOnlyList<string> labels, int count)
@@ -8280,7 +8297,7 @@ internal sealed class BytecodeVmRangeIterator(long from, long to, long step) : B
     }
 }
 
-internal sealed class BytecodeVmCollectionIterator(GameEventScriptValue sourceTarget, IEnumerator<GameEventScriptValue> items) : BytecodeVmIterator
+internal sealed class BytecodeVmCollectionStream(GameEventScriptValue sourceTarget, IEnumerator<GameEventScriptValue> items) : BytecodeVmIterator
 {
     private bool _disposed;
 

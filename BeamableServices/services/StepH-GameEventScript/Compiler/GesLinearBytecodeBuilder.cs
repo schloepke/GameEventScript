@@ -12,8 +12,10 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly Func<string, int> _resolveStringIndex;
     private readonly Func<IReadOnlyList<ushort>, int> _resolveUShortListIndex;
     private readonly Func<GameEventScriptExtensionReference, int> _resolveExternalReferenceIndex;
+    private readonly Func<GameEventScriptExternalTypeConstructorReference, int> _resolveExternalTypeConstructorReferenceIndex;
     private readonly IReadOnlyDictionary<string, GesCallableDefinition> _sourceCallables;
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _sourceTypeDefinitions;
+    private readonly IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> _externalTypeDefinitions;
     private readonly bool _emitDebugInfo;
     private readonly List<GameEventScriptBytecodeInstruction> _code = [];
     private readonly List<GameEventScriptBytecodeDebugDiagnosticSite> _debugDiagnosticSites = [];
@@ -29,15 +31,19 @@ internal sealed class GesLinearBytecodeBuilder
         Func<string, int>? resolveStringIndex = null,
         Func<IReadOnlyList<ushort>, int>? resolveUShortListIndex = null,
         Func<GameEventScriptExtensionReference, int>? resolveExternalReferenceIndex = null,
+        Func<GameEventScriptExternalTypeConstructorReference, int>? resolveExternalTypeConstructorReferenceIndex = null,
         IReadOnlyDictionary<string, GesCallableDefinition>? sourceCallables = null,
         IReadOnlyDictionary<string, TypeDefinitionNode>? sourceTypeDefinitions = null,
+        IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition>? externalTypeDefinitions = null,
         bool emitDebugInfo = false)
     {
         _resolveStringIndex = resolveStringIndex ?? (_ => -1);
         _resolveUShortListIndex = resolveUShortListIndex ?? (_ => -1);
         _resolveExternalReferenceIndex = resolveExternalReferenceIndex ?? (_ => -1);
+        _resolveExternalTypeConstructorReferenceIndex = resolveExternalTypeConstructorReferenceIndex ?? (_ => -1);
         _sourceCallables = sourceCallables ?? new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
         _sourceTypeDefinitions = sourceTypeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
+        _externalTypeDefinitions = externalTypeDefinitions ?? new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
         _emitDebugInfo = emitDebugInfo;
     }
 
@@ -1505,12 +1511,30 @@ internal sealed class GesLinearBytecodeBuilder
         var typeNameIndex = ResolveStringIndex(typeConstructor.TypeName);
         var argumentNameListIndex = ResolveStringListIndex(argumentNames);
         var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
-        return EmitValueInstruction(
-            state,
-            GameEventScriptBytecodeOpCode.TypeConstructor,
-            a: typeNameIndex,
-            b: argumentNameListIndex,
-            c: argumentSlotListIndex);
+        if (_sourceTypeDefinitions.ContainsKey(typeConstructor.TypeName))
+        {
+            return EmitValueInstruction(
+                state,
+                GameEventScriptBytecodeOpCode.CreateRecord,
+                a: typeNameIndex,
+                b: argumentNameListIndex,
+                c: argumentSlotListIndex);
+        }
+
+        if (_externalTypeDefinitions.ContainsKey(typeConstructor.TypeName))
+        {
+            var referenceIndex = _resolveExternalTypeConstructorReferenceIndex(new GameEventScriptExternalTypeConstructorReference(
+                typeConstructor.TypeName,
+                argumentNames));
+            return EmitValueInstruction(
+                state,
+                GameEventScriptBytecodeOpCode.CreateExternalType,
+                a: referenceIndex,
+                b: argumentNameListIndex,
+                c: argumentSlotListIndex);
+        }
+
+        throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support type constructor ':{typeConstructor.TypeName}'.");
     }
 
     private bool TryEmitSourceSpatialConstructor(
@@ -1643,7 +1667,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var iteratorSlot = AllocateSlot(state);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionIterator, dest: iteratorSlot, a: sourceSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StreamCreate, dest: iteratorSlot, a: sourceSlot));
         for (var index = 0; index < prefixCount; index++)
         {
             iteratorSlot = EmitPipelinePrefixIterator(iteratorSlot, selectors[index], context, state);
@@ -1908,7 +1932,7 @@ internal sealed class GesLinearBytecodeBuilder
     private int EmitPipelineCollect(int iteratorSlot, ExpressionState state)
         => EmitValueInstruction(
             state,
-            GameEventScriptBytecodeOpCode.PipelineCollectList,
+            GameEventScriptBytecodeOpCode.StreamCollectList,
             a: iteratorSlot);
 
     private int EmitPipelineEntryTerminal(
@@ -2368,7 +2392,7 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var collectionSlot = EmitSourceExpression(collection.Expression, context, state);
                 var iteratorSlot = AllocateSlot(state);
-                Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CollectionIterator, dest: iteratorSlot, a: collectionSlot));
+                Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StreamCreate, dest: iteratorSlot, a: collectionSlot));
                 return iteratorSlot;
             }
 

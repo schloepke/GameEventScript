@@ -52,8 +52,10 @@ internal static class GesBytecodeCompiler
                 AddString,
                 AddUShortList,
                 AddExternalReference,
+                AddExternalTypeConstructorReference,
                 module.Callables,
                 module.TypeDefinitions,
+                module.ExternalTypeDefinitions,
                 options.EnableDebugInfo);
             linearBuilder.AddHandlers(handlers.Values.SelectMany(group => group), _handlerSources);
             linearBuilder.AddCallables(callables.Values, module.Callables);

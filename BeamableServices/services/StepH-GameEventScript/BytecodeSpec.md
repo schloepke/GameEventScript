@@ -361,19 +361,19 @@ future decoders. The current groups are:
 ```text
 0x00 Group 1: no-op, frame slots, jumps, calls, returns, emit operations
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
-0x20 Group 1 numeric helper casts/checks and reserved tail
-0x30 Group 2: loads, argument staging, value creation, type construction
-0x40 Group 2 value creation continuation and type construction tail
-0x50 Group 3: boolean, comparison, implication, presence checks
-0x60 Group 3 comparison reserved space
-0x70 Group 4: math and random
-0x80 Group 4 continuation and reserved tail
-0x90 Group 5: text/collection operators, iterators, streams, series
-0xA0 Group 5 stream next/close/reduce/fold, series, and reserved tail
-0xB0 reserved after moving value creation into Group 2
-0xC0 Group 6: pipeline stream adapter, materializers, transforms, membership terminals
-0xD0 Group 6 pipeline ordering, slicing, random terminals
-0xE0 Group 6 pipeline dice/pattern terminals, generated-list builders, and reserved tail
+0x20 Group 1 type checks, loads, argument staging, value creation
+0x30 Group 1 argument staging and value creation continuation
+0x40 Group 1 record/external type construction, presence helpers, and reserved tail
+0x50 Group 2: boolean algebra, comparison, math
+0x60 Group 2 math/random/series continuation and reserved tail
+0x70 Group 2 mathematical series and reserved tail
+0x80 reserved after compacting math into Group 2
+0x90 Group 3: text/collection operators, iterators, streams
+0xA0 Group 3 stream next/close/reduce/fold/collect and reserved tail
+0xB0 reserved
+0xC0 Group 4: pipeline stream adapter, materializers, transforms, membership terminals
+0xD0 Group 4 pipeline ordering, slicing, random terminals
+0xE0 Group 4 pipeline dice/pattern terminals, generated-list builders, and reserved tail
 0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
 
@@ -686,7 +686,7 @@ sequence.
 - `CreateRangeIterator dst from to`
 - `CreateRangeIteratorWithStep dst from to step`
 - `CreateRangeIteratorShort dst fromI16 toI16 stepI16`
-- `CollectionIterator dst collection`
+- `StreamCreate dst collection`
 - `StreamNext dst iterator noMoreTarget`
 - `StreamClose iterator`
 - `Call dst entryAddress`
@@ -790,7 +790,7 @@ Collection loop shape:
 
 ```text
 @0300 SlotLocals locals+=loopLocalCount
-@0301 CollectionIterator dst=sIterator source=sValues
+@0301 StreamCreate dst=sIterator source=sValues
 @0302 StreamNext dst=sItem iterator=sIterator noMore=@0310
 @0303 SlotLocals locals+=iterationLocalCount
 @0304 ...
@@ -820,11 +820,13 @@ compiler-assigned iterator slot.
 - `RandomPush seedSlot`
 - `RandomPushConstant seedI64`
 - `RandomPop`
-- `TypeConstructor dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
+- `CreateRecord dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
+- `CreateExternalType dst externalTypeConstructorReferenceIndex argumentNameListIndex argumentSlotListIndex`
 
-Dice, vector, point, list, map, and range creation opcodes live in Group 2 with
-other value-loading and construction instructions. `TypeConstructor` is kept at
-the end of Group 2 because it may bind external constructors and custom records.
+Dice, vector, point, list, map, and range creation opcodes live in Group 1 with
+other value-loading and construction instructions. `CreateRecord` and
+`CreateExternalType` are kept at the end of the value-creation block because they construct
+script records and host-bound external values.
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
 `StringPool` indexes, while slot lists contain frame slot indexes.
@@ -946,9 +948,9 @@ normal entry addresses in the global code segment.
 Core streaming shape:
 
 ```text
-CollectionIterator source -> iterator
+StreamCreate source -> iterator
 PipelineStream transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
-PipelineCollectList dst iterator
+StreamCollectList dst iterator
 PipelineFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
 StreamReduce dst iterator itemBindingSlot reducerEntry
@@ -1017,7 +1019,7 @@ Generated collection expressions lower to normal linear iterator control flow:
 ```text
 PipelineListCreateBuilder builder
 SlotLocals locals+=collectionLocalCount
-CreateRangeIterator* / CollectionIterator iterator
+CreateRangeIterator* / StreamCreate iterator
 loop:
   StreamNext item iterator noMore
   SlotLocals locals+=iterationLocalCount
@@ -1109,7 +1111,7 @@ code[26]
 @0000 L_handler_Start:
 @0000 SlotLocals locals+=5
 @0001 SlotLocals locals+=1
-@0003 CollectionIterator dst=s2 source=s0
+@0003 StreamCreate dst=s2 source=s0
 @0004 StreamNext dst=s3 iterator=s2 noMore=@0010
 @0005 ...
 @0010 StreamClose iterator=s2

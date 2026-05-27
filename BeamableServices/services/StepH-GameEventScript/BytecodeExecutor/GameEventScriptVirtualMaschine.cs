@@ -201,8 +201,11 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case StageTag:
                     _vmState.StageTagConstant(instruction.StringIndex);
                     break;
-                case TypeConstructor:
-                    _vmState.Register(instruction.DestinationSlot).VmTypeConstructor(instruction.StringIndex, instruction.ListIndex, instruction.AU, ref _vmState);
+                case CreateRecord:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateRecord(instruction.StringIndex, instruction.ListIndex, instruction.AU, ref _vmState);
+                    break;
+                case CreateExternalType:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.ExternalReferenceIndex, instruction.ListIndex, instruction.AU, ref _vmState);
                     break;
                 case CreateVector:
                     _vmState.Register(instruction.DestinationSlot).VmCreateVector(instruction.ImmediateX, ref _vmState);
@@ -367,7 +370,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CreateRangeIteratorShort:
                     _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                     break;
-                case CollectionIterator:
+                case StreamCreate:
                     // FIXME: creating the real custom type here
                     break;
                 case StreamNext:
@@ -415,7 +418,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CreateDice:
                     _vmState.Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
                     break;
-                case PipelineCollectList:
+                case StreamCollectList:
                     // FIXME: creating the real custom type here
                     break;
                 case PipelineFirst:

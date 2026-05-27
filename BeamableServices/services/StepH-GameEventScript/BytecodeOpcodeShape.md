@@ -179,12 +179,11 @@ every unit has DSL syntax today.
 
 ## Opcode Table
 
-Opcode values are split into aligned operation-family blocks. Every family starts
-at a `0x_0` boundary; larger families may span multiple 16-value pages. The VM
-dispatches on the complete byte value; the high nibble is a format convention,
-not a second runtime dispatch step.
+Opcode values are split into operation-family blocks. Larger families may span
+multiple 16-value pages. The VM dispatches on the complete byte value; the high
+nibble is a format convention, not a second runtime dispatch step.
 
-### Group 1 - Control, Calls, Messages, Types, Access
+### Group 1 - Control, Calls, Messages, Types, Values
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -218,75 +217,51 @@ not a second runtime dispatch step.
 | 0x1B | `CheckCustomType` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
 | 0x1C | `CheckUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
 | 0x1D | `CheckNumeric` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a numeric value through the source-level `is numeric` helper. |
-| 0x1E | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
-| 0x1F | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
-| 0x20 | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
-| 0x21 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
-| 0x22 | `CheckInteger` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite integral numeric value. |
-| 0x23 | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
-| 0x24..0x2F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
+| 0x1E | `CheckInteger` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite integral numeric value. |
+| 0x1F | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
+| 0x20 | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
+| 0x21 | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
+| 0x22 | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
+| 0x23 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
+| 0x24 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |
+| 0x25 | `LoadTrue` | - | result slot | - | - | - | Loads boolean `true`. |
+| 0x26 | `LoadFalse` | - | result slot | - | - | - | Loads boolean `false`. |
+| 0x27 | `LoadInteger` | numeric unit | result slot | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
+| 0x28 | `LoadFloat` | numeric unit | result slot | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
+| 0x29 | `LoadPercentage` | - | result slot | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
+| 0x2A | `LoadText` | - | result slot | `StringIndex` | - | - | Loads a text literal. |
+| 0x2B | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
+| 0x2C | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2D | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2E | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value as the next local call argument. |
+| 0x2F | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
+| 0x30 | `StageTrue` | - | - | - | - | - | Stages `true` as the next local call argument. |
+| 0x31 | `StageFalse` | - | - | - | - | - | Stages `false` as the next local call argument. |
+| 0x32 | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer argument. |
+| 0x33 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float argument. |
+| 0x34 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
+| 0x35 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
+| 0x36 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
+| 0x37 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
+| 0x38 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x39 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x3A | `CreateList` | - | result slot | - | `ListIndex`=item slots | - | Creates a list from slot-list operands. |
+| 0x3B | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Creates a map from key names and value slots. |
+| 0x3C | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
+| 0x3D | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
+| 0x3E | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0x3F | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
+| 0x40 | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
+| 0x41 | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a script record from named argument slots. |
+| 0x42 | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a host-bound external type value from named argument slots. |
+| 0x43 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check. |
+| 0x44 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check. |
+| 0x45 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
+| 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
-### Group 2 - Loads, Argument Staging, Value Creation, Type Construction
+### Group 2 - Boolean Algebra, Comparison, Math And Random
 
-| Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0x30 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |
-| 0x31 | `LoadTrue` | - | result slot | - | - | - | Loads boolean `true`. |
-| 0x32 | `LoadFalse` | - | result slot | - | - | - | Loads boolean `false`. |
-| 0x33 | `LoadInteger` | numeric unit | result slot | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
-| 0x34 | `LoadFloat` | numeric unit | result slot | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
-| 0x35 | `LoadPercentage` | - | result slot | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
-| 0x36 | `LoadText` | - | result slot | `StringIndex` | - | - | Loads a text literal. |
-| 0x37 | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
-| 0x38 | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x39 | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x3A | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value as the next local call argument. |
-| 0x3B | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
-| 0x3C | `StageTrue` | - | - | - | - | - | Stages `true` as the next local call argument. |
-| 0x3D | `StageFalse` | - | - | - | - | - | Stages `false` as the next local call argument. |
-| 0x3E | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer argument. |
-| 0x3F | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float argument. |
-| 0x40 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
-| 0x41 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
-| 0x42 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
-| 0x43 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
-| 0x44 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x45 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x46 | `CreateList` | - | result slot | - | `ListIndex`=item slots | - | Creates a list from slot-list operands. |
-| 0x47 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Creates a map from key names and value slots. |
-| 0x48 | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
-| 0x49 | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
-| 0x4A | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
-| 0x4B | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
-| 0x4C | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x4D..0x4E | reserved | - | - | - | - | - | Reserved value-creation slots. |
-| 0x4F | `TypeConstructor` | - | result slot | `StringIndex`=type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a record/external value from named argument slots. |
-
-### Group 3 - Boolean, Comparison, Presence
-
-| Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0x50 | `Or` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
-| 0x51 | `And` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
-| 0x52 | `Xor` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
-| 0x53 | `Implies` | - | result slot | `XSlot`=antecedent | `YSlot`=consequent | - | Binary implication combine. |
-| 0x54 | `Not` | - | result slot | `XSlot`=operand | - | - | Logical negation. |
-| 0x55 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check. |
-| 0x56 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check. |
-| 0x57 | `Equal` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x58 | `NotEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x59 | `ApproxEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Approximate equality. |
-| 0x5A | `Less` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5B | `Greater` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5C | `LessOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5D | `GreaterOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5E..0x63 | reserved | - | - | - | - | - | Former integer comparison fast-path range. |
-| 0x64 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
-| 0x65..0x6F | reserved | - | - | - | - | - | Reserved tail of Group 3. |
-
-### Group 4 - Math And Random
-
-Group 4 numeric operations treat `nothing` as absent input: if any direct
+Group 2 numeric operations treat `nothing` as absent input: if any direct
 numeric source operand is `nothing`, the result slot receives `nothing`.
 Otherwise, a present but non-computable numeric operation writes numeric `NaN`
 to the result slot. Scalar `Divide` keeps IEEE floating-point behavior for zero
@@ -310,29 +285,43 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0x70 | `Add` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x71 | `Subtract` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x72 | `Multiply` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x73 | `Divide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x74 | `Power` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x75 | `IntegerDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Floor-like integer division operation. |
-| 0x76 | `Modulo` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric modulo operation. |
-| 0x77 | `Remainder` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric remainder operation. |
-| 0x78..0x7E | reserved | - | - | - | - | - | Former integer arithmetic fast-path range. |
-| 0x7F | `Min` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
-| 0x80 | `Max` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
-| 0x81 | `Negate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |
-| 0x82 | `Abs` | - | result slot | `XSlot`=operand | - | - | Absolute value. |
-| 0x83 | `LogN` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
-| 0x84 | `Chance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
-| 0x85 | `Clamp` | - | result slot | `XSlot`=value | `YSlot`=minimum | `AU`=maximum slot | The only opcode with three direct source slots. |
-| 0x86 | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a random value from the requested range using the current random scope. |
-| 0x87 | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
-| 0x88 | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
-| 0x89 | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
-| 0x8A..0x8F | reserved | - | - | - | - | - | Reserved tail of Group 4. |
+| 0x50 | `Or` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
+| 0x51 | `And` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
+| 0x52 | `Xor` | - | result slot | `XSlot`=left | `YSlot`=right | - | Tri-state boolean combine. |
+| 0x53 | `Implies` | - | result slot | `XSlot`=antecedent | `YSlot`=consequent | - | Binary implication combine. |
+| 0x54 | `Not` | - | result slot | `XSlot`=operand | - | - | Logical negation. |
+| 0x55 | `Equal` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x56 | `NotEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x57 | `ApproxEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Approximate equality. |
+| 0x58 | `Less` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x59 | `Greater` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x5A | `LessOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x5B | `GreaterOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x5C | `Add` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5D | `Subtract` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5E | `Multiply` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5F | `Divide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x60 | `Power` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x61 | `IntegerDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Floor-like integer division operation. |
+| 0x62 | `Modulo` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric modulo operation. |
+| 0x63 | `Remainder` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric remainder operation. |
+| 0x64 | `Min` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
+| 0x65 | `Max` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
+| 0x66 | `Negate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |
+| 0x67 | `Abs` | - | result slot | `XSlot`=operand | - | - | Absolute value. |
+| 0x68 | `LogN` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
+| 0x69 | `Chance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
+| 0x6A | `Clamp` | - | result slot | `XSlot`=value | `YSlot`=minimum | `AU`=maximum slot | The only opcode with three direct source slots. |
+| 0x6B | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a random value from the requested range using the current random scope. |
+| 0x6C | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
+| 0x6D | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
+| 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
+| 0x6F | `SeriesTerm` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a mathematical series term. |
+| 0x70 | `SeriesTake` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a mathematical series or list-like source. |
+| 0x71 | `SeriesDrop` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a mathematical series or list-like source. |
+| 0x72..0x8F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
 
-### Group 5 - Text, Collections, Iterators, Series
+### Group 3 - Text, Collections, Streams
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -349,23 +338,21 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0x9A | `ValuesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
 | 0x9B | `EntriesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
 | 0x9C..0xA0 | reserved | - | - | - | - | - | Reserved space after map projections. |
-| 0xA1 | `CollectionIterator` | - | iterator slot | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
+| 0xA1 | `StreamCreate` | - | iterator slot | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
 | 0xA2 | `StreamNext` | - | item slot | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
 | 0xA3 | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
 | 0xA4 | `StreamReduce` | - | accumulator/result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=reducer entry address | Empty -> `nothing`; one item -> item; otherwise reducer combines accumulator and item. |
 | 0xA5 | `StreamReduceOrDefault` | - | accumulator/result slot | `XSlot`=iterator | `YSlot`=default | `AU`=item binding slot, `BU`=reducer entry address | Empty -> default; one item -> item; otherwise reducer combines accumulator and item. |
 | 0xA6 | `StreamFold` | - | accumulator/result slot | `XSlot`=iterator | `YSlot`=seed | `AU`=item binding slot, `BU`=reducer entry address | Starts with seed and runs reducer for every item. |
-| 0xA7 | `SeriesTerm` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a series term. |
-| 0xA8 | `SeriesTake` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a series or list-like source. |
-| 0xA9 | `SeriesDrop` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a series or list-like source. |
-| 0xAA..0xAF | reserved | - | - | - | - | - | Reserved tail of Group 5. |
+| 0xA7 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xA8..0xAF | reserved | - | - | - | - | - | Reserved tail of Group 3. |
 
-### Group 6 - Pipeline Operations
+### Group 4 - Pipeline Operations
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0xC0 | `PipelineStream` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=next | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy one-time adapter. `ReturnValue` yields; `ReturnVoid` skips/exhausts. |
-| 0xC1 | `PipelineCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xC1 | reserved | - | - | - | - | - | Reserved after moving list materialization to `StreamCollectList`. |
 | 0xC2 | `PipelineFirst` | - | result slot | `XSlot`=iterator | - | - | Returns the first element or `nothing`. |
 | 0xC3 | `PipelineLast` | - | result slot | `XSlot`=iterator | - | - | Returns the last element or `nothing`. |
 | 0xC4 | `PipelineSingle` | - | result slot | `XSlot`=iterator | - | - | Returns the only element or `nothing`. |
@@ -413,7 +400,7 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xB0..0xBF | reserved | - | - | - | - | - | Reserved after moving value creation into Group 2. |
+| 0xB0..0xBF | reserved | - | - | - | - | - | Reserved. |
 | 0xEC..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
@@ -421,7 +408,7 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `TypeConstructor`, `CreateList`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateRecord`, `CreateExternalType`, `CreateList`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
 | `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message

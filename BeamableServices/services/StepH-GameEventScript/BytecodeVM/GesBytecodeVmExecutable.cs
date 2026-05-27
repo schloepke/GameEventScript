@@ -156,10 +156,18 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
         _boundExternalTypeConstructors = bound;
     }
 
-    internal bool TryGetBoundExternalTypeConstructor(string typeName, IReadOnlyList<string>? argumentLabels, out IGameEventScriptExternalTypeConstructor constructor)
-        => _boundExternalTypeConstructors.TryGetValue(
-            GameEventScriptExternalTypeConstructorReference.CreateSignatureId(typeName, argumentLabels),
-            out constructor!);
+    internal bool TryGetBoundExternalTypeConstructor(int referenceIndex, out GameEventScriptExternalTypeConstructorReference reference, out IGameEventScriptExternalTypeConstructor constructor)
+    {
+        if ((uint)referenceIndex < (uint)BytecodeModule.ExternalTypeConstructorReferences.Count)
+        {
+            reference = BytecodeModule.ExternalTypeConstructorReferences[referenceIndex];
+            return _boundExternalTypeConstructors.TryGetValue(reference.SignatureId, out constructor!);
+        }
+
+        reference = default!;
+        constructor = default!;
+        return false;
+    }
 
     internal bool TryGetLinearEntrySupport(int entryAddress, out bool supported)
     {

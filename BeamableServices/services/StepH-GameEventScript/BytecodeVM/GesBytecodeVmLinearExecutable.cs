@@ -379,7 +379,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.CreateRangeIteratorShort:
                 break;
 
-            case GameEventScriptBytecodeOpCode.CollectionIterator:
+            case GameEventScriptBytecodeOpCode.StreamCreate:
                 ValidateSlot(module, instruction.XSlot, $"{context} collection slot");
                 break;
 
@@ -412,7 +412,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlotListIndex(module, instruction.BU, $"{context} capture slot list");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineCollectList:
+            case GameEventScriptBytecodeOpCode.StreamCollectList:
             case GameEventScriptBytecodeOpCode.PipelineFirst:
             case GameEventScriptBytecodeOpCode.PipelineLast:
             case GameEventScriptBytecodeOpCode.PipelineSingle:
@@ -557,11 +557,19 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.YSlot, $"{context} source slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.TypeConstructor:
+            case GameEventScriptBytecodeOpCode.CreateRecord:
                 ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} type name");
                 ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
                 ValidateSlotListIndex(module, instruction.AU, $"{context} argument slots");
-                ValidateMatchingListCounts(module, instruction.ListIndex, instruction.AU, $"{context} type constructor arguments");
+                ValidateMatchingListCounts(module, instruction.ListIndex, instruction.AU, $"{context} record constructor arguments");
+                break;
+
+            case GameEventScriptBytecodeOpCode.CreateExternalType:
+                ValidateIndex(module.ExternalTypeConstructorReferences.Count, instruction.ExternalReferenceIndex, $"{context} external type constructor reference");
+                ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
+                ValidateSlotListIndex(module, instruction.AU, $"{context} argument slots");
+                ValidateMatchingListCounts(module, instruction.ListIndex, instruction.AU, $"{context} external type constructor arguments");
+                ValidateExternalTypeConstructorArgumentSlots(module, instruction.ExternalReferenceIndex, instruction.AU, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateVector:
@@ -742,6 +750,16 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (slots.Count != argumentCount)
         {
             throw InvalidBytecode($"{context} count {slots.Count} does not match external reference argument count {argumentCount}.");
+        }
+    }
+
+    private static void ValidateExternalTypeConstructorArgumentSlots(GameEventScriptCompiled module, int referenceIndex, int slotListIndex, string context)
+    {
+        var argumentCount = module.ExternalTypeConstructorReferences[referenceIndex].ArgumentLabels.Count;
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != argumentCount)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match external type constructor argument count {argumentCount}.");
         }
     }
 

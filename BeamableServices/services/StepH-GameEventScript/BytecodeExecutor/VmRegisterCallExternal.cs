@@ -1,27 +1,363 @@
+using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterCallExternal
 {
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state)
+    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
     {
+        var shape = state.FetchUInt16SliceTableByPointer(extensionShape);
+        var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
+        if (shape.Length < 2 || argumentSlots.Length != shape.Length - 2)
+        {
+            dst.SetNothing();
+            state.RaiseError("Invalid standard extension call shape.");
+            return;
+        }
+
+        var argumentCount = argumentSlots.Length;
+        var arguments = argumentCount == 0
+            ? Array.Empty<GameEventScriptFastValue>()
+            : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+
+        try
+        {
+            for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
+            {
+                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue(ref state.Binary.TextConstantTable);
+            }
+
+            var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
+            for (var labelIndex = 0; labelIndex < argumentCount; labelIndex++)
+            {
+                labels[labelIndex] = state.FetchStringByPointer(shape[labelIndex + 2]);
+            }
+
+            var reference = new GameEventScriptExtensionReference(
+                state.FetchStringByPointer(shape[0]),
+                state.FetchStringByPointer(shape[1]),
+                labels);
+
+            if (!GesStandardExtensions.TryInvoke(reference, arguments.AsSpan(0, argumentCount), out var result))
+            {
+                dst.SetNothing();
+                state.RaiseError($"Unknown standard extension '{reference.SignatureId}'.");
+                return;
+            }
+
+            dst.BindArguments(result, ref state.Binary.TextConstantTable);
+        }
+        finally
+        {
+            if (argumentCount > 0)
+            {
+                Array.Clear(arguments, 0, argumentCount);
+                ArrayPool<GameEventScriptFastValue>.Shared.Return(arguments);
+            }
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallStandardPredicate(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state)
+    internal static void VmCallStandardPredicate(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
     {
+        dst.VmCallStandard(extensionShape, argumentSlotList, ref state, session);
+        if (dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !dst.IsNothing)
+        {
+            dst.SetNothing();
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state)
+    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
     {
+        var externalReferenceIndex = 0;
+        var found = false;
+        GameEventScriptBinaryBindEntry bind = default;
+        foreach (var entry in state.Binary.BindTable.Entries)
+        {
+            if (entry.Kind != GameEventScriptBinaryBindKind.ExtensionCall)
+            {
+                continue;
+            }
+
+            if (externalReferenceIndex == extensionShape)
+            {
+                bind = entry;
+                found = true;
+                break;
+            }
+
+            externalReferenceIndex++;
+        }
+
+        if (!found)
+        {
+            dst.SetNothing();
+            state.RaiseError($"External extension reference slot '{extensionShape}' was not found.");
+            return;
+        }
+
+        var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
+        if (argumentSlots.Length != bind.ArgumentNames.Count)
+        {
+            dst.SetNothing();
+            state.RaiseError("External extension call argument count does not match the reference shape.");
+            return;
+        }
+
+        var fullName = state.FetchStringByPointer(bind.Name);
+        var separator = fullName.IndexOf('.');
+        if (separator <= 0 || separator >= fullName.Length - 1)
+        {
+            dst.SetNothing();
+            state.RaiseError($"External extension reference '{fullName}' has an invalid name.");
+            return;
+        }
+
+        var argumentCount = argumentSlots.Length;
+        var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
+        for (var labelIndex = 0; labelIndex < argumentCount; labelIndex++)
+        {
+            labels[labelIndex] = state.FetchStringByPointer(bind.ArgumentNames[labelIndex]);
+        }
+
+        var reference = new GameEventScriptExtensionReference(
+            fullName.Substring(0, separator),
+            fullName.Substring(separator + 1),
+            labels);
+
+        if (!session.ExtensionRegistry.TryResolve(reference, out var function))
+        {
+            dst.SetNothing();
+            state.RaiseError($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to reference slot '{extensionShape}'.");
+            return;
+        }
+
+        var arguments = argumentCount == 0
+            ? Array.Empty<GameEventScriptFastValue>()
+            : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+
+        try
+        {
+            for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
+            {
+                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue(ref state.Binary.TextConstantTable);
+            }
+
+            var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
+            dst.BindArguments(result, ref state.Binary.TextConstantTable);
+        }
+        finally
+        {
+            if (argumentCount > 0)
+            {
+                Array.Clear(arguments, 0, argumentCount);
+                ArrayPool<GameEventScriptFastValue>.Shared.Return(arguments);
+            }
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallExternalPredicate(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state)
+    internal static void VmCallExternalPredicate(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
     {
+        dst.VmCallExternal(extensionShape, argumentSlotList, ref state, session);
+        if (dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !dst.IsNothing)
+        {
+            dst.SetNothing();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void BindArguments(ref this VmValue destination, GameEventScriptFastValue argument, ref GameEventScriptTextTable textTable)
+    {
+        switch (argument.Kind)
+        {
+            case GameEventScriptValueKind.Nothing:
+                destination.SetNothing();
+                break;
+            case GameEventScriptValueKind.Boolean:
+                destination.SetBoolean(argument.Boolean);
+                break;
+            case GameEventScriptValueKind.Number:
+                if (argument.IsIntegerNumber) destination.SetInteger(argument.Integer, argument.Unit);
+                else destination.SetFloat(argument.Number, argument.Unit);
+                break;
+            case GameEventScriptValueKind.Percentage:
+                destination.SetPercentage(argument.Number);
+                break;
+            case GameEventScriptValueKind.Vector:
+                destination.SetVector(argument.X, argument.Y, argument.Z, argument.Unit);
+                break;
+            case GameEventScriptValueKind.Point:
+                destination.SetPoint(argument.X, argument.Y, argument.Z, argument.Unit);
+                break;
+            default:
+                destination.BindArguments(argument.ToGameEventScriptValue(), ref textTable);
+                break;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument, ref GameEventScriptTextTable textTable)
+    {
+        switch (argument.Kind)
+        {
+            case GameEventScriptValueKind.Tag:
+                destination.SetTag(argument.AsText());
+                break;
+            case GameEventScriptValueKind.Text:
+                destination.SetText(argument.AsText());
+                break;
+            case GameEventScriptValueKind.Percentage:
+                destination.SetPercentage(argument.AsNumber());
+                break;
+            case GameEventScriptValueKind.Vector when argument is GameEventScriptVectorValue vector:
+                destination.SetVector(vector.X, vector.Y, vector.Z, vector.Unit);
+                break;
+            case GameEventScriptValueKind.Point when argument is GameEventScriptPointValue point:
+                destination.SetPoint(point.X, point.Y, point.Z, point.Unit);
+                break;
+            case GameEventScriptValueKind.Number:
+                if (argument.IsInteger()) destination.SetInteger(argument.AsInteger(), argument.Unit);
+                else destination.SetFloat(argument.AsNumber(), argument.Unit);
+                break;
+            case GameEventScriptValueKind.Boolean:
+                destination.SetBoolean(argument.AsBoolean());
+                break;
+            case GameEventScriptValueKind.Range when argument is GameEventScriptRangeValue range:
+                if (range.IsIntegerRange) destination.SetRange(range.From, range.To, range.Step);
+                else destination.SetRange(range.FromNumber, range.ToNumber, range.StepNumber);
+                break;
+            case GameEventScriptValueKind.Message when argument is GameEventScriptMessageValue message:
+                destination.SetMessage(message.Value);
+                break;
+            case GameEventScriptValueKind.Handler when argument is GameEventScriptHandlerValue handler:
+                destination.SetMessageHandler(handler.Signature);
+                break;
+            case GameEventScriptValueKind.List:
+                var sourceItems = argument.AsList();
+                var list = new VmListObject(sourceItems.Count);
+                for (var index = 0; index < sourceItems.Count; index++)
+                {
+                    list.Items[index].BindArguments(sourceItems[index], ref textTable);
+                }
+
+                destination.SetList(list);
+                break;
+            case GameEventScriptValueKind.Map:
+                var sourceEntries = argument.AsMap();
+                var entries = new Dictionary<string, VmValue>(sourceEntries.Count, StringComparer.Ordinal);
+                foreach (var (key, sourceValue) in sourceEntries)
+                {
+                    var value = default(VmValue);
+                    value.BindArguments(sourceValue, ref textTable);
+                    entries[key] = value;
+                }
+
+                destination.SetMap(new VmMapObject(entries));
+                break;
+            case GameEventScriptValueKind.Dice:
+                var sourceDice = argument.AsDice().Rolls;
+                var rolls = new int[sourceDice.Count];
+                for (var index = 0; index < sourceDice.Count; index++)
+                {
+                    rolls[index] = sourceDice[index];
+                }
+
+                destination.SetDice(rolls);
+                break;
+            case GameEventScriptValueKind.Series when argument is GameEventScriptSeriesValue series:
+                destination.SetSeries(series);
+                break;
+            case GameEventScriptValueKind.Series:
+            case GameEventScriptValueKind.Nothing:
+            default:
+                destination.SetNothing();
+                break;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static GameEventScriptFastValue ToGameEventScriptFastValue(this ref VmValue value, ref GameEventScriptTextTable textTable)
+    {
+        switch (value.Kind)
+        {
+            case Nothing:
+                return GameEventScriptFastValue.Nothing;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                return GameEventScriptFastValue.FromBoolean(value.IsTrue);
+            case Integer:
+                return GameEventScriptFastValue.FromInteger(value.IntegerValue, value.Unit);
+            case Float:
+                return GameEventScriptFastValue.FromFloat(value.FloatValue, value.Unit);
+            case Percentage:
+                return GameEventScriptFastValue.FromPercentage(value.FloatValue);
+            case Vector when value.ObjectValue is VmFloatTriplet vector:
+                return GameEventScriptFastValue.FromVector(vector.X, vector.Y, vector.Z, value.Unit);
+            case Point when value.ObjectValue is VmFloatTriplet point:
+                return GameEventScriptFastValue.FromPoint(point.X, point.Y, point.Z, value.Unit);
+            case Text:
+                return GameEventScriptFastValue.FromText(value.IsStorageObject
+                    ? value.ObjectValue as string ?? string.Empty
+                    : textTable.Resolve((ushort)value.IntegerValue));
+            default:
+                return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue(ref textTable));
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a, ref GameEventScriptTextTable textTable) => a.Kind switch
+    {
+        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
+        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
+        Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
+        Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
+        Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
+        GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
+        Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : textTable.Resolve((ushort)a.IntegerValue)),
+        Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : textTable.Resolve((ushort)a.IntegerValue)),
+        List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues(ref textTable)),
+        Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues(ref textTable)),
+        Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
+        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
+        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
+        Series when a.ObjectValue is GameEventScriptSeriesValue series => series,
+        Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
+        Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
+        _ => GameEventScriptValueFactory.GesNothing(),
+    };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static List<GameEventScriptValue> ToGameEventScriptValues(this VmListObject list, ref GameEventScriptTextTable textTable)
+    {
+        var result = new List<GameEventScriptValue>(list.Items.Length);
+        for (var i = 0; i < list.Items.Length; i++)
+        {
+            result.Add(list.Items[i].ToGameEventScriptValue(ref textTable));
+        }
+
+        return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this VmMapObject map, ref GameEventScriptTextTable textTable)
+    {
+        var result = new Dictionary<string, GameEventScriptValue>(map.Length, StringComparer.Ordinal);
+        foreach (var (key, value) in map.Entries)
+        {
+            var x = value;
+            result.Add(key, x.ToGameEventScriptValue(ref textTable));
+        }
+
+        return result;
     }
 }

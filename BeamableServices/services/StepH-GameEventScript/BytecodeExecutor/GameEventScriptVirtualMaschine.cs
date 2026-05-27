@@ -62,16 +62,16 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).Kind = GameEventScriptBytecodeTypeKind.Boolean;
                     break;
                 case CallStandard:
-                    _vmState.Register(instruction.DestinationSlot).VmCallStandard(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    _vmState.Register(instruction.DestinationSlot).VmCallStandard(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState, session);
                     break;
                 case CallStandardPredicate:
-                    _vmState.Register(instruction.DestinationSlot).VmCallStandardPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    _vmState.Register(instruction.DestinationSlot).VmCallStandardPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState, session);
                     break;
                 case CallExternal:
-                    _vmState.Register(instruction.DestinationSlot).VmCallExternal(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    _vmState.Register(instruction.DestinationSlot).VmCallExternal(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState, session);
                     break;
                 case CallExternalPredicate:
-                    _vmState.Register(instruction.DestinationSlot).VmCallExternalPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    _vmState.Register(instruction.DestinationSlot).VmCallExternalPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState, session);
                     break;
 
                 case ReturnVoid:

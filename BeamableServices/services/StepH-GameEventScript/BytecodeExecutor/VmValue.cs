@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueFlags;
@@ -255,6 +256,15 @@ internal struct VmValue
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = message;
+    }
+
+    internal void SetSeries(GameEventScriptSeriesValue series)
+    {
+        Kind = Series;
+        Flags = StorageObjectFlag | HasValueFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = series;
     }
 
     internal void SetList(VmListObject list)

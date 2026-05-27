@@ -222,17 +222,15 @@ public struct VmValue
         ObjectValue = point;
     }
 
-    public void SetDice(long[] values)
+    public void SetDice(int[] values)
     {
         Kind = Dice;
         Flags = VmValueFlags.StorageObject;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = values.Length;
         Array.Sort(values);
         Array.Reverse(values);
-        var list = new VmListObject(values.Length);
-        for (var i = 0; i < values.Length; i++) list.Items[i].SetInteger(values[i]);
-        ObjectValue = list;
+        ObjectValue = values;
     }
 
     public void SetMessageHandler(GameEventScriptMessageSignature handler)

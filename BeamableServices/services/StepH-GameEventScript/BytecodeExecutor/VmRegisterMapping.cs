@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -88,7 +90,39 @@ internal static class VmRegisterMapping
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
         Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue! as string : textTable.Resolve((ushort)a.IntegerValue)),
         Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue! as string : textTable.Resolve((ushort)a.IntegerValue)),
-        // FIXME this might not work here, since we need to binary to look up strings and tags
+        List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues(ref textTable)),
+        Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues(ref textTable)),
+        Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
+        GameEventScriptBytecodeTypeKind.Range =>  GameEventScriptValueFactory.GesNothing(),
+        Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
+        Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
         _ => GameEventScriptValueFactory.GesNothing(),
     };
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static List<GameEventScriptValue> ToGameEventScriptValues(this VmListObject list, ref GameEventScriptTextTable textTable)
+    {
+        var result = new List<GameEventScriptValue>();
+        for (var i = 0; i < list.Items.Length; i++)
+        {
+            result.Add(list.Items[i].ToGameEventScriptValue(ref textTable));
+        }
+
+        return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this VmMapObject map, ref GameEventScriptTextTable textTable)
+    {
+        var result = new Dictionary<string, GameEventScriptValue>();
+        foreach (var (key, value) in map.Entries)
+        {
+            var x = value;
+            result.Add(key, x.ToGameEventScriptValue(ref textTable));
+        }
+        
+        return result;
+    }
+
+
 }

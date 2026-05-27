@@ -42,6 +42,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicCreateValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCreateValues(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -111,6 +116,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicBooleanLogicCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicBooleanLogic(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCreateValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCreateValues(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
@@ -284,6 +294,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicBooleanLogicCases()
         => Cases("runtime/atomic/boolean-logic.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicCreateValuesCases()
+        => Cases("runtime/atomic/create-values.json");
+
     public static IEnumerable<object[]> RuntimeCollectionsCases()
         => Cases("runtime/collections.json");
 
@@ -322,6 +335,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicBooleanLogicCases()
         => NewVirtualMachineCases("runtime/atomic/boolean-logic.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCreateValuesCases()
+        => NewVirtualMachineCases("runtime/atomic/create-values.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
         => NewVirtualMachineCases("runtime/collections.json");

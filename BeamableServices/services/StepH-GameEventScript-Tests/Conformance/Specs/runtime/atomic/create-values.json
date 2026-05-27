@@ -1,0 +1,323 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicCreateValues",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "load primitive values",
+      "script": "module AtomicLoadPrimitiveValues\non Start {\n  let nothingValue be missing\n  let trueValue be true\n  let falseValue be false\n  let integerValue be 42\n  let floatValue be 12.5\n  let meterValue be 7m\n  let percentageValue be 25%\n  let textValue be 'hello'\n  let tagValue be :boss\n  emit Done(nothingValue: nothingValue, trueValue: trueValue, falseValue: falseValue, integerValue: integerValue, floatValue: floatValue, meterValue: meterValue, percentageValue: percentageValue, textValue: textValue, tagValue: tagValue)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "falseValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatValue": {
+                  "type": ":float",
+                  "value": "12.5"
+                },
+                "integerValue": {
+                  "type": ":integer",
+                  "value": "42"
+                },
+                "meterValue": {
+                  "type": ":integer",
+                  "unit": ":meter",
+                  "value": "7"
+                },
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":percentage",
+                  "value": "0.25"
+                },
+                "tagValue": {
+                  "type": ":tag",
+                  "value": "boss"
+                },
+                "textValue": {
+                  "type": ":text",
+                  "value": "hello"
+                },
+                "trueValue": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create vector and point values",
+      "script": "module AtomicCreateVectorPointValues\non Start {\n  let vectorValue be :vector(1, 2.5, 3)\n  let pointValue be :point(4, 5.5, 6)\n  emit Done(vectorValue: vectorValue, pointValue: pointValue)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "pointValue": {
+                  "type": ":point",
+                  "x": "4",
+                  "y": "5.5",
+                  "z": "6"
+                },
+                "vectorValue": {
+                  "type": ":vector",
+                  "x": "1",
+                  "y": "2.5",
+                  "z": "3"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create range values",
+      "script": "module AtomicCreateRangeValues\non Start {\n  let ascending as :range be from 1 to 3\n  let stepped as :range be from 1 to 5 step 2\n  let descending as :range be from 5 to 1 step (0 - 2)\n  emit Done(ascending: ascending, stepped: stepped, descending: descending)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "ascending": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
+                },
+                "descending": {
+                  "type": ":range",
+                  "from": "5",
+                  "to": "1",
+                  "step": "-2"
+                },
+                "stepped": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "5",
+                  "step": "2"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create dice values",
+      "script": "module AtomicCreateDiceValues\non Start {\n  let diceValue as :dice be [6, 2, 4]\n  emit Done(diceValue: diceValue, length: :len diceValue)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "diceValue": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4,
+                    2
+                  ]
+                },
+                "length": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create list values",
+      "script": "module AtomicCreateListValues\non Start {\n  let values be [1, 'two', :pi, true]\n  emit Done(values: values, length: :len values)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "length": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "values": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "two"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "pi"
+                    },
+                    {
+                      "type": ":boolean",
+                      "value": true
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create map values",
+      "script": "module AtomicCreateMapValues\non Start {\n  let unit be [name: 'Ada', hp: 10, alive: true, role: :boss]\n  emit Done(unit: unit, length: :len unit)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "length": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "unit": {
+                  "type": ":map",
+                  "entries": {
+                    "alive": {
+                      "type": ":boolean",
+                      "value": true
+                    },
+                    "hp": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    },
+                    "role": {
+                      "type": ":tag",
+                      "value": "boss"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create nested collection values",
+      "script": "module AtomicCreateNestedCollectionValues\non Start {\n  let squad be [leader: [name: 'Ada', hp: 10], inventory: ['potion', 'key'], tags: [:boss, :scout]]\n  emit Done(squad: squad, length: :len squad)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "length": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "squad": {
+                  "type": ":map",
+                  "entries": {
+                    "inventory": {
+                      "type": ":list",
+                      "items": [
+                        {
+                          "type": ":text",
+                          "value": "potion"
+                        },
+                        {
+                          "type": ":text",
+                          "value": "key"
+                        }
+                      ]
+                    },
+                    "leader": {
+                      "type": ":map",
+                      "entries": {
+                        "hp": {
+                          "type": ":integer",
+                          "value": "10"
+                        },
+                        "name": {
+                          "type": ":text",
+                          "value": "Ada"
+                        }
+                      }
+                    },
+                    "tags": {
+                      "type": ":list",
+                      "items": [
+                        {
+                          "type": ":tag",
+                          "value": "boss"
+                        },
+                        {
+                          "type": ":tag",
+                          "value": "scout"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

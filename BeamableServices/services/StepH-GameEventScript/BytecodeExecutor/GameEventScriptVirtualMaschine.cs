@@ -202,6 +202,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.StageTagConstant(instruction.StringIndex);
                     break;
                 case TypeConstructor:
+                    _vmState.Register(instruction.DestinationSlot).VmTypeConstructor(instruction.StringIndex, instruction.ListIndex, instruction.AU, ref _vmState);
                     break;
                 case CreateVector:
                     _vmState.Register(instruction.DestinationSlot).VmCreateVector(instruction.ImmediateX, ref _vmState);
@@ -318,40 +319,55 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmLength(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case StartsWith:
+                    // FIXME: creating the real custom type here
                     break;
                 case EndsWith:
+                    // FIXME: creating the real custom type here
                     break;
                 case Contains:
+                    // FIXME: creating the real custom type here
                     break;
                 case ContainsValue:
+                    // FIXME: creating the real custom type here
                     break;
                 case Intersect:
+                    // FIXME: creating the real custom type here
                     break;
                 case Combine:
+                    // FIXME: creating the real custom type here
                     break;
                 case Except:
+                    // FIXME: creating the real custom type here
                     break;
                 case Zip:
+                    // FIXME: creating the real custom type here
                     break;
                 case UnaryKeys:
+                    // FIXME: creating the real custom type here
                     break;
                 case UnaryValues:
+                    // FIXME: creating the real custom type here
                     break;
                 case UnaryEntries:
+                    // FIXME: creating the real custom type here
                     break;
                 case GameEventScriptBytecodeOpCode.Range:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case RangeWithStep:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU));
                     break;
                 case RangeIterator:
-                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, 1));
                     break;
                 case RangeIteratorWithStep:
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
                     break;
                 case RangeIteratorShort:
                     _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                     break;
                 case CollectionIterator:
+                    // FIXME: creating the real custom type here
                     break;
                 case StreamNext:
                     _vmState.Register(instruction.DestinationSlot).VmIteratorNext(ref _vmState.Register(instruction.XSlot), instruction.TargetAddress, ref _vmState);
@@ -360,18 +376,25 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.XSlot).VmIteratorClose();
                     break;
                 case StreamReduce:
+                    // FIXME: creating the real custom type here
                     break;
                 case StreamReduceOrDefault:
+                    // FIXME: creating the real custom type here
                     break;
                 case StreamFold:
+                    // FIXME: creating the real custom type here
                     break;
                 case SeriesTerm:
+                    // FIXME: creating the real custom type here
                     break;
                 case SeriesTake:
+                    // FIXME: creating the real custom type here
                     break;
                 case SeriesDrop:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineIterator:
+                    // FIXME: creating the real custom type here
                     break;
                 case BuildList:
                     _vmState.Register(instruction.DestinationSlot).VmBuildList(instruction.ListIndex, ref _vmState);
@@ -392,84 +415,124 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
                     break;
                 case PipelineCollectList:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineFirst:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineLast:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineSingle:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineHasAny:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineHasAll:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineContainsSingle:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineContainsAny:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineContainsAll:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineMap:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineMapValue:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDistinct:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDistinctBy:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineGroupBy:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineReverse:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineSortAscending:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineSortDescending:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineOrderByAscending:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineOrderByDescending:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakeFirst:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakeLast:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakeHighest:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakeLowest:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDropFirst:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDropLast:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDropHighest:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDropLowest:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineShuffle:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDraw:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineChoose:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineChooseRandom:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineChooseWeighted:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDicePatternCountAny:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDicePatternCountFace:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDicePatternFullHouse:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineDicePatternStraight:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakePatternCountAny:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakePatternCountFace:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakePatternFullHouse:
+                    // FIXME: creating the real custom type here
                     break;
                 case PipelineTakePatternStraight:
+                    // FIXME: creating the real custom type here
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null);

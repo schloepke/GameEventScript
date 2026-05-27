@@ -15,12 +15,7 @@ internal interface IVmKeyAccess<T>
     internal bool TryGet(string key, out T value);
 }
 
-internal interface IVmLengthAccess
-{
-    internal int Length { get; }
-}
-
-internal class VmListObject(int size) : IVmLengthAccess, IVmIndexAccess<VmValue>
+internal class VmListObject(int size) : IVmIndexAccess<VmValue>
 {
     internal static readonly VmListObject Empty = new(0);
     
@@ -40,7 +35,7 @@ internal class VmListObject(int size) : IVmLengthAccess, IVmIndexAccess<VmValue>
     }
 }
 
-internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmLengthAccess, IVmKeyAccess<VmValue>
+internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKeyAccess<VmValue>
 {
     public int Length => entries.Count;
     public IReadOnlyDictionary<string, VmValue> Entries => entries;
@@ -57,7 +52,7 @@ internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmLe
     }
 }
 
-internal class VmFloatTriplet(double x, double y, double z) : IVmLengthAccess, IVmIndexAccess<double>, IVmKeyAccess<double>
+internal class VmFloatTriplet(double x, double y, double z) : IVmIndexAccess<double>, IVmKeyAccess<double>
 {
     internal readonly double X = x;
     internal readonly double Y = y;
@@ -138,3 +133,5 @@ internal class VmIntegerRangeStream(long from, long to, long step) : IVmStream, 
         _disposed = true;
     }
 }
+
+internal record VmRange(long from, long to, long step);

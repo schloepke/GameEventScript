@@ -13,10 +13,10 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 24)]
-public struct VmValue
+internal struct VmValue
 {
     [Flags]
-    public enum VmValueFlags : byte
+    internal enum VmValueFlags : byte
     {
         None = 0,
 
@@ -34,21 +34,21 @@ public struct VmValue
     [FieldOffset(0)] internal double FloatValue;
     [FieldOffset(8)] internal object? ObjectValue;
 
-    public bool IsTrue => (Flags & VmValueFlags.IsTrue) != 0;
-    public bool IsFalse => (Flags & VmValueFlags.IsFalse) != 0;
-    public bool IsNotTrue => (Flags & VmValueFlags.IsTrue) == 0;
-    public bool IsTruthDeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) != 0;
-    public bool IsTruthIndeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) == 0;
+    internal bool IsTrue => (Flags & VmValueFlags.IsTrue) != 0;
+    internal bool IsFalse => (Flags & VmValueFlags.IsFalse) != 0;
+    internal bool IsNotTrue => (Flags & VmValueFlags.IsTrue) == 0;
+    internal bool IsTruthDeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) != 0;
+    internal bool IsTruthIndeterminate => (Flags & (VmValueFlags.IsTrue | VmValueFlags.IsFalse)) == 0;
 
-    public bool IsNothing => Kind is Nothing;
-    public bool IsNotNothing => Kind is not Nothing;
+    internal bool IsNothing => Kind is Nothing;
+    internal bool IsNotNothing => Kind is not Nothing;
 
-    public bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
-    public bool HasUnit => Unit.IsNumericUnit();
-    public bool IsStoragePointer => (Flags & VmValueFlags.StoragePointer) != 0;
-    public bool IsStorageObject => (Flags & VmValueFlags.StorageObject) != 0;
+    internal bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
+    internal bool HasUnit => Unit.IsNumericUnit();
+    internal bool IsStoragePointer => (Flags & VmValueFlags.StoragePointer) != 0;
+    internal bool IsStorageObject => (Flags & VmValueFlags.StorageObject) != 0;
 
-    public void UpdatedTextTruthinessCache(ref GameEventScriptTextTable textTable)
+    internal void UpdatedTextTruthinessCache(ref GameEventScriptTextTable textTable)
     {
         if (IsTruthIndeterminate)
         {
@@ -84,7 +84,7 @@ public struct VmValue
         }
     }
 
-    public void SetNothing()
+    internal void SetNothing()
     {
         Kind = Nothing;
         Unit = UnitNothing;
@@ -93,7 +93,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetBoolean(bool value)
+    internal void SetBoolean(bool value)
     {
         Kind = GameEventScriptBytecodeTypeKind.Boolean;
         Flags = value ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
@@ -102,7 +102,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Integer;
         Flags = value != 0 ? VmValueFlags.IsTrue : VmValueFlags.IsFalse;
@@ -111,7 +111,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (double.IsFinite(value) && value is >= long.MinValue and <= long.MaxValue && value == Math.Truncate(value))
@@ -132,7 +132,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetPercentage(double ratio)
+    internal void SetPercentage(double ratio)
     {
         if (double.IsFinite(ratio))
         {
@@ -150,7 +150,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetTextPointer(ushort pointer)
+    internal void SetTextPointer(ushort pointer)
     {
         Kind = Text;
         Flags = VmValueFlags.StoragePointer;
@@ -159,7 +159,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetText(string text)
+    internal void SetText(string text)
     {
         Kind = Text;
         Flags = VmValueFlags.StorageObject;
@@ -168,7 +168,7 @@ public struct VmValue
         ObjectValue = text;
     }
 
-    public void SetTagPointer(ushort pointer)
+    internal void SetTagPointer(ushort pointer)
     {
         Kind = Tag;
         Flags = VmValueFlags.StoragePointer;
@@ -177,7 +177,7 @@ public struct VmValue
         ObjectValue = null;
     }
 
-    public void SetTag(string tag)
+    internal void SetTag(string tag)
     {
         Kind = Tag;
         Flags = VmValueFlags.StorageObject;
@@ -186,7 +186,7 @@ public struct VmValue
         ObjectValue = tag;
     }
 
-    public void SetVector(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetVector(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Vector;
         Flags = VmValueFlags.StorageObject | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? VmValueFlags.IsFalse : VmValueFlags.IsTrue);
@@ -204,7 +204,7 @@ public struct VmValue
         ObjectValue = vector;
     }
 
-    public void SetPoint(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetPoint(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Point;
         Flags = VmValueFlags.StorageObject | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? VmValueFlags.IsFalse : VmValueFlags.IsTrue);
@@ -222,7 +222,7 @@ public struct VmValue
         ObjectValue = point;
     }
 
-    public void SetDice(int[] values)
+    internal void SetDice(int[] values)
     {
         Kind = Dice;
         Flags = VmValueFlags.StorageObject;
@@ -233,7 +233,7 @@ public struct VmValue
         ObjectValue = values;
     }
 
-    public void SetMessageHandler(GameEventScriptMessageSignature handler)
+    internal void SetMessageHandler(GameEventScriptMessageSignature handler)
     {
         Kind = Handler;
         Flags = VmValueFlags.StorageObject;
@@ -242,7 +242,7 @@ public struct VmValue
         ObjectValue = handler;
     }
 
-    public void SetMessage(GameEventScriptMessage message)
+    internal void SetMessage(GameEventScriptMessage message)
     {
         Kind = Message;
         Flags = VmValueFlags.StorageObject;
@@ -286,6 +286,18 @@ public struct VmValue
         IntegerValue = map.Length;
         ObjectValue = map;
     }
+
+    internal void SetRange(long from, long to, long step)
+    {
+        Kind = GameEventScriptBytecodeTypeKind.Range;
+        Flags = VmValueFlags.StorageObject;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        if(step == 0 || (step > 0 && from >= to) || (step < 0 && from <= to)) ObjectValue = EmptyRange;
+        else ObjectValue = new VmRange(from, to, step);
+    }
+
+    private static VmRange EmptyRange = new(0, 0, 0);
 
     public bool TryGetInteger(out long intValue)
     {

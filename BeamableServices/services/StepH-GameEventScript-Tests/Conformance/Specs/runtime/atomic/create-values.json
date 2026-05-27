@@ -132,7 +132,15 @@
     {
       "kind": "scriptApi",
       "name": "create dice values",
-      "script": "module AtomicCreateDiceValues\non Start {\n  let diceValue as :dice be [6, 2, 4]\n  emit Done(diceValue: diceValue, length: :len diceValue)\n}",
+      "script": "module AtomicCreateDiceValues\non Start {\n  let diceValue be :dice 6d3\n  emit Done(diceValue: diceValue, length: :len diceValue)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1",
+        "3",
+        "2",
+        "1"
+      ],
       "steps": [
         {
           "input": {
@@ -146,14 +154,17 @@
                 "diceValue": {
                   "type": ":dice",
                   "rolls": [
-                    6,
-                    4,
-                    2
+                    3,
+                    3,
+                    2,
+                    2,
+                    1,
+                    1
                   ]
                 },
                 "length": {
                   "type": ":integer",
-                  "value": "3"
+                  "value": "6"
                 }
               }
             }

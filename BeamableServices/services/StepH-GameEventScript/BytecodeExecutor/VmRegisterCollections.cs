@@ -22,8 +22,8 @@ internal static class VmRegisterCollections
             case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
                 dst.SetInteger(text.Length);
                 break;
-            case List or Map or Dice when a.ObjectValue is IVmLengthAccess objectValue:
-                dst.SetInteger(objectValue.Length);
+            case List or Map or Dice:
+                dst.SetInteger(a.IntegerValue);
                 break;
             default:
                 dst.SetNothing();

@@ -93,7 +93,7 @@ internal static class VmRegisterMapping
         List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues(ref textTable)),
         Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues(ref textTable)),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
-        GameEventScriptBytecodeTypeKind.Range =>  GameEventScriptValueFactory.GesNothing(),
+        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
         Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
         Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
         _ => GameEventScriptValueFactory.GesNothing(),

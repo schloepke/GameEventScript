@@ -26,8 +26,8 @@ internal static class VmRegisterCompare
             case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text } :
                 dst.SetBoolean(text.Length == 0);
                 break;
-            case List or Map or Dice when a.ObjectValue is IVmLengthAccess objectValue:
-                dst.SetBoolean(objectValue.Length == 0);
+            case List or Map or Dice:
+                dst.SetBoolean(a.IntegerValue == 0);
                 break;
             // Fixme: Special handling for series and external type
             default:
@@ -56,8 +56,8 @@ internal static class VmRegisterCompare
             case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
                 dst.SetBoolean(text.Length > 0);
                 break;
-            case Text or List or Map or  Tag or Dice when a.ObjectValue is IVmLengthAccess objectValue:
-                dst.SetBoolean(objectValue.Length > 0);
+            case Text or List or Map or  Tag or Dice:
+                dst.SetBoolean(a.IntegerValue > 0);
                 break;
             // Fixme: Special handling for series and external type
             default:

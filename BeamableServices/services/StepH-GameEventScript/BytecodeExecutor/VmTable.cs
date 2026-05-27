@@ -269,7 +269,7 @@ internal sealed class VmTableBuilder
     }
 }
 
-internal sealed class VmTable : IVmLengthAccess
+internal sealed class VmTable
 {
     private readonly VmTableIndex?[] _indexes;
 
@@ -281,7 +281,6 @@ internal sealed class VmTable : IVmLengthAccess
 
     public VmTableData Data { get; }
     public int RowCount => checked((int)Data.RowCount);
-    public int Length => RowCount;
     public int ColumnCount => Data.ColumnCount;
 
     public static VmTable CreateList(VmTableColumnKind itemKind, int capacity = 0, ushort valueNameIndex = 0) =>

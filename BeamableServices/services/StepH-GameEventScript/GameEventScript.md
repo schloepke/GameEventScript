@@ -559,19 +559,21 @@ let callback be Done(value)
 
 ### Presence and Emptiness
 
-`nothing` is the absence value.
+`nothing` is the absence value. `NaN` is kept as a numeric result for failed
+mathematical operations, but for presence checks it behaves like absence:
+`NaN is :nothing` is true.
 
-`has value` is false for:
+`empty` is true for:
 
 - `nothing`
+- `NaN`
 - empty text
 - empty lists, maps, dice, and ranges
-- `NaN`, `Infinity`, and `-Infinity`
 
-It is true for ordinary values, including `0` and `false`.
+It is false for ordinary values, including `0`, `false`, `Infinity`, and
+`-Infinity`.
 
-`empty` is a structural emptiness check. It is true for empty text, lists, maps,
-dice, and ranges. It is not the same as invalid numeric values.
+`has value` is the exact complement of `empty`.
 
 `:default` uses the same presence semantics as `has value`:
 

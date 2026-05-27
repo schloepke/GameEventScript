@@ -34,6 +34,8 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
             var instruction = _vmState.FetchInstructionAndIncrementInstructionPointer();
             switch (instruction.OpCode)
             {
+                #region Group 1 - control, calls, messages, types, values
+
                 case Nop:
                     break;
                 case SlotLocals:
@@ -51,6 +53,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case JumpIfNotTrue:
                     if (_vmState.Register(instruction.ConditionSlot).IsNotTrue) _vmState.JumpAddress(instruction.TargetAddress);
                     break;
+
                 case Call:
                     _vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot);
                     break;
@@ -70,12 +73,14 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CallExternalPredicate:
                     _vmState.Register(instruction.DestinationSlot).VmCallExternalPredicate(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
                     break;
+
                 case ReturnVoid:
                     _vmState.ReturnVoid();
                     break;
                 case ReturnValue:
                     _vmState.ReturnValue(instruction.XSlot);
                     break;
+
                 case EmitMessage:
                     _vmState.VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                     break;
@@ -89,6 +94,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case EmitMessageValueWithTags:
                     _vmState.VmPublishMessageValueWithTags(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                     break;
+
                 case PublishMessage:
                     _vmState.VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                     break;
@@ -102,11 +108,9 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PublishMessageValueWithTags:
                     _vmState.VmPublishMessageValueWithTags(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                     break;
+
                 case Cast:
                     _vmState.Register(instruction.DestinationSlot).VmCast(ref _vmState.Register(instruction.XSlot), instruction.TypeKind, ref binary.TextConstantTable);
-                    break;
-                case CastNumeric:
-                    _vmState.Register(instruction.DestinationSlot).VmCastNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case CastCustom:
                     _vmState.Register(instruction.DestinationSlot).VmCastCustom(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
@@ -114,8 +118,18 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CastUnit:
                     _vmState.Register(instruction.DestinationSlot).VmCastUnit(ref _vmState.Register(instruction.XSlot), (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1f));
                     break;
+                case CastNumeric:
+                    _vmState.Register(instruction.DestinationSlot).VmCastNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
+                    break;
+
                 case CheckType:
                     _vmState.Register(instruction.DestinationSlot).VmCheckType(ref _vmState.Register(instruction.XSlot), instruction.TypeKind);
+                    break;
+                case CheckCustomType:
+                    _vmState.Register(instruction.DestinationSlot).VmCheckCustomType(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
+                    break;
+                case CheckUnit:
+                    _vmState.Register(instruction.DestinationSlot).VmCheckUnit(ref _vmState.Register(instruction.XSlot), (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1f));
                     break;
                 case CheckNumeric:
                     _vmState.Register(instruction.DestinationSlot).VmCheckNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
@@ -126,12 +140,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case CheckFractional:
                     _vmState.Register(instruction.DestinationSlot).VmCheckFractional(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
-                case CheckCustomType:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckCustomType(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
-                    break;
-                case CheckUnit:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckUnit(ref _vmState.Register(instruction.XSlot), (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1f));
-                    break;
+
                 case MoveSlot:
                     _vmState.Register(instruction.DestinationSlot) = _vmState.Register(instruction.XSlot);
                     break;
@@ -144,6 +153,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case BindHandler:
                     _vmState.Register(instruction.DestinationSlot).BindHandler(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), ref _vmState, session);
                     break;
+
                 case LoadNothing:
                     _vmState.Register(instruction.DestinationSlot).SetNothing();
                     break;
@@ -174,6 +184,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case LoadMessage:
                     _vmState.Register(instruction.DestinationSlot).CreateMessage(binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), ref _vmState, session);
                     break;
+
                 case StageRegister:
                     _vmState.StageRegister(instruction.XSlot);
                     break;
@@ -192,20 +203,18 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case StageFloat:
                     _vmState.StageFloat(instruction.F64, (GameEventScriptBytecodeInstructionUnit)(instruction.UnitAndFlags & 0x1F));
                     break;
-                case StagePercentage:
-                    _vmState.StagePercentage(instruction.F64);
-                    break;
                 case StageText:
                     _vmState.StageTextConstant(instruction.StringIndex);
                     break;
                 case StageTag:
                     _vmState.StageTagConstant(instruction.StringIndex);
                     break;
-                case CreateRecord:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateRecord(instruction.StringIndex, instruction.ListIndex, instruction.AU, ref _vmState);
+                case StagePercentage:
+                    _vmState.StagePercentage(instruction.F64);
                     break;
-                case CreateExternalType:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.ExternalReferenceIndex, instruction.ListIndex, instruction.AU, ref _vmState);
+
+                case CreateDice:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateDice(instruction.Count, instruction.ImmediateY, ref _vmState);
                     break;
                 case CreateVector:
                     _vmState.Register(instruction.DestinationSlot).VmCreateVector(instruction.ImmediateX, ref _vmState);
@@ -215,6 +224,49 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmCreatePoint(instruction.ImmediateX, ref _vmState);
                     _vmState.ClearStage();
                     break;
+                case CreateList:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateList(instruction.ListIndex, ref _vmState);
+                    break;
+                case CreateMap:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateMap(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
+                    break;
+                case CreateRange:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    break;
+                case CreateRangeWithStep:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU));
+                    break;
+                case CreateRangeIterator:
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, 1));
+                    break;
+                case CreateRangeIteratorWithStep:
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
+                    break;
+                case CreateRangeIteratorShort:
+                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                    break;
+                case CreateRecord:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateRecord(instruction.StringIndex, instruction.ListIndex, instruction.AU, ref _vmState);
+                    break;
+                case CreateExternalType:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.ExternalReferenceIndex, instruction.ListIndex, instruction.AU, ref _vmState);
+                    break;
+
+                case HasValue:
+                    _vmState.Register(instruction.DestinationSlot).SetBoolean(_vmState.Register(instruction.XSlot).HasValue);
+                    break;
+                case IsEmpty:
+                    _vmState.Register(instruction.DestinationSlot).SetBoolean(!_vmState.Register(instruction.XSlot).HasValue);
+                    break;
+                case Default:
+                    var a = _vmState.Register(instruction.XSlot);
+                    _vmState.Register(instruction.DestinationSlot) = a.HasValue ? a : _vmState.Register(instruction.YSlot);
+                    break;
+
+                #endregion
+
+                #region Group 2 - boolean algebra, comparison, math and random
+
                 case Or:
                     _vmState.Register(instruction.DestinationSlot).VmOr(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
@@ -229,12 +281,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case Not:
                     _vmState.Register(instruction.DestinationSlot).VmNot(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
-                    break;
-                case HasValue:
-                    _vmState.Register(instruction.DestinationSlot).SetBoolean(_vmState.Register(instruction.XSlot).HasValue);
-                    break;
-                case IsEmpty:
-                    _vmState.Register(instruction.DestinationSlot).VmEmpty(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case Equal:
                     _vmState.Register(instruction.DestinationSlot).VmEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
@@ -256,10 +302,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case GreaterOrEqual:
                     _vmState.Register(instruction.DestinationSlot).VmGreaterOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case Default:
-                    var a = _vmState.Register(instruction.XSlot);
-                    _vmState.Register(instruction.DestinationSlot) = a.HasValue ? a : _vmState.Register(instruction.YSlot);
                     break;
                 case Add:
                     _vmState.Register(instruction.DestinationSlot).VmAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
@@ -319,6 +361,20 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case RandomPop:
                     _vmState.PopRandom();
                     break;
+                case SeriesTerm:
+                    // FIXME: creating the real custom type here
+                    break;
+                case SeriesTake:
+                    // FIXME: creating the real custom type here
+                    break;
+                case SeriesDrop:
+                    // FIXME: creating the real custom type here
+                    break;
+
+                #endregion
+
+                #region Group 3 - text, collection, streams
+
                 case Length:
                     _vmState.Register(instruction.DestinationSlot).VmLength(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
@@ -355,21 +411,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case EntriesOfMap:
                     _vmState.Register(instruction.DestinationSlot).VmEntries(ref _vmState.Register(instruction.XSlot));
                     break;
-                case CreateRange:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
-                    break;
-                case CreateRangeWithStep:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref _vmState.Register(instruction.AU));
-                    break;
-                case CreateRangeIterator:
-                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, 1));
-                    break;
-                case CreateRangeIteratorWithStep:
-                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
-                    break;
-                case CreateRangeIteratorShort:
-                    _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
-                    break;
                 case StreamCreate:
                     // FIXME: creating the real custom type here
                     break;
@@ -388,37 +429,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case StreamFold:
                     // FIXME: creating the real custom type here
                     break;
-                case SeriesTerm:
-                    // FIXME: creating the real custom type here
-                    break;
-                case SeriesTake:
-                    // FIXME: creating the real custom type here
-                    break;
-                case SeriesDrop:
-                    // FIXME: creating the real custom type here
-                    break;
-                case PipelineStream:
-                    // FIXME: creating the real custom type here
-                    break;
-                case CreateList:
-                    _vmState.Register(instruction.DestinationSlot).VmBuildList(instruction.ListIndex, ref _vmState);
-                    break;
-                case CreateMap:
-                    _vmState.Register(instruction.DestinationSlot).VmBuildMap(instruction.SecondaryListIndex, instruction.ListIndex, ref _vmState);
-                    break;
-                case PipelineListCreateBuilder:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateListBuilder();
-                    break;
-                case PipelineListBuilderAdd:
-                    _vmState.Register(instruction.XSlot).VmListBuilderAdd(ref _vmState.Register(instruction.YSlot));
-                    break;
-                case PipelineListBuilderFinish:
-                    _vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref _vmState.Register(instruction.XSlot));
-                    break;
-                case CreateDice:
-                    _vmState.Register(instruction.DestinationSlot).VmDice(instruction.Count, instruction.ImmediateY, ref _vmState);
-                    break;
                 case StreamCollectList:
+                    // FIXME: creating the real custom type here
+                    break;
+                case StreamCollectMap:
+                    // FIXME: creating the real custom type here
+                    break;
+                case StreamCollectMapValue:
                     // FIXME: creating the real custom type here
                     break;
                 case StreamCollectFirst:
@@ -428,6 +445,14 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     // FIXME: creating the real custom type here
                     break;
                 case StreamCollectSingle:
+                    // FIXME: creating the real custom type here
+                    break;
+
+                #endregion
+
+                #region Group 4 - pipeline terminals and transforms
+
+                case PipelineStream:
                     // FIXME: creating the real custom type here
                     break;
                 case PipelineHasAny:
@@ -443,12 +468,6 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     // FIXME: creating the real custom type here
                     break;
                 case PipelineContainsAll:
-                    // FIXME: creating the real custom type here
-                    break;
-                case StreamCollectMap:
-                    // FIXME: creating the real custom type here
-                    break;
-                case StreamCollectMapValue:
                     // FIXME: creating the real custom type here
                     break;
                 case PipelineDistinct:
@@ -538,8 +557,20 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case PipelineTakePatternStraight:
                     // FIXME: creating the real custom type here
                     break;
+                case PipelineListCreateBuilder:
+                    _vmState.Register(instruction.DestinationSlot).VmCreateListBuilder();
+                    break;
+                case PipelineListBuilderAdd:
+                    _vmState.Register(instruction.XSlot).VmListBuilderAdd(ref _vmState.Register(instruction.YSlot));
+                    break;
+                case PipelineListBuilderFinish:
+                    _vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref _vmState.Register(instruction.XSlot));
+                    break;
+
+                #endregion
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null);
+                    _vmState.RaiseError("Illegal opcode " + nameof(instruction.OpCode) + ". Execution halted.");
+                    break;
             }
         }
 

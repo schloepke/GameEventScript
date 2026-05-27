@@ -4637,7 +4637,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return typeName switch
         {
-            "nothing" => value.Kind == BytecodeVmValueKind.Nothing || (value.ReferenceValue?.IsNothing() ?? false),
+            "nothing" => value.Kind == BytecodeVmValueKind.Nothing ||
+                         value.Kind == BytecodeVmValueKind.Float && double.IsNaN(value.Number) ||
+                         value.ReferenceValue is { } referenceValue && IsNaNOrNothing(referenceValue),
             "tag" => value.ReferenceValue?.IsTag() ?? false,
             "text" => value.ReferenceValue?.IsText() ?? false,
             "percentage" => value.Kind == BytecodeVmValueKind.Percentage || (value.ReferenceValue?.IsPercentage() ?? false),
@@ -4664,6 +4666,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
                  string.Equals(customTypeName, typeName, StringComparison.Ordinal)
         };
     }
+
+    private static bool IsNaNOrNothing(GameEventScriptValue value)
+        => value.IsNothing() ||
+           value.IsNaN() ||
+           value is GameEventScriptTagValue && value.TryConvertToNumber(out var numericValue) && numericValue.IsNaN();
 
     private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue)
     {

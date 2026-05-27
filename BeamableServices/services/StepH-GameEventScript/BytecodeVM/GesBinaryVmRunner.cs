@@ -376,7 +376,7 @@ internal sealed class GesBinaryVmRunState
     private static bool IsValueOfType(GesBinaryVmValue value, GameEventScriptBytecodeTypeKind typeKind)
         => typeKind switch
         {
-            GameEventScriptBytecodeTypeKind.Nothing => value.Kind == GesBinaryVmValueKind.Nothing,
+            GameEventScriptBytecodeTypeKind.Nothing => value.Kind == GesBinaryVmValueKind.Nothing || value.IsNaNLike(),
             GameEventScriptBytecodeTypeKind.Integer => value.Kind == GesBinaryVmValueKind.Integer,
             GameEventScriptBytecodeTypeKind.Float => value.Kind is GesBinaryVmValueKind.Integer or GesBinaryVmValueKind.Float or GesBinaryVmValueKind.Percentage,
             GameEventScriptBytecodeTypeKind.Boolean => value.Kind == GesBinaryVmValueKind.Boolean,
@@ -644,6 +644,11 @@ internal readonly struct GesBinaryVmValue
 
     public bool IsFalse()
         => Kind == GesBinaryVmValueKind.Boolean && IntegerValue == 0;
+
+    public bool IsNaNLike()
+        => Kind == GesBinaryVmValueKind.Float && double.IsNaN(NumberValue) ||
+           Kind == GesBinaryVmValueKind.Tag && string.Equals((string?)_reference, "nan", StringComparison.Ordinal) ||
+           Kind == GesBinaryVmValueKind.Reference && _reference is GameEventScriptValue value && value.IsNaN();
 
     public GameEventScriptValue ToGameEventScriptValue()
         => Kind switch

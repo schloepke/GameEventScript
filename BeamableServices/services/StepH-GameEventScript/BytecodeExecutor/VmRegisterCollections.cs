@@ -21,7 +21,7 @@ internal static class VmRegisterCollections
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmBuildList(ref this VmValue dst, ushort slotsIndex, ref VmState vmState)
+    internal static void VmCreateList(ref this VmValue dst, ushort slotsIndex, ref VmState vmState)
     {
         var itemSlots = vmState.Binary.Uint16ConstantTable.Resolve(slotsIndex);
         var list = new VmListObject(itemSlots.Length);
@@ -33,7 +33,7 @@ internal static class VmRegisterCollections
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmBuildMap(ref this VmValue dst, ushort keySlotsIndex, ushort itemSlotsIndex, ref VmState vmState)
+    internal static void VmCreateMap(ref this VmValue dst, ushort keySlotsIndex, ushort itemSlotsIndex, ref VmState vmState)
     {
         var keyNames = vmState.Binary.Uint16ConstantTable.Resolve(keySlotsIndex);
         var itemSlots = vmState.Binary.Uint16ConstantTable.Resolve(itemSlotsIndex);

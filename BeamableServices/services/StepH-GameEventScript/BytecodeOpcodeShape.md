@@ -254,8 +254,8 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x40 | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
 | 0x41 | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a script record from named argument slots. |
 | 0x42 | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a host-bound external type value from named argument slots. |
-| 0x43 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check. |
-| 0x44 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check. |
+| 0x43 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
+| 0x44 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
 | 0x45 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
 | 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 

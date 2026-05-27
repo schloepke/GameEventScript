@@ -75,6 +75,214 @@
     },
     {
       "kind": "scriptApi",
+      "name": "has value operator",
+      "script": "module AtomicCollectionHasValueOperator\non Start {\n  let vNothing be missing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be :ab\n  let vNaN be :nan\n  let vInfinity be :infinity\n  let vNegativeInfinity be 0 - :infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: has value vNothing, booleanTrue: has value vBooleanTrue, booleanFalse: has value vBooleanFalse, integerZero: has value vIntegerZero, floatPositive: has value vFloatPositive, percentageZero: has value vPercentageZero, textValue: has value vText, textEmpty: has value vTextEmpty, tagValue: has value vTag, nanValue: has value vNaN, infinityValue: has value vInfinity, negativeInfinityValue: has value vNegativeInfinity, vectorZero: has value vVectorZero, pointZero: has value vPointZero, listValue: has value vList, listEmpty: has value vListEmpty, mapValue: has value vMap, mapEmpty: has value vMapEmpty, diceValue: has value vDice, diceEmpty: has value vDiceEmpty, rangeValue: has value vRange)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "booleanTrue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "booleanFalse": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "integerZero": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "floatPositive": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "percentageZero": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textEmpty": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "nanValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "infinityValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "negativeInfinityValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "vectorZero": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "pointZero": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listEmpty": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapEmpty": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceEmpty": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "is empty operator",
+      "script": "module AtomicCollectionIsEmptyOperator\non Start {\n  let vNothing be missing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be :ab\n  let vNaN be :nan\n  let vInfinity be :infinity\n  let vNegativeInfinity be 0 - :infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing is empty, booleanTrue: vBooleanTrue is empty, booleanFalse: vBooleanFalse is empty, integerZero: vIntegerZero is empty, floatPositive: vFloatPositive is empty, percentageZero: vPercentageZero is empty, textValue: vText is empty, textEmpty: vTextEmpty is empty, tagValue: vTag is empty, nanValue: vNaN is empty, infinityValue: vInfinity is empty, negativeInfinityValue: vNegativeInfinity is empty, vectorZero: vVectorZero is empty, pointZero: vPointZero is empty, listValue: vList is empty, listEmpty: vListEmpty is empty, mapValue: vMap is empty, mapEmpty: vMapEmpty is empty, diceValue: vDice is empty, diceEmpty: vDiceEmpty is empty, rangeValue: vRange is empty)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "booleanTrue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "booleanFalse": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerZero": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatPositive": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "percentageZero": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textEmpty": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "nanValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "infinityValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "negativeInfinityValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "vectorZero": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "pointZero": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listEmpty": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapEmpty": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceEmpty": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "keys operator",
       "script": "module AtomicCollectionKeysOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :keys vNothing, booleanValue: :keys vBoolean, integerValue: :keys vInteger, floatValue: :keys vFloat, percentageValue: :keys vPercentage, textValue: :keys vText, tagValue: :keys vTag, vectorValue: :keys vVector, pointValue: :keys vPoint, listValue: :keys vList, mapValue: :keys vMap, diceValue: :keys vDice, rangeValue: :keys vRange)\n}",
       "randomSequence": [

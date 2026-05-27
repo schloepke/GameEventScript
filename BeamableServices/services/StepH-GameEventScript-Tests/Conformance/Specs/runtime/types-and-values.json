@@ -1970,7 +1970,7 @@
     {
       "kind": "scriptApi",
       "name": "value checks defaults and presence",
-      "script": "on Start(opt, emptyText, emptyList, emptyDict, zeroValue, falseValue, diceValue, nanValue, infinityValue) {\n  emit Done(hasOpt: has value opt, hasEmptyText: has value emptyText, hasEmptyList: has value emptyList, hasEmptyDict: has value emptyDict, hasZero: has value zeroValue, hasFalse: has value falseValue, hasNaN: has value nanValue, hasInfinity: has value infinityValue, isEmptyOpt: empty opt, isEmptyText: empty emptyText, isEmptyList: empty emptyList, isEmptyDict: empty emptyDict, isEmptyDice: empty diceValue, isEmptyNaN: empty nanValue, isEmptyInfinity: empty infinityValue, notEmptyList: not empty [1], notFalse: not falseValue, optValue: opt :default 10, listValue: (emptyList :default [1, 2])[1], textValue: emptyText :default 'fallback', dictValue: (emptyDict :default [name: 'default']).name, missingTextValue: emptyDict['name'] :default 'fallback')\n}",
+      "script": "on Start(opt, emptyText, emptyList, emptyDict, zeroValue, falseValue, diceValue, nanValue, infinityValue) {\n  emit Done(hasOpt: has value opt, hasEmptyText: has value emptyText, hasEmptyList: has value emptyList, hasEmptyDict: has value emptyDict, hasZero: has value zeroValue, hasFalse: has value falseValue, hasNaN: has value nanValue, hasInfinity: has value infinityValue, isEmptyOpt: empty opt, isEmptyText: empty emptyText, isEmptyList: empty emptyList, isEmptyDict: empty emptyDict, isEmptyDice: empty diceValue, isEmptyNaN: empty nanValue, isEmptyInfinity: empty infinityValue, nanIsNothing: nanValue is :nothing, notEmptyList: not empty [1], notFalse: not falseValue, optValue: opt :default 10, listValue: (emptyList :default [1, 2])[1], textValue: emptyText :default 'fallback', dictValue: (emptyDict :default [name: 'default']).name, missingTextValue: emptyDict['name'] :default 'fallback')\n}",
       "steps": [
         {
           "input": {
@@ -2072,11 +2072,15 @@
                 },
                 "isEmptyNaN": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "isEmptyInfinity": {
                   "type": ":boolean",
                   "value": false
+                },
+                "nanIsNothing": {
+                  "type": ":boolean",
+                  "value": true
                 },
                 "notEmptyList": {
                   "type": ":boolean",

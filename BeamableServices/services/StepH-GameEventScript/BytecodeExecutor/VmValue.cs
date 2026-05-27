@@ -46,8 +46,8 @@ internal struct VmValue
     internal bool IsNumeric => (Flags & IsNumericFlag) != 0;
     internal bool HasValue => (Flags & HasValueFlag) != 0;
 
-    internal bool IsNothing => Kind is Nothing;
-    internal bool IsNotNothing => Kind is not Nothing;
+    internal bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
+    internal bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
 
     internal bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
     internal bool HasUnit => Unit.IsNumericUnit();

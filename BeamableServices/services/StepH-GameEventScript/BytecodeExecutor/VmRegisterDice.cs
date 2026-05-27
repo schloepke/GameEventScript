@@ -7,7 +7,7 @@ internal static class VmRegisterDice
     private static readonly int[] EmptyDice = [];
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmDice(ref this VmValue dst, short count, short sides, ref VmState state)
+    internal static void VmCreateDice(ref this VmValue dst, short count, short sides, ref VmState state)
     {
         if (count <= 0 || sides <= 0)
         {

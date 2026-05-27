@@ -165,7 +165,9 @@ instruction word are encoded by typed load opcodes:
   plus optional numeric unit in `UnitAndFlags`.
 - `LoadFloat` stores IEEE 754 double bits in the overlapped `F64` payload, plus
   optional numeric unit in `UnitAndFlags`. `NaN`, `Infinity`, and `-Infinity`
-  are represented by their IEEE bit patterns.
+  are represented by their IEEE bit patterns. `NaN` remains a numeric value for
+  failed mathematical operations, but presence checks treat it as empty and type
+  checks treat it as `:nothing`.
 - `LoadPercentage` stores a percentage ratio in `F64` and must not carry unit
   flags. Percentage is a dedicated value kind, not a bytecode unit.
 - `LoadText` and `LoadTag` store a `StringPool` index in the primary `X`

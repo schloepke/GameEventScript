@@ -10,33 +10,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterCompare
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmEmpty(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
-    {
-        switch (a.Kind)
-        {
-            case Nothing:
-                dst.SetBoolean(true);
-                break;
-            case Integer or Float or Percentage or GameEventScriptBytecodeTypeKind.Boolean:
-                dst.SetBoolean(false);
-                break;
-            case Text or Tag when a.IsStoragePointer:
-                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).Length == 0);
-                break;
-            case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text } :
-                dst.SetBoolean(text.Length == 0);
-                break;
-            case List or Map or Dice:
-                dst.SetBoolean(a.IntegerValue == 0);
-                break;
-            // Fixme: Special handling for series and external type
-            default:
-                dst.SetBoolean(true);
-                break;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)

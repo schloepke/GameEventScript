@@ -82,9 +82,18 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     public virtual GameEventScriptDiceValue AsDice() => GameEventScriptDiceValue.Empty;
 
-    public virtual bool HasSemanticValue() => true;
+    public virtual bool HasSemanticValue()
+    {
+        if (this is GameEventScriptTagValue tag)
+        {
+            return tag.Value.Length > 0 &&
+                   (!TryConvertToNumber(out var numericValue) || numericValue.HasSemanticValue());
+        }
 
-    public virtual bool IsSemanticallyEmpty() => false;
+        return true;
+    }
+
+    public virtual bool IsSemanticallyEmpty() => !HasSemanticValue();
 
     public GameEventScriptValue Lookup(GameEventScriptValue selector)
     {

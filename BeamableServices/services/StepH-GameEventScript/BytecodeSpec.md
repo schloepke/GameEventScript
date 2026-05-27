@@ -956,6 +956,12 @@ CollectionBuilderAdd builder item
 CollectionBuilderFinish dst builder
 ```
 
+`UnaryKeys`, `UnaryValues`, and `UnaryEntries` are strict map/custom-type
+projection opcodes. They are not general enumerable materializers. Map-backed
+custom type values follow the same rules as maps. Successful projections use
+stable ordinal key order. If the operand is `nothing`, the result is
+`nothing`; any other non-map operand also yields `nothing`.
+
 `PipelineIterator` is a lazy one-time adapter over another VM iterator. Its
 helper entry runs as an isolated helper frame: the current source item is bound
 to helper-local slot `AU` (normally slot `0`), and `BU` references a

@@ -1018,21 +1018,21 @@
                 }
               },
               "values": {
-                "type": ":list",
-                "items": [
-                  {
+                "type": ":map",
+                "entries": {
+                  "a": {
                     "type": ":integer",
                     "value": "10"
                   },
-                  {
+                  "b": {
                     "type": ":integer",
                     "value": "20"
                   },
-                  {
+                  "c": {
                     "type": ":integer",
                     "value": "30"
                   }
-                ]
+                }
               },
               "maybeTarget": {
                 "type": ":list",
@@ -1100,15 +1100,6 @@
               }
             },
             {
-              "name": "SeenMaybe",
-              "args": {
-                "value": {
-                  "type": ":text",
-                  "value": "boss"
-                }
-              }
-            },
-            {
               "name": "SeenEntry",
               "args": {
                 "key": {
@@ -1147,7 +1138,7 @@
                 },
                 "maybeCount": {
                   "type": ":integer",
-                  "value": "1"
+                  "value": "0"
                 },
                 "entryCount": {
                   "type": ":integer",

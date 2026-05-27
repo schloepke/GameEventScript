@@ -188,6 +188,16 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesRange(long from, long to, long step = 1) => GameEventScriptRangeValue.Create(from, to, step);
 
     /// <summary>
+    /// Creates a new instance of <see cref="GameEventScriptRangeValue"/> representing a numeric range.
+    /// </summary>
+    /// <param name="from">The starting value of the range.</param>
+    /// <param name="to">The ending value of the range.</param>
+    /// <param name="step">The step increment between values in the range. Defaults to 1.</param>
+    /// <returns>A new <see cref="GameEventScriptRangeValue"/> instance representing the specified range.</returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public static GameEventScriptValue GesRange(double from, double to, double step = 1d) => GameEventScriptRangeValue.Create(from, to, step);
+
+    /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a message value.
     /// </summary>
     /// <param name="message">The message to encapsulate. Cannot be null.</param>
@@ -209,7 +219,15 @@ public static class GameEventScriptValueFactory
     /// <param name="source">The source <see cref="GameEventScriptValue"/> to extract values from. Cannot be null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the resulting sequence of values.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesValues(GameEventScriptValue source) => GesList(EnumerateValues(source));
+    public static GameEventScriptValue GesValues(GameEventScriptValue source)
+    {
+        source ??= GesNothing();
+        return source.IsNothing()
+            ? GesNothing()
+            : source.Kind == GameEventScriptValueKind.Map
+                ? GesList(EnumerateValues(source))
+                : GesNothing();
+    }
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing the keys of a map value.
@@ -217,7 +235,15 @@ public static class GameEventScriptValueFactory
     /// <param name="source">The source sequence value. Must represent a sequence in a valid format.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the keys of the specified sequence value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesKeys(GameEventScriptValue source) => GesList(EnumerateKeys(source));
+    public static GameEventScriptValue GesKeys(GameEventScriptValue source)
+    {
+        source ??= GesNothing();
+        return source.IsNothing()
+            ? GesNothing()
+            : source.Kind == GameEventScriptValueKind.Map
+                ? GesList(EnumerateKeys(source))
+                : GesNothing();
+    }
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing map entries
@@ -226,7 +252,15 @@ public static class GameEventScriptValueFactory
     /// <param name="source">The source <see cref="GameEventScriptValue"/> used to generate the entry sequence. Cannot be null.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the entry sequence.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesEntries(GameEventScriptValue source) => GesList(EnumerateEntries(source));
+    public static GameEventScriptValue GesEntries(GameEventScriptValue source)
+    {
+        source ??= GesNothing();
+        return source.IsNothing()
+            ? GesNothing()
+            : source.Kind == GameEventScriptValueKind.Map
+                ? GesList(EnumerateEntries(source))
+                : GesNothing();
+    }
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptListValue"/> representing a list of script values.
@@ -256,24 +290,14 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateValues(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.IsNothing())
+        if (source.Kind != GameEventScriptValueKind.Map)
         {
             yield break;
         }
 
-        if (source.Kind == GameEventScriptValueKind.Map)
+        foreach (var key in source.AsMap().Keys.OrderBy(key => key, StringComparer.Ordinal))
         {
-            foreach (var value in source.AsMap().Values)
-            {
-                yield return value;
-            }
-
-            yield break;
-        }
-
-        foreach (var value in source.AsEnumerable())
-        {
-            yield return value;
+            yield return source.AsMap()[key];
         }
     }
 

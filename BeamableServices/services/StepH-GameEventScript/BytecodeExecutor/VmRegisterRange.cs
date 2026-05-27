@@ -5,17 +5,21 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterRange
 {
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateRange(ref this VmValue dst, ref VmValue from, ref VmValue to)
     {
         if (from.Kind is Integer && to.Kind is Integer)
         {
             dst.SetRange(from.IntegerValue, to.IntegerValue, 1);
-            return;
         }
-        
-        dst.SetNothing();
+        else if (from.IsNumeric && to.IsNumeric)
+        {
+            dst.SetRange(from.AsNumeric, to.AsNumeric, 1.0d);
+        }
+        else
+        {
+            dst.SetNothing();
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -24,10 +28,14 @@ internal static class VmRegisterRange
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)
         {
             dst.SetRange(from.IntegerValue, to.IntegerValue, step.IntegerValue);
-            return;
         }
-        
-        dst.SetNothing();
+        else if (from.IsNumeric && to.IsNumeric && step.IsNumeric)
+        {
+            dst.SetRange(from.AsNumeric, to.AsNumeric, step.AsNumeric);
+        }
+        else
+        {
+            dst.SetNothing();
+        }
     }
-
 }

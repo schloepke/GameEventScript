@@ -337,9 +337,9 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0x96 | `Combine` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
 | 0x97 | `Except` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
 | 0x98 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
-| 0x99 | `UnaryKeys` | - | result slot | `XSlot`=operand | - | - | Map/record keys projection. |
-| 0x9A | `UnaryValues` | - | result slot | `XSlot`=operand | - | - | Map/record values projection. |
-| 0x9B | `UnaryEntries` | - | result slot | `XSlot`=operand | - | - | Map/record entries projection. |
+| 0x99 | `UnaryKeys` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9A | `UnaryValues` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9B | `UnaryEntries` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
 | 0x9C | `Range` | - | result slot | `XSlot`=from | `YSlot`=to | - | Builds a range with implicit step `1`. |
 | 0x9D | `RangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Builds a range with explicit step. |
 | 0x9E | `RangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |

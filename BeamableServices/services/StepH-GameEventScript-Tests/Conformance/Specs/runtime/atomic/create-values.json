@@ -131,6 +131,38 @@
     },
     {
       "kind": "scriptApi",
+      "name": "create float range values",
+      "script": "module AtomicCreateFloatRangeValues\non Start {\n  let ascending as :range be from 1.5 to 3.5 step 0.5\n  let descending as :range be from 3.5 to 1.5 step (0 - 0.5)\n  emit Done(ascending: ascending, descending: descending)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "ascending": {
+                  "type": ":range",
+                  "from": "1.5",
+                  "to": "3.5",
+                  "step": "0.5"
+                },
+                "descending": {
+                  "type": ":range",
+                  "from": "3.5",
+                  "to": "1.5",
+                  "step": "-0.5"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "create dice values",
       "script": "module AtomicCreateDiceValues\non Start {\n  let diceValue be :dice 6d3\n  emit Done(diceValue: diceValue, length: :len diceValue)\n}",
       "randomSequence": [

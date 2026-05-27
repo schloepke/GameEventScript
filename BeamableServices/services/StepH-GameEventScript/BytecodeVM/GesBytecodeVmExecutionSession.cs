@@ -2364,9 +2364,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryCreateRangeIterator(BytecodeVmValue fromValue, BytecodeVmValue toValue, BytecodeVmValue stepValue, out BytecodeVmIterator iterator)
     {
-        if (!fromValue.TryGetRangeInteger(out var from) ||
-            !toValue.TryGetRangeInteger(out var to) ||
-            !stepValue.TryGetRangeInteger(out var step))
+        if (fromValue.TryGetExactRangeInteger(out var integerFrom) &&
+            toValue.TryGetExactRangeInteger(out var integerTo) &&
+            stepValue.TryGetExactRangeInteger(out var integerStep))
+        {
+            return TryCreateRangeIterator(GesRange(integerFrom, integerTo, integerStep), out iterator);
+        }
+
+        if (!fromValue.TryGetRangeNumber(out var from) ||
+            !toValue.TryGetRangeNumber(out var to) ||
+            !stepValue.TryGetRangeNumber(out var step))
         {
             iterator = BytecodeVmIterator.Empty;
             return false;
@@ -2375,22 +2382,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryCreateRangeIterator(from, to, step, out iterator);
     }
 
-    private bool TryCreateRangeIterator(long from, long to, long step, out BytecodeVmIterator iterator)
+    private bool TryCreateRangeIterator(double from, double to, double step, out BytecodeVmIterator iterator)
+        => TryCreateRangeIterator(GesRange(from, to, step), out iterator);
+
+    private bool TryCreateRangeIterator(GameEventScriptValue range, out BytecodeVmIterator iterator)
     {
-        if (step == 0)
+        if (!GesRuntimeLimitUtilities.TryGetRangeLength(range, out var length) || length == 0)
         {
             iterator = BytecodeVmIterator.Empty;
             return true;
         }
 
-        var length = GesRuntimeLimitUtilities.GetRangeLength(from, to, step);
         if (!_runtimeBudget.TryCheckRangeLength(length, "For loop range would enumerate more range items than allowed."))
         {
             iterator = BytecodeVmIterator.Empty;
             return true;
         }
 
-        iterator = new BytecodeVmRangeIterator(from, to, step);
+        iterator = new BytecodeVmCollectionIterator(range, range.AsEnumerable().GetEnumerator());
         return true;
     }
 
@@ -4688,9 +4697,16 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static BytecodeVmValue EvaluateRangeExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue, BytecodeVmValue stepValue)
     {
-        if (!fromValue.TryGetRangeInteger(out var from) ||
-            !toValue.TryGetRangeInteger(out var to) ||
-            !stepValue.TryGetRangeInteger(out var step))
+        if (fromValue.TryGetExactRangeInteger(out var integerFrom) &&
+            toValue.TryGetExactRangeInteger(out var integerTo) &&
+            stepValue.TryGetExactRangeInteger(out var integerStep))
+        {
+            return BytecodeVmValue.Reference(GesRange(integerFrom, integerTo, integerStep));
+        }
+
+        if (!fromValue.TryGetRangeNumber(out var from) ||
+            !toValue.TryGetRangeNumber(out var to) ||
+            !stepValue.TryGetRangeNumber(out var step))
         {
             return BytecodeVmValue.Nothing;
         }
@@ -7037,6 +7053,36 @@ internal readonly record struct BytecodeVmValue(
         }
 
         value = 0L;
+        return false;
+    }
+
+    public bool TryGetExactRangeInteger(out long value)
+    {
+        switch (Kind)
+        {
+            case BytecodeVmValueKind.Boolean:
+                value = BooleanValue ? 1L : 0L;
+                return true;
+            case BytecodeVmValueKind.Integer:
+                value = IntegerValue;
+                return true;
+            case BytecodeVmValueKind.Reference when ReferenceValue is GameEventScriptNumberValue { IsIntegerValue: true } integer:
+                value = integer.IntegerValue;
+                return true;
+            default:
+                value = 0L;
+                return false;
+        }
+    }
+
+    public bool TryGetRangeNumber(out double value)
+    {
+        if (TryGetFiniteNumber(out value))
+        {
+            return true;
+        }
+
+        value = 0d;
         return false;
     }
 

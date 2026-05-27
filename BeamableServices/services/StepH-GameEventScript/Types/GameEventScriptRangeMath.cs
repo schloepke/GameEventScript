@@ -54,12 +54,78 @@ internal static class GameEventScriptRangeMath
         return step > 0 ? value <= to : value >= to;
     }
 
+    public static long GetLength(double from, double to, double step)
+    {
+        if (!double.IsFinite(from) || !double.IsFinite(to) || !double.IsFinite(step) || step == 0d)
+        {
+            return 0;
+        }
+
+        if (step > 0d)
+        {
+            return from > to ? 0 : CountInclusive((to - from) / step);
+        }
+
+        return from < to ? 0 : CountInclusive((from - to) / -step);
+    }
+
+    public static bool Contains(double from, double to, double step, double value)
+    {
+        if (!double.IsFinite(value) ||
+            !double.IsFinite(from) ||
+            !double.IsFinite(to) ||
+            !double.IsFinite(step) ||
+            step == 0d)
+        {
+            return false;
+        }
+
+        return step > 0d
+            ? value >= from && value <= to && IsIntegerMultiple(value - from, step)
+            : value <= from && value >= to && IsIntegerMultiple(from - value, -step);
+    }
+
+    public static bool TryGetTerm(double from, double to, double step, long oneBasedIndex, out double value)
+    {
+        if (oneBasedIndex <= 0 || oneBasedIndex > GetLength(from, to, step))
+        {
+            value = 0d;
+            return false;
+        }
+
+        value = from + step * (oneBasedIndex - 1);
+        return step > 0d ? value <= to : value >= to;
+    }
+
     private static long CountInclusive(ulong zeroBasedDistance, ulong stepMagnitude)
     {
         var zeroBasedCount = zeroBasedDistance / stepMagnitude;
         return zeroBasedCount >= (ulong)long.MaxValue
             ? long.MaxValue
             : (long)(zeroBasedCount + 1UL);
+    }
+
+    private static long CountInclusive(double zeroBasedDistanceInSteps)
+    {
+        if (double.IsNaN(zeroBasedDistanceInSteps) || zeroBasedDistanceInSteps < 0d)
+        {
+            return 0;
+        }
+
+        if (double.IsPositiveInfinity(zeroBasedDistanceInSteps) || zeroBasedDistanceInSteps >= long.MaxValue)
+        {
+            return long.MaxValue;
+        }
+
+        return (long)System.Math.Floor(zeroBasedDistanceInSteps) + 1L;
+    }
+
+    private static bool IsIntegerMultiple(double distance, double stepMagnitude)
+    {
+        var quotient = distance / stepMagnitude;
+        var nearest = System.Math.Round(quotient);
+        var tolerance = 1e-10d * System.Math.Max(1d, System.Math.Abs(quotient));
+        return System.Math.Abs(quotient - nearest) <= tolerance;
     }
 
     private static ulong StepMagnitude(long step)

@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -33,12 +34,21 @@ internal class VmListObject(int size) : IVmIndexAccess<VmValue>
         value = Items[index];
         return true;
     }
+    
 }
 
 internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKeyAccess<VmValue>
 {
+    private VmListObject? _keys;
+    private VmListObject? _values;
+    private VmListObject? _entries;
+    
     public int Length => entries.Count;
     public IReadOnlyDictionary<string, VmValue> Entries => entries;
+    
+    internal VmListObject KeyList => _keys ??= CreateListOfKeys();
+    internal VmListObject ValueList => _values ??= CreateListOfValues();
+    internal VmListObject EntryList => _entries ??= CreateListOfEntries();
 
     public bool TryGet(string key, out VmValue value)
     {
@@ -50,6 +60,42 @@ internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKe
         value = default;
         return false;
     }
+
+    private VmListObject CreateListOfKeys()
+    {
+        var list = new VmListObject(entries.Count);
+        var i = 0;
+        foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
+        {
+            list.Items[i++].SetTag(key);
+        }
+        return list;
+    }
+
+    private VmListObject CreateListOfValues()
+    {
+        var list = new VmListObject(entries.Count);
+        var i = 0;
+        foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
+        {
+            list.Items[i++] = entries[key];
+        }
+        return list;
+    }
+
+    private VmListObject CreateListOfEntries()
+    {
+        var list = new VmListObject(entries.Count);
+        var i = 0;
+        foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
+        {
+            list.Items[i++].SetMap(new VmMapObject(new Dictionary<string, VmValue> { ["key"] = VmValue.CreateTag(key), ["value"] = entries[key] }));
+        }
+
+        return list;
+    }
+
+
 }
 
 internal class VmFloatTriplet(double x, double y, double z) : IVmIndexAccess<double>, IVmKeyAccess<double>
@@ -135,3 +181,4 @@ internal class VmIntegerRangeStream(long from, long to, long step) : IVmStream, 
 }
 
 internal record VmRange(long from, long to, long step);
+internal record VmFloatRange(double from, double to, double step);

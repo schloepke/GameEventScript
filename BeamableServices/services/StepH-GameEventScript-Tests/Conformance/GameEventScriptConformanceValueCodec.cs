@@ -95,9 +95,9 @@ internal static class GameEventScriptConformanceValueCodec
                 return GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32)));
             case ":range":
                 return GameEventScriptValueFactory.GesRange(
-                    RequireInt64(element, "from", "range start"),
-                    RequireInt64(element, "to", "range end"),
-                    TryGetProperty(element, "step", out var stepElement) ? ReadInt64(stepElement, "range step") : 1L);
+                    RequireFloat(element, "from", "range start"),
+                    RequireFloat(element, "to", "range end"),
+                    TryGetProperty(element, "step", out var stepElement) ? ReadFloat(stepElement, "range step") : 1d);
             case ":message":
                 return GameEventScriptValueFactory.GesMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
             default:
@@ -304,9 +304,9 @@ internal static class GameEventScriptConformanceValueCodec
         => new()
         {
             ["type"] = ":range",
-            ["from"] = GetInternalProperty<long>(value, "From").ToString(CultureInfo.InvariantCulture),
-            ["to"] = GetInternalProperty<long>(value, "To").ToString(CultureInfo.InvariantCulture),
-            ["step"] = GetInternalProperty<long>(value, "Step").ToString(CultureInfo.InvariantCulture)
+            ["from"] = FormatFloat(GetInternalProperty<double>(value, "FromNumber")),
+            ["to"] = FormatFloat(GetInternalProperty<double>(value, "ToNumber")),
+            ["step"] = FormatFloat(GetInternalProperty<double>(value, "StepNumber"))
         };
 
     private static JsonObject ToNumberJson(GameEventScriptNumberValue value)

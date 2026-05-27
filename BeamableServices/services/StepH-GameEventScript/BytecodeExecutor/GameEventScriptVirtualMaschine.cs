@@ -228,7 +228,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmNot(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryHasValue:
-                    _vmState.Register(instruction.DestinationSlot).VmHasValue(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).SetBoolean(_vmState.Register(instruction.XSlot).HasValue);
                     break;
                 case UnaryEmpty:
                     _vmState.Register(instruction.DestinationSlot).VmEmpty(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
@@ -255,7 +255,8 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmGreaterOrEqual(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
                     break;
                 case Default:
-                    _vmState.Register(instruction.DestinationSlot).VmDefault(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));
+                    var a = _vmState.Register(instruction.XSlot);
+                    _vmState.Register(instruction.DestinationSlot) = a.HasValue ? a : _vmState.Register(instruction.YSlot);
                     break;
                 case Add:
                     _vmState.Register(instruction.DestinationSlot).VmAdd(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
@@ -319,37 +320,37 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmLength(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
                     break;
                 case StartsWith:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmStartsWith(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case EndsWith:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmEndsWith(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Contains:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmContains(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case ContainsValue:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmContainsValue(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Intersect:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmIntersect(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Combine:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmCombine(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Except:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmExcept(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Zip:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmZip(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case UnaryKeys:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmKeys(ref _vmState.Register(instruction.XSlot));
                     break;
                 case UnaryValues:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmValues(ref _vmState.Register(instruction.XSlot));
                     break;
                 case UnaryEntries:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmEntries(ref _vmState.Register(instruction.XSlot));
                     break;
                 case GameEventScriptBytecodeOpCode.Range:
                     _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));

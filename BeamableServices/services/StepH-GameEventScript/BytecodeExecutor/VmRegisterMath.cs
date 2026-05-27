@@ -26,7 +26,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 break;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue + b.AsNumberValue, unit);
+                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric + b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer when b.Kind is Percentage:
@@ -98,7 +98,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 break;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue - b.AsNumberValue, unit);
+                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric - b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer when b.Kind is Percentage:
@@ -186,7 +186,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TryProductUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue * b.AsNumberValue, unit);
+                if (TryProductUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric * b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Integer when b.Kind is Percentage:
@@ -240,7 +240,7 @@ internal static class VmRegisterMath
                 dst.SetFloat(double.NaN);
                 return;
             case Integer or Float when b.Kind is Vector:
-                var scalar = a.AsNumberValue;
+                var scalar = a.AsNumeric;
                 if (b.ObjectValue is VmFloatTriplet rightVector && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -322,7 +322,7 @@ internal static class VmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue / b.AsNumberValue, unit);
+                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric / b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Percentage when b.Kind is Percentage:
@@ -335,10 +335,10 @@ internal static class VmRegisterMath
                     return;
                 }
 
-                dst.SetPercentage(a.FloatValue / b.AsNumberValue);
+                dst.SetPercentage(a.FloatValue / b.AsNumeric);
                 return;
             case Integer or Float when b.Kind is Percentage:
-                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumberValue / b.FloatValue, unit);
+                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric / b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
@@ -481,7 +481,7 @@ internal static class VmRegisterMath
                 dst.SetFloat(Math.Pow(a.FloatValue, b.FloatValue), floatUnit);
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                var rightNumber = b.AsNumberValue;
+                var rightNumber = b.AsNumeric;
                 if (b.HasUnit)
                 {
                     dst.SetFloat(double.NaN);
@@ -499,7 +499,7 @@ internal static class VmRegisterMath
                     }
                 }
 
-                dst.SetFloat(Math.Pow(a.AsNumberValue, rightNumber), mixedUnit);
+                dst.SetFloat(Math.Pow(a.AsNumeric, rightNumber), mixedUnit);
                 return;
             case Nothing:
                 dst.SetNothing();
@@ -567,7 +567,7 @@ internal static class VmRegisterMath
             case Float or Integer when b.Kind is Float or Integer:
                 if (TryQuotientUnit(ref a, ref b, out var mixedUnit))
                 {
-                    var result = Math.Floor(a.AsNumberValue / b.AsNumberValue);
+                    var result = Math.Floor(a.AsNumeric / b.AsNumeric);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, mixedUnit);
                     else dst.SetFloat(result, mixedUnit);
                 }
@@ -576,7 +576,7 @@ internal static class VmRegisterMath
             case Integer or Float when b.Kind is Percentage:
                 if (TryQuotientUnit(ref a, ref b, out var percentageRightUnit))
                 {
-                    var result = Math.Floor(a.AsNumberValue / b.FloatValue);
+                    var result = Math.Floor(a.AsNumeric / b.FloatValue);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageRightUnit);
                     else dst.SetFloat(result, percentageRightUnit);
                 }
@@ -585,7 +585,7 @@ internal static class VmRegisterMath
             case Percentage when b.Kind is Integer or Float or Percentage:
                 if (TryQuotientUnit(ref a, ref b, out var percentageLeftUnit))
                 {
-                    var result = Math.Floor(a.FloatValue / b.AsNumberValue);
+                    var result = Math.Floor(a.FloatValue / b.AsNumeric);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageLeftUnit);
                     else dst.SetFloat(result, percentageLeftUnit);
                 }
@@ -690,8 +690,8 @@ internal static class VmRegisterMath
             case Float or Integer when b.Kind is Float or Integer:
                 if (TrySameUnit(ref a, ref b, out var mixedUnit))
                 {
-                    var leftNumber = a.AsNumberValue;
-                    var rightNumber = b.AsNumberValue;
+                    var leftNumber = a.AsNumeric;
+                    var rightNumber = b.AsNumeric;
                     if (double.IsNaN(leftNumber) || double.IsNaN(rightNumber) || double.IsInfinity(leftNumber) || rightNumber == 0d)
                     {
                         dst.SetFloat(double.NaN, mixedUnit);
@@ -792,8 +792,8 @@ internal static class VmRegisterMath
             case Float or Integer when b.Kind is Float or Integer:
                 if (TrySameUnit(ref a, ref b, out var mixedUnit))
                 {
-                    var leftNumber = a.AsNumberValue;
-                    var rightNumber = b.AsNumberValue;
+                    var leftNumber = a.AsNumeric;
+                    var rightNumber = b.AsNumeric;
                     if (double.IsNaN(leftNumber) || double.IsNaN(rightNumber) || double.IsInfinity(leftNumber) || rightNumber == 0d)
                     {
                         dst.SetFloat(double.NaN, mixedUnit);
@@ -858,8 +858,8 @@ internal static class VmRegisterMath
                     return;
                 }
 
-                var fastLeft = a.AsNumberValue;
-                var fastRight = b.AsNumberValue;
+                var fastLeft = a.AsNumeric;
+                var fastRight = b.AsNumeric;
                 if (double.IsNaN(fastLeft) || double.IsNaN(fastRight)) dst.SetFloat(double.NaN);
                 else dst = fastRight < fastLeft ? b : a;
                 return;
@@ -1078,8 +1078,8 @@ internal static class VmRegisterMath
                     return;
                 }
 
-                var fastLeft = a.AsNumberValue;
-                var fastRight = b.AsNumberValue;
+                var fastLeft = a.AsNumeric;
+                var fastRight = b.AsNumeric;
                 if (double.IsNaN(fastLeft) || double.IsNaN(fastRight)) dst.SetFloat(double.NaN);
                 else dst = fastRight > fastLeft ? b : a;
                 return;
@@ -1400,9 +1400,9 @@ internal static class VmRegisterMath
                     return;
                 }
 
-                var x = value.AsNumberValue;
-                var a = min.AsNumberValue;
-                var b = max.AsNumberValue;
+                var x = value.AsNumeric;
+                var a = min.AsNumeric;
+                var b = max.AsNumeric;
                 var lower = a <= b ? a : b;
                 var upper = a <= b ? b : a;
                 if (double.IsNaN(x) || double.IsNaN(lower) || double.IsNaN(upper))
@@ -1520,8 +1520,8 @@ internal static class VmRegisterMath
             case Float or Integer when to.Kind is Float or Integer:
                 if (TrySameUnit(ref from, ref to, out unit))
                 {
-                    var left = from.AsNumberValue;
-                    var right = to.AsNumberValue;
+                    var left = from.AsNumeric;
+                    var right = to.AsNumeric;
                     if (double.IsFinite(left) && double.IsFinite(right)) dst.SetFloat(randomGenerator.NextInclusiveFloat(left, right), unit);
                     else dst.SetFloat(double.NaN);
                 }
@@ -1539,7 +1539,7 @@ internal static class VmRegisterMath
                 }
 
                 var percentageLeft = from.FloatValue;
-                var numericRight = to.AsNumberValue;
+                var numericRight = to.AsNumeric;
                 if (double.IsFinite(percentageLeft) && double.IsFinite(numericRight)) dst.SetFloat(randomGenerator.NextInclusiveFloat(percentageLeft, numericRight));
                 else dst.SetFloat(double.NaN);
                 return;
@@ -1550,7 +1550,7 @@ internal static class VmRegisterMath
                     return;
                 }
 
-                var numericLeft = from.AsNumberValue;
+                var numericLeft = from.AsNumeric;
                 var percentageRight = to.FloatValue;
                 if (double.IsFinite(numericLeft) && double.IsFinite(percentageRight)) dst.SetFloat(randomGenerator.NextInclusiveFloat(numericLeft, percentageRight));
                 else dst.SetFloat(double.NaN);

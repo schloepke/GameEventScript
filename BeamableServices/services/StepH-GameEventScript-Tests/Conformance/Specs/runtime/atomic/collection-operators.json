@@ -1,0 +1,1170 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicCollectionOperators",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "length operator",
+      "script": "module AtomicCollectionLengthOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :len vNothing, booleanValue: :len vBoolean, integerValue: :len vInteger, floatValue: :len vFloat, percentageValue: :len vPercentage, textValue: :len vText, tagValue: :len vTag, vectorValue: :len vVector, pointValue: :len vPoint, listValue: :len vList, mapValue: :len vMap, diceValue: :len vDice, rangeValue: :len vRange)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "mapValue": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "diceValue": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "rangeValue": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "keys operator",
+      "script": "module AtomicCollectionKeysOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :keys vNothing, booleanValue: :keys vBoolean, integerValue: :keys vInteger, floatValue: :keys vFloat, percentageValue: :keys vPercentage, textValue: :keys vText, tagValue: :keys vTag, vectorValue: :keys vVector, pointValue: :keys vPoint, listValue: :keys vList, mapValue: :keys vMap, diceValue: :keys vDice, rangeValue: :keys vRange)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":nothing"
+                },
+                "mapValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":tag",
+                      "value": "alpha"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "hp"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "name"
+                    }
+                  ]
+                },
+                "diceValue": {
+                  "type": ":nothing"
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "values operator",
+      "script": "module AtomicCollectionValuesOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :values vNothing, booleanValue: :values vBoolean, integerValue: :values vInteger, floatValue: :values vFloat, percentageValue: :values vPercentage, textValue: :values vText, tagValue: :values vTag, vectorValue: :values vVector, pointValue: :values vPoint, listValue: :values vList, mapValue: :values vMap, diceValue: :values vDice, rangeValue: :values vRange)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":nothing"
+                },
+                "mapValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":text",
+                      "value": "first"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  ]
+                },
+                "diceValue": {
+                  "type": ":nothing"
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "entries operator",
+      "script": "module AtomicCollectionEntriesOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :entries vNothing, booleanValue: :entries vBoolean, integerValue: :entries vInteger, floatValue: :entries vFloat, percentageValue: :entries vPercentage, textValue: :entries vText, tagValue: :entries vTag, vectorValue: :entries vVector, pointValue: :entries vPoint, listValue: :entries vList, mapValue: :entries vMap, diceValue: :entries vDice, rangeValue: :entries vRange)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":nothing"
+                },
+                "mapValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "alpha"
+                        },
+                        "value": {
+                          "type": ":text",
+                          "value": "first"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "hp"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "10"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "name"
+                        },
+                        "value": {
+                          "type": ":text",
+                          "value": "Ada"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "diceValue": {
+                  "type": ":nothing"
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "starts with operator",
+      "script": "module AtomicCollectionStartsWithOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing starts with [1], booleanValue: vBoolean starts with [1], integerValue: vInteger starts with [1], floatValue: vFloat starts with [1], percentageValue: vPercentage starts with [1], textValue: vText starts with 'ab', tagValue: vTag starts with :ab, vectorValue: vVector starts with [1, 2], pointValue: vPoint starts with [4, 5], listValue: vList starts with [1, 2], mapValue: vMap starts with [10], diceValue: vDice starts with [3, 2], rangeValue: vRange starts with [1, 2])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "percentageValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "vectorValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "pointValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "ends with operator",
+      "script": "module AtomicCollectionEndsWithOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing ends with [1], booleanValue: vBoolean ends with [1], integerValue: vInteger ends with [1], floatValue: vFloat ends with [1], percentageValue: vPercentage ends with [1], textValue: vText ends with 'cd', tagValue: vTag ends with :cd, vectorValue: vVector ends with [2, 3], pointValue: vPoint ends with [5, 6], listValue: vList ends with [2, 3], mapValue: vMap ends with [10], diceValue: vDice ends with [2, 1], rangeValue: vRange ends with [2, 3])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "percentageValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "vectorValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "pointValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "contains operator",
+      "script": "module AtomicCollectionContainsOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 in vNothing, booleanValue: 1 in vBoolean, integerValue: 1 in vInteger, floatValue: 1 in vFloat, percentageValue: 1 in vPercentage, textValue: 'bc' in vText, tagValue: :bc in vTag, vectorValue: 2 in vVector, pointValue: 5 in vPoint, listValue: 2 in vList, mapValue: :hp in vMap, diceValue: 2 in vDice, rangeValue: 2 in vRange)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "percentageValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "vectorValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "pointValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "contains value operator",
+      "script": "module AtomicCollectionContainsValueOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 value in vNothing, booleanValue: 1 value in vBoolean, integerValue: 1 value in vInteger, floatValue: 1 value in vFloat, percentageValue: 1 value in vPercentage, textValue: 'bc' value in vText, tagValue: :bc value in vTag, vectorValue: 2 value in vVector, pointValue: 5 value in vPoint, listValue: 2 value in vList, mapValue: 10 value in vMap, diceValue: 2 value in vDice, rangeValue: 2 value in vRange)\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "percentageValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "vectorValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "pointValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "intersect operator",
+      "script": "module AtomicCollectionIntersectOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :intersect [2], booleanValue: vBoolean :intersect [2], integerValue: vInteger :intersect [2], floatValue: vFloat :intersect [2], percentageValue: vPercentage :intersect [2], textValue: vText :intersect [2], tagValue: vTag :intersect [2], vectorValue: vVector :intersect [2], pointValue: vPoint :intersect [2], listValue: vList :intersect [2, 2, 4], mapValue: vMap :intersect [hp: 99, extra: 1], diceValue: vDice :intersect [2, 4], rangeValue: vRange :intersect [2])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                },
+                "mapValue": {
+                  "type": ":map",
+                  "entries": {
+                    "hp": {
+                      "type": ":integer",
+                      "value": "10"
+                    }
+                  }
+                },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "combine operator",
+      "script": "module AtomicCollectionCombineOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :combine [4], booleanValue: vBoolean :combine [4], integerValue: vInteger :combine [4], floatValue: vFloat :combine [4], percentageValue: vPercentage :combine [4], textValue: vText :combine [4], tagValue: vTag :combine [4], vectorValue: vVector :combine [4], pointValue: vPoint :combine [4], listValue: vList :combine [3, 4], mapValue: vMap :combine [hp: 12, mp: 5], diceValue: vDice :combine [4], rangeValue: vRange :combine [4])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "mapValue": {
+                  "type": ":map",
+                  "entries": {
+                    "hp": {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    "mp": {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "merge operator",
+      "script": "module AtomicCollectionMergeOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :merge [4], booleanValue: vBoolean :merge [4], integerValue: vInteger :merge [4], floatValue: vFloat :merge [4], percentageValue: vPercentage :merge [4], textValue: vText :merge [4], tagValue: vTag :merge [4], vectorValue: vVector :merge [4], pointValue: vPoint :merge [4], listValue: vList :merge [3, 4], mapValue: vMap :merge [hp: 12, mp: 5], diceValue: vDice :merge [4], rangeValue: vRange :merge [4])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "mapValue": {
+                  "type": ":map",
+                  "entries": {
+                    "hp": {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    "mp": {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "except operator",
+      "script": "module AtomicCollectionExceptOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :except [2], booleanValue: vBoolean :except [2], integerValue: vInteger :except [2], floatValue: vFloat :except [2], percentageValue: vPercentage :except [2], textValue: vText :except [2], tagValue: vTag :except [2], vectorValue: vVector :except [2], pointValue: vPoint :except [2], listValue: vList :except [2], mapValue: vMap :except [hp: 99], diceValue: vDice :except [2], rangeValue: vRange :except [2])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "mapValue": {
+                  "type": ":map",
+                  "entries": {
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    }
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "zip operator",
+      "script": "module AtomicCollectionZipOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :zip ['a'], booleanValue: vBoolean :zip ['a'], integerValue: vInteger :zip ['a'], floatValue: vFloat :zip ['a'], percentageValue: vPercentage :zip ['a'], textValue: vText :zip ['a'], tagValue: vTag :zip ['a'], vectorValue: vVector :zip ['a'], pointValue: vPoint :zip ['a'], listValue: vList :zip ['a', 'b'], mapValue: vMap :zip ['a'], diceValue: vDice :zip ['a', 'b'], rangeValue: vRange :zip ['a'])\n}",
+      "randomSequence": [
+        "3",
+        "2",
+        "1"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "booleanValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "floatValue": {
+                  "type": ":nothing"
+                },
+                "percentageValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "tagValue": {
+                  "type": ":nothing"
+                },
+                "vectorValue": {
+                  "type": ":nothing"
+                },
+                "pointValue": {
+                  "type": ":nothing"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "left": {
+                          "type": ":integer",
+                          "value": "1"
+                        },
+                        "right": {
+                          "type": ":text",
+                          "value": "a"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "left": {
+                          "type": ":integer",
+                          "value": "2"
+                        },
+                        "right": {
+                          "type": ":text",
+                          "value": "b"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "mapValue": {
+                  "type": ":nothing"
+                },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "left": {
+                          "type": ":integer",
+                          "value": "3"
+                        },
+                        "right": {
+                          "type": ":text",
+                          "value": "a"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "left": {
+                          "type": ":integer",
+                          "value": "2"
+                        },
+                        "right": {
+                          "type": ":text",
+                          "value": "b"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

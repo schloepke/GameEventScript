@@ -13,9 +13,9 @@ internal static class VmRegisterVectorPoint
         var unitX = UnitNothing;
         var unitY = UnitNothing;
         var unitZ = UnitNothing;
-        var x = start == 0 && i < state.StageLength ? state.RegisterStaged(i++).AsNumberValueWithUnit(out unitX) : 0.0d;
-        var y = start <= 1 && i < state.StageLength ? state.RegisterStaged(i++).AsNumberValueWithUnit(out unitY) : 0.0d;
-        var z = start <= 2 && i < state.StageLength ? state.RegisterStaged(i).AsNumberValueWithUnit(out unitZ) : 0.0d;
+        var x = start == 0 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
+        var y = start <= 1 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
+        var z = start <= 2 && i < state.StageLength ? state.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
         var unit = unitX;
         if (unitX is UnitNothing)
         {
@@ -46,9 +46,9 @@ internal static class VmRegisterVectorPoint
         var unitX = UnitNothing;
         var unitY = UnitNothing;
         var unitZ = UnitNothing;
-        var x = start == 0 && i < state.StageLength ? state.RegisterStaged(i++).AsNumberValueWithUnit(out unitX) : 0.0d;
-        var y = start <= 1 && i < state.StageLength ? state.RegisterStaged(i++).AsNumberValueWithUnit(out unitY) : 0.0d;
-        var z = start <= 2 && i < state.StageLength ? state.RegisterStaged(i).AsNumberValueWithUnit(out unitZ) : 0.0d;
+        var x = start == 0 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
+        var y = start <= 1 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
+        var z = start <= 2 && i < state.StageLength ? state.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
         var unit = unitX;
         if (unitX is UnitNothing)
         {

@@ -339,6 +339,13 @@ value has value
 :max of a and b and c
 ```
 
+`:keys`, `:values`, and `:entries` are defined only for maps and
+map-backed custom type values. `:keys` returns a list of tag keys, `:values`
+returns the corresponding values, and `:entries` returns maps with `key` and
+`value` fields. All three projections use stable ordinal key order. If the
+operand is `nothing`, the result is `nothing`; if the operand is any other
+non-map value, the result is also `nothing`.
+
 Square and cube roots lower to powers with exponents `0.5` and `1/3`.
 
 ### Constants

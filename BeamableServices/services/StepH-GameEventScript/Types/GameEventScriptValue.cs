@@ -222,7 +222,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Number => FormatNumberValue((GameEventScriptNumberValue)this),
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
             GameEventScriptValueKind.Series => $"series[{((GameEventScriptSeriesValue)this).SignatureId} offset {((GameEventScriptSeriesValue)this).Offset}]",
-            GameEventScriptValueKind.Range => $"range[{((GameEventScriptRangeValue)this).From} to {((GameEventScriptRangeValue)this).To} step {((GameEventScriptRangeValue)this).Step}]",
+            GameEventScriptValueKind.Range => FormatRange((GameEventScriptRangeValue)this),
             GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.ToString(),
             GameEventScriptValueKind.Handler => $"handler {((GameEventScriptHandlerValue)this).Signature.SignatureId}",
             GameEventScriptValueKind.List => $"[{string.Join(", ", AsList().Select(x => x.ToString()))}]",
@@ -272,9 +272,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Boolean => AsBoolean() == other.AsBoolean(),
             GameEventScriptValueKind.Series => ((GameEventScriptSeriesValue)this).SignatureId == ((GameEventScriptSeriesValue)other).SignatureId &&
                                                ((GameEventScriptSeriesValue)this).Offset == ((GameEventScriptSeriesValue)other).Offset,
-            GameEventScriptValueKind.Range => ((GameEventScriptRangeValue)this).From == ((GameEventScriptRangeValue)other).From &&
-                                              ((GameEventScriptRangeValue)this).To == ((GameEventScriptRangeValue)other).To &&
-                                              ((GameEventScriptRangeValue)this).Step == ((GameEventScriptRangeValue)other).Step,
+            GameEventScriptValueKind.Range => ((GameEventScriptRangeValue)this).FromNumber == ((GameEventScriptRangeValue)other).FromNumber &&
+                                              ((GameEventScriptRangeValue)this).ToNumber == ((GameEventScriptRangeValue)other).ToNumber &&
+                                              ((GameEventScriptRangeValue)this).StepNumber == ((GameEventScriptRangeValue)other).StepNumber,
             GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.SignatureId == ((GameEventScriptMessageValue)other).Value.SignatureId &&
                                                 EqualsDictionary(((GameEventScriptMessageValue)this).Value.Arguments, ((GameEventScriptMessageValue)other).Value.Arguments),
             GameEventScriptValueKind.Handler => ((GameEventScriptHandlerValue)this).Signature.SignatureId == ((GameEventScriptHandlerValue)other).Signature.SignatureId,
@@ -344,9 +344,9 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             case GameEventScriptValueKind.Range:
             {
                 var range = (GameEventScriptRangeValue)this;
-                hash.Add(range.From);
-                hash.Add(range.To);
-                hash.Add(range.Step);
+                hash.Add(range.FromNumber);
+                hash.Add(range.ToNumber);
+                hash.Add(range.StepNumber);
                 break;
             }
             case GameEventScriptValueKind.Message:
@@ -630,10 +630,10 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
         private static int CompareRange(GameEventScriptRangeValue left, GameEventScriptRangeValue right)
         {
-            var byFrom = left.From.CompareTo(right.From);
+            var byFrom = left.FromNumber.CompareTo(right.FromNumber);
             if (byFrom != 0) return byFrom;
-            var byTo = left.To.CompareTo(right.To);
-            return byTo != 0 ? byTo : left.Step.CompareTo(right.Step);
+            var byTo = left.ToNumber.CompareTo(right.ToNumber);
+            return byTo != 0 ? byTo : left.StepNumber.CompareTo(right.StepNumber);
         }
 
         private static int CompareMessage(GameEventScriptMessageValue left, GameEventScriptMessageValue right)
@@ -775,6 +775,12 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             ? $"{formatted}{value.Unit.ToSuffix()}"
             : formatted;
     }
+
+    internal static string FormatRange(GameEventScriptRangeValue value)
+        => $"range[{FormatRangeComponent(value.FromNumber)} to {FormatRangeComponent(value.ToNumber)} step {FormatRangeComponent(value.StepNumber)}]";
+
+    private static string FormatRangeComponent(double value)
+        => value.ToString("0.############################", CultureInfo.InvariantCulture);
 
     public static double WrapDegrees(double degrees)
     {

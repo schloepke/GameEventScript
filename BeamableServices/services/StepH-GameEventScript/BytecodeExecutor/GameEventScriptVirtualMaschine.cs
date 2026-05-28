@@ -413,13 +413,13 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmEntries(ref _vmState.Register(instruction.XSlot));
                     break;
                 case StreamCreate:
-                    // FIXME: creating the real custom type here
+                    _vmState.Register(instruction.DestinationSlot).VmStreamCreate(ref _vmState.Register(instruction.XSlot));
                     break;
                 case StreamNext:
-                    _vmState.Register(instruction.DestinationSlot).VmIteratorNext(ref _vmState.Register(instruction.XSlot), instruction.TargetAddress);
+                    _vmState.Register(instruction.DestinationSlot).VmStreamNext(ref _vmState.Register(instruction.XSlot), instruction.TargetAddress);
                     break;
                 case StreamClose:
-                    _vmState.Register(instruction.XSlot).VmIteratorClose();
+                    _vmState.Register(instruction.XSlot).VmStreamClose();
                     break;
                 case StreamReduce:
                     // FIXME: creating the real custom type here

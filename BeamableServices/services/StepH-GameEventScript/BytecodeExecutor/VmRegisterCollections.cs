@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -7,19 +6,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterCollections
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmIteratorNext(ref this VmValue dst, ref VmValue iterator, ushort noMoreAddress)
-    {
-        if (iterator is not { Kind: Stream, ObjectValue: IVmStream it }) dst.OwningState.RaiseError("Cannot iterator over non-iterator value");
-        else if (!it.TryNext(ref dst)) dst.OwningState.JumpAddress(noMoreAddress);
-    }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmIteratorClose(ref this VmValue iterator)
-    {
-        if (iterator is { Kind: Stream, ObjectValue: IDisposable it }) it.Dispose();
-    }
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateList(ref this VmValue dst)
     {

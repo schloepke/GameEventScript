@@ -8,6 +8,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal interface IVmIndexAccess<T>
 {
+    internal int Length { get; }
     internal bool TryGet(int index, out T value);
 }
 
@@ -139,41 +140,6 @@ internal class VmFloatTriplet(double x, double y, double z) : IVmIndexAccess<dou
                 value = 0;
                 return false;
         }
-    }
-}
-
-internal interface IVmStream
-{
-    public bool TryNext(ref VmValue value);
-}
-
-internal class VmIntegerRangeStream(long from, long to, long step) : IVmStream, IDisposable
-{
-    private long _current = from;
-    private bool _disposed = false;
-
-    public bool TryNext(ref VmValue value)
-    {
-        if(_disposed)
-        {
-            // A disposed iterator cannot be used again and results in an error / nothing. This might be a bug in the VM itself so maybe we result in error halt?
-            value.SetNothing();
-            return false;
-        }
-        if (!(step switch
-            {
-                > 0 => _current <= to,
-                < 0 => _current >= to,
-                _ => false
-            })) return false;
-        value.SetInteger(_current);
-        _current += step;
-        return true;
-    }
-
-    public void Dispose()
-    {
-        _disposed = true;
     }
 }
 

@@ -25,13 +25,10 @@ public static class GameEventScriptBytecodeInstructionUnits
         => unit.IsNumericUnit() ? unit : null;
 
     internal static byte ToUnitAndFlags(this GameEventScriptBytecodeInstructionUnit? unit)
-        => (byte)unit.ToStoredUnit();
+        => GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(unit);
 
     internal static byte ToUnitAndFlags(this GameEventScriptBytecodeInstructionUnit unit)
-        => (byte)unit.ToStoredUnit();
-
-    internal static GameEventScriptBytecodeInstructionUnit FromUnitAndFlags(byte unitAndFlags)
-        => ((GameEventScriptBytecodeInstructionUnit)(unitAndFlags & 0x1F)).ToStoredUnit();
+        => GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(unit);
 
     public static bool TryParseTypeName(string? typeName, out GameEventScriptBytecodeInstructionUnit unit)
     {

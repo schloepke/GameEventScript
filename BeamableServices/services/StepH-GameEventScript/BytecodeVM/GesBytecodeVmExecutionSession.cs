@@ -124,7 +124,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return allowPipeline && CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.Call:
-            case GameEventScriptBytecodeOpCode.CallPredicate:
                 return CanExecuteLinearCallableAddress(instruction.EntryAddress, visitingCallables, allowPipeline);
 
             default:
@@ -306,7 +305,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 var callFrameCountAfter = callFrames?.Count ?? 0;
                 if (callFrameCountAfter <= callFrameCountBefore ||
-                    instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate))
+                    instruction.OpCode is not GameEventScriptBytecodeOpCode.Call)
                 {
                     RecordLinearDiagnosticsAfter(instructionAddress);
                 }
@@ -639,8 +638,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.Call:
-            case GameEventScriptBytecodeOpCode.CallPredicate:
-                if (instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate)
+                if (instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate))
                 {
                     if (!TryExecuteLinearPredicateCallFast(instruction, stagedArguments, out var handledPredicateCallFast))
                     {
@@ -747,7 +745,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         nextEndAddress = currentEndAddress;
         nextPc = returnAddress;
 
-        var normalizePredicateResult = instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate;
+        var normalizePredicateResult = instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate);
         var argumentCount = stagedArguments?.Count ?? 0;
         if (!_compiledScript.LinearExecutable.CallablesByEntryAddress.TryGetValue(instruction.EntryAddress, out var callable) ||
             callable.Parameters.Count != argumentCount)
@@ -1324,12 +1322,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             case GameEventScriptBytecodeOpCode.CallStandard:
-            case GameEventScriptBytecodeOpCode.CallStandardPredicate:
             {
                 if (!TryCallStandard(
                         instruction.SecondaryListIndex,
                         instruction.ListIndex,
-                        instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandardPredicate,
+                        instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate),
                         out var standardValue))
                 {
                     return false;
@@ -1339,12 +1336,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             case GameEventScriptBytecodeOpCode.CallExternal:
-            case GameEventScriptBytecodeOpCode.CallExternalPredicate:
             {
                 if (!TryCallExternal(
                         instruction.ExternalReferenceIndex,
                         instruction.ListIndex,
-                        instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternalPredicate,
+                        instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate),
                         out var externalValue))
                 {
                     return false;
@@ -1472,7 +1468,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
-                case GameEventScriptBytecodeOpCode.CallPredicate:
+                case GameEventScriptBytecodeOpCode.Call when instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate):
                     if (!allowPredicateCall ||
                         !CanEvaluateLinearPredicateCallFast(instruction) ||
                         stagedArgumentCount != 1 ||
@@ -1485,7 +1481,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.CallStandard:
-                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
                     if (!CanEvaluateLinearStandardCallFast(instruction) ||
                         !AddTemp(instruction.DestinationSlot))
                     {
@@ -1712,7 +1707,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
-                case GameEventScriptBytecodeOpCode.CallPredicate:
+                case GameEventScriptBytecodeOpCode.Call when instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate):
                     if (!hasStagedArgument ||
                         !TryEvaluateLinearPredicateCallFast(instruction, stagedArgument, out var predicateValue) ||
                         !projection.SetTemp(instruction.DestinationSlot, predicateValue))
@@ -1724,7 +1719,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.CallStandard:
-                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
                     if (!TryEvaluateLinearStandardCallFast(instruction, ref projection, out var standardValue) ||
                         !projection.SetTemp(instruction.DestinationSlot, standardValue))
                     {
@@ -1887,7 +1881,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     break;
 
-                case GameEventScriptBytecodeOpCode.CallPredicate:
+                case GameEventScriptBytecodeOpCode.Call when instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate):
                     if (!hasStagedArgument ||
                         !TryEvaluateLinearPredicateCallFast(instruction, stagedArgument, out var predicateValue) ||
                         !projection.SetTemp(instruction.DestinationSlot, predicateValue))
@@ -1899,7 +1893,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     break;
 
                 case GameEventScriptBytecodeOpCode.CallStandard:
-                case GameEventScriptBytecodeOpCode.CallStandardPredicate:
                     if (!TryEvaluateLinearStandardCallFast(instruction, ref projection, out var standardValue) ||
                         !projection.SetTemp(instruction.DestinationSlot, standardValue))
                     {
@@ -2024,7 +2017,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         value = BytecodeVmValue.FromGameEventScriptFastValue(standardValue);
         return NormalizeExtensionPredicateResult(
-            instruction.OpCode == GameEventScriptBytecodeOpCode.CallStandardPredicate,
+            instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate),
             ref value);
     }
 
@@ -4016,7 +4009,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.LoadInteger:
-                value = BytecodeVmValue.Integer(instruction.I64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
+                value = BytecodeVmValue.Integer(instruction.I64, instruction.Unit.ToOptionalNumericUnit());
                 return true;
 
             case GameEventScriptBytecodeOpCode.LoadFloat:
@@ -4028,7 +4021,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
                         : double.IsNegativeInfinity(number)
                             ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
-                            : BytecodeVmValue.Float(number, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
+                            : BytecodeVmValue.Float(number, instruction.Unit.ToOptionalNumericUnit());
                 return true;
             }
 
@@ -4089,7 +4082,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
 
             case GameEventScriptBytecodeOpCode.StageInteger:
-                value = BytecodeVmValue.Integer(instruction.I64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
+                value = BytecodeVmValue.Integer(instruction.I64, instruction.Unit.ToOptionalNumericUnit());
                 return true;
 
             case GameEventScriptBytecodeOpCode.StageFloat:
@@ -4101,7 +4094,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
                         : double.IsNegativeInfinity(number)
                             ? BytecodeVmValue.Reference(GesFloatNegativeInfinity())
-                            : BytecodeVmValue.Float(number, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit());
+                            : BytecodeVmValue.Float(number, instruction.Unit.ToOptionalNumericUnit());
                 return true;
             }
 
@@ -4608,7 +4601,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static bool TryGetRequiredNumericUnit(byte unitAndFlags, out GameEventScriptBytecodeInstructionUnit unit)
     {
-        var value = GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(unitAndFlags);
+        var value = GameEventScriptBytecodeInstruction.DecodeUnit(unitAndFlags);
         if (value.IsNumericUnit())
         {
             unit = value;

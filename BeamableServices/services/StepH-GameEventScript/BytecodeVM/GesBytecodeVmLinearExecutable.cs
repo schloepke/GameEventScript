@@ -177,7 +177,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             if (stagedCount == 0)
             {
-                if (instruction.OpCode is GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate)
+                if (instruction.OpCode is GameEventScriptBytecodeOpCode.Call)
                 {
                     var expected = GetExpectedStagedArgumentCount(module, instruction);
                     if (expected != 0)
@@ -197,7 +197,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 continue;
             }
 
-            if (instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate))
+            if (instruction.OpCode is not GameEventScriptBytecodeOpCode.Call)
             {
                 throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} is interrupted by instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode}.");
             }
@@ -598,14 +598,12 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CallStandard:
-            case GameEventScriptBytecodeOpCode.CallStandardPredicate:
                 ValidateExtensionShape(module, instruction.SecondaryListIndex, $"{context} standard extension shape");
                 ValidateSlotListIndex(module, instruction.ListIndex, $"{context} argument slots");
                 ValidateExtensionShapeArgumentSlots(module, instruction.SecondaryListIndex, instruction.ListIndex, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.CallExternal:
-            case GameEventScriptBytecodeOpCode.CallExternalPredicate:
                 ValidateIndex(module.ExternalReferences.Count, instruction.ExternalReferenceIndex, $"{context} external reference");
                 ValidateSlotListIndex(module, instruction.ListIndex, $"{context} argument slots");
                 ValidateExternalReferenceArgumentSlots(module, instruction.ExternalReferenceIndex, instruction.ListIndex, $"{context} argument slots");
@@ -613,12 +611,14 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             case GameEventScriptBytecodeOpCode.Call:
                 ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} callable entry");
-                ValidateCallableEntry(module, instruction.EntryAddress, $"{context} callable entry");
-                break;
-
-            case GameEventScriptBytecodeOpCode.CallPredicate:
-                ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} predicate entry");
-                ValidatePredicateCallEntry(module, instruction.EntryAddress, $"{context} predicate entry");
+                if (instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate))
+                {
+                    ValidatePredicateCallEntry(module, instruction.EntryAddress, $"{context} predicate entry");
+                }
+                else
+                {
+                    ValidateCallableEntry(module, instruction.EntryAddress, $"{context} callable entry");
+                }
                 break;
 
             default:
@@ -800,7 +800,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             throw InvalidBytecode($"{instruction.OpCode} references unknown callable entry address {instruction.EntryAddress}.");
         }
 
-        if (instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate &&
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.Call &&
+            instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate) &&
             callable.Kind != GameEventScriptBytecodeCallableKind.Predicate)
         {
             throw InvalidBytecode($"{instruction.OpCode} references function '{callable.Name}' instead of a predicate.");
@@ -960,7 +961,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (instruction.OpCode is GameEventScriptBytecodeOpCode.CastUnit or GameEventScriptBytecodeOpCode.CheckUnit)
         {
             ValidateNumericUnit(instruction.UnitAndFlags, $"{context} unit");
-            if ((GameEventScriptBytecodeInstructionUnit)instruction.UnitAndFlags == GameEventScriptBytecodeInstructionUnit.UnitNone)
+            if (instruction.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone)
             {
                 throw InvalidBytecode($"{context} unit must not be UnitNone.");
             }
@@ -1070,7 +1071,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
     private static void ValidateNumericUnit(byte value, string context)
     {
-        var unit = (GameEventScriptBytecodeInstructionUnit)value;
+        var unit = (GameEventScriptBytecodeInstructionUnit)GameEventScriptBytecodeInstruction.WithoutInstructionFlags(value);
         if (unit is GameEventScriptBytecodeInstructionUnit.UnitNone or
             GameEventScriptBytecodeInstructionUnit.UnitDegree or
             GameEventScriptBytecodeInstructionUnit.UnitMeter or

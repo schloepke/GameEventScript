@@ -8,10 +8,10 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterCollections
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmIteratorNext(ref this VmValue dst, ref VmValue iterator, ushort noMoreAddress, ref VmState state)
+    internal static void VmIteratorNext(ref this VmValue dst, ref VmValue iterator, ushort noMoreAddress)
     {
-        if (iterator is not { Kind: Stream, ObjectValue: IVmStream it }) state.RaiseError("Cannot iterator over non-iterator value");
-        else if (!it.TryNext(ref dst)) state.JumpAddress(noMoreAddress);
+        if (iterator is not { Kind: Stream, ObjectValue: IVmStream it }) dst.OwningState.RaiseError("Cannot iterator over non-iterator value");
+        else if (!it.TryNext(ref dst)) dst.OwningState.JumpAddress(noMoreAddress);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -21,22 +21,22 @@ internal static class VmRegisterCollections
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreateList(ref this VmValue dst, ushort slotsIndex, ref VmState vmState)
+    internal static void VmCreateList(ref this VmValue dst, ushort slotsIndex)
     {
-        var itemSlots = vmState.Binary.Uint16ConstantTable.Resolve(slotsIndex);
-        var list = new VmListObject(itemSlots.Length);
+        var itemSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(slotsIndex);
+        var list = new VmListObject(dst.OwningState, itemSlots.Length);
         for (var i = 0; i < itemSlots.Length; i++)
         {
-            list.Items[i] = vmState.Register(itemSlots[i]);
+            list.Items[i] = dst.OwningState.Register(itemSlots[i]);
         }
         dst.SetList(list);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreateMap(ref this VmValue dst, ushort keySlotsIndex, ushort itemSlotsIndex, ref VmState vmState)
+    internal static void VmCreateMap(ref this VmValue dst, ushort keySlotsIndex, ushort itemSlotsIndex)
     {
-        var keyNames = vmState.Binary.Uint16ConstantTable.Resolve(keySlotsIndex);
-        var itemSlots = vmState.Binary.Uint16ConstantTable.Resolve(itemSlotsIndex);
+        var keyNames = dst.OwningState.Binary.Uint16ConstantTable.Resolve(keySlotsIndex);
+        var itemSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(itemSlotsIndex);
         if (keyNames.Length != itemSlots.Length)
         {
             dst.SetNothing();
@@ -45,9 +45,9 @@ internal static class VmRegisterCollections
         var map = new Dictionary<string, VmValue>(itemSlots.Length);
         for (var i = 0; i < itemSlots.Length; i++)
         {
-            map[vmState.Binary.TextConstantTable.Resolve(keyNames[i])] = vmState.Register(itemSlots[i]);
+            map[dst.OwningState.Binary.TextConstantTable.Resolve(keyNames[i])] = dst.OwningState.Register(itemSlots[i]);
         }
-        dst.SetMap(new VmMapObject(map));
+        dst.SetMap(new VmMapObject(dst.OwningState, map));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -70,7 +70,7 @@ internal static class VmRegisterCollections
     {
         if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder)
         {
-            var list = new VmListObject(builder.Count);
+            var list = new VmListObject(dst.OwningState, builder.Count);
             for (var i = 0; i < builder.Count; i++)
             {
                 list.Items[i] = builder[i];

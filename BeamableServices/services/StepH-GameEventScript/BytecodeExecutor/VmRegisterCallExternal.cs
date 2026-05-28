@@ -13,8 +13,9 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterCallExternal
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
+    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList)
     {
+        var state = dst.OwningState;
         var shape = state.FetchUInt16SliceTableByPointer(extensionShape);
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (shape.Length < 2 || argumentSlots.Length != shape.Length - 2)
@@ -25,15 +26,13 @@ internal static class VmRegisterCallExternal
         }
 
         var argumentCount = argumentSlots.Length;
-        var arguments = argumentCount == 0
-            ? Array.Empty<GameEventScriptFastValue>()
-            : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue(ref state.Binary.TextConstantTable);
+                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue();
             }
 
             var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
@@ -42,11 +41,7 @@ internal static class VmRegisterCallExternal
                 labels[labelIndex] = state.FetchStringByPointer(shape[labelIndex + 2]);
             }
 
-            var reference = new GameEventScriptExtensionReference(
-                state.FetchStringByPointer(shape[0]),
-                state.FetchStringByPointer(shape[1]),
-                labels);
-
+            var reference = new GameEventScriptExtensionReference(state.FetchStringByPointer(shape[0]), state.FetchStringByPointer(shape[1]), labels);
             if (!GesStandardExtensions.TryInvoke(reference, arguments.AsSpan(0, argumentCount), out var result))
             {
                 dst.SetNothing();
@@ -54,7 +49,7 @@ internal static class VmRegisterCallExternal
                 return;
             }
 
-            dst.BindArguments(result, ref state.Binary.TextConstantTable);
+            dst.BindArguments(result);
         }
         finally
         {
@@ -67,45 +62,29 @@ internal static class VmRegisterCallExternal
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallStandardPredicate(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
+    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, GameEventScriptSession session)
     {
-        dst.VmCallStandard(extensionShape, argumentSlotList, ref state, session);
-        if (dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !dst.IsNothing)
-        {
-            dst.SetNothing();
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
-    {
+        var state = dst.OwningState;
         var externalReferenceIndex = 0;
         var found = false;
         GameEventScriptBinaryBindEntry bind = default;
         foreach (var entry in state.Binary.BindTable.Entries)
         {
-            if (entry.Kind != GameEventScriptBinaryBindKind.ExtensionCall)
-            {
-                continue;
-            }
-
+            if (entry.Kind != GameEventScriptBinaryBindKind.ExtensionCall) continue;
             if (externalReferenceIndex == extensionShape)
             {
                 bind = entry;
                 found = true;
                 break;
             }
-
             externalReferenceIndex++;
         }
-
         if (!found)
         {
             dst.SetNothing();
             state.RaiseError($"External extension reference slot '{extensionShape}' was not found.");
             return;
         }
-
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (argumentSlots.Length != bind.ArgumentNames.Count)
         {
@@ -113,7 +92,6 @@ internal static class VmRegisterCallExternal
             state.RaiseError("External extension call argument count does not match the reference shape.");
             return;
         }
-
         var fullName = state.FetchStringByPointer(bind.Name);
         var separator = fullName.IndexOf('.');
         if (separator <= 0 || separator >= fullName.Length - 1)
@@ -122,7 +100,6 @@ internal static class VmRegisterCallExternal
             state.RaiseError($"External extension reference '{fullName}' has an invalid name.");
             return;
         }
-
         var argumentCount = argumentSlots.Length;
         var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
         for (var labelIndex = 0; labelIndex < argumentCount; labelIndex++)
@@ -130,10 +107,7 @@ internal static class VmRegisterCallExternal
             labels[labelIndex] = state.FetchStringByPointer(bind.ArgumentNames[labelIndex]);
         }
 
-        var reference = new GameEventScriptExtensionReference(
-            fullName.Substring(0, separator),
-            fullName.Substring(separator + 1),
-            labels);
+        var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], labels);
 
         if (!session.ExtensionRegistry.TryResolve(reference, out var function))
         {
@@ -142,19 +116,16 @@ internal static class VmRegisterCallExternal
             return;
         }
 
-        var arguments = argumentCount == 0
-            ? Array.Empty<GameEventScriptFastValue>()
-            : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue(ref state.Binary.TextConstantTable);
+                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue();
             }
-
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
-            dst.BindArguments(result, ref state.Binary.TextConstantTable);
+            dst.BindArguments(result);
         }
         finally
         {
@@ -167,17 +138,7 @@ internal static class VmRegisterCallExternal
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallExternalPredicate(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, ref VmState state, GameEventScriptSession session)
-    {
-        dst.VmCallExternal(extensionShape, argumentSlotList, ref state, session);
-        if (dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !dst.IsNothing)
-        {
-            dst.SetNothing();
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void BindArguments(ref this VmValue destination, GameEventScriptFastValue argument, ref GameEventScriptTextTable textTable)
+    private static void BindArguments(ref this VmValue destination, GameEventScriptFastValue argument)
     {
         switch (argument.Kind)
         {
@@ -201,13 +162,22 @@ internal static class VmRegisterCallExternal
                 destination.SetPoint(argument.X, argument.Y, argument.Z, argument.Unit);
                 break;
             default:
-                destination.BindArguments(argument.ToGameEventScriptValue(), ref textTable);
+                destination.BindArguments(argument.ToGameEventScriptValue());
                 break;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument, ref GameEventScriptTextTable textTable)
+    internal static void NormalizeResultAsPredicate(ref this VmValue value)
+    {
+        if (value.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !value.IsNothing)
+        {
+            value.SetNothing();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
     {
         switch (argument.Kind)
         {
@@ -245,12 +215,8 @@ internal static class VmRegisterCallExternal
                 break;
             case GameEventScriptValueKind.List:
                 var sourceItems = argument.AsList();
-                var list = new VmListObject(sourceItems.Count);
-                for (var index = 0; index < sourceItems.Count; index++)
-                {
-                    list.Items[index].BindArguments(sourceItems[index], ref textTable);
-                }
-
+                var list = new VmListObject(destination.OwningState, sourceItems.Count);
+                for (var index = 0; index < sourceItems.Count; index++) list.Items[index].BindArguments(sourceItems[index]);
                 destination.SetList(list);
                 break;
             case GameEventScriptValueKind.Map:
@@ -259,11 +225,12 @@ internal static class VmRegisterCallExternal
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     var value = default(VmValue);
-                    value.BindArguments(sourceValue, ref textTable);
+                    value.InitRegister(destination.OwningState);
+                    value.BindArguments(sourceValue);
                     entries[key] = value;
                 }
 
-                destination.SetMap(new VmMapObject(entries));
+                destination.SetMap(new VmMapObject(destination.OwningState, entries));
                 break;
             case GameEventScriptValueKind.Dice:
                 var sourceDice = argument.AsDice().Rolls;
@@ -287,7 +254,7 @@ internal static class VmRegisterCallExternal
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static GameEventScriptFastValue ToGameEventScriptFastValue(this ref VmValue value, ref GameEventScriptTextTable textTable)
+    internal static GameEventScriptFastValue ToGameEventScriptFastValue(this ref VmValue value)
     {
         switch (value.Kind)
         {
@@ -306,16 +273,14 @@ internal static class VmRegisterCallExternal
             case Point when value.ObjectValue is VmFloatTriplet point:
                 return GameEventScriptFastValue.FromPoint(point.X, point.Y, point.Z, value.Unit);
             case Text:
-                return GameEventScriptFastValue.FromText(value.IsStorageObject
-                    ? value.ObjectValue as string ?? string.Empty
-                    : textTable.Resolve((ushort)value.IntegerValue));
+                return GameEventScriptFastValue.FromText(value.IsStorageObject ? value.ObjectValue as string ?? string.Empty : value.OwningState.Binary.TextConstantTable.Resolve((ushort)value.IntegerValue));
             default:
-                return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue(ref textTable));
+                return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue());
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a, ref GameEventScriptTextTable textTable) => a.Kind switch
+    internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
         Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
         Float => GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
@@ -323,10 +288,10 @@ internal static class VmRegisterCallExternal
         Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
         Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
-        Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : textTable.Resolve((ushort)a.IntegerValue)),
-        Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : textTable.Resolve((ushort)a.IntegerValue)),
-        List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues(ref textTable)),
-        Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues(ref textTable)),
+        Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
+        Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
+        List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
+        Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
@@ -337,25 +302,25 @@ internal static class VmRegisterCallExternal
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static List<GameEventScriptValue> ToGameEventScriptValues(this VmListObject list, ref GameEventScriptTextTable textTable)
+    private static List<GameEventScriptValue> ToGameEventScriptValues(this VmListObject list)
     {
         var result = new List<GameEventScriptValue>(list.Items.Length);
         for (var i = 0; i < list.Items.Length; i++)
         {
-            result.Add(list.Items[i].ToGameEventScriptValue(ref textTable));
+            result.Add(list.Items[i].ToGameEventScriptValue());
         }
 
         return result;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this VmMapObject map, ref GameEventScriptTextTable textTable)
+    private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this VmMapObject map)
     {
         var result = new Dictionary<string, GameEventScriptValue>(map.Length, StringComparer.Ordinal);
         foreach (var (key, value) in map.Entries)
         {
             var x = value;
-            result.Add(key, x.ToGameEventScriptValue(ref textTable));
+            result.Add(key, x.ToGameEventScriptValue());
         }
 
         return result;

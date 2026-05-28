@@ -6,13 +6,12 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
-internal struct VmState
+internal class VmState
 {
     internal enum StateValue
     {
@@ -29,14 +28,17 @@ internal struct VmState
         internal ushort? ResultRegisterIndex;
         internal ushort RegisterFrameStart;
         internal ushort RegisterFrameLength;
+        internal bool NormalizeResultAsPredicate;
     }
+
+    internal  VmListObject EmptyList { get; init; }
 
     internal GameEventScriptBinary Binary { get; init; }
 
     internal StateValue State { get; set; }
 
-    internal ushort InstructionPointer { get; private set; } = 0;
-    internal ushort CallStackPointer { get; private set; } = 0;
+    internal ushort InstructionPointer { get; private set; }
+    internal ushort CallStackPointer { get; private set; }
     internal CallFrame[] CallStack { get; init; }
 
     internal VmValue[] RegisterSlots { get; init; }
@@ -47,12 +49,12 @@ internal struct VmState
 
     internal ushort RegisterFrameStart = 0;
     internal ushort RegisterFrameLength = 0;
-    internal ushort StageLength  { get; private set; } = 0;
+    internal ushort StageLength  { get; private set; }
     
-    internal string? ErrorMessage { get; private set; } = null;
+    internal string? ErrorMessage { get; private set; }
 
     internal Dictionary<string, GameEventScriptBinaryBindEntry> InboundMessageHandlers { get; init; }
-    internal List<GameEventScriptMessageSignature> OutboundMessageSignatures { get; init; }
+    //internal List<GameEventScriptMessageSignature> OutboundMessageSignatures { get; init; }
 
     internal readonly ushort CodeSegmentSize; 
 
@@ -65,22 +67,30 @@ internal struct VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
+        EmptyList = new VmListObject(this, 0);
         Binary = binary;
         CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterSlots = new VmValue[registerSize];
+        RegisterSlots = CreateRegisterArray(registerSize);
         RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = GameEventScriptRandomGenerator.Create(); // INFO: We create one here so that we always have one. but it should be set for the message from the context!
-        for (var i = 0; i < RegisterSlots.Length; i++)
-        {
-            RegisterSlots[i].SetNothing();
-        }
         InboundMessageHandlers = binary.BindTable.Entries.Where(x => x.Kind == GameEventScriptBinaryBindKind.MessageHandler).ToDictionary(
             bind => GameEventScriptMessageSignature.CreateSignatureId(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve)),
             x => x);
+    }
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue[] CreateRegisterArray(int size)
+    {
+        var values = new VmValue[size];
+        for (var i = 0; i < values.Length; i++)
+        {
+            values[i].InitRegister(this);
+        }
+        return values;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -103,7 +113,7 @@ internal struct VmState
         RegisterFrameLength = (ushort)arguments.Count;
         for (var i = 0; i < RegisterFrameLength; i++) 
         {
-            RegisterSlots[i].BindArguments(arguments[i], ref Binary.TextConstantTable);
+            RegisterSlots[i].BindArguments(arguments[i]);
         }
         RandomGenerator = context.Random;
         RandomGeneratorsPointer = 0;
@@ -157,7 +167,7 @@ internal struct VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool CallAddress(ushort address, ushort? resultRegister = null)
+    internal bool CallAddress(ushort address, ushort? resultRegister = null, bool normalizeResultAsPredicate = false)
     {
         if (CallStackPointer >= CallStack.Length) return RaiseError("Stack overflow");
         CallStack[CallStackPointer++] = new CallFrame
@@ -165,7 +175,8 @@ internal struct VmState
             InstructionPointer = InstructionPointer,
             ResultRegisterIndex = resultRegister,
             RegisterFrameStart = RegisterFrameStart,
-            RegisterFrameLength = RegisterFrameLength
+            RegisterFrameLength = RegisterFrameLength,
+            NormalizeResultAsPredicate = normalizeResultAsPredicate
         };
         InstructionPointer = address;
         RegisterFrameStart += RegisterFrameLength;
@@ -198,7 +209,15 @@ internal struct VmState
         InstructionPointer = callFrame.InstructionPointer;
         RegisterFrameStart = callFrame.RegisterFrameStart;
         RegisterFrameLength = callFrame.RegisterFrameLength;
-        if (callFrame.ResultRegisterIndex.HasValue) RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
+        if (callFrame.ResultRegisterIndex.HasValue)
+        {
+            if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing)
+            {
+                result.SetNothing();
+            }
+
+            RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

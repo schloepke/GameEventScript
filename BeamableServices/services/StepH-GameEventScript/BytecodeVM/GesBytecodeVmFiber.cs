@@ -221,7 +221,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     var callFrameCountAfter = _callFrames?.Count ?? 0;
                     if (callFrameCountAfter <= callFrameCountBefore ||
-                        instruction.OpCode is not (GameEventScriptBytecodeOpCode.Call or GameEventScriptBytecodeOpCode.CallPredicate))
+                        instruction.OpCode is not GameEventScriptBytecodeOpCode.Call)
                     {
                         session.RecordLinearDiagnosticsAfter(instructionAddress);
                     }

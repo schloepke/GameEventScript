@@ -18,12 +18,12 @@ pipelines. High-level language constructs lower either to normal linear
 instructions or to explicit opcodes that reference normalized tables. Function
 and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
-temporary slots from handler locals with temporary frame extensions. Predicate calls
-use direct `CallPredicate` instructions with target entry addresses and
-contiguous staged argument sequences. Local calls use direct `Call`
-instructions with target entry addresses and contiguous staged argument
-sequences. Extension calls use direct
-`CallStandard*` or `CallExternal*` instructions with argument slot lists.
+temporary slots from handler locals with temporary frame extensions. Predicate
+calls use `Call`, `CallStandard`, or `CallExternal` with
+`GameEventScriptInstructionFlag.NormalizeResultAsPredicate` set in
+`UnitAndFlags`. Local calls use direct `Call` instructions with target entry
+addresses and contiguous staged argument sequences. Extension calls use direct
+`CallStandard` or `CallExternal` instructions with argument slot lists.
 Extrema reduce operators, type constructors, local builders, message literals,
 handler binding, casts, type checks, member access, and seeded-random
 expressions are layout-free direct instructions.
@@ -692,7 +692,6 @@ sequence.
 - `StreamNext dst iterator noMoreTarget`
 - `StreamClose iterator`
 - `Call dst entryAddress`
-- `CallPredicate dst entryAddress`
 - `ReturnValue src`
 - `ReturnVoid`
 
@@ -730,22 +729,22 @@ VM-internal collection builder opcodes.
 
 Predicates and functions are normal callable entries. A call instruction
 transfers control to the callable entry and returns to the next instruction.
-Predicate calls use the same frame mechanism, normalize the result to
-`boolean | nothing`, and read their arguments from the stage sequence immediately
-before the call. The call instruction does not store an argument count; the VM
-uses the contiguous `Stage*` sequence immediately before the call and validates
-it against callable metadata. A stage sequence may contain only `Stage*`
-instructions and must be followed by `Call` or `CallPredicate`. The callee
-frame receives arguments in slots `0..n-1`.
+Predicate calls use the same frame mechanism with
+`NormalizeResultAsPredicate`, normalize the result to `boolean | nothing`, and
+read their arguments from the stage sequence immediately before the call. The
+call instruction does not store an argument count; the VM uses the contiguous
+`Stage*` sequence immediately before the call and validates it against callable
+metadata. A stage sequence may contain only `Stage*` instructions and must be
+followed by `Call`. The callee frame receives arguments in slots `0..n-1`.
 The `x is predicate` syntax is unary sugar that lowers to one staged argument
-plus `CallPredicate`.
+plus `Call` with `NormalizeResultAsPredicate`.
 
 ```text
 @0500 StageRegister src=s0
 @0501 Call dst=s3 callable=wounded stagedArgs=1
 @0502 JumpIfNotTrue cond=s3 target=@0510
 @0520 StageRegister src=s2
-@0521 CallPredicate dst=s4 predicate=@0900 stagedArgs=1
+@0521 Call dst=s4 predicate=@0900 flags=NormalizeResultAsPredicate stagedArgs=1
 ```
 
 Type constructors, variadic operators, collection builders, maps,
@@ -920,9 +919,10 @@ or `EmitMessageValue`. Tagged dynamic values use
 ### Extensions, Intrinsics, and External Types
 
 - `CallStandard dst extensionShapeIndex argumentSlotListIndex`
-- `CallStandardPredicate dst extensionShapeIndex argumentSlotListIndex`
 - `CallExternal dst externalReferenceIndex argumentSlotListIndex`
-- `CallExternalPredicate dst externalReferenceIndex argumentSlotListIndex`
+
+Predicate extension calls use the same opcode with
+`NormalizeResultAsPredicate` set in `UnitAndFlags`.
 
 External references are collected at compile time and dynamically bound by the
 host when loading the compiled artifact. Runtime extension binding is not

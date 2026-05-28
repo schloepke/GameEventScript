@@ -10,7 +10,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterMessages
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void CreateMessageSignature(ref this VmValue dest, ReadOnlySpan<ushort> shape, ref VmState vmState,  GameEventScriptSession session)
+    internal static void CreateMessageSignature(ref this VmValue dest, ReadOnlySpan<ushort> shape, VmState vmState,  GameEventScriptSession session)
     {
         if (shape.Length == 0)
         {
@@ -27,26 +27,24 @@ internal static class VmRegisterMessages
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void CreateMessage(ref this VmValue dest, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots, ref VmState vmState,  GameEventScriptSession session)
+    internal static void CreateMessage(ref this VmValue dest, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
         {
-            vmState.RaiseError("Message signature shape and argument slots mismatch");
+            dest.OwningState.RaiseError("Message signature shape and argument slots mismatch");
             return;
         }
-        var messageName = vmState.Binary.TextConstantTable.Resolve(shape[0]);
+        var messageName = dest.OwningState.Binary.TextConstantTable.Resolve(shape[0]);
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
-                vmState.Binary.TextConstantTable.Resolve(shape[index + 1]),
-                vmState.Register(argumentSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(dest.OwningState.Binary.TextConstantTable.Resolve(shape[index + 1]), dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue());
         }
         dest.SetMessage(GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void BindHandler(ref this VmValue dest, ref VmValue handler, ReadOnlySpan<ushort> argumentSlots, ref VmState vmState,  GameEventScriptSession session)
+    internal static void BindHandler(ref this VmValue dest, ref VmValue handler, ReadOnlySpan<ushort> argumentSlots)
     {
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
         {
@@ -57,7 +55,7 @@ internal static class VmRegisterMessages
         var arguments = new GameEventScriptValue[argumentSlots.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
-            arguments[index] = vmState.Register(argumentSlots[index]).ToGameEventScriptValue(ref vmState.Binary.TextConstantTable);
+            arguments[index] = dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue();
         }
         if (signature.TryCreateMessage(arguments, out var message))
         {

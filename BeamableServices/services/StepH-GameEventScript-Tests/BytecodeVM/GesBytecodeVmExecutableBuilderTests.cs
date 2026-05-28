@@ -407,11 +407,15 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var predicateInstruction = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        var predicateInstruction = compiled.Code.Single(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.Call &&
+            instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
         Assert.AreEqual(compiled.Callables["higher"].EntryAddress, predicateInstruction.EntryAddress);
         Assert.AreEqual((ushort)0, predicateInstruction.XSlot);
 
-        var predicateIndex = Array.FindIndex(compiled.Code.ToArray(), instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallPredicate);
+        var predicateIndex = Array.FindIndex(compiled.Code.ToArray(), instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.Call &&
+            instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 2].OpCode);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.StageRegister, compiled.Code[predicateIndex - 1].OpCode);
     }
@@ -487,8 +491,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var functionCall = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternal);
-        var predicateCall = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternalPredicate);
+        var functionCall = compiled.Code.Single(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternal &&
+            !instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+        var predicateCall = compiled.Code.Single(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.CallExternal &&
+            instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
 
         Assert.HasCount(2, compiled.ExternalReferences);
         Assert.HasCount(

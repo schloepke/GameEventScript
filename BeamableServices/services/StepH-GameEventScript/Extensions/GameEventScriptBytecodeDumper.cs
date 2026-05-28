@@ -454,19 +454,16 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.CallStandard:
-            case GameEventScriptBytecodeOpCode.CallStandardPredicate:
                 AppendStringListPoolIndex(builder, "shape", module, instruction.SecondaryListIndex);
                 AppendSlotListPoolIndex(builder, "args", module, instruction.ListIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.CallExternal:
-            case GameEventScriptBytecodeOpCode.CallExternalPredicate:
                 AppendIndex(builder, "external", instruction.ExternalReferenceIndex);
                 AppendSlotListPoolIndex(builder, "args", module, instruction.ListIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.Call:
-            case GameEventScriptBytecodeOpCode.CallPredicate:
                 AppendAddress(builder, "target", instruction.EntryAddress);
                 break;
 
@@ -631,7 +628,7 @@ public static class GameEventScriptBytecodeDumper
 
     private static void AppendNumericUnit(StringBuilder builder, byte value)
     {
-        switch ((GameEventScriptBytecodeInstructionUnit)value)
+        switch (GameEventScriptBytecodeInstruction.DecodeUnit(value))
         {
             case GameEventScriptBytecodeInstructionUnit.UnitDegree:
                 builder.Append(" unit=").Append(GameEventScriptBytecodeInstructionUnit.UnitDegree.ToTypeName());

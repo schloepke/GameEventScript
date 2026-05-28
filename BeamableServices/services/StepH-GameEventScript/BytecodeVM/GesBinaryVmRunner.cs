@@ -190,11 +190,11 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadInteger:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Integer(instruction.I64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit()));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Integer(instruction.I64, instruction.Unit.ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadFloat:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Float(instruction.F64, GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit()));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Float(instruction.F64, instruction.Unit.ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadPercentage:
@@ -218,7 +218,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastUnit:
-                    Set(instruction.DestinationSlot, CastUnit(Get(instruction.XSlot), GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit()));
+                    Set(instruction.DestinationSlot, CastUnit(Get(instruction.XSlot), instruction.Unit.ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.CastNumeric:
@@ -246,7 +246,7 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.CheckUnit:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.XSlot), GameEventScriptBytecodeInstructionUnits.FromUnitAndFlags(instruction.UnitAndFlags).ToOptionalNumericUnit())));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Boolean(IsValueOfUnit(Get(instruction.XSlot), instruction.Unit.ToOptionalNumericUnit())));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Add:

@@ -14,7 +14,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
-[StructLayout(LayoutKind.Explicit, Size = 24)]
+[StructLayout(LayoutKind.Explicit, Size = 32)]
 internal struct VmValue
 {
     [Flags]
@@ -31,12 +31,15 @@ internal struct VmValue
         StorageObjectFlag = 1 << 5
     }
 
-    [FieldOffset(16)] internal GameEventScriptBytecodeTypeKind Kind;
-    [FieldOffset(18)] internal GameEventScriptBytecodeInstructionUnit Unit;
-    [FieldOffset(19)] internal VmValueFlags Flags;
     [FieldOffset(0)] internal long IntegerValue;
     [FieldOffset(0)] internal double FloatValue;
     [FieldOffset(8)] internal object? ObjectValue;
+
+    [FieldOffset(16)] internal GameEventScriptBytecodeTypeKind Kind;
+    [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
+    [FieldOffset(18)] internal VmValueFlags Flags;
+
+    [FieldOffset(24)] internal VmState OwningState;
 
     internal bool IsTrue => (Flags & IsTrueFlag) != 0;
     internal bool IsFalse => (Flags & IsFalseFlag) != 0;
@@ -55,19 +58,19 @@ internal struct VmValue
     internal bool IsStoragePointer => (Flags & StoragePointerFlag) != 0;
     internal bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
-    internal void UpdatedTextTruthinessCache(ref GameEventScriptTextTable textTable)
+    internal void UpdatedTextTruthinessCache()
     {
         if (IsTruthIndeterminate)
         {
             switch (Kind)
             {
                 case Text:
-                    var resolvedText = IsStoragePointer ? textTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+                    var resolvedText = IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
                     if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1") Flags |= IsTrueFlag;
                     else Flags |= IsFalseFlag;
                     break;
                 case Tag:
-                    if ((IsStoragePointer ? textTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
+                    if ((IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
                         {
                             "true" => true,
                             "infinity" => true,
@@ -89,6 +92,12 @@ internal struct VmValue
                     break;
             }
         }
+    }
+
+    internal void InitRegister(VmState state)
+    {
+        OwningState = state;
+        SetNothing();
     }
 
     internal void SetNothing()
@@ -160,7 +169,7 @@ internal struct VmValue
     internal void SetTextPointer(ushort pointer)
     {
         Kind = Text;
-        Flags = StoragePointerFlag | HasValueFlag; // FIXME this could be wrong since empty string MUST be HasValue false. But at the moment we cannot check the empty string case
+        Flags = StoragePointerFlag | (OwningState.Binary.TextConstantTable.ResolveSize(pointer) == 0 ? None : HasValueFlag);
         Unit = UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -232,7 +241,7 @@ internal struct VmValue
     internal void SetDice(int[] values)
     {
         Kind = Dice;
-        Flags = values.Length > 0 ? HasValueFlag | StorageObjectFlag : StorageObjectFlag;
+        Flags = values.Length > 0 ? (HasValueFlag | StorageObjectFlag) : StorageObjectFlag;
         Unit = UnitNone;
         IntegerValue = values.Length;
         Array.Sort(values);

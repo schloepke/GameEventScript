@@ -113,13 +113,10 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.JumpIfFalse => [TargetAddress, ConditionSlot],
             GameEventScriptBytecodeOpCode.JumpIfNotTrue => [TargetAddress, ConditionSlot],
             GameEventScriptBytecodeOpCode.Call => [DST_U16_TargetSlot, EntryAddress_Callable],
-            GameEventScriptBytecodeOpCode.CallPredicate => [DST_U16_TargetSlot, EntryAddress_Predicate],
             GameEventScriptBytecodeOpCode.ReturnVoid => [],
             GameEventScriptBytecodeOpCode.ReturnValue => [A_U16_ReturnSlot],
             GameEventScriptBytecodeOpCode.CallStandard => [DST_U16_TargetSlot, A_U16_StandardExtensionShapeListIndex, B_U16_ArgumentSlotListIndex],
-            GameEventScriptBytecodeOpCode.CallStandardPredicate => [DST_U16_TargetSlot, A_U16_StandardExtensionShapeListIndex, B_U16_ArgumentSlotListIndex],
             GameEventScriptBytecodeOpCode.CallExternal => [DST_U16_TargetSlot, A_U16_ExternalReferenceIndex, B_U16_ArgumentSlotListIndex],
-            GameEventScriptBytecodeOpCode.CallExternalPredicate => [DST_U16_TargetSlot, A_U16_ExternalReferenceIndex, B_U16_ArgumentSlotListIndex],
 
             GameEventScriptBytecodeOpCode.LoadNothing => [DST_U16_TargetSlot],
             GameEventScriptBytecodeOpCode.LoadTrue => [DST_U16_TargetSlot],

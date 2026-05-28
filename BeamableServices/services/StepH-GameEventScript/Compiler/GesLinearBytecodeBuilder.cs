@@ -1359,8 +1359,9 @@ internal sealed class GesLinearBytecodeBuilder
         var argument = PrepareStageArgument(predicateCall.Value, context, state);
         EmitStageArgument(argument);
         instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.CallPredicate,
-            dest: destinationSlot));
+            GameEventScriptBytecodeOpCode.Call,
+            dest: destinationSlot,
+            unitAndFlags: GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit.UnitNone, GameEventScriptInstructionFlag.NormalizeResultAsPredicate)));
         _deferredCallableAddressPatches.Add((instructionAddress, callable.Name));
         return true;
     }
@@ -1378,9 +1379,10 @@ internal sealed class GesLinearBytecodeBuilder
         {
             return EmitValueInstruction(
                 state,
-                GameEventScriptBytecodeOpCode.CallStandardPredicate,
+                GameEventScriptBytecodeOpCode.CallStandard,
                 a: ResolveExtensionShapeIndex(reference),
-                b: argumentSlotListIndex);
+                b: argumentSlotListIndex,
+                unitAndFlags: GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit.UnitNone, GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
         }
 
         var referenceIndex = _resolveExternalReferenceIndex(reference);
@@ -1391,9 +1393,10 @@ internal sealed class GesLinearBytecodeBuilder
 
         return EmitValueInstruction(
             state,
-            GameEventScriptBytecodeOpCode.CallExternalPredicate,
+            GameEventScriptBytecodeOpCode.CallExternal,
             a: referenceIndex,
-            b: argumentSlotListIndex);
+            b: argumentSlotListIndex,
+            unitAndFlags: GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit.UnitNone, GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
     }
 
     private int EmitSourceCall(CallExpressionNode call, SourceContext context, ExpressionState state)
@@ -1460,12 +1463,12 @@ internal sealed class GesLinearBytecodeBuilder
             EmitStageArgument(arguments[argumentIndex]);
         }
 
-        var opCode = called.Kind == GameEventScriptCallableKind.PredicateCall
-            ? GameEventScriptBytecodeOpCode.CallPredicate
-            : GameEventScriptBytecodeOpCode.Call;
         instructionAddress = Emit(CreateInstruction(
-            opCode,
-            dest: destinationSlot));
+            GameEventScriptBytecodeOpCode.Call,
+            dest: destinationSlot,
+            unitAndFlags: called.Kind == GameEventScriptCallableKind.PredicateCall
+                ? GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit.UnitNone, GameEventScriptInstructionFlag.NormalizeResultAsPredicate)
+                : (byte)0));
         _deferredCallableAddressPatches.Add((instructionAddress, called.Name));
         return true;
     }

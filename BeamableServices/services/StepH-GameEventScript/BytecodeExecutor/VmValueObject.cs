@@ -16,11 +16,9 @@ internal interface IVmKeyAccess<T>
     internal bool TryGet(string key, out T value);
 }
 
-internal class VmListObject(int size) : IVmIndexAccess<VmValue>
+internal class VmListObject(VmState ownerState, int size) : IVmIndexAccess<VmValue>
 {
-    internal static readonly VmListObject Empty = new(0);
-    
-    internal VmValue[] Items = new VmValue[size];
+    internal readonly VmValue[] Items = ownerState.CreateRegisterArray(size);
     public int Length => Items.Length;
 
     public bool TryGet(int index, out VmValue value)
@@ -37,7 +35,7 @@ internal class VmListObject(int size) : IVmIndexAccess<VmValue>
     
 }
 
-internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKeyAccess<VmValue>
+internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmValue> entries) : IVmKeyAccess<VmValue>
 {
     private VmListObject? _keys;
     private VmListObject? _values;
@@ -63,7 +61,7 @@ internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKe
 
     private VmListObject CreateListOfKeys()
     {
-        var list = new VmListObject(entries.Count);
+        var list = new VmListObject(ownerState, entries.Count);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
@@ -74,7 +72,7 @@ internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKe
 
     private VmListObject CreateListOfValues()
     {
-        var list = new VmListObject(entries.Count);
+        var list = new VmListObject(ownerState, entries.Count);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
@@ -85,16 +83,15 @@ internal class VmMapObject(IReadOnlyDictionary<string, VmValue> entries) : IVmKe
 
     private VmListObject CreateListOfEntries()
     {
-        var list = new VmListObject(entries.Count);
+        var list = new VmListObject(ownerState, entries.Count);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
-            list.Items[i++].SetMap(new VmMapObject(new Dictionary<string, VmValue> { ["key"] = VmValue.CreateTag(key), ["value"] = entries[key] }));
+            list.Items[i++].SetMap(new VmMapObject(ownerState, new Dictionary<string, VmValue> { ["key"] = VmValue.CreateTag(key), ["value"] = entries[key] }));
         }
 
         return list;
     }
-
 
 }
 

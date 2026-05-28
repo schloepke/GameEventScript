@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterVectorPoint
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreateVector(ref this VmValue dst, short start, ref VmState state)
+    internal static void VmCreateVector(ref this VmValue dst, short start, VmState state)
     {
         ushort i = 0;
         var unitX = UnitNothing;
@@ -40,7 +40,7 @@ internal static class VmRegisterVectorPoint
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreatePoint(ref this VmValue dst, short start, ref VmState state)
+    internal static void VmCreatePoint(ref this VmValue dst, short start, VmState state)
     {
         ushort i = 0;
         var unitX = UnitNothing;

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json.Serialization;
@@ -54,6 +55,7 @@ public readonly struct GameEventScriptTextTable
     public SliceEntry[] Slices { get; init; }
     public byte[] Data { get; init; }
 
+    public int ResolveSize(ushort index) => Slices[index].Length;
     public string Resolve(ushort index) => Encoding.UTF8.GetString(Data.AsSpan(Slices[index].Start, Slices[index].Length));
 }
 
@@ -123,7 +125,14 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
     UnitNothing = 255 // Special non-unit type for nothing / void helping to evaluate unions to nothing 
 }
 
-public enum GameEventScriptBytecodeTypeKind : ushort
+[Flags]
+public enum GameEventScriptInstructionFlag : byte
+{
+    None = 0,
+    NormalizeResultAsPredicate = 0x20
+}
+
+public enum GameEventScriptBytecodeTypeKind : byte
 {
     Invalid = 0x00,
     Nothing = 0x01,
@@ -156,6 +165,9 @@ public enum GameEventScriptBytecodeTypeKind : ushort
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GameEventScriptBytecodeInstruction
 {
+    private const byte UnitMask = 0x1F;
+    private const byte InstructionFlagMask = 0xE0;
+
     [FieldOffset(0)] public GameEventScriptBytecodeOpCode OpCode;
 
     [FieldOffset(1)] public byte UnitAndFlags;
@@ -201,6 +213,46 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(8)] public double F64;
     
     #endregion
+
+    internal GameEventScriptBytecodeInstructionUnit Unit => DecodeUnit(UnitAndFlags);
+
+    internal GameEventScriptInstructionFlag InstructionFlags => DecodeInstructionFlags(UnitAndFlags);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool HasInstructionFlag(GameEventScriptInstructionFlag flag)
+        => HasInstructionFlag(UnitAndFlags, flag);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void AddInstructionFlag(GameEventScriptInstructionFlag flag)
+        => UnitAndFlags = WithInstructionFlag(UnitAndFlags, flag);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit? unit, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
+        => EncodeUnitAndFlags(unit.ToStoredUnit(), flags);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte EncodeUnitAndFlags(GameEventScriptBytecodeInstructionUnit unit, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
+        => (byte)(((byte)unit.ToStoredUnit() & UnitMask) | ((byte)flags & InstructionFlagMask));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static GameEventScriptBytecodeInstructionUnit DecodeUnit(byte unitAndFlags)
+        => ((GameEventScriptBytecodeInstructionUnit)(unitAndFlags & UnitMask)).ToStoredUnit();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static GameEventScriptInstructionFlag DecodeInstructionFlags(byte unitAndFlags)
+        => (GameEventScriptInstructionFlag)(unitAndFlags & InstructionFlagMask);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool HasInstructionFlag(byte unitAndFlags, GameEventScriptInstructionFlag flag)
+        => (unitAndFlags & (byte)flag) != 0;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte WithInstructionFlag(byte unitAndFlags, GameEventScriptInstructionFlag flag)
+        => (byte)(unitAndFlags | ((byte)flag & InstructionFlagMask));
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static byte WithoutInstructionFlags(byte unitAndFlags)
+        => (byte)(unitAndFlags & UnitMask);
 }
 
 public enum GameEventScriptBytecodeOpCode : byte
@@ -215,79 +267,76 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfNotTrue = 0x05,
 
     Call = 0x06,
-    CallPredicate = 0x07,
-    CallStandard = 0x08,
-    CallStandardPredicate = 0x09,
-    CallExternal = 0x0A,
-    CallExternalPredicate = 0x0B,
+    CallStandard = 0x07,
+    CallExternal = 0x08,
 
-    ReturnVoid = 0x0C,
-    ReturnValue = 0x0D,
+    ReturnVoid = 0x09,
+    ReturnValue = 0x0A,
 
-    EmitMessage = 0x0E,
-    EmitMessageWithTags = 0x0F,
-    EmitMessageValue = 0x10,
-    EmitMessageValueWithTags = 0x11,
+    EmitMessage = 0x0B,
+    EmitMessageWithTags = 0x0C,
+    EmitMessageValue = 0x0D,
+    EmitMessageValueWithTags = 0x0E,
 
-    PublishMessage = 0x12,
-    PublishMessageWithTags = 0x13,
-    PublishMessageValue = 0x14,
-    PublishMessageValueWithTags = 0x15,
+    PublishMessage = 0x0F,
+    PublishMessageWithTags = 0x10,
+    PublishMessageValue = 0x11,
+    PublishMessageValueWithTags = 0x12,
 
-    Cast = 0x16,
-    CastCustom = 0x17,
-    CastUnit = 0x18,
-    CastNumeric = 0x19,
+    Cast = 0x13,
+    CastCustom = 0x14,
+    CastUnit = 0x15,
+    CastNumeric = 0x16,
 
-    CheckType = 0x1A,
-    CheckCustomType = 0x1B,
-    CheckUnit = 0x1C,
-    CheckNumeric = 0x1D,
-    CheckInteger = 0x1E,
-    CheckFractional = 0x1F,
+    CheckType = 0x17,
+    CheckCustomType = 0x18,
+    CheckUnit = 0x19,
+    CheckNumeric = 0x1A,
+    CheckInteger = 0x1B,
+    CheckFractional = 0x1C,
 
-    MoveSlot = 0x20,
-    MemberAccess = 0x21,
-    IndexedAccess = 0x22,
-    BindHandler = 0x23,
+    MoveSlot = 0x1D,
+    MemberAccess = 0x1E,
+    IndexedAccess = 0x1F,
+    BindHandler = 0x20,
 
-    LoadNothing = 0x24,
-    LoadTrue = 0x25,
-    LoadFalse = 0x26,
-    LoadInteger = 0x27,
-    LoadFloat = 0x28,
-    LoadPercentage = 0x29,
-    LoadText = 0x2A,
-    LoadTag = 0x2B,
-    LoadHandler = 0x2C,
-    LoadMessage = 0x2D,
+    LoadNothing = 0x21,
+    LoadTrue = 0x22,
+    LoadFalse = 0x23,
+    LoadInteger = 0x24,
+    LoadFloat = 0x25,
+    LoadPercentage = 0x26,
+    LoadText = 0x27,
+    LoadTag = 0x28,
+    LoadHandler = 0x29,
+    LoadMessage = 0x2A,
 
-    StageRegister = 0x2E,
-    StageNothing = 0x2F,
-    StageTrue = 0x30,
-    StageFalse = 0x31,
-    StageInteger = 0x32,
-    StageFloat = 0x33,
-    StageText = 0x34,
-    StageTag = 0x35,
-    StagePercentage = 0x36,
+    StageRegister = 0x2B,
+    StageNothing = 0x2C,
+    StageTrue = 0x2D,
+    StageFalse = 0x2E,
+    StageInteger = 0x2F,
+    StageFloat = 0x30,
+    StageText = 0x31,
+    StageTag = 0x32,
+    StagePercentage = 0x33,
 
-    CreateDice = 0x37,
-    CreateVector = 0x38,
-    CreatePoint = 0x39,
-    CreateList = 0x3A,
-    CreateMap = 0x3B,
-    CreateRange = 0x3C,
-    CreateRangeWithStep = 0x3D,
-    CreateRangeIterator = 0x3E,
-    CreateRangeIteratorWithStep = 0x3F,
-    CreateRangeIteratorShort = 0x40,
-    CreateRecord = 0x41,
-    CreateExternalType = 0x42,
+    CreateDice = 0x34,
+    CreateVector = 0x35,
+    CreatePoint = 0x36,
+    CreateList = 0x37,
+    CreateMap = 0x38,
+    CreateRange = 0x39,
+    CreateRangeWithStep = 0x3A,
+    CreateRangeIterator = 0x3B,
+    CreateRangeIteratorWithStep = 0x3C,
+    CreateRangeIteratorShort = 0x3D,
+    CreateRecord = 0x3E,
+    CreateExternalType = 0x3F,
 
-    HasValue = 0x43,
-    IsEmpty = 0x44,
-    Default = 0x45,
+    HasValue = 0x40,
+    IsEmpty = 0x41,
+    Default = 0x42,
 
     #endregion
 

@@ -193,71 +193,68 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x03 | `JumpIfTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsTrue()`. |
 | 0x04 | `JumpIfFalse` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsFalse()`. |
 | 0x05 | `JumpIfNotTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `!X.IsTrue()`, including `nothing`. |
-| 0x06 | `Call` | - | result slot | - | `EntryAddress`=callable | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. |
-| 0x07 | `CallPredicate` | - | result slot | - | `EntryAddress`=predicate | - | Enters a VM-owned predicate call frame and normalizes the result to boolean or `nothing`. Arguments are the contiguous staged sequence immediately before the call. |
-| 0x08 | `CallStandard` | - | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. |
-| 0x09 | `CallStandardPredicate` | - | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension and normalizes the result to boolean or `nothing`. |
-| 0x0A | `CallExternal` | - | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension. |
-| 0x0B | `CallExternalPredicate` | - | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension and normalizes the result to boolean or `nothing`. |
-| 0x0C | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
-| 0x0D | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
-| 0x0E | `EmitMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Emits a statically shaped message without tags. |
-| 0x0F | `EmitMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Emits a statically shaped message with tags. |
-| 0x10 | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
-| 0x11 | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Emits a dynamic message value with tags. |
-| 0x12 | `PublishMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
-| 0x13 | `PublishMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
-| 0x14 | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
-| 0x15 | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Publishes a dynamic message value with tags. |
-| 0x16 | `Cast` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. |
-| 0x17 | `CastCustom` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
-| 0x18 | `CastUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x19 | `CastNumeric` | - | result slot | `XSlot`=source | - | - | Coerces `X` through the source-level `:number` type. Integral values stay integer; otherwise the result is float. |
-| 0x1A | `CheckType` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
-| 0x1B | `CheckCustomType` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
-| 0x1C | `CheckUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x1D | `CheckNumeric` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a numeric value through the source-level `is numeric` helper. |
-| 0x1E | `CheckInteger` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite integral numeric value. |
-| 0x1F | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
-| 0x20 | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
-| 0x21 | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
-| 0x22 | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
-| 0x23 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
-| 0x24 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |
-| 0x25 | `LoadTrue` | - | result slot | - | - | - | Loads boolean `true`. |
-| 0x26 | `LoadFalse` | - | result slot | - | - | - | Loads boolean `false`. |
-| 0x27 | `LoadInteger` | numeric unit | result slot | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
-| 0x28 | `LoadFloat` | numeric unit | result slot | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
-| 0x29 | `LoadPercentage` | - | result slot | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
-| 0x2A | `LoadText` | - | result slot | `StringIndex` | - | - | Loads a text literal. |
-| 0x2B | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
-| 0x2C | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2D | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2E | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value as the next local call argument. |
-| 0x2F | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
-| 0x30 | `StageTrue` | - | - | - | - | - | Stages `true` as the next local call argument. |
-| 0x31 | `StageFalse` | - | - | - | - | - | Stages `false` as the next local call argument. |
-| 0x32 | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer argument. |
-| 0x33 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float argument. |
-| 0x34 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
-| 0x35 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
-| 0x36 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
-| 0x37 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
-| 0x38 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x39 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x3A | `CreateList` | - | result slot | - | `ListIndex`=item slots | - | Creates a list from slot-list operands. |
-| 0x3B | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Creates a map from key names and value slots. |
-| 0x3C | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
-| 0x3D | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
-| 0x3E | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
-| 0x3F | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
-| 0x40 | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x41 | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a script record from named argument slots. |
-| 0x42 | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a host-bound external type value from named argument slots. |
-| 0x43 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
-| 0x44 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
-| 0x45 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
-| 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
+| 0x06 | `Call` | optional `NormalizeResultAsPredicate` | result slot | - | `EntryAddress`=callable/predicate | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. With `NormalizeResultAsPredicate`, the returned value is normalized to boolean or `nothing`. |
+| 0x07 | `CallStandard` | optional `NormalizeResultAsPredicate` | result slot | `SecondaryListIndex`=extension shape | `ListIndex`=argument slots | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
+| 0x08 | `CallExternal` | optional `NormalizeResultAsPredicate` | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
+| 0x09 | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
+| 0x0A | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
+| 0x0B | `EmitMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Emits a statically shaped message without tags. |
+| 0x0C | `EmitMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Emits a statically shaped message with tags. |
+| 0x0D | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
+| 0x0E | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Emits a dynamic message value with tags. |
+| 0x0F | `PublishMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
+| 0x10 | `PublishMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
+| 0x11 | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
+| 0x12 | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Publishes a dynamic message value with tags. |
+| 0x13 | `Cast` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. |
+| 0x14 | `CastCustom` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
+| 0x15 | `CastUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x16 | `CastNumeric` | - | result slot | `XSlot`=source | - | - | Coerces `X` through the source-level `:number` type. Integral values stay integer; otherwise the result is float. |
+| 0x17 | `CheckType` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
+| 0x18 | `CheckCustomType` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
+| 0x19 | `CheckUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x1A | `CheckNumeric` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a numeric value through the source-level `is numeric` helper. |
+| 0x1B | `CheckInteger` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite integral numeric value. |
+| 0x1C | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
+| 0x1D | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
+| 0x1E | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
+| 0x1F | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
+| 0x20 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
+| 0x21 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |
+| 0x22 | `LoadTrue` | - | result slot | - | - | - | Loads boolean `true`. |
+| 0x23 | `LoadFalse` | - | result slot | - | - | - | Loads boolean `false`. |
+| 0x24 | `LoadInteger` | numeric unit | result slot | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
+| 0x25 | `LoadFloat` | numeric unit | result slot | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
+| 0x26 | `LoadPercentage` | - | result slot | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
+| 0x27 | `LoadText` | - | result slot | `StringIndex` | - | - | Loads a text literal. |
+| 0x28 | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
+| 0x29 | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2A | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2B | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value as the next local call argument. |
+| 0x2C | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
+| 0x2D | `StageTrue` | - | - | - | - | - | Stages `true` as the next local call argument. |
+| 0x2E | `StageFalse` | - | - | - | - | - | Stages `false` as the next local call argument. |
+| 0x2F | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer argument. |
+| 0x30 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float argument. |
+| 0x31 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
+| 0x32 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
+| 0x33 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
+| 0x34 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
+| 0x35 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x36 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x37 | `CreateList` | - | result slot | - | `ListIndex`=item slots | - | Creates a list from slot-list operands. |
+| 0x38 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Creates a map from key names and value slots. |
+| 0x39 | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
+| 0x3A | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
+| 0x3B | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0x3C | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
+| 0x3D | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
+| 0x3E | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a script record from named argument slots. |
+| 0x3F | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a host-bound external type value from named argument slots. |
+| 0x40 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
+| 0x41 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
+| 0x42 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
+| 0x43..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Boolean Algebra, Comparison, Math And Random
 

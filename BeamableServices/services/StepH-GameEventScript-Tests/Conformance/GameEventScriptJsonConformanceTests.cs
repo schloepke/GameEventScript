@@ -54,6 +54,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicCustomTypesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCustomTypes(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicCollectionOperatorsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCollectionOperators(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -144,6 +149,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCreateValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCreateValues(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCustomTypesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCustomTypes(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCollectionOperatorsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -332,6 +342,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicCreateValuesCases()
         => Cases("runtime/atomic/create-values.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicCustomTypesCases()
+        => Cases("runtime/atomic/custom-types.json");
+
     public static IEnumerable<object[]> RuntimeAtomicCollectionOperatorsCases()
         => Cases("runtime/atomic/collection-operators.json");
 
@@ -382,6 +395,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCreateValuesCases()
         => NewVirtualMachineCases("runtime/atomic/create-values.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCustomTypesCases()
+        => NewVirtualMachineCases("runtime/atomic/custom-types.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCollectionOperatorsCases()
         => NewVirtualMachineCases("runtime/atomic/collection-operators.json");

@@ -796,8 +796,20 @@ internal sealed class GesLinearBytecodeBuilder
                 if (collectionAccess.Selector is ExpressionSelectorNode selector)
                 {
                     var target = EmitSourceExpression(collectionAccess.Target, context, state);
-                    var index = EmitSourceExpression(selector.Expression, context, state);
-                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.IndexedAccess, a: index, b: target);
+                    switch (selector.Expression)
+                    {
+                        case IntegerLiteralExpressionNode integer when integer.Value >= short.MinValue && integer.Value <= short.MaxValue:
+                            return EmitIndexAccessInstruction(state, target, (short)integer.Value);
+
+                        case TextLiteralExpressionNode text:
+                            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MemberAccess, a: ResolveStringIndex(text.Value), b: target);
+
+                        case TagLiteralExpressionNode tag:
+                            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MemberAccess, a: ResolveStringIndex(tag.Name), b: target);
+                    }
+
+                    var property = EmitSourceExpression(selector.Expression, context, state);
+                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PropertyAccess, a: property, b: target);
                 }
 
                 return EmitSourcePipeline(collectionAccess, context, state);
@@ -2477,6 +2489,20 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var dest = AllocateSlot(state);
         Emit(CreateInstruction(opCode, dest: dest, a: a, b: b, c: c, unitAndFlags: unitAndFlags));
+        return dest;
+    }
+
+    private int EmitIndexAccessInstruction(ExpressionState state, int target, short index)
+    {
+        var dest = AllocateSlot(state);
+        Emit(new GameEventScriptBytecodeInstruction
+        {
+            OpCode = GameEventScriptBytecodeOpCode.IndexAccess,
+            DestinationSlot = ToUShortOperand(dest, "destination operand"),
+            ImmediateX = index,
+            YSlot = ToUShortOperand(target, "object operand")
+        });
+
         return dest;
     }
 

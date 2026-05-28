@@ -218,43 +218,44 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x1C | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
 | 0x1D | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
 | 0x1E | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
-| 0x1F | `IndexedAccess` | - | result slot | `XSlot`=index | `YSlot`=object | - | Direct indexed lookup. |
-| 0x20 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
-| 0x21 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |
-| 0x22 | `LoadTrue` | - | result slot | - | - | - | Loads boolean `true`. |
-| 0x23 | `LoadFalse` | - | result slot | - | - | - | Loads boolean `false`. |
-| 0x24 | `LoadInteger` | numeric unit | result slot | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
-| 0x25 | `LoadFloat` | numeric unit | result slot | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
-| 0x26 | `LoadPercentage` | - | result slot | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
-| 0x27 | `LoadText` | - | result slot | `StringIndex` | - | - | Loads a text literal. |
-| 0x28 | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
-| 0x29 | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2A | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2B | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value for the next stage-consuming instruction. |
-| 0x2C | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` for the next stage-consuming instruction. |
-| 0x2D | `StageTrue` | - | - | - | - | - | Stages `true` for the next stage-consuming instruction. |
-| 0x2E | `StageFalse` | - | - | - | - | - | Stages `false` for the next stage-consuming instruction. |
-| 0x2F | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer value. |
-| 0x30 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float value. |
-| 0x31 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
-| 0x32 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
-| 0x33 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
-| 0x34 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
-| 0x35 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x36 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x37 | `CreateList` | - | result slot | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
-| 0x38 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
-| 0x39 | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
-| 0x3A | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
-| 0x3B | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
-| 0x3C | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
-| 0x3D | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x3E | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | - | Constructs a script record from named staged argument values. |
-| 0x3F | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
-| 0x40 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
-| 0x41 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
-| 0x42 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
-| 0x43..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
+| 0x1F | `IndexAccess` | - | result slot | `ImmediateX`=1-based index | `YSlot`=object | - | Reads a statically known positional element. |
+| 0x20 | `PropertyAccess` | - | result slot | `XSlot`=property/index selector | `YSlot`=object | - | Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics. |
+| 0x21 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
+| 0x22 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |
+| 0x23 | `LoadTrue` | - | result slot | - | - | - | Loads boolean `true`. |
+| 0x24 | `LoadFalse` | - | result slot | - | - | - | Loads boolean `false`. |
+| 0x25 | `LoadInteger` | numeric unit | result slot | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
+| 0x26 | `LoadFloat` | numeric unit | result slot | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
+| 0x27 | `LoadPercentage` | - | result slot | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
+| 0x28 | `LoadText` | - | result slot | `StringIndex` | - | - | Loads a text literal. |
+| 0x29 | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
+| 0x2A | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2B | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2C | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value for the next stage-consuming instruction. |
+| 0x2D | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` for the next stage-consuming instruction. |
+| 0x2E | `StageTrue` | - | - | - | - | - | Stages `true` for the next stage-consuming instruction. |
+| 0x2F | `StageFalse` | - | - | - | - | - | Stages `false` for the next stage-consuming instruction. |
+| 0x30 | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer value. |
+| 0x31 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float value. |
+| 0x32 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
+| 0x33 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
+| 0x34 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
+| 0x35 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
+| 0x36 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x37 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x38 | `CreateList` | - | result slot | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
+| 0x39 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
+| 0x3A | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
+| 0x3B | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
+| 0x3C | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0x3D | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
+| 0x3E | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
+| 0x3F | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | - | Constructs a script record from named staged argument values. |
+| 0x40 | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
+| 0x41 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
+| 0x42 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
+| 0x43 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
+| 0x44..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Boolean Algebra, Comparison, Math And Random
 

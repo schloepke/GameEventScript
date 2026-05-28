@@ -813,7 +813,8 @@ compiler-assigned iterator slot.
 - `LoadMessage dst messageShapeIndex argumentSlotListIndex`
 - `BindHandler dst handlerSlot argumentSlotListIndex`
 - `MemberAccess dst nameIndex objectSlot`
-- `IndexedAccess dst selectorSlot objectSlot`
+- `IndexAccess dst immediateIndex objectSlot`
+- `PropertyAccess dst selectorSlot objectSlot`
 - `CreateDice dst count sides`
 - `CreateVector dst immediateX`
 - `CreatePoint dst immediateX`

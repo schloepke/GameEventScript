@@ -609,10 +609,12 @@ let unit be [name: 'Ada', hp: 10]
 let flags be [enemy:, visible:, armed:]
 ```
 
-Lookups use member syntax or bracket syntax:
+Lookups use member syntax or bracket syntax. Literal text and tag selectors are
+member lookups; dynamic selectors are resolved at runtime.
 
 ```ges
 unit.name
+unit['name']
 unit[:name]
 ```
 
@@ -620,10 +622,12 @@ Dynamic map lookup with a non-text and non-tag key returns `nothing`.
 
 ### Lookup and Membership
 
-`x[y]` performs lookup unless `y` starts with a structured selector.
+`x[y]` performs positional index lookup for integer selectors and member lookup
+for text/tag selectors unless `y` starts with a structured selector. Positional
+indexes are 1-based.
 
 ```ges
-let firstItem be items[0]
+let firstItem be items[1]
 let hp be unit[:hp]
 let hasEnemyFlag be :enemy in flags
 let containsUnit be unit value in units

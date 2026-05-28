@@ -66,6 +66,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
+            if (key.StartsWith("_")) continue;
             list.Items[i++].SetTag(key);
         }
         return list;
@@ -77,6 +78,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
+            if (key.StartsWith("_")) continue;
             list.Items[i++] = entries[key];
         }
         return list;
@@ -88,6 +90,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
+            if (key.StartsWith("_")) continue;
             list.Items[i++].SetMap(new VmMapObject(ownerState, new Dictionary<string, VmValue> { ["key"] = VmValue.CreateTag(key), ["value"] = entries[key] }));
         }
 

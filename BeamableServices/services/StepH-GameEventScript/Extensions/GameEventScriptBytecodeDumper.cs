@@ -345,8 +345,13 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "object", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.IndexedAccess:
-                AppendSlot(builder, "index", instruction.XSlot);
+            case GameEventScriptBytecodeOpCode.IndexAccess:
+                builder.Append(" index=").Append(instruction.ImmediateX);
+                AppendSlot(builder, "object", instruction.YSlot);
+                break;
+
+            case GameEventScriptBytecodeOpCode.PropertyAccess:
+                AppendSlot(builder, "property", instruction.XSlot);
                 AppendSlot(builder, "object", instruction.YSlot);
                 break;
 

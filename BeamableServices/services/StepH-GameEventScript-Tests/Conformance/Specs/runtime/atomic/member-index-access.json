@@ -196,7 +196,7 @@
     {
       "kind": "scriptApi",
       "name": "list member and index access",
-      "script": "module AtomicListAccess\non Start {\n  let value be [10, 20, 30]\n  emit Done(member: value.missing, first: value[1], third: value[3], indexZero: value[0], indexOut: value[4])\n}",
+      "script": "module AtomicListAccess\non Start {\n  let value be [10, 20, 30]\n  let index be 2\n  emit Done(member: value.missing, first: value[1], dynamicSecond: value[index], third: value[3], indexZero: value[0], indexOut: value[4])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -206,6 +206,7 @@
               "args": {
                 "member": { "type": ":nothing" },
                 "first": { "type": ":integer", "value": "10" },
+                "dynamicSecond": { "type": ":integer", "value": "20" },
                 "third": { "type": ":integer", "value": "30" },
                 "indexZero": { "type": ":nothing" },
                 "indexOut": { "type": ":nothing" }
@@ -218,7 +219,7 @@
     {
       "kind": "scriptApi",
       "name": "map member and index access",
-      "script": "module AtomicMapAccess\non Start {\n  let value be [name: 'Ada', hp: 10]\n  emit Done(memberName: value.name, memberMissing: value.missing, indexText: value['name'], indexTag: value[:hp], indexMissing: value[:missing], indexOut: value[1])\n}",
+      "script": "module AtomicMapAccess\non Start {\n  let value be [name: 'Ada', hp: 10]\n  let key be 'name'\n  emit Done(memberName: value.name, memberMissing: value.missing, indexText: value['name'], indexTag: value[:hp], dynamicText: value[key], indexMissing: value[:missing], indexOut: value[1])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -230,6 +231,7 @@
                 "memberMissing": { "type": ":nothing" },
                 "indexText": { "type": ":text", "value": "Ada" },
                 "indexTag": { "type": ":integer", "value": "10" },
+                "dynamicText": { "type": ":text", "value": "Ada" },
                 "indexMissing": { "type": ":nothing" },
                 "indexOut": { "type": ":nothing" }
               }

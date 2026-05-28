@@ -1,0 +1,424 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicCustomTypes",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "create custom record with computed field and casts",
+      "script": "module AtomicCreateCustomRecord\nrecord :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let gauge be :gauge(current: 125, maximum: 100)\n  let gaugeList as :list be gauge\n  let gaugeMap as :map be gauge\n  emit Done(gauge: gauge, current: gauge.current, percentage: gauge.percentage, gaugeList: gaugeList, gaugeListLength: :len gaugeList, gaugeMap: gaugeMap, mapCurrent: gaugeMap.current, mapPercentage: gaugeMap.percentage, recordKeys: :keys gauge, recordValues: :values gauge, recordEntries: :entries gauge, isGauge: gauge is :gauge, isAim: gauge is :aim)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "current": {
+                  "type": ":integer",
+                  "value": "100"
+                },
+                "gauge": {
+                  "type": ":gauge",
+                  "entries": {
+                    "current": {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    "maximum": {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    "percentage": {
+                      "type": ":percentage",
+                      "value": "0.01"
+                    }
+                  }
+                },
+                "gaugeList": {
+                  "type": ":list",
+                  "items": []
+                },
+                "gaugeListLength": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "gaugeMap": {
+                  "type": ":map",
+                  "entries": {
+                    "current": {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    "maximum": {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    "percentage": {
+                      "type": ":percentage",
+                      "value": "0.01"
+                    }
+                  }
+                },
+                "isAim": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "isGauge": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapCurrent": {
+                  "type": ":integer",
+                  "value": "100"
+                },
+                "mapPercentage": {
+                  "type": ":percentage",
+                  "value": "0.01"
+                },
+                "percentage": {
+                  "type": ":percentage",
+                  "value": "0.01"
+                },
+                "recordEntries": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "current"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "100"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "maximum"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "100"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "percentage"
+                        },
+                        "value": {
+                          "type": ":percentage",
+                          "value": "0.01"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "recordKeys": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":tag",
+                      "value": "current"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "maximum"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "percentage"
+                    }
+                  ]
+                },
+                "recordValues": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "100"
+                    },
+                    {
+                      "type": ":percentage",
+                      "value": "0.01"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "create external type with computed field and casts",
+      "script": "module AtomicCreateExternalType\non Start {\n  let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))\n  let aimList as :list be aim\n  let aimMap as :map be aim\n  emit Done(aim: aim, bearing: aim.bearing, checksum: aim.checksum, directionZ: aim.direction.z, aimList: aimList, aimListLength: :len aimList, aimMap: aimMap, mapChecksum: aimMap.checksum, mapDirectionZ: aimMap.direction.z, aimKeys: :keys aim, aimValues: :values aim, aimEntries: :entries aim, isAim: aim is :aim, isGauge: aim is :gauge)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "aim": {
+                  "type": ":aim",
+                  "entries": {
+                    "bearing": {
+                      "type": ":float",
+                      "unit": ":degree",
+                      "value": "90"
+                    },
+                    "checksum": {
+                      "type": ":integer",
+                      "value": "106"
+                    },
+                    "direction": {
+                      "type": ":vector",
+                      "unit": ":meter",
+                      "x": "1",
+                      "y": "2",
+                      "z": "3"
+                    },
+                    "range": {
+                      "type": ":float",
+                      "unit": ":meter",
+                      "value": "12"
+                    },
+                    "steps": {
+                      "type": ":integer",
+                      "unit": ":meter",
+                      "value": "4"
+                    }
+                  }
+                },
+                "aimList": {
+                  "type": ":list",
+                  "items": []
+                },
+                "aimListLength": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "aimMap": {
+                  "type": ":map",
+                  "entries": {
+                    "bearing": {
+                      "type": ":float",
+                      "unit": ":degree",
+                      "value": "90"
+                    },
+                    "checksum": {
+                      "type": ":integer",
+                      "value": "106"
+                    },
+                    "direction": {
+                      "type": ":vector",
+                      "unit": ":meter",
+                      "x": "1",
+                      "y": "2",
+                      "z": "3"
+                    },
+                    "range": {
+                      "type": ":float",
+                      "unit": ":meter",
+                      "value": "12"
+                    },
+                    "steps": {
+                      "type": ":integer",
+                      "unit": ":meter",
+                      "value": "4"
+                    }
+                  }
+                },
+                "bearing": {
+                  "type": ":float",
+                  "unit": ":degree",
+                  "value": "90"
+                },
+                "checksum": {
+                  "type": ":integer",
+                  "value": "106"
+                },
+                "directionZ": {
+                  "type": ":float",
+                  "unit": ":meter",
+                  "value": "3"
+                },
+                "isAim": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "isGauge": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapChecksum": {
+                  "type": ":integer",
+                  "value": "106"
+                },
+                "mapDirectionZ": {
+                  "type": ":float",
+                  "unit": ":meter",
+                  "value": "3"
+                },
+                "aimEntries": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "bearing"
+                        },
+                        "value": {
+                          "type": ":float",
+                          "unit": ":degree",
+                          "value": "90"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "checksum"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "106"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "direction"
+                        },
+                        "value": {
+                          "type": ":vector",
+                          "unit": ":meter",
+                          "x": "1",
+                          "y": "2",
+                          "z": "3"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "range"
+                        },
+                        "value": {
+                          "type": ":float",
+                          "unit": ":meter",
+                          "value": "12"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "steps"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "unit": ":meter",
+                          "value": "4"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "aimKeys": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":tag",
+                      "value": "bearing"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "checksum"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "direction"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "range"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "steps"
+                    }
+                  ]
+                },
+                "aimValues": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":float",
+                      "unit": ":degree",
+                      "value": "90"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "106"
+                    },
+                    {
+                      "type": ":vector",
+                      "unit": ":meter",
+                      "x": "1",
+                      "y": "2",
+                      "z": "3"
+                    },
+                    {
+                      "type": ":float",
+                      "unit": ":meter",
+                      "value": "12"
+                    },
+                    {
+                      "type": ":integer",
+                      "unit": ":meter",
+                      "value": "4"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

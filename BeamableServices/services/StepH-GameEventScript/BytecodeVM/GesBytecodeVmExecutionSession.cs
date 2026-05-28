@@ -1159,8 +1159,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.CreateDice:
                 return DefineSlot(instruction.DestinationSlot, EvaluateDiceExpression(instruction.Count, instruction.ImmediateY));
 
-            case GameEventScriptBytecodeOpCode.IndexedAccess:
-                return DefineSlot(instruction.DestinationSlot, EvaluateIndexedAccess(ResolveSlot(instruction.YSlot), ResolveSlot(instruction.XSlot)));
+            case GameEventScriptBytecodeOpCode.IndexAccess:
+                return DefineSlot(instruction.DestinationSlot, EvaluateIndexAccess(ResolveSlot(instruction.YSlot), instruction.ImmediateX));
+
+            case GameEventScriptBytecodeOpCode.PropertyAccess:
+                return DefineSlot(instruction.DestinationSlot, EvaluatePropertyAccess(ResolveSlot(instruction.YSlot), ResolveSlot(instruction.XSlot)));
 
             case GameEventScriptBytecodeOpCode.MemberAccess:
                 if (!TryReadStringPool(instruction.StringIndex, out var member))
@@ -4145,7 +4148,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             : BytecodeVmValue.Nothing;
     }
 
-    private static BytecodeVmValue EvaluateIndexedAccess(BytecodeVmValue target, BytecodeVmValue selector)
+    private static BytecodeVmValue EvaluateIndexAccess(BytecodeVmValue target, int index)
+        => BytecodeVmValue.FromGameEventScriptValue(target.ToGameEventScriptValue().Lookup(GameEventScriptValueFactory.GesInteger(index)));
+
+    private static BytecodeVmValue EvaluatePropertyAccess(BytecodeVmValue target, BytecodeVmValue selector)
     {
         var selectorValue = selector.ToGameEventScriptValue();
         if (selectorValue.IsNothing())

@@ -454,6 +454,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.YSlot, $"{context} source slot");
                 break;
 
+            case GameEventScriptBytecodeOpCode.PropertyAccess:
+                ValidateSlot(module, instruction.XSlot, $"{context} property slot");
+                ValidateSlot(module, instruction.YSlot, $"{context} source slot");
+                break;
+
             case GameEventScriptBytecodeOpCode.PipelineStream:
                 ValidateSlot(module, instruction.XSlot, $"{context} source iterator slot");
                 ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} iterator entry");
@@ -601,8 +606,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.IndexedAccess:
-                ValidateSlot(module, instruction.XSlot, $"{context} index slot");
+            case GameEventScriptBytecodeOpCode.IndexAccess:
                 ValidateSlot(module, instruction.YSlot, $"{context} source slot");
                 break;
 

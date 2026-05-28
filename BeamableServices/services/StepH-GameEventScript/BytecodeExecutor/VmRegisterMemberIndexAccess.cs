@@ -31,9 +31,9 @@ internal static class VmRegisterMemberIndexAccess
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmIndexAccess(ref this VmValue dst, ushort indexSlot, ref VmValue obj)
+    internal static void VmIndexAccess(ref this VmValue dst, long indexIn, ref VmValue obj)
     {
-        if (!dst.OwningState.Register(indexSlot).TryGetInteger(out var indexIn) || indexIn <= 0)
+        if (indexIn <= 0)
         {
             dst.SetNothing();
             return;
@@ -53,12 +53,12 @@ internal static class VmRegisterMemberIndexAccess
                 dst.SetFloat(value, obj.Unit);
                 return;
             case Range when obj.ObjectValue is VmRange integerRange:
-                var intRangeValue = integerRange.from + (index + 1) * integerRange.step;
+                var intRangeValue = integerRange.from + index * integerRange.step;
                 if (integerRange.step > 0 && intRangeValue <= integerRange.to || integerRange.step < 0 && intRangeValue >= integerRange.to) dst.SetInteger(intRangeValue);
                 else dst.SetNothing();
                 return;
             case Range when obj.ObjectValue is VmFloatRange floatRange:
-                var floatRangeValue = floatRange.from + (index + 1) * floatRange.step;
+                var floatRangeValue = floatRange.from + index * floatRange.step;
                 if (floatRange.step > 0 && floatRangeValue <= floatRange.to || floatRange.step < 0 && floatRangeValue >= floatRange.to) dst.SetFloat(floatRangeValue);
                 else dst.SetNothing();
                 return;
@@ -77,6 +77,39 @@ internal static class VmRegisterMemberIndexAccess
             // FIXME: Need to implement the index access for message signatures.
             case Envelope:
             // FIXME: Need to implement the index access for envelopes.
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmPropertyAccess(ref this VmValue dst, ref VmValue property, ref VmValue obj)
+    {
+        if (property.TryGetInteger(out var indexIn))
+        {
+            dst.VmIndexAccess(indexIn, ref obj);
+            return;
+        }
+
+        switch (property.Kind)
+        {
+            case Text or Tag when property.IsStoragePointer:
+                dst.VmMemberAccess((ushort)property.IntegerValue, ref obj);
+                return;
+            case Text or Tag when property.ObjectValue is string key:
+                switch (obj.Kind)
+                {
+                    case Map or Custom when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
+                        dst = value;
+                        return;
+                    case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(key, out var value):
+                        dst.SetFloat(value, obj.Unit);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
             default:
                 dst.SetNothing();
                 return;

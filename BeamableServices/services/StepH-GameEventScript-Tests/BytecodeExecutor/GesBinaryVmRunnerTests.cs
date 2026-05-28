@@ -122,5 +122,43 @@ public sealed class BytecodeExecutorTests
         Assert.AreEqual("Ready", emitted[0].Name);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(1), emitted[0].Arguments["value"]);
     }
+
+    [TestMethod]
+    public void RegisterArrayGrowsForLargeStageSequences()
+    {
+        const string script =
+            """
+            module BinaryExecutor
+
+            on Start {
+                let values be [
+                    1, 2, 3, 4, 5, 6, 7, 8,
+                    9, 10, 11, 12, 13, 14, 15, 16,
+                    17, 18, 19, 20, 21, 22, 23, 24,
+                    25, 26, 27, 28, 29, 30, 31, 32,
+                    33, 34, 35, 36, 37, 38, 39, 40
+                ]
+                emit Done(count: :len values)
+            }
+            """;
+
+        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
+        var emitted = new List<GameEventScriptMessage>();
+        var session = new GameEventScriptSession(
+            GameEventScriptRandomGenerator.FromSeed(1),
+            message =>
+            {
+                emitted.Add(message);
+                return true;
+            });
+
+        var runner = new GameEventScriptVirtualMaschine(binary, 64, 128);
+        var handled = runner.ExecuteMessage(Create("Start"), session);
+
+        Assert.IsTrue(handled);
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Done", emitted[0].Name);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(40), emitted[0].Arguments["count"]);
+    }
     
 }

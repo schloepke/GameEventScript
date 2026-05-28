@@ -13,6 +13,9 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 internal class VmState
 {
+    private const int InitialRegisterCapacity = 32;
+    private const int RegisterCapacityGrowth = 32;
+
     internal enum StateValue
     {
         Initialized,
@@ -41,7 +44,8 @@ internal class VmState
     internal ushort CallStackPointer { get; private set; }
     internal CallFrame[] CallStack { get; init; }
 
-    internal VmValue[] RegisterSlots { get; init; }
+    internal VmValue[] RegisterSlots { get; private set; }
+    private VmValue _overflowRegister;
 
     internal ushort RandomGeneratorsPointer { get; private set; } = 0;
     internal GameEventScriptRandomGenerator[] RandomGenerators { get; init; }
@@ -57,6 +61,7 @@ internal class VmState
     //internal List<GameEventScriptMessageSignature> OutboundMessageSignatures { get; init; }
 
     internal readonly ushort CodeSegmentSize; 
+    private readonly int _maxRegisterSlots;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
@@ -67,13 +72,15 @@ internal class VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
+        _maxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
         EmptyList = new VmListObject(this, 0);
         Binary = binary;
         CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterSlots = CreateRegisterArray(registerSize);
+        RegisterSlots = CreateRegisterArray(InitialRegisterCapacity);
+        _overflowRegister.InitRegister(this);
         RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = GameEventScriptRandomGenerator.Create(); // INFO: We create one here so that we always have one. but it should be set for the message from the context!
@@ -106,11 +113,12 @@ internal class VmState
         if (bind.Kind != GameEventScriptBinaryBindKind.MessageHandler) return RaiseError($"Message '{signatureId}' is not a handler.");
         if (bind.ArgumentNames.Count != message.Arguments.Count) return RaiseError($"Message '{signatureId}' has the wrong number of arguments.");
         var arguments = message.Arguments;
-        if (arguments.Count > RegisterSlots.Length) return RaiseError($"Message '{signatureId}' has too many arguments for the VM register frame.");
+        if (!EnsureRegisterCapacity(arguments.Count)) return false;
         if (bind.EntryAddress >= CodeSegmentSize) return RaiseError($"Message '{signatureId}' has an invalid entry address.");
         InstructionPointer = bind.EntryAddress;
         RegisterFrameStart = 0;
         RegisterFrameLength = (ushort)arguments.Count;
+        StageLength = 0;
         for (var i = 0; i < RegisterFrameLength; i++) 
         {
             RegisterSlots[i].BindArguments(arguments[i]);
@@ -154,6 +162,7 @@ internal class VmState
         State = StateValue.Initialized;
         RegisterFrameStart = 0;
         RegisterFrameLength = 0;
+        StageLength = 0;
         RandomGeneratorsPointer = 0;
         for (var i = 0; i < RegisterSlots.Length; i++) {
             RegisterSlots[i].SetNothing();
@@ -169,6 +178,9 @@ internal class VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool CallAddress(ushort address, ushort? resultRegister = null, bool normalizeResultAsPredicate = false)
     {
+        var nextRegisterFrameStart = RegisterFrameStart + RegisterFrameLength;
+        var nextRegisterFrameLength = StageLength;
+        if (!EnsureRegisterCapacity(nextRegisterFrameStart + nextRegisterFrameLength)) return false;
         if (CallStackPointer >= CallStack.Length) return RaiseError("Stack overflow");
         CallStack[CallStackPointer++] = new CallFrame
         {
@@ -179,10 +191,10 @@ internal class VmState
             NormalizeResultAsPredicate = normalizeResultAsPredicate
         };
         InstructionPointer = address;
-        RegisterFrameStart += RegisterFrameLength;
-        RegisterFrameLength = StageLength;
+        RegisterFrameStart = checked((ushort)nextRegisterFrameStart);
+        RegisterFrameLength = nextRegisterFrameLength;
         StageLength = 0;
-        return RegisterFrameStart + RegisterFrameLength <= RegisterSlots.Length || RaiseError($"Register overflow");
+        return true;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -225,15 +237,9 @@ internal class VmState
         RegisterFrameStart = callFrame.RegisterFrameStart;
         RegisterFrameLength = callFrame.RegisterFrameLength;
         StageLength = 0;
-        if (callFrame.ResultRegisterIndex.HasValue)
-        {
-            if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing)
-            {
-                result.SetNothing();
-            }
-
-            RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
-        }
+        if (!callFrame.ResultRegisterIndex.HasValue) return;
+        if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
+        RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -260,13 +266,8 @@ internal class VmState
         switch (slotCount)
         {
             case > 0:
-                var requiredTotalSlots = RegisterFrameStart + slotCount;
-                if (requiredTotalSlots > RegisterSlots.Length)
-                {
-                    // FIXME: Here we might want to let the register frame grow.
-                    RaiseError("Not enough slots in register frame.");
-                }
-                else
+                var requiredTotalSlots = RegisterFrameStart + RegisterFrameLength + slotCount;
+                if (EnsureRegisterCapacity(requiredTotalSlots))
                 {
                     RegisterFrameLength += (ushort)slotCount;
                 }
@@ -302,16 +303,41 @@ internal class VmState
             RegisterSlots[index].SetNothing();
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool EnsureRegisterCapacity(int requiredSlots)
+    {
+        if (requiredSlots <= RegisterSlots.Length) return true;
+        if (requiredSlots > _maxRegisterSlots) return RaiseError($"Register overflow. Required {requiredSlots} slots but maximum is {_maxRegisterSlots}.");
+        var newLength = RegisterSlots.Length;
+        do
+        {
+            newLength = Math.Min(newLength + RegisterCapacityGrowth, _maxRegisterSlots);
+        }
+        while (newLength < requiredSlots);
+
+        var oldLength = RegisterSlots.Length;
+        var expanded = new VmValue[newLength];
+        Array.Copy(RegisterSlots, expanded, oldLength);
+        RegisterSlots = expanded;
+        for (var i = oldLength; i < RegisterSlots.Length; i++)
+        {
+            RegisterSlots[i].InitRegister(this);
+        }
+
+        return true;
+    }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref VmValue AddStageSlot()
     {
-        var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength++;
-        if (stageRegisterIndex >= RegisterSlots.Length) 
+        var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;
+        if (!EnsureRegisterCapacity(stageRegisterIndex + 1)) 
         {
-            // FIXME: Here we might want to let the register frame grow.
-            RaiseError("Cannot add more staged arguments than available register slots.");
+            return ref _overflowRegister;
         }
+
+        StageLength++;
         return ref RegisterSlots[stageRegisterIndex];
     }
 

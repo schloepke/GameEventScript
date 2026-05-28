@@ -134,6 +134,38 @@ internal static class VmRegisterTypeCastCheck
             case Tag:
                 CastTag(ref dst, ref xSlot);
                 return;
+            case Dice:
+                switch (xSlot.Kind)
+                {
+                    case Dice:
+                        dst = xSlot;
+                        return;
+                    case List when xSlot.ObjectValue is VmListObject list:
+                    {
+                        var dice = new int[list.Length];
+                        for (var i = 0; i < list.Length; i++)
+                        {
+                            var item = list.Items[i];
+                            if (item.Kind is not Integer || item.IntegerValue <= 0 || item.IntegerValue > int.MaxValue)
+                            {
+                                dst.SetNothing();
+                                return;
+                            }
+
+                            dice[i] = (int)item.IntegerValue;
+                        }
+
+                        dst.SetDice(dice);
+                        return;
+                    }
+                    case Nothing:
+                        dst.SetDice([]);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
+
             case Custom:
             case Invalid:
                 dst.SetNothing();
@@ -187,7 +219,12 @@ internal static class VmRegisterTypeCastCheck
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckType(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type)
     {
-        dst.SetBoolean(type != Invalid && type != Custom && xSlot.Kind == type);
+        dst.SetBoolean(type switch
+        {
+            Nothing => xSlot.IsNothing,
+            Invalid or Custom => false,
+            _ => xSlot.IsNotNothing && xSlot.Kind == type
+        });
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -339,9 +376,6 @@ internal static class VmRegisterTypeCastCheck
             case "negativeinfinity":
                 number = double.NegativeInfinity;
                 return NumericNegativeInfinity;
-            case "nan":
-                number = double.NaN;
-                return NumericNaN;
             case "pi":
                 number = GesPi;
                 return NumericFinite;

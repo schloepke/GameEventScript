@@ -353,7 +353,6 @@ Square and cube roots lower to powers with exponents `0.5` and `1/3`.
 Numeric constants are tag-like literals:
 
 ```ges
-:nan
 :infinity
 :negativeinfinity
 :pi      // alias: ∏
@@ -559,14 +558,13 @@ let callback be Done(value)
 
 ### Presence and Emptiness
 
-`nothing` is the absence value. `NaN` is kept as a numeric result for failed
-mathematical operations, but for presence checks it behaves like absence:
-`NaN is :nothing` is true.
+`nothing` is the absence value. NaN is not a DSL value or special tag. If an
+internal numeric operation produces NaN, the script-visible value behaves as
+`nothing`. The spelling `:nan` is an ordinary tag with no numeric meaning.
 
 `empty` is true for:
 
 - `nothing`
-- `NaN`
 - empty text
 - empty lists, maps, dice, and ranges
 

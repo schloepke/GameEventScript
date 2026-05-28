@@ -88,7 +88,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:infinity|negativeinfinity|nan|pi|e|euler|tau|phi)\b|[∞∏ℇτφ]</string>
+					<string>:(?:infinity|negativeinfinity|pi|e|euler|tau|phi)\b|[∞∏ℇτφ]</string>
 					<key>name</key>
 					<string>constant.language.tag.numeric.gameeventscript</string>
 				</dict>

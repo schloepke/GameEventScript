@@ -77,14 +77,17 @@ internal static class VmRegisterCallExternal
                 found = true;
                 break;
             }
+
             externalReferenceIndex++;
         }
+
         if (!found)
         {
             dst.SetNothing();
             state.RaiseError($"External extension reference slot '{extensionShape}' was not found.");
             return;
         }
+
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (argumentSlots.Length != bind.ArgumentNames.Count)
         {
@@ -92,6 +95,7 @@ internal static class VmRegisterCallExternal
             state.RaiseError("External extension call argument count does not match the reference shape.");
             return;
         }
+
         var fullName = state.FetchStringByPointer(bind.Name);
         var separator = fullName.IndexOf('.');
         if (separator <= 0 || separator >= fullName.Length - 1)
@@ -100,6 +104,7 @@ internal static class VmRegisterCallExternal
             state.RaiseError($"External extension reference '{fullName}' has an invalid name.");
             return;
         }
+
         var argumentCount = argumentSlots.Length;
         var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
         for (var labelIndex = 0; labelIndex < argumentCount; labelIndex++)
@@ -124,6 +129,7 @@ internal static class VmRegisterCallExternal
             {
                 arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue();
             }
+
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
             dst.BindArguments(result);
         }
@@ -265,7 +271,7 @@ internal static class VmRegisterCallExternal
             case Integer:
                 return GameEventScriptFastValue.FromInteger(value.IntegerValue, value.Unit);
             case Float:
-                return GameEventScriptFastValue.FromFloat(value.FloatValue, value.Unit);
+                return double.IsNaN(value.FloatValue) ? GameEventScriptFastValue.Nothing : GameEventScriptFastValue.FromFloat(value.FloatValue, value.Unit);
             case Percentage:
                 return GameEventScriptFastValue.FromPercentage(value.FloatValue);
             case Vector when value.ObjectValue is VmFloatTriplet vector:
@@ -283,7 +289,7 @@ internal static class VmRegisterCallExternal
     internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
         Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
-        Float => GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
+        Float => double.IsNaN(a.FloatValue) ? GameEventScriptValueFactory.GesNothing() : GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
         Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
         Vector when a.ObjectValue is VmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
         Point when a.ObjectValue is VmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),

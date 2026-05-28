@@ -165,9 +165,10 @@ instruction word are encoded by typed load opcodes:
   plus optional numeric unit in `UnitAndFlags`.
 - `LoadFloat` stores IEEE 754 double bits in the overlapped `F64` payload, plus
   optional numeric unit in `UnitAndFlags`. `NaN`, `Infinity`, and `-Infinity`
-  are represented by their IEEE bit patterns. `NaN` remains a numeric value for
-  failed mathematical operations, but presence checks treat it as empty and type
-  checks treat it as `:nothing`.
+  are represented by their IEEE bit patterns. `NaN` may still exist internally
+  as a failed mathematical result, but the DSL surface normalizes it to
+  `nothing`: presence checks treat it as empty and type checks treat it as
+  `:nothing`.
 - `LoadPercentage` stores a percentage ratio in `F64` and must not carry unit
   flags. Percentage is a dedicated value kind, not a bytecode unit.
 - `LoadText` and `LoadTag` store a `StringPool` index in the primary `X`
@@ -619,7 +620,8 @@ Numeric operations must preserve the language distinction between absent input
 and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and
 numeric random-range evaluation, any source operand that is `nothing` produces
 `nothing`. If all source operands are present but the operation cannot be
-computed as valid mathematics, the result is a numeric `NaN`.
+computed as valid mathematics, the internal result may be numeric `NaN`; at the
+DSL boundary it is observed as `nothing`.
 
 Invalid numeric results include non-numeric operands in numeric operations,
 incompatible quantity units, invalid vector/point arithmetic, and `mod`/`rem`

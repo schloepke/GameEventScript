@@ -913,7 +913,7 @@ internal static class VmRegisterMath
             case Tag:
                 leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
                 leftNumber = ReadNumericTagOrNaN(leftText);
-                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 leftRank = 1;
                 break;
             case Vector:
@@ -972,7 +972,7 @@ internal static class VmRegisterMath
             case Tag:
                 rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
                 rightNumber = ReadNumericTagOrNaN(rightText);
-                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 rightRank = 1;
                 break;
             case Vector:
@@ -1133,7 +1133,7 @@ internal static class VmRegisterMath
             case Tag:
                 leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
                 leftNumber = ReadNumericTagOrNaN(leftText);
-                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 leftRank = 1;
                 break;
             case Vector:
@@ -1192,7 +1192,7 @@ internal static class VmRegisterMath
             case Tag:
                 rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
                 rightNumber = ReadNumericTagOrNaN(rightText);
-                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "nan" or "pi" or "e" or "tau" or "phi";
+                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 rightRank = 1;
                 break;
             case Vector:
@@ -1600,7 +1600,6 @@ internal static class VmRegisterMath
     {
         "infinity" => double.PositiveInfinity,
         "negativeinfinity" => double.NegativeInfinity,
-        "nan" => double.NaN,
         "pi" => GesPi,
         "e" => GesEulerNumber,
         "tau" => GesTau,

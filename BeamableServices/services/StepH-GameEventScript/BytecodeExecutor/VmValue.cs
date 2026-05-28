@@ -129,6 +129,11 @@ internal struct VmValue
 
     internal void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
+        if (double.IsNaN(value))
+        {
+            SetNothing();
+            return;
+        }
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (double.IsFinite(value) && value is >= long.MinValue and <= long.MaxValue && value == Math.Truncate(value))
         {
@@ -140,7 +145,7 @@ internal struct VmValue
         else
         {
             Kind = Float;
-            Flags = IsNumericFlag | (value != 0 && double.IsFinite(value) && !double.IsNaN(value) ? IsTrueFlag : IsFalseFlag) | (double.IsNaN(value) ? None : HasValueFlag);
+            Flags = IsNumericFlag | HasValueFlag | (value != 0 && double.IsFinite(value) ? IsTrueFlag : IsFalseFlag);
             FloatValue = value;
         }
 

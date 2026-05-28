@@ -1577,7 +1577,7 @@
     {
       "kind": "scriptApi",
       "name": "inline literals escaped quotes and numeric helpers",
-      "script": "on Start(opt, missingValue, value, meterValue) {\n  let text be 'Hello ''World'', I''m here'\n  let doubleText be \"didn't say \"\"stop\"\"\"\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let naturalOne be :ln :e\n  let naturalZero be :ln 0\n  let naturalNegative be :ln (0 - 1)\n  let naturalInfinity be :ln :infinity\n  let naturalNaN be :ln :nan\n  let naturalNothing be :ln missingValue\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let boundedNothingValue be :clamp missingValue between 0 and 99\n  let boundedNothingMin be :clamp 10 between missingValue and 99\n  let boundedInvalid be :clamp 'hello' between 0 and 99\n  let boundedInfinity be :clamp :infinity between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  emit Done(text: text, doubleText: doubleText, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, naturalOne: naturalOne, naturalZero: naturalZero, naturalNegative: naturalNegative, naturalInfinity: naturalInfinity, naturalNaN: naturalNaN, naturalNothing: naturalNothing, naturalRuntime: :ln value > 1, naturalUnit: :ln meterValue, boundedHigh: boundedHigh, boundedLow: boundedLow, boundedNothingValue: boundedNothingValue, boundedNothingMin: boundedNothingMin, boundedInvalid: boundedInvalid, boundedInfinity: boundedInfinity, highest: highest, lowest: lowest, presenceFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
+      "script": "on Start(opt, missingValue, value, meterValue) {\n  let text be 'Hello ''World'', I''m here'\n  let doubleText be \"didn't say \"\"stop\"\"\"\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let naturalOne be :ln :e\n  let naturalZero be :ln 0\n  let naturalNegative be :ln (0 - 1)\n  let naturalInfinity be :ln :infinity\n  let naturalInvalidTag be :ln :nan\n  let naturalNothing be :ln missingValue\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let boundedNothingValue be :clamp missingValue between 0 and 99\n  let boundedNothingMin be :clamp 10 between missingValue and 99\n  let boundedInvalid be :clamp 'hello' between 0 and 99\n  let boundedInfinity be :clamp :infinity between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  emit Done(text: text, doubleText: doubleText, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, naturalOne: naturalOne, naturalZero: naturalZero, naturalNegative: naturalNegative, naturalInfinity: naturalInfinity, naturalInvalidTag: naturalInvalidTag, naturalNothing: naturalNothing, naturalRuntime: :ln value > 1, naturalUnit: :ln meterValue, boundedHigh: boundedHigh, boundedLow: boundedLow, boundedNothingValue: boundedNothingValue, boundedNothingMin: boundedNothingMin, boundedInvalid: boundedInvalid, boundedInfinity: boundedInfinity, highest: highest, lowest: lowest, presenceFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
       "steps": [
         {
           "input": {
@@ -1648,10 +1648,6 @@
                   "type": ":float",
                   "value": "Infinity"
                 },
-                "naturalNaN": {
-                  "type": ":float",
-                  "value": "NaN"
-                },
                 "naturalNothing": {
                   "type": ":nothing"
                 },
@@ -1700,6 +1696,9 @@
                 "nothingFallback": {
                   "type": ":integer",
                   "value": "20"
+                },
+                "naturalInvalidTag": {
+                  "type": ":nothing"
                 }
               }
             }
@@ -2794,7 +2793,7 @@
     {
       "kind": "scriptApi",
       "name": "approximate equality operators",
-      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, approxAscii: near =~ target, approxAlmost: near ≈ target, approxCongruent: near ≅ target, far: 0.1 =~ 0.2, nanExact: :nan = :nan, nanApprox: :nan =~ :nan, unitApprox: 1.0000000001m =~ 1m, unitMismatch: 1m =~ 1s)\n}",
+      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, approxAscii: near =~ target, approxAlmost: near ≈ target, approxCongruent: near ≅ target, far: 0.1 =~ 0.2, tagExact: :nan = :nan, tagApprox: :nan =~ :nan, unitApprox: 1.0000000001m =~ 1m, unitMismatch: 1m =~ 1s)\n}",
       "steps": [
         {
           "input": {
@@ -2825,19 +2824,19 @@
                   "type": ":boolean",
                   "value": false
                 },
-                "nanExact": {
-                  "type": ":boolean",
-                  "value": false
-                },
-                "nanApprox": {
-                  "type": ":boolean",
-                  "value": false
-                },
                 "unitApprox": {
                   "type": ":boolean",
                   "value": true
                 },
                 "unitMismatch": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "tagExact": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagApprox": {
                   "type": ":boolean",
                   "value": false
                 }

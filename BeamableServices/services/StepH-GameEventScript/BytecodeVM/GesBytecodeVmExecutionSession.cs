@@ -4016,7 +4016,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 var number = instruction.F64;
                 value = double.IsNaN(number)
-                    ? BytecodeVmValue.Reference(GesFloatNaN())
+                    ? BytecodeVmValue.Nothing
                     : double.IsPositiveInfinity(number)
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
                         : double.IsNegativeInfinity(number)
@@ -4089,7 +4089,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 var number = instruction.F64;
                 value = double.IsNaN(number)
-                    ? BytecodeVmValue.Reference(GesFloatNaN())
+                    ? BytecodeVmValue.Nothing
                     : double.IsPositiveInfinity(number)
                         ? BytecodeVmValue.Reference(GesFloatInfinity())
                         : double.IsNegativeInfinity(number)
@@ -4662,8 +4662,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static bool IsNaNOrNothing(GameEventScriptValue value)
         => value.IsNothing() ||
-           value.IsNaN() ||
-           value is GameEventScriptTagValue && value.TryConvertToNumber(out var numericValue) && numericValue.IsNaN();
+           value.IsNaN();
 
     private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue)
     {
@@ -7109,7 +7108,7 @@ internal readonly record struct BytecodeVmValue(
             BytecodeVmValueKind.Nothing => GameEventScriptNothingValue.Instance,
             BytecodeVmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(BooleanValue),
             BytecodeVmValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue, Unit),
-            BytecodeVmValueKind.Float => GameEventScriptValueFactory.GesFloat(Number, Unit),
+            BytecodeVmValueKind.Float => double.IsNaN(Number) ? GameEventScriptNothingValue.Instance : GameEventScriptValueFactory.GesFloat(Number, Unit),
             BytecodeVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(Number),
             BytecodeVmValueKind.Reference => ReferenceValue ?? GameEventScriptNothingValue.Instance,
             BytecodeVmValueKind.Iterator => GameEventScriptNothingValue.Instance,

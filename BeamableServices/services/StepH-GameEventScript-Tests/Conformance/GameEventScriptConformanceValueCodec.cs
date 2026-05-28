@@ -153,6 +153,11 @@ internal static class GameEventScriptConformanceValueCodec
 
     public static JsonObject ToValueJson(GameEventScriptValue value)
     {
+        if (value.IsNothing())
+        {
+            return new JsonObject { ["type"] = ":nothing" };
+        }
+
         if (value.TryGetCustomTypeName(out var customTypeName))
         {
             return new JsonObject
@@ -190,7 +195,7 @@ internal static class GameEventScriptConformanceValueCodec
 
         return value switch
         {
-            "NaN" => GameEventScriptValueFactory.GesFloatNaN(),
+            "NaN" => GameEventScriptValueFactory.GesNothing(),
             "Infinity" => GameEventScriptValueFactory.GesFloatInfinity(),
             "-Infinity" => GameEventScriptValueFactory.GesFloatNegativeInfinity(),
             _ => GameEventScriptValueFactory.GesFloat(double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)

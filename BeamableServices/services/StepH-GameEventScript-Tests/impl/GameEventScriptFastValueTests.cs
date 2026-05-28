@@ -85,13 +85,13 @@ public sealed class GameEventScriptFastValueTests
         ]));
 
         Assert.IsTrue(text.IsReferenceBacked);
-        Assert.IsTrue(nan.IsReferenceBacked);
+        Assert.IsFalse(nan.IsReferenceBacked);
         Assert.IsTrue(list.IsReferenceBacked);
         Assert.AreEqual(GameEventScriptValueKind.Text, text.Kind);
-        Assert.AreEqual(GameEventScriptValueKind.Number, nan.Kind);
+        Assert.AreEqual(GameEventScriptValueKind.Nothing, nan.Kind);
         Assert.AreEqual(GameEventScriptValueKind.List, list.Kind);
         Assert.AreEqual("hello", text.Text);
-        Assert.IsTrue(nan.ToGameEventScriptValue().IsNaN());
+        Assert.IsTrue(nan.ToGameEventScriptValue().IsNothing());
         Assert.HasCount(2, list.ToGameEventScriptValue().AsList());
     }
 }

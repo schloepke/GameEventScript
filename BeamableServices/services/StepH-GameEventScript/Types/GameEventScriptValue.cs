@@ -43,7 +43,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public static IComparer<GameEventScriptValue> StableComparer { get; } = new StableGameEventScriptValueComparer();
 
     public bool IsNumber() => Kind is GameEventScriptValueKind.Number or GameEventScriptValueKind.Percentage;
-    public bool IsNothing() => Kind == GameEventScriptValueKind.Nothing;
+    public bool IsNothing() => Kind == GameEventScriptValueKind.Nothing || IsNaN();
     public bool IsTag() => Kind == GameEventScriptValueKind.Tag;
     public bool IsInteger() => this is GameEventScriptNumberValue { IsIntegerValue: true };
     public bool IsFractional() => this is GameEventScriptNumberValue { IsFractionalValue: true };
@@ -595,6 +595,13 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
             var byRank = GetSortRank(left).CompareTo(GetSortRank(right));
             if (byRank != 0) return byRank;
+            if (left.Kind != right.Kind &&
+                ((left.IsNumber() && right.Kind == GameEventScriptValueKind.Tag) ||
+                 (left.Kind == GameEventScriptValueKind.Tag && right.IsNumber())))
+            {
+                return left.IsNumber() ? -1 : 1;
+            }
+
             return left.Kind switch
             {
                 GameEventScriptValueKind.Nothing => 0,

@@ -68,12 +68,6 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
             return true;
         }
 
-        if (string.Equals(Value, "nan", StringComparison.Ordinal))
-        {
-            value = GesFloatNaN();
-            return true;
-        }
-
         if (string.Equals(Value, "pi", StringComparison.Ordinal))
         {
             value = GesFloat(Pi);

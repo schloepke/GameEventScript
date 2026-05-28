@@ -194,7 +194,9 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadFloat:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Float(instruction.F64, instruction.Unit.ToOptionalNumericUnit()));
+                    Set(instruction.DestinationSlot, double.IsNaN(instruction.F64)
+                        ? GesBinaryVmValue.Nothing
+                        : GesBinaryVmValue.Float(instruction.F64, instruction.Unit.ToOptionalNumericUnit()));
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadPercentage:
@@ -206,7 +208,8 @@ internal sealed class GesBinaryVmRunState
                     break;
 
                 case GameEventScriptBytecodeOpCode.LoadTag:
-                    Set(instruction.DestinationSlot, GesBinaryVmValue.Tag(_binary.TextConstantTable.Resolve(checked((ushort)instruction.StringIndex))));
+                    var tag = _binary.TextConstantTable.Resolve(checked((ushort)instruction.StringIndex));
+                    Set(instruction.DestinationSlot, GesBinaryVmValue.Tag(tag));
                     break;
 
                 case GameEventScriptBytecodeOpCode.Cast:
@@ -647,14 +650,13 @@ internal readonly struct GesBinaryVmValue
 
     public bool IsNaNLike()
         => Kind == GesBinaryVmValueKind.Float && double.IsNaN(NumberValue) ||
-           Kind == GesBinaryVmValueKind.Tag && string.Equals((string?)_reference, "nan", StringComparison.Ordinal) ||
            Kind == GesBinaryVmValueKind.Reference && _reference is GameEventScriptValue value && value.IsNaN();
 
     public GameEventScriptValue ToGameEventScriptValue()
         => Kind switch
         {
             GesBinaryVmValueKind.Integer => GameEventScriptValueFactory.GesInteger(IntegerValue, Unit),
-            GesBinaryVmValueKind.Float => GameEventScriptValueFactory.GesFloat(NumberValue, Unit),
+            GesBinaryVmValueKind.Float => double.IsNaN(NumberValue) ? GameEventScriptValueFactory.GesNothing() : GameEventScriptValueFactory.GesFloat(NumberValue, Unit),
             GesBinaryVmValueKind.Percentage => GameEventScriptValueFactory.GesPercentage(NumberValue),
             GesBinaryVmValueKind.Boolean => GameEventScriptValueFactory.GesBoolean(IntegerValue != 0),
             GesBinaryVmValueKind.Text => GameEventScriptValueFactory.GesText((string?)_reference ?? string.Empty),

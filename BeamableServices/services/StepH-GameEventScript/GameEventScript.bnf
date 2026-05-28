@@ -143,7 +143,7 @@ OfArgumentList ::= "of" Expression { "and" Expression }
 ArgumentLabel ::= Identifier | "to"
 
 Literal ::= Number | Percentage | UnitNumber | TextLiteral | "true" | "false"
-TagLiteral ::= ":" TagName | ":infinity" | ":negativeinfinity" | ":nan" | ":pi" | ":e" | ":euler" | ":tau" | ":phi" | "∞" | "∏" | "ℇ" | "τ" | "φ"
+TagLiteral ::= ":" TagName | ":infinity" | ":negativeinfinity" | ":pi" | ":e" | ":euler" | ":tau" | ":phi" | "∞" | "∏" | "ℇ" | "τ" | "φ"
 
 BracketLiteral ::= ListLiteral | MapLiteral
 ListLiteral ::= "[" [ ExpressionList ] "]"

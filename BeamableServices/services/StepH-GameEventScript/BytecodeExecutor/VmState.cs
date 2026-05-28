@@ -190,14 +190,19 @@ internal class VmState
     {
         if (CallStackPointer == 0)
         {
+            ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
+            RegisterFrameLength = 0;
+            StageLength = 0;
             State = StateValue.Halted;
             return;
         }
 
         var callFrame = CallStack[--CallStackPointer];
+        ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
         InstructionPointer = callFrame.InstructionPointer;
         RegisterFrameStart = callFrame.RegisterFrameStart;
         RegisterFrameLength = callFrame.RegisterFrameLength;
+        StageLength = 0;
         if (callFrame.ResultRegisterIndex.HasValue) RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart].SetNothing();
     }
 
@@ -205,10 +210,21 @@ internal class VmState
     internal void ReturnValue(ushort registerIndex)
     {
         var result = RegisterSlots[registerIndex + RegisterFrameStart];
+        if (CallStackPointer == 0)
+        {
+            ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
+            RegisterFrameLength = 0;
+            StageLength = 0;
+            State = StateValue.Halted;
+            return;
+        }
+
         var callFrame = CallStack[--CallStackPointer];
+        ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
         InstructionPointer = callFrame.InstructionPointer;
         RegisterFrameStart = callFrame.RegisterFrameStart;
         RegisterFrameLength = callFrame.RegisterFrameLength;
+        StageLength = 0;
         if (callFrame.ResultRegisterIndex.HasValue)
         {
             if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing)
@@ -263,6 +279,7 @@ internal class VmState
                 }
                 else
                 {
+                    ClearRegisterRange(RegisterFrameStart + RegisterFrameLength - tempSlotCount, tempSlotCount);
                     RegisterFrameLength -= (ushort)tempSlotCount;
                 }
                 break;
@@ -272,7 +289,18 @@ internal class VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ClearStage()
     {
+        ClearRegisterRange(RegisterFrameStart + RegisterFrameLength, StageLength);
         StageLength = 0;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ClearRegisterRange(int start, int count)
+    {
+        var end = start + count;
+        for (var index = start; index < end; index++)
+        {
+            RegisterSlots[index].SetNothing();
+        }
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

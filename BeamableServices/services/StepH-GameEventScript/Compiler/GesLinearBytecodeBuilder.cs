@@ -717,7 +717,7 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitSourceExtensionCall(extensionCall, context, state);
 
             case ListLiteralExpressionNode list:
-                return EmitSourceCollectionBuilder(GameEventScriptBytecodeOpCode.CreateList, list.Items, null, context, state);
+                return EmitSourceList(list, context, state);
 
             case MapLiteralExpressionNode dictionary:
                 return EmitSourceDictionary(dictionary, context, state);
@@ -1140,41 +1140,43 @@ internal sealed class GesLinearBytecodeBuilder
             b: argumentSlotListIndex);
     }
 
-    private int EmitSourceCollectionBuilder(
-        GameEventScriptBytecodeOpCode opCode,
-        IReadOnlyList<ExpressionNode> items,
-        string[]? names,
-        SourceContext context,
-        ExpressionState state)
+    private int EmitSourceList(ListLiteralExpressionNode list, SourceContext context, ExpressionState state)
     {
-        var itemSlots = new int[items.Count];
-        for (var index = 0; index < items.Count; index++)
+        var arguments = new StageArgumentPlan[list.Items.Count];
+        for (var index = 0; index < list.Items.Count; index++)
         {
-            itemSlots[index] = EmitSourceExpression(items[index], context, state);
+            arguments[index] = PrepareStageArgument(list.Items[index], context, state);
         }
 
-        var itemSlotListIndex = ResolveSlotListIndex(itemSlots);
-        return EmitValueInstruction(state, opCode, b: itemSlotListIndex);
+        for (var index = 0; index < arguments.Length; index++)
+        {
+            EmitStageArgument(arguments[index]);
+        }
+
+        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.CreateList);
     }
 
     private int EmitSourceDictionary(MapLiteralExpressionNode dictionary, SourceContext context, ExpressionState state)
     {
         var names = new string[dictionary.Entries.Count];
-        var valueSlots = new int[dictionary.Entries.Count];
+        var values = new StageArgumentPlan[dictionary.Entries.Count];
         for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
         {
             var entry = dictionary.Entries[entryIndex];
             names[entryIndex] = entry.Key;
-            valueSlots[entryIndex] = EmitSourceExpression(entry.Value, context, state);
+            values[entryIndex] = PrepareStageArgument(entry.Value, context, state);
+        }
+
+        for (var entryIndex = 0; entryIndex < values.Length; entryIndex++)
+        {
+            EmitStageArgument(values[entryIndex]);
         }
 
         var nameListIndex = ResolveStringListIndex(names);
-        var valueSlotListIndex = ResolveSlotListIndex(valueSlots);
         return EmitValueInstruction(
             state,
             GameEventScriptBytecodeOpCode.CreateMap,
-            a: nameListIndex,
-            b: valueSlotListIndex);
+            a: nameListIndex);
     }
 
     private int EmitSourceVariadic(VariadicTaggedExpressionNode variadic, SourceContext context, ExpressionState state)

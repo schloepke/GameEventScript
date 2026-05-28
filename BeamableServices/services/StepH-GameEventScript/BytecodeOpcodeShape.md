@@ -230,20 +230,20 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x28 | `LoadTag` | - | result slot | `StringIndex` | - | - | Loads a tag literal. |
 | 0x29 | `LoadHandler` | - | result slot | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
 | 0x2A | `LoadMessage` | - | result slot | `SecondaryListIndex`=message shape | `ListIndex`=argument slots | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2B | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value as the next local call argument. |
-| 0x2C | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` as the next local call argument. |
-| 0x2D | `StageTrue` | - | - | - | - | - | Stages `true` as the next local call argument. |
-| 0x2E | `StageFalse` | - | - | - | - | - | Stages `false` as the next local call argument. |
-| 0x2F | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer argument. |
-| 0x30 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float argument. |
+| 0x2B | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value for the next stage-consuming instruction. |
+| 0x2C | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` for the next stage-consuming instruction. |
+| 0x2D | `StageTrue` | - | - | - | - | - | Stages `true` for the next stage-consuming instruction. |
+| 0x2E | `StageFalse` | - | - | - | - | - | Stages `false` for the next stage-consuming instruction. |
+| 0x2F | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer value. |
+| 0x30 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float value. |
 | 0x31 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
 | 0x32 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
-| 0x33 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio argument. |
+| 0x33 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
 | 0x34 | `CreateDice` | - | result slot | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not slots. |
 | 0x35 | `CreateVector` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
 | 0x36 | `CreatePoint` | - | result slot | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x37 | `CreateList` | - | result slot | - | `ListIndex`=item slots | - | Creates a list from slot-list operands. |
-| 0x38 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | `ListIndex`=value slots | - | Creates a map from key names and value slots. |
+| 0x37 | `CreateList` | - | result slot | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
+| 0x38 | `CreateMap` | - | result slot | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
 | 0x39 | `CreateRange` | - | result slot | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
 | 0x3A | `CreateRangeWithStep` | - | result slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a range value with explicit step. |
 | 0x3B | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
@@ -407,7 +407,7 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateRecord`, `CreateExternalType`, `CreateList`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateRecord`, `CreateExternalType`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
 | `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message

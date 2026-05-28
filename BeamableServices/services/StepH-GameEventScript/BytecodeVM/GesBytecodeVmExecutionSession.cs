@@ -423,6 +423,37 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
             }
 
+            case GameEventScriptBytecodeOpCode.CreateList:
+            {
+                var listOperands = stagedArguments?.ToArray() ?? [];
+                stagedArguments = null;
+                if (!DefineSlot(instruction.DestinationSlot, BuildListValue(listOperands, 0, listOperands.Length)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+            }
+
+            case GameEventScriptBytecodeOpCode.CreateMap:
+            {
+                if (!TryReadStringList(instruction.SecondaryListIndex, out var keys))
+                {
+                    return false;
+                }
+
+                var mapOperands = stagedArguments?.ToArray() ?? [];
+                stagedArguments = null;
+                if (!DefineSlot(instruction.DestinationSlot, BuildMapValue(mapOperands, 0, mapOperands.Length, keys)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+            }
+
             case GameEventScriptBytecodeOpCode.Jump:
                 return TryMoveLinearPc(instruction.TargetAddress, endAddress, ref pc);
 

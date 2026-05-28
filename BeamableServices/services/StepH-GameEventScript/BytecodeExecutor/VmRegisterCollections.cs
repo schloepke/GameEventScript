@@ -21,31 +21,31 @@ internal static class VmRegisterCollections
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreateList(ref this VmValue dst, ushort slotsIndex)
+    internal static void VmCreateList(ref this VmValue dst)
     {
-        var itemSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(slotsIndex);
-        var list = new VmListObject(dst.OwningState, itemSlots.Length);
-        for (var i = 0; i < itemSlots.Length; i++)
+        var state = dst.OwningState;
+        var list = new VmListObject(dst.OwningState, state.StageLength);
+        for (ushort i = 0; i < state.StageLength; i++)
         {
-            list.Items[i] = dst.OwningState.Register(itemSlots[i]);
+            list.Items[i] = state.RegisterStaged(i);
         }
         dst.SetList(list);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreateMap(ref this VmValue dst, ushort keySlotsIndex, ushort itemSlotsIndex)
+    internal static void VmCreateMap(ref this VmValue dst, ushort keyNamesIndex)
     {
-        var keyNames = dst.OwningState.Binary.Uint16ConstantTable.Resolve(keySlotsIndex);
-        var itemSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(itemSlotsIndex);
-        if (keyNames.Length != itemSlots.Length)
+        var state = dst.OwningState;
+        var keyNames = dst.OwningState.Binary.Uint16ConstantTable.Resolve(keyNamesIndex);
+        if (keyNames.Length != state.StageLength)
         {
             dst.SetNothing();
             return;
         }
-        var map = new Dictionary<string, VmValue>(itemSlots.Length);
-        for (var i = 0; i < itemSlots.Length; i++)
+        var map = new Dictionary<string, VmValue>(state.StageLength);
+        for (ushort i = 0; i < state.StageLength; i++)
         {
-            map[dst.OwningState.Binary.TextConstantTable.Resolve(keyNames[i])] = dst.OwningState.Register(itemSlots[i]);
+            map[dst.OwningState.Binary.TextConstantTable.Resolve(keyNames[i])] = state.RegisterStaged(i);
         }
         dst.SetMap(new VmMapObject(dst.OwningState, map));
     }

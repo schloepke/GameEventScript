@@ -185,6 +185,14 @@ internal sealed class GesBytecodeVmLinearExecutable
                         throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged argument(s), but no stage sequence precedes it.");
                     }
                 }
+                else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateMap)
+                {
+                    var expected = module.UShortListPool[instruction.SecondaryListIndex].Count;
+                    if (expected != 0)
+                    {
+                        throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
+                    }
+                }
 
                 continue;
             }
@@ -192,6 +200,26 @@ internal sealed class GesBytecodeVmLinearExecutable
             if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateVector or GameEventScriptBytecodeOpCode.CreatePoint)
             {
                 ValidateSpatialStagedArgumentCount(instruction, stagedCount, address);
+                stagedCount = 0;
+                stageStartAddress = -1;
+                continue;
+            }
+
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateList)
+            {
+                stagedCount = 0;
+                stageStartAddress = -1;
+                continue;
+            }
+
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateMap)
+            {
+                var expectedStagedValues = module.UShortListPool[instruction.SecondaryListIndex].Count;
+                if (expectedStagedValues != stagedCount)
+                {
+                    throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expectedStagedValues} staged value(s), but {stagedCount} value(s) were staged.");
+                }
+
                 stagedCount = 0;
                 stageStartAddress = -1;
                 continue;
@@ -214,7 +242,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
         if (stagedCount != 0)
         {
-            throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} has no following call.");
+            throw InvalidBytecode($"stage sequence starting @{stageStartAddress.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} has no following stage consumer.");
         }
     }
 
@@ -578,13 +606,10 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateList:
-                ValidateSlotListIndex(module, instruction.ListIndex, $"{context} item slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateMap:
                 ValidateStringListIndex(module, instruction.SecondaryListIndex, $"{context} keys");
-                ValidateSlotListIndex(module, instruction.ListIndex, $"{context} value slots");
-                ValidateMatchingListCounts(module, instruction.SecondaryListIndex, instruction.ListIndex, $"{context} map entries");
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadMessage:

@@ -434,13 +434,8 @@ public static class GameEventScriptBytecodeDumper
                 AppendSignedImmediate(builder, "immediateX", instruction.ImmediateX);
                 break;
 
-            case GameEventScriptBytecodeOpCode.CreateList:
-                AppendSlotListPoolIndex(builder, "items", module, instruction.ListIndex);
-                break;
-
             case GameEventScriptBytecodeOpCode.CreateMap:
                 AppendStringListPoolIndex(builder, "keys", module, instruction.SecondaryListIndex);
-                AppendSlotListPoolIndex(builder, "values", module, instruction.ListIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.LoadMessage:

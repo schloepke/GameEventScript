@@ -737,7 +737,9 @@ read their arguments from the stage sequence immediately before the call. The
 call instruction does not store an argument count; the VM uses the contiguous
 `Stage*` sequence immediately before the call and validates it against callable
 metadata. A stage sequence may contain only `Stage*` instructions and must be
-followed by `Call`. The callee frame receives arguments in slots `0..n-1`.
+followed by a stage consumer (`Call`, `CreateVector`, `CreatePoint`,
+`CreateList`, or `CreateMap`). The callee frame receives arguments in slots
+`0..n-1`.
 The `x is predicate` syntax is unary sugar that lowers to one staged argument
 plus `Call` with `NormalizeResultAsPredicate`.
 
@@ -815,8 +817,11 @@ compiler-assigned iterator slot.
 - `CreateDice dst count sides`
 - `CreateVector dst immediateX`
 - `CreatePoint dst immediateX`
-- `CreateList dst itemSlotListIndex`
-- `CreateMap dst keyNameListIndex valueSlotListIndex`
+- `CreateList dst` consumes the contiguous staged value sequence immediately
+  before the opcode as list items.
+- `CreateMap dst keyNameListIndex` consumes the contiguous staged value sequence
+  immediately before the opcode as map values; keys stay in `keyNameListIndex`
+  for now.
 - `CreateRange dst fromSlot toSlot`
 - `CreateRangeWithStep dst fromSlot toSlot stepSlot`
 - `RandomTake dst fromSlot toSlot`

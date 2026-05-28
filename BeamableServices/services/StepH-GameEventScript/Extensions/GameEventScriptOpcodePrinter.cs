@@ -213,8 +213,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CreatePoint => [DST_U16_TargetSlot, X_I16_Immediate],
             GameEventScriptBytecodeOpCode.MemberAccess => [DST_U16_TargetSlot, StringIndex, YSlot_ObjectSlot],
             GameEventScriptBytecodeOpCode.IndexedAccess => [DST_U16_TargetSlot, XSlot_IndexSlot, YSlot_ObjectSlot],
-            GameEventScriptBytecodeOpCode.CreateList => [DST_U16_TargetSlot, A_U16_ItemSlotListIndex],
-            GameEventScriptBytecodeOpCode.CreateMap => [DST_U16_TargetSlot, A_U16_KeyNameListIndex, B_U16_ValueSlotListIndex],
+            GameEventScriptBytecodeOpCode.CreateList => [DST_U16_TargetSlot],
+            GameEventScriptBytecodeOpCode.CreateMap => [DST_U16_TargetSlot, A_U16_KeyNameListIndex],
             GameEventScriptBytecodeOpCode.LoadMessage => [DST_U16_TargetSlot, SecondaryListIndex, ListIndex],
             GameEventScriptBytecodeOpCode.BindHandler => [DST_U16_TargetSlot, XSlot_HandlerSlot, ListIndex],
 

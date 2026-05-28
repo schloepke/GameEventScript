@@ -222,10 +222,12 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.ClearStage();
                     break;
                 case CreateList:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateList(instruction.ListIndex);
+                    _vmState.Register(instruction.DestinationSlot).VmCreateList();
+                    _vmState.ClearStage();
                     break;
                 case CreateMap:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateMap(instruction.SecondaryListIndex, instruction.ListIndex);
+                    _vmState.Register(instruction.DestinationSlot).VmCreateMap(instruction.SecondaryListIndex);
+                    _vmState.ClearStage();
                     break;
                 case CreateRange:
                     _vmState.Register(instruction.DestinationSlot).VmCreateRange(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));

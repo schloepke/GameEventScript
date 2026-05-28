@@ -38,7 +38,7 @@ internal static class VmStatePublisher
         var tags = new List<string>(tagSlots.Length);
         for (var index = 0; index < tagSlots.Length; index++)
         {
-            AddTagsToList(tags, vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+            AddTagsToList(tags, vmState.Register(tagSlots[index]).ToGameEventScriptValue());
         }
 
         var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);

@@ -97,7 +97,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
                 case PublishMessageWithTags:
                     _vmState.VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
-                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
+                        binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), true, session);
                     break;
                 case PublishMessageValue:
                     _vmState.VmPublishMessageValue(ref _vmState.Register(instruction.XSlot), true, session);
@@ -142,10 +142,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot) = _vmState.Register(instruction.XSlot);
                     break;
                 case MemberAccess:
-                    _vmState.Register(instruction.DestinationSlot).VmMemberAccess(instruction.XSlot, ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmMemberAccess(instruction.XSlot, ref _vmState.Register(instruction.YSlot));
                     break;
                 case IndexedAccess:
-                    _vmState.Register(instruction.DestinationSlot).VmIndexAccess(instruction.XSlot, ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmIndexAccess(instruction.XSlot, ref _vmState.Register(instruction.YSlot));
                     break;
                 case BindHandler:
                     _vmState.Register(instruction.DestinationSlot).BindHandler(ref _vmState.Register(instruction.XSlot), binary.Uint16ConstantTable.Resolve(instruction.ListIndex));

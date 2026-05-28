@@ -11,39 +11,14 @@ internal static class VmStreams
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamCreate(ref this VmValue dst, ref VmValue x)
     {
-        switch (x.Kind)
+        if (x.TryCreateStream(out var stream))
         {
-            case GameEventScriptBytecodeTypeKind.Range when x.ObjectValue is VmRange range:
-                dst.SetStream(new VmIntegerRangeStream(range.from, range.to, range.step));
-                break;
-            case GameEventScriptBytecodeTypeKind.Range when x.ObjectValue is VmFloatRange range:
-                dst.SetStream(new VmFloatRangeStream(range.from, range.to, range.step));
-                break;
-            case List when x.ObjectValue is VmListObject list:
-                dst.SetStream(new VmListStream(list));
-                break;
-            case Dice when x.ObjectValue is int[] dices:
-                dst.SetStream(new VmIntStream(dices));
-                break;
-            case Map when x.ObjectValue is VmMapObject map:
-                dst.SetStream(new VmListStream(map.ValueList));
-                break;
-            case Vector or Point when x.ObjectValue is VmFloatTriplet vp:
-                dst.SetStream(new VmIndexAccessStream(vp));
-                break;
-            case Text or Tag when x is { IsStoragePointer: true}:
-                dst.SetStream(new VmStringStream(x.OwningState.Binary.TextConstantTable.Resolve((ushort)x.IntegerValue)));
-                break;
-            case Text or Tag when x is { IsStorageObject: true, ObjectValue: string text }:
-                dst.SetStream(new VmStringStream(text));
-                break;
-            case Series:
-                dst.SetNothing();
-                break;
-            default:
-                dst.SetNothing();
-                break;
-        }   
+            dst.SetStream(stream);
+        }
+        else
+        {
+            dst.SetNothing();
+        }
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -393,4 +393,41 @@ internal struct VmValue
         value.SetTag(tag);
         return value;
     }
+
+    internal bool TryCreateStream(out IVmStream stream)
+    {
+        switch (Kind)
+        {
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is VmRange range:
+                stream = new VmIntegerRangeStream(range.from, range.to, range.step);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is VmFloatRange range:
+                stream = new VmFloatRangeStream(range.from, range.to, range.step);
+                return true;
+            case List when ObjectValue is VmListObject list:
+                stream = new VmListStream(list);
+                return true;
+            case Dice when ObjectValue is int[] dices:
+                stream = new VmIntStream(dices);
+                return true;
+            case Map when ObjectValue is VmMapObject map:
+                stream = new VmListStream(map.ValueList);
+                return true;
+            case Vector or Point when ObjectValue is VmFloatTriplet vp:
+                stream = new VmIndexAccessStream(vp);
+                return true;
+            case Text or Tag when IsStoragePointer:
+                stream = new VmStringStream(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue));
+                return true;
+            case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
+                stream = new VmStringStream(text);
+                return true;
+            case Series:
+            default:
+                stream = default;
+                return false;
+        }   
+
+    }
+    
 }

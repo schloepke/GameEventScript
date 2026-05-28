@@ -207,8 +207,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CheckUnit => [DST_U16_TargetSlot, A_U16_SourceSlot, UnitAndFlags_Unit],
 
             GameEventScriptBytecodeOpCode.LoadHandler => [DST_U16_TargetSlot, A_U16_MessageShapeListIndex],
-            GameEventScriptBytecodeOpCode.CreateRecord => [DST_U16_TargetSlot, A_U16_TypeNameIndex, B_U16_ArgumentNameListIndex, C_U16_ArgumentSlotListIndex],
-            GameEventScriptBytecodeOpCode.CreateExternalType => [DST_U16_TargetSlot, A_U16_ExternalReferenceIndex, B_U16_ArgumentNameListIndex, C_U16_ArgumentSlotListIndex],
+            GameEventScriptBytecodeOpCode.CreateRecord => [DST_U16_TargetSlot, A_U16_TypeNameIndex, B_U16_ArgumentNameListIndex],
+            GameEventScriptBytecodeOpCode.CreateExternalType => [DST_U16_TargetSlot, A_U16_ExternalReferenceIndex, B_U16_ArgumentNameListIndex],
             GameEventScriptBytecodeOpCode.CreateVector => [DST_U16_TargetSlot, X_I16_Immediate],
             GameEventScriptBytecodeOpCode.CreatePoint => [DST_U16_TargetSlot, X_I16_Immediate],
             GameEventScriptBytecodeOpCode.MemberAccess => [DST_U16_TargetSlot, StringIndex, YSlot_ObjectSlot],

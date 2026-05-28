@@ -1505,25 +1505,28 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var argumentNames = new string[typeConstructor.Arguments.Count];
-        var argumentSlots = new int[typeConstructor.Arguments.Count];
+        var argumentValues = new StageArgumentPlan[typeConstructor.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < typeConstructor.Arguments.Count; argumentIndex++)
         {
             var argument = typeConstructor.Arguments[argumentIndex];
             argumentNames[argumentIndex] = argument.Name;
-            argumentSlots[argumentIndex] = EmitSourceExpression(argument.Expression, context, state);
+            argumentValues[argumentIndex] = PrepareStageArgument(argument.Expression, context, state);
+        }
+
+        for (var argumentIndex = 0; argumentIndex < argumentValues.Length; argumentIndex++)
+        {
+            EmitStageArgument(argumentValues[argumentIndex]);
         }
 
         var typeNameIndex = ResolveStringIndex(typeConstructor.TypeName);
         var argumentNameListIndex = ResolveStringListIndex(argumentNames);
-        var argumentSlotListIndex = ResolveSlotListIndex(argumentSlots);
         if (_sourceTypeDefinitions.ContainsKey(typeConstructor.TypeName))
         {
             return EmitValueInstruction(
                 state,
                 GameEventScriptBytecodeOpCode.CreateRecord,
                 a: typeNameIndex,
-                b: argumentNameListIndex,
-                c: argumentSlotListIndex);
+                b: argumentNameListIndex);
         }
 
         if (_externalTypeDefinitions.ContainsKey(typeConstructor.TypeName))
@@ -1535,8 +1538,7 @@ internal sealed class GesLinearBytecodeBuilder
                 state,
                 GameEventScriptBytecodeOpCode.CreateExternalType,
                 a: referenceIndex,
-                b: argumentNameListIndex,
-                c: argumentSlotListIndex);
+                b: argumentNameListIndex);
         }
 
         throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support type constructor ':{typeConstructor.TypeName}'.");

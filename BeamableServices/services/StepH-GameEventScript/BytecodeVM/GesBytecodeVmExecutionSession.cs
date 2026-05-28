@@ -454,6 +454,52 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return true;
             }
 
+            case GameEventScriptBytecodeOpCode.CreateRecord:
+            {
+                if (!TryReadStringPool(instruction.StringIndex, out var typeName) ||
+                    !TryReadStringList(instruction.ListIndex, out var constructorArgumentNames))
+                {
+                    return false;
+                }
+
+                var constructorOperands = stagedArguments?.ToArray() ?? [];
+                stagedArguments = null;
+                if (!DefineSlot(
+                        instruction.DestinationSlot,
+                        EvaluateRecordConstructor(typeName, constructorArgumentNames, constructorOperands, 0, constructorOperands.Length)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+            }
+
+            case GameEventScriptBytecodeOpCode.CreateExternalType:
+            {
+                if (!TryReadStringList(instruction.ListIndex, out var constructorArgumentNames))
+                {
+                    return false;
+                }
+
+                var constructorOperands = stagedArguments?.ToArray() ?? [];
+                stagedArguments = null;
+                if (!DefineSlot(
+                        instruction.DestinationSlot,
+                        EvaluateExternalTypeConstructor(
+                            instruction.ExternalReferenceIndex,
+                            constructorArgumentNames,
+                            constructorOperands,
+                            0,
+                            constructorOperands.Length)))
+                {
+                    return false;
+                }
+
+                pc++;
+                return true;
+            }
+
             case GameEventScriptBytecodeOpCode.Jump:
                 return TryMoveLinearPc(instruction.TargetAddress, endAddress, ref pc);
 
@@ -1232,87 +1278,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.CreateRecord:
-            {
-                if (!TryReadStringPool(instruction.StringIndex, out var typeName) ||
-                    !TryReadStringList(instruction.ListIndex, out var constructorArgumentNames) ||
-                    !TryRentLinearOperands(instruction.AU, out var constructorOperands, out var constructorOperandCount))
-                {
-                    return false;
-                }
-
-                try
-                {
-                    return DefineSlot(
-                        instruction.DestinationSlot,
-                        EvaluateRecordConstructor(typeName, constructorArgumentNames, constructorOperands, 0, constructorOperandCount));
-                }
-                finally
-                {
-                    ReturnLinearOperands(constructorOperands, constructorOperandCount);
-                }
-            }
-
-            case GameEventScriptBytecodeOpCode.CreateExternalType:
-            {
-                if (!TryReadStringList(instruction.ListIndex, out var constructorArgumentNames) ||
-                    !TryRentLinearOperands(instruction.AU, out var constructorOperands, out var constructorOperandCount))
-                {
-                    return false;
-                }
-
-                try
-                {
-                    return DefineSlot(
-                        instruction.DestinationSlot,
-                        EvaluateExternalTypeConstructor(
-                            instruction.ExternalReferenceIndex,
-                            constructorArgumentNames,
-                            constructorOperands,
-                            0,
-                            constructorOperandCount));
-                }
-                finally
-                {
-                    ReturnLinearOperands(constructorOperands, constructorOperandCount);
-                }
-            }
-
-            case GameEventScriptBytecodeOpCode.CreateList:
-            {
-                if (!TryRentLinearOperands(instruction.ListIndex, out var collectionOperands, out var collectionOperandCount))
-                {
-                    return false;
-                }
-
-                try
-                {
-                    return DefineSlot(instruction.DestinationSlot, BuildListValue(collectionOperands, 0, collectionOperandCount));
-                }
-                finally
-                {
-                    ReturnLinearOperands(collectionOperands, collectionOperandCount);
-                }
-            }
-
-            case GameEventScriptBytecodeOpCode.CreateMap:
-            {
-                if (!TryReadStringList(instruction.SecondaryListIndex, out var keys) ||
-                    !TryRentLinearOperands(instruction.ListIndex, out var dictionaryOperands, out var dictionaryOperandCount))
-                {
-                    return false;
-                }
-
-                try
-                {
-                    return DefineSlot(instruction.DestinationSlot, BuildMapValue(dictionaryOperands, 0, dictionaryOperandCount, keys));
-                }
-                finally
-                {
-                    ReturnLinearOperands(dictionaryOperands, dictionaryOperandCount);
-                }
-            }
-
             case GameEventScriptBytecodeOpCode.LoadMessage:
             {
                 if (!TryReadMessageShape(instruction.SecondaryListIndex, out var messageName, out var messageArgumentNames) ||

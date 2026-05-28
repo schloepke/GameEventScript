@@ -738,8 +738,8 @@ call instruction does not store an argument count; the VM uses the contiguous
 `Stage*` sequence immediately before the call and validates it against callable
 metadata. A stage sequence may contain only `Stage*` instructions and must be
 followed by a stage consumer (`Call`, `CreateVector`, `CreatePoint`,
-`CreateList`, or `CreateMap`). The callee frame receives arguments in slots
-`0..n-1`.
+`CreateList`, `CreateMap`, `CreateRecord`, or `CreateExternalType`). The
+callee frame receives arguments in slots `0..n-1`.
 The `x is predicate` syntax is unary sugar that lowers to one staged argument
 plus `Call` with `NormalizeResultAsPredicate`.
 
@@ -828,8 +828,12 @@ compiler-assigned iterator slot.
 - `RandomPush seedSlot`
 - `RandomPushConstant seedI64`
 - `RandomPop`
-- `CreateRecord dst typeNameIndex argumentNameListIndex argumentSlotListIndex`
-- `CreateExternalType dst externalTypeConstructorReferenceIndex argumentNameListIndex argumentSlotListIndex`
+- `CreateRecord dst typeNameIndex argumentNameListIndex` consumes the
+  contiguous staged value sequence immediately before the opcode as constructor
+  values.
+- `CreateExternalType dst externalTypeConstructorReferenceIndex argumentNameListIndex`
+  consumes the contiguous staged value sequence immediately before the opcode
+  as constructor values.
 
 Dice, vector, point, list, map, and range creation opcodes live in Group 1 with
 other value-loading and construction instructions. `CreateRecord` and
@@ -837,7 +841,9 @@ other value-loading and construction instructions. `CreateRecord` and
 script records and host-bound external values.
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
-`StringPool` indexes, while slot lists contain frame slot indexes.
+`StringPool` indexes, while slot lists contain frame slot indexes. Record,
+external type, list, map, vector, and point constructors consume staged values
+instead of argument slot lists.
 Vector and point constructors are fixed built-ins. Their source arguments are
 lowered into staged component values in canonical `x, y, z` order; `immediateX`
 stores the first staged component index (`0`, `1`, or `2`) so leading missing

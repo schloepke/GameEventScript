@@ -420,13 +420,11 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.CreateRecord:
                 AppendPoolIndex(builder, "type", module.StringPool, instruction.StringIndex);
                 AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
-                AppendSlotListPoolIndex(builder, "args", module, instruction.AU);
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateExternalType:
                 AppendExternalTypeConstructorReference(builder, "externalType", module, instruction.ExternalReferenceIndex);
                 AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
-                AppendSlotListPoolIndex(builder, "args", module, instruction.AU);
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateVector:

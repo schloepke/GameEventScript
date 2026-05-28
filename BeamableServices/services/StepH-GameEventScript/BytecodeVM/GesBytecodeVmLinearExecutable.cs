@@ -193,6 +193,14 @@ internal sealed class GesBytecodeVmLinearExecutable
                         throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
                     }
                 }
+                else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord or GameEventScriptBytecodeOpCode.CreateExternalType)
+                {
+                    var expected = module.UShortListPool[instruction.ListIndex].Count;
+                    if (expected != 0)
+                    {
+                        throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
+                    }
+                }
 
                 continue;
             }
@@ -215,6 +223,19 @@ internal sealed class GesBytecodeVmLinearExecutable
             if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateMap)
             {
                 var expectedStagedValues = module.UShortListPool[instruction.SecondaryListIndex].Count;
+                if (expectedStagedValues != stagedCount)
+                {
+                    throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expectedStagedValues} staged value(s), but {stagedCount} value(s) were staged.");
+                }
+
+                stagedCount = 0;
+                stageStartAddress = -1;
+                continue;
+            }
+
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord or GameEventScriptBytecodeOpCode.CreateExternalType)
+            {
+                var expectedStagedValues = module.UShortListPool[instruction.ListIndex].Count;
                 if (expectedStagedValues != stagedCount)
                 {
                     throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expectedStagedValues} staged value(s), but {stagedCount} value(s) were staged.");
@@ -588,16 +609,12 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.CreateRecord:
                 ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} type name");
                 ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
-                ValidateSlotListIndex(module, instruction.AU, $"{context} argument slots");
-                ValidateMatchingListCounts(module, instruction.ListIndex, instruction.AU, $"{context} record constructor arguments");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateExternalType:
                 ValidateIndex(module.ExternalTypeConstructorReferences.Count, instruction.ExternalReferenceIndex, $"{context} external type constructor reference");
                 ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
-                ValidateSlotListIndex(module, instruction.AU, $"{context} argument slots");
-                ValidateMatchingListCounts(module, instruction.ListIndex, instruction.AU, $"{context} external type constructor arguments");
-                ValidateExternalTypeConstructorArgumentSlots(module, instruction.ExternalReferenceIndex, instruction.AU, $"{context} argument slots");
+                ValidateExternalTypeConstructorArgumentNames(module, instruction.ExternalReferenceIndex, instruction.ListIndex, $"{context} argument names");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateVector:
@@ -778,13 +795,13 @@ internal sealed class GesBytecodeVmLinearExecutable
         }
     }
 
-    private static void ValidateExternalTypeConstructorArgumentSlots(GameEventScriptCompiled module, int referenceIndex, int slotListIndex, string context)
+    private static void ValidateExternalTypeConstructorArgumentNames(GameEventScriptCompiled module, int referenceIndex, int nameListIndex, string context)
     {
         var argumentCount = module.ExternalTypeConstructorReferences[referenceIndex].ArgumentLabels.Count;
-        var slots = module.UShortListPool[slotListIndex];
-        if (slots.Count != argumentCount)
+        var names = module.UShortListPool[nameListIndex];
+        if (names.Count != argumentCount)
         {
-            throw InvalidBytecode($"{context} count {slots.Count} does not match external type constructor argument count {argumentCount}.");
+            throw InvalidBytecode($"{context} count {names.Count} does not match external type constructor argument count {argumentCount}.");
         }
     }
 

@@ -249,8 +249,8 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x3B | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
 | 0x3C | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
 | 0x3D | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x3E | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a script record from named argument slots. |
-| 0x3F | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | `AU`=argument slot-list `UShortListPool` index | Constructs a host-bound external type value from named argument slots. |
+| 0x3E | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | - | Constructs a script record from named staged argument values. |
+| 0x3F | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
 | 0x40 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
 | 0x41 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
 | 0x42 | `Default` | - | result slot | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |

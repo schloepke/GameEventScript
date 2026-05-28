@@ -394,6 +394,18 @@ internal struct VmValue
         return value;
     }
 
+    internal bool TryGetInteger(out long value)
+    {
+        if (Kind != Integer)
+        {
+            value = 0;
+            return false;
+        }
+        
+        value = IntegerValue;
+        return true;
+    }
+
     internal bool TryCreateStream(out IVmStream stream)
     {
         switch (Kind)

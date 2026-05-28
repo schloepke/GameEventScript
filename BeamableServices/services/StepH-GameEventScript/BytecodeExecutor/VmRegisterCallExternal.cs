@@ -13,7 +13,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterCallExternal
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList)
+    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, bool isPredicate)
     {
         var state = dst.OwningState;
         var shape = state.FetchUInt16SliceTableByPointer(extensionShape);
@@ -50,6 +50,10 @@ internal static class VmRegisterCallExternal
             }
 
             dst.BindArguments(result);
+            if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
+            {
+                dst.SetNothing();
+            }
         }
         finally
         {
@@ -62,7 +66,7 @@ internal static class VmRegisterCallExternal
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, GameEventScriptSession session)
+    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
         var state = dst.OwningState;
         var externalReferenceIndex = 0;
@@ -132,6 +136,11 @@ internal static class VmRegisterCallExternal
 
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
             dst.BindArguments(result);
+            if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
+            {
+                dst.SetNothing();
+            }
+
         }
         finally
         {
@@ -170,15 +179,6 @@ internal static class VmRegisterCallExternal
             default:
                 destination.BindArguments(argument.ToGameEventScriptValue());
                 break;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void NormalizeResultAsPredicate(ref this VmValue value)
-    {
-        if (value.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !value.IsNothing)
-        {
-            value.SetNothing();
         }
     }
 

@@ -1,9 +1,11 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
+using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -34,6 +36,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(RuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicMemberIndexAccessCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicMemberIndexAccess(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
@@ -121,6 +128,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMemberIndexAccessCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicMemberIndexAccess(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
@@ -311,6 +323,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicMessagesHandlersCases()
         => Cases("runtime/atomic/messages-handlers.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicMemberIndexAccessCases()
+        => Cases("runtime/atomic/member-index-access.json");
+
     public static IEnumerable<object[]> RuntimeAtomicBooleanLogicCases()
         => Cases("runtime/atomic/boolean-logic.json");
 
@@ -358,6 +373,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMessagesHandlersCases()
         => NewVirtualMachineCases("runtime/atomic/messages-handlers.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMemberIndexAccessCases()
+        => NewVirtualMachineCases("runtime/atomic/member-index-access.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicBooleanLogicCases()
         => NewVirtualMachineCases("runtime/atomic/boolean-logic.json");
@@ -413,6 +431,12 @@ public abstract class GameEventScriptJsonConformanceTestBase
     {
         var outcome = RunNewVirtualMachineCase(testCase);
         TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
+        if (!outcome.Passed)
+        {
+            TestContext.WriteLine($"Script Dump:{Environment.NewLine}{DumpScriptForFailure(testCase)}");
+            TestContext.WriteLine($"Bytecode Dump:{Environment.NewLine}{DumpBytecodeForFailure(testCase)}");
+        }
+
         if (!softRun && !outcome.Passed)
         {
             Assert.Fail($"{outcome.Status}: {testCase}: {outcome.Detail}");
@@ -466,6 +490,47 @@ public abstract class GameEventScriptJsonConformanceTestBase
         }
 
         samples.Add($"{kind}: {testCase}: {detail}");
+    }
+
+    private static string DumpBytecodeForFailure(GameEventScriptConformanceCase testCase)
+    {
+        try
+        {
+            return GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test).DumpBytecode();
+        }
+        catch (Exception exception)
+        {
+            return $"<bytecode dump unavailable: {exception.Message}>";
+        }
+    }
+
+    private static string DumpScriptForFailure(GameEventScriptConformanceCase testCase)
+    {
+        var test = testCase.Test;
+        if (!string.IsNullOrWhiteSpace(test.Script))
+        {
+            return test.Script;
+        }
+
+        if (test.Scripts is not { Count: > 0 })
+        {
+            return "<script dump unavailable: test has no script text>";
+        }
+
+        var builder = new StringBuilder();
+        for (var index = 0; index < test.Scripts.Count; index++)
+        {
+            var source = test.Scripts[index];
+            if (index > 0)
+            {
+                builder.AppendLine();
+            }
+
+            builder.AppendLine($"// source: {source.SourceName ?? $"script-{index + 1}"}");
+            builder.AppendLine(source.Text ?? string.Empty);
+        }
+
+        return builder.ToString();
     }
 
     private static IEnumerable<object[]> Cases(string relativeSpecFile)

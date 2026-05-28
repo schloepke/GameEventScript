@@ -1,0 +1,392 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicMemberIndexAccess",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "nothing member and index access",
+      "script": "module AtomicNothingAccess\non Start {\n  let value be missing\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "index": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "boolean member and index access",
+      "script": "module AtomicBooleanAccess\non Start {\n  let value be true\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "index": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "integer member and index access",
+      "script": "module AtomicIntegerAccess\non Start {\n  let value be 10\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "index": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "float member and index access",
+      "script": "module AtomicFloatAccess\non Start {\n  let value be 10.5\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "index": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "percentage member and index access",
+      "script": "module AtomicPercentageAccess\non Start {\n  let value be 25%\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "index": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "text member and index access",
+      "script": "module AtomicTextAccess\non Start {\n  let value be 'ab'\n  emit Done(member: value.missing, first: value[1], second: value[2], indexZero: value[0], indexOut: value[3])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "first": { "type": ":text", "value": "a" },
+                "second": { "type": ":text", "value": "b" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "tag member and index access",
+      "script": "module AtomicTagAccess\non Start {\n  let value be :ab\n  emit Done(member: value.missing, first: value[1], second: value[2], indexZero: value[0], indexOut: value[3])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "first": { "type": ":text", "value": "a" },
+                "second": { "type": ":text", "value": "b" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "vector member and index access",
+      "script": "module AtomicVectorAccess\non Start {\n  let value be :vector(1m, 2m, 3m)\n  emit Done(memberX: value.x, memberMissing: value.missing, indexFirst: value[1], indexThird: value[3], indexZero: value[0], indexOut: value[4])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "memberX": { "type": ":integer", "unit": ":meter", "value": "1" },
+                "memberMissing": { "type": ":nothing" },
+                "indexFirst": { "type": ":integer", "unit": ":meter", "value": "1" },
+                "indexThird": { "type": ":integer", "unit": ":meter", "value": "3" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "point member and index access",
+      "script": "module AtomicPointAccess\non Start {\n  let value be :point(4m, 5m, 6m)\n  emit Done(memberY: value.y, memberMissing: value.missing, indexFirst: value[1], indexThird: value[3], indexZero: value[0], indexOut: value[4])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "memberY": { "type": ":integer", "unit": ":meter", "value": "5" },
+                "memberMissing": { "type": ":nothing" },
+                "indexFirst": { "type": ":integer", "unit": ":meter", "value": "4" },
+                "indexThird": { "type": ":integer", "unit": ":meter", "value": "6" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "list member and index access",
+      "script": "module AtomicListAccess\non Start {\n  let value be [10, 20, 30]\n  emit Done(member: value.missing, first: value[1], third: value[3], indexZero: value[0], indexOut: value[4])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "first": { "type": ":integer", "value": "10" },
+                "third": { "type": ":integer", "value": "30" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "map member and index access",
+      "script": "module AtomicMapAccess\non Start {\n  let value be [name: 'Ada', hp: 10]\n  emit Done(memberName: value.name, memberMissing: value.missing, indexText: value['name'], indexTag: value[:hp], indexMissing: value[:missing], indexOut: value[1])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "memberName": { "type": ":text", "value": "Ada" },
+                "memberMissing": { "type": ":nothing" },
+                "indexText": { "type": ":text", "value": "Ada" },
+                "indexTag": { "type": ":integer", "value": "10" },
+                "indexMissing": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "dice member and index access",
+      "script": "module AtomicDiceAccess\non Start {\n  let value be :dice 3d6\n  emit Done(member: value.missing, first: value[1], third: value[3], indexZero: value[0], indexOut: value[4])\n}",
+      "randomSequence": [ "6", "4", "2" ],
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "first": { "type": ":integer", "value": "6" },
+                "third": { "type": ":integer", "value": "2" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "range member and index access",
+      "script": "module AtomicRangeAccess\non Start {\n  let value as :range be from 10 to 20 step 5\n  let descending as :range be from 20 to 10 step (0 - 5)\n  let fractional as :range be from 1.5 to 2.5 step 0.5\n  emit Done(member: value.missing, first: value[1], third: value[3], descendingSecond: descending[2], fractionalSecond: fractional[2], indexZero: value[0], indexOut: value[4])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "member": { "type": ":nothing" },
+                "first": { "type": ":integer", "value": "10" },
+                "third": { "type": ":integer", "value": "20" },
+                "descendingSecond": { "type": ":integer", "value": "15" },
+                "fractionalSecond": { "type": ":float", "value": "2" },
+                "indexZero": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "message member and index access",
+      "script": "module AtomicMessageAccess\non Start {\n  let value be Ping(amount: 7, target: 'orc')\n  emit Done(memberName: value.name, memberArg: value.arguments.amount, memberMissing: value.missing, indexName: value[:name], indexArg: value[:arguments].target, indexMissing: value[:missing], indexOut: value[1])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "memberName": { "type": ":text", "value": "Ping" },
+                "memberArg": { "type": ":integer", "value": "7" },
+                "memberMissing": { "type": ":nothing" },
+                "indexName": { "type": ":text", "value": "Ping" },
+                "indexArg": { "type": ":text", "value": "orc" },
+                "indexMissing": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "handler member and index access",
+      "script": "module AtomicHandlerAccess\non Start {\n  let value be Ping(amount, target)\n  emit Done(memberName: value.name, memberParam: value.parameters[1], memberMissing: value.missing, indexName: value[:name], indexParam: value[:parameters][2], indexMissing: value[:missing], indexOut: value[1])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "memberName": { "type": ":text", "value": "Ping" },
+                "memberParam": { "type": ":text", "value": "amount" },
+                "memberMissing": { "type": ":nothing" },
+                "indexName": { "type": ":text", "value": "Ping" },
+                "indexParam": { "type": ":text", "value": "target" },
+                "indexMissing": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "custom record member and index access",
+      "script": "module AtomicCustomRecordAccess\nrecord :unit as {\n  name: :text,\n  hp: :number\n}\n\non Start {\n  let value be :unit(name: 'Ada', hp: 10)\n  emit Done(memberName: value.name, memberMissing: value.missing, indexText: value['name'], indexTag: value[:hp], indexMissing: value[:missing], indexOut: value[1], isUnit: value is :unit)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "memberName": { "type": ":text", "value": "Ada" },
+                "memberMissing": { "type": ":nothing" },
+                "indexText": { "type": ":text", "value": "Ada" },
+                "indexTag": { "type": ":integer", "value": "10" },
+                "indexMissing": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" },
+                "isUnit": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "envelope member and index access",
+      "script": "module AtomicEnvelopeAccess\non Start {\n  emit Ping(amount: 7) with :radio\n}\n\non Ping as envelope {\n  emit Done(memberName: envelope.message.name, memberTag: envelope.tags[1], memberMissing: envelope.missing, indexName: envelope[:message].name, indexTag: envelope['tags'][1], indexMissing: envelope[:missing], indexOut: envelope[1])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Ping",
+              "tags": [ "radio" ],
+              "args": {
+                "amount": { "type": ":integer", "value": "7" }
+              }
+            },
+            {
+              "name": "Done",
+              "args": {
+                "memberName": { "type": ":text", "value": "Ping" },
+                "memberTag": { "type": ":tag", "value": "radio" },
+                "memberMissing": { "type": ":nothing" },
+                "indexName": { "type": ":text", "value": "Ping" },
+                "indexTag": { "type": ":tag", "value": "radio" },
+                "indexMissing": { "type": ":nothing" },
+                "indexOut": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

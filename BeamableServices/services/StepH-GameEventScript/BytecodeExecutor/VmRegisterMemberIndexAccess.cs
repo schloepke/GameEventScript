@@ -16,7 +16,7 @@ internal static class VmRegisterMemberIndexAccess
                 dst = value;
                 return;
             case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(key, out var value):
-                dst.SetFloat(value);
+                dst.SetFloat(value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
                 // FIXME: Need to implement the member access for messages.
@@ -31,15 +31,15 @@ internal static class VmRegisterMemberIndexAccess
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmIndexAccess(ref this VmValue dst, ushort indexIn, ref VmValue obj)
+    internal static void VmIndexAccess(ref this VmValue dst, ushort indexSlot, ref VmValue obj)
     {
-        if (indexIn <= 0)
+        if (!dst.OwningState.Register(indexSlot).TryGetInteger(out var indexIn) || indexIn <= 0)
         {
             dst.SetNothing();
             return;
         }
 
-        var index = indexIn - 1;
+        var index = (int)indexIn - 1;
         switch (obj.Kind)
         {
             case List when obj.ObjectValue is VmListObject map && map.TryGet(index, out var value):
@@ -50,7 +50,7 @@ internal static class VmRegisterMemberIndexAccess
                 else dst.SetNothing();
                 return;
             case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(index, out var value):
-                dst.SetFloat(value);
+                dst.SetFloat(value, obj.Unit);
                 return;
             case Range when obj.ObjectValue is VmRange integerRange:
                 var intRangeValue = integerRange.from + (index + 1) * integerRange.step;

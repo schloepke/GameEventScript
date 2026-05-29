@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -374,7 +375,7 @@ internal struct VmValue
         Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
         _ => double.NaN,
     };
-    
+
     public double AsNumericWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
     {
         unit = Unit;
@@ -385,6 +386,19 @@ internal struct VmValue
             _ => double.NaN,
         };
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal string ReadTextOrTag() => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool EqualsValue(ref VmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
+    {
+        Integer => IntegerValue == other.IntegerValue,
+        Float or Percentage => FloatValue == other.FloatValue,
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue == other.IsTrue,
+        Text or Tag => string.Equals(ReadTextOrTag(), other.ReadTextOrTag(), StringComparison.Ordinal),
+        _ => ReferenceEquals(ObjectValue, other.ObjectValue)
+    };
 
     internal bool TryGetInteger(out long value)
     {

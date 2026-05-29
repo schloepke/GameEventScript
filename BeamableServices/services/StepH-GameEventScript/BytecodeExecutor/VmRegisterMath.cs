@@ -187,7 +187,7 @@ internal static class VmRegisterMath
                     {
                         if (removed[j]) continue;
                         var candidate = removeList is not null ? removeList.Items[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
-                        if (!VmValueEquals(ref candidate, ref aList.Items[i], ref textTable)) continue;
+                        if (!candidate.EqualsValue(ref aList.Items[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -206,7 +206,7 @@ internal static class VmRegisterMath
                     {
                         if (removed[j]) continue;
                         var candidate = removeList is not null ? removeList.Items[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
-                        if (!VmValueEquals(ref candidate, ref aList.Items[i], ref textTable)) continue;
+                        if (!candidate.EqualsValue(ref aList.Items[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -266,7 +266,7 @@ internal static class VmRegisterMath
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
-                        if (removed[j] || !VmValueEquals(ref item, ref removeList.Items[j], ref textTable)) continue;
+                        if (removed[j] || !item.EqualsValue(ref removeList.Items[j])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -283,7 +283,7 @@ internal static class VmRegisterMath
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
-                        if (removed[j] || !VmValueEquals(ref item, ref removeList.Items[j], ref textTable)) continue;
+                        if (removed[j] || !item.EqualsValue(ref removeList.Items[j])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -339,7 +339,7 @@ internal static class VmRegisterMath
                 }
                 else if (b.Kind is Text or Tag)
                 {
-                    keys.Add(ReadTextOrTag(ref b, ref textTable));
+                    keys.Add(b.ReadTextOrTag());
                 }
                 else if (b.Kind is List && b.ObjectValue is VmListObject keyList)
                 {
@@ -352,7 +352,7 @@ internal static class VmRegisterMath
                             return;
                         }
 
-                        keys.Add(ReadTextOrTag(ref keyValue, ref textTable));
+                        keys.Add(keyValue.ReadTextOrTag());
                     }
                 }
                 else
@@ -1833,30 +1833,6 @@ internal static class VmRegisterMath
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool VmValueEquals(ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
-    {
-        if (a.Unit != b.Unit || a.Kind != b.Kind)
-        {
-            return false;
-        }
-
-        return a.Kind switch
-        {
-            Integer => a.IntegerValue == b.IntegerValue,
-            Float or Percentage => a.FloatValue == b.FloatValue,
-            GameEventScriptBytecodeTypeKind.Boolean => a.IsTrue == b.IsTrue,
-            Text or Tag => string.Equals(ReadTextOrTag(ref a, ref textTable), ReadTextOrTag(ref b, ref textTable), StringComparison.Ordinal),
-            _ => ReferenceEquals(a.ObjectValue, b.ObjectValue)
-        };
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static string ReadTextOrTag(ref VmValue value, ref GameEventScriptTextTable textTable)
-        => value.IsStoragePointer
-            ? textTable.Resolve((ushort)value.IntegerValue)
-            : value.ObjectValue as string ?? string.Empty;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)

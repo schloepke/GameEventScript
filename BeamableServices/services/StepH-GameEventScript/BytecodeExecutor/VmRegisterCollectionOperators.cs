@@ -127,7 +127,7 @@ internal static class VmRegisterCollectionOperators
                                 return;
                             }
 
-                            var key = ReadTextOrTag(ref keyValue, ref textTable);
+                            var key = keyValue.ReadTextOrTag();
                             if (map.ContainsKey(key)) continue;
                             var flag = default(VmValue);
                             flag.SetBoolean(true);
@@ -226,7 +226,7 @@ internal static class VmRegisterCollectionOperators
                                 return;
                             }
 
-                            keys.Add(ReadTextOrTag(ref keyValue, ref textTable));
+                            keys.Add(keyValue.ReadTextOrTag());
                         }
                         break;
                     }
@@ -247,11 +247,29 @@ internal static class VmRegisterCollectionOperators
                     {
                         var removed = new bool[rightList.Length];
                         var resultLength = 0;
-                        for (var i = 0; i < leftList.Length; i++) if (TryConsumeListMatch(ref leftList.Items[i], rightList, removed, ref textTable)) resultLength++;
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                if (removed[j] || !leftList.Items[i].EqualsValue(ref rightList.Items[j])) continue;
+                                removed[j] = true;
+                                resultLength++;
+                                break;
+                            }
+                        }
                         var list = new VmListObject(dst.OwningState, resultLength);
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
-                        for (var i = 0; i < leftList.Length; i++) if (TryConsumeListMatch(ref leftList.Items[i], rightList, removed, ref textTable)) list.Items[index++] = leftList.Items[i];
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                if (removed[j] || !leftList.Items[i].EqualsValue(ref rightList.Items[j])) continue;
+                                removed[j] = true;
+                                list.Items[index++] = leftList.Items[i];
+                                break;
+                            }
+                        }
                         dst.SetList(list);
                         return;
                     }
@@ -259,11 +277,33 @@ internal static class VmRegisterCollectionOperators
                     {
                         var removed = new bool[rightDice.Length];
                         var resultLength = 0;
-                        for (var i = 0; i < leftList.Length; i++) if (TryConsumeDiceMatch(dst.OwningState, ref leftList.Items[i], rightDice, removed, ref textTable)) resultLength++;
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            ref var item = ref leftList.Items[i];
+                            if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || item.IntegerValue != rightDice[j]) continue;
+                                removed[j] = true;
+                                resultLength++;
+                                break;
+                            }
+                        }
                         var list = new VmListObject(dst.OwningState, resultLength);
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
-                        for (var i = 0; i < leftList.Length; i++) if (TryConsumeDiceMatch(dst.OwningState, ref leftList.Items[i], rightDice, removed, ref textTable)) list.Items[index++] = leftList.Items[i];
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            ref var item = ref leftList.Items[i];
+                            if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || item.IntegerValue != rightDice[j]) continue;
+                                removed[j] = true;
+                                list.Items[index++] = item;
+                                break;
+                            }
+                        }
                         dst.SetList(list);
                         return;
                     }
@@ -278,11 +318,29 @@ internal static class VmRegisterCollectionOperators
                     case Dice when b.ObjectValue is int[] rightDice:
                         var removed = new bool[rightDice.Length];
                         var resultLength = 0;
-                        for (var i = 0; i < leftDice.Length; i++) if (TryConsumeDiceInteger(leftDice[i], rightDice, removed)) resultLength++;
+                        for (var i = 0; i < leftDice.Length; i++)
+                        {
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || leftDice[i] != rightDice[j]) continue;
+                                removed[j] = true;
+                                resultLength++;
+                                break;
+                            }
+                        }
                         var dice = new int[resultLength];
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
-                        for (var i = 0; i < leftDice.Length; i++) if (TryConsumeDiceInteger(leftDice[i], rightDice, removed)) dice[index++] = leftDice[i];
+                        for (var i = 0; i < leftDice.Length; i++)
+                        {
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || leftDice[i] != rightDice[j]) continue;
+                                removed[j] = true;
+                                dice[index++] = leftDice[i];
+                                break;
+                            }
+                        }
                         dst.SetDice(dice);
                         return;
                     case List when b.ObjectValue is VmListObject rightList:
@@ -290,16 +348,28 @@ internal static class VmRegisterCollectionOperators
                         var resultLength1 = 0;
                         for (var i = 0; i < leftDice.Length; i++)
                         {
-                            var item = dst.OwningState.CreateInteger(leftDice[i]);
-                            if (TryConsumeListMatch(ref item, rightList, removed1, ref textTable)) resultLength1++;
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                ref var item = ref rightList.Items[j];
+                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
+                                removed1[j] = true;
+                                resultLength1++;
+                                break;
+                            }
                         }
                         var list = new VmListObject(dst.OwningState, resultLength1);
                         var index1 = 0;
                         Array.Clear(removed1, 0, removed1.Length);
                         for (var i = 0; i < leftDice.Length; i++)
                         {
-                            var item = dst.OwningState.CreateInteger(leftDice[i]);
-                            if (TryConsumeListMatch(ref item, rightList, removed1, ref textTable)) list.Items[index1++].SetInteger(leftDice[i]);
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                ref var item = ref rightList.Items[j];
+                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
+                                removed1[j] = true;
+                                list.Items[index1++].SetInteger(leftDice[i]);
+                                break;
+                            }
                         }
                         dst.SetList(list);
                         return;
@@ -376,64 +446,4 @@ internal static class VmRegisterCollectionOperators
         }
     }
 
-    private static bool TryConsumeListMatch(ref VmValue item, VmListObject right, bool[] removed, ref GameEventScriptTextTable textTable)
-    {
-        for (var i = 0; i < right.Length; i++)
-        {
-            if (!removed[i] && VmValueEquals(ref item, ref right.Items[i], ref textTable))
-            {
-                removed[i] = true;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool TryConsumeDiceMatch(VmState ownerState, ref VmValue item, int[] right, bool[] removed, ref GameEventScriptTextTable textTable)
-    {
-        for (var i = 0; i < right.Length; i++)
-        {
-            var diceValue = ownerState.CreateInteger(right[i]);
-            if (!removed[i] && VmValueEquals(ref item, ref diceValue, ref textTable))
-            {
-                removed[i] = true;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool TryConsumeDiceInteger(int item, int[] right, bool[] removed)
-    {
-        for (var i = 0; i < right.Length; i++)
-        {
-            if (!removed[i] && item == right[i])
-            {
-                removed[i] = true;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static bool VmValueEquals(ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
-    {
-        if (a.Unit != b.Unit || a.Kind != b.Kind) return false;
-        return a.Kind switch
-        {
-            Integer => a.IntegerValue == b.IntegerValue,
-            Float or Percentage => a.FloatValue == b.FloatValue,
-            GameEventScriptBytecodeTypeKind.Boolean => a.IsTrue == b.IsTrue,
-            Text or Tag => string.Equals(ReadTextOrTag(ref a, ref textTable), ReadTextOrTag(ref b, ref textTable), StringComparison.Ordinal),
-            _ => ReferenceEquals(a.ObjectValue, b.ObjectValue)
-        };
-    }
-
-    private static string ReadTextOrTag(ref VmValue value, ref GameEventScriptTextTable textTable)
-        => value.IsStoragePointer
-            ? textTable.Resolve((ushort)value.IntegerValue)
-            : value.ObjectValue as string ?? string.Empty;
 }

@@ -86,7 +86,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -213,8 +213,7 @@
                   "value": false
                 },
                 "tagTrueUpper": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":nothing"
@@ -345,7 +344,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -621,7 +620,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -897,7 +896,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -1033,7 +1032,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -1309,7 +1308,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -1445,7 +1444,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -1721,7 +1720,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -2277,7 +2276,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -2485,12 +2484,11 @@
               "name": "Done",
               "args": {
                 "nothing": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "booleanTrue": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "booleanFalse": {
                   "type": ":boolean",
@@ -2498,7 +2496,7 @@
                 },
                 "integerOne": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "integerZero": {
                   "type": ":boolean",
@@ -2506,11 +2504,11 @@
                 },
                 "floatPositive": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "percentagePositive": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "percentageZero": {
                   "type": ":boolean",
@@ -2518,11 +2516,11 @@
                 },
                 "textTrue": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textFalse": {
                   "type": ":boolean",
@@ -2530,7 +2528,7 @@
                 },
                 "textOne": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textZero": {
                   "type": ":boolean",
@@ -2546,7 +2544,7 @@
                 },
                 "tagTrue": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagFalse": {
                   "type": ":boolean",
@@ -2554,19 +2552,19 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPhi": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagInfinity": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagNan": {
                   "type": ":boolean",
@@ -2578,7 +2576,7 @@
                 },
                 "vector": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "vectorZero": {
                   "type": ":boolean",
@@ -2586,23 +2584,20 @@
                 },
                 "point": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "pointZero": {
                   "type": ":boolean",
                   "value": false
                 },
                 "list": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "map": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "dice": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 }
               }
             }
@@ -2693,7 +2688,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -2829,7 +2824,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -2965,7 +2960,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -3381,7 +3376,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -3657,7 +3652,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -3924,8 +3919,7 @@
                   "value": false
                 },
                 "tagTrueUpper": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":nothing"
@@ -4047,8 +4041,7 @@
                   "value": false
                 },
                 "tagTrueUpper": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":nothing"
@@ -4170,8 +4163,7 @@
                   "value": false
                 },
                 "tagTrueUpper": {
-                  "type": ":boolean",
-                  "value": false
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":nothing"
@@ -4293,7 +4285,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -4565,7 +4558,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -4841,7 +4834,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -5257,7 +5250,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -5673,7 +5666,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -5949,7 +5942,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -6085,7 +6078,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -6221,7 +6214,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -6497,7 +6490,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -6565,7 +6558,8 @@
               "name": "Done",
               "args": {
                 "nothing": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "booleanTrue": {
                   "type": ":boolean",
@@ -6573,7 +6567,7 @@
                 },
                 "booleanFalse": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "integerOne": {
                   "type": ":boolean",
@@ -6581,7 +6575,7 @@
                 },
                 "integerZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "floatPositive": {
                   "type": ":boolean",
@@ -6593,7 +6587,7 @@
                 },
                 "percentageZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textTrue": {
                   "type": ":boolean",
@@ -6605,7 +6599,7 @@
                 },
                 "textFalse": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textOne": {
                   "type": ":boolean",
@@ -6613,15 +6607,15 @@
                 },
                 "textZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textInvalid": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textEmpty": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagTrue": {
                   "type": ":boolean",
@@ -6629,11 +6623,11 @@
                 },
                 "tagFalse": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -6649,11 +6643,11 @@
                 },
                 "tagNan": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagCustom": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "vector": {
                   "type": ":boolean",
@@ -6661,7 +6655,7 @@
                 },
                 "vectorZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "point": {
                   "type": ":boolean",
@@ -6669,16 +6663,19 @@
                 },
                 "pointZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "list": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "map": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "dice": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 }
               }
             }
@@ -7189,7 +7186,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -7325,7 +7322,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -7601,7 +7598,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -7877,7 +7874,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8004,7 +8001,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8127,7 +8125,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8250,7 +8249,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8492,7 +8492,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8628,7 +8628,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8764,7 +8764,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -8900,7 +8900,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9036,7 +9036,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9172,7 +9172,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9308,7 +9308,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9444,7 +9444,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9580,7 +9580,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9716,7 +9716,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9852,7 +9852,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -9988,7 +9988,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -10124,7 +10124,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -10260,7 +10260,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -10396,7 +10396,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -10532,7 +10532,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -10604,67 +10604,67 @@
                 },
                 "booleanTrue": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "booleanFalse": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "integerOne": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "integerZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "floatPositive": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "percentagePositive": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "percentageZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textTrue": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textFalse": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textOne": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textInvalid": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "textEmpty": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagTrue": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagFalse": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
@@ -10672,39 +10672,39 @@
                 },
                 "tagPi": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPhi": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagInfinity": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagNan": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagCustom": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "vector": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "vectorZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "point": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "pointZero": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "list": {
                   "type": ":nothing"
@@ -10804,7 +10804,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -10940,7 +10940,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11076,7 +11076,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11212,7 +11212,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11348,7 +11348,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11484,7 +11484,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11620,7 +11620,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11756,7 +11756,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -11892,7 +11892,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -12349,7 +12349,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -12481,7 +12482,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -12757,7 +12758,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -13033,7 +13034,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -13169,7 +13170,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -13445,7 +13446,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -13581,7 +13582,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -13857,7 +13858,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -14413,7 +14414,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -14621,8 +14622,7 @@
               "name": "Done",
               "args": {
                 "nothing": {
-                  "type": ":boolean",
-                  "value": true
+                  "type": ":nothing"
                 },
                 "booleanTrue": {
                   "type": ":boolean",
@@ -14630,7 +14630,7 @@
                 },
                 "booleanFalse": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "integerOne": {
                   "type": ":boolean",
@@ -14638,7 +14638,7 @@
                 },
                 "integerZero": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "floatPositive": {
                   "type": ":boolean",
@@ -14650,7 +14650,7 @@
                 },
                 "percentageZero": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textTrue": {
                   "type": ":boolean",
@@ -14662,7 +14662,7 @@
                 },
                 "textFalse": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textOne": {
                   "type": ":boolean",
@@ -14670,15 +14670,15 @@
                 },
                 "textZero": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textInvalid": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "textEmpty": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagTrue": {
                   "type": ":boolean",
@@ -14686,7 +14686,7 @@
                 },
                 "tagFalse": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
@@ -14706,11 +14706,11 @@
                 },
                 "tagNan": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "tagCustom": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "vector": {
                   "type": ":boolean",
@@ -14718,7 +14718,7 @@
                 },
                 "vectorZero": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "point": {
                   "type": ":boolean",
@@ -14726,19 +14726,16 @@
                 },
                 "pointZero": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "list": {
-                  "type": ":boolean",
-                  "value": true
+                  "type": ":nothing"
                 },
                 "map": {
-                  "type": ":boolean",
-                  "value": true
+                  "type": ":nothing"
                 },
                 "dice": {
-                  "type": ":boolean",
-                  "value": true
+                  "type": ":nothing"
                 }
               }
             }
@@ -14829,7 +14826,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -14965,7 +14962,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -15101,7 +15098,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -15517,7 +15514,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -15793,7 +15790,7 @@
                 },
                 "tagTrueUpper": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -16060,7 +16057,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -16183,7 +16181,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",
@@ -16306,7 +16305,8 @@
                   "type": ":nothing"
                 },
                 "tagTrueUpper": {
-                  "type": ":nothing"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "tagPi": {
                   "type": ":boolean",

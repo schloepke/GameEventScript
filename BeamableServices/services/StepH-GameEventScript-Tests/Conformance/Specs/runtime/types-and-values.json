@@ -3233,7 +3233,7 @@
                 },
                 "textIsNumeric": {
                   "type": ":boolean",
-                  "value": true
+                  "value": false
                 },
                 "badTextIsNumeric": {
                   "type": ":boolean",

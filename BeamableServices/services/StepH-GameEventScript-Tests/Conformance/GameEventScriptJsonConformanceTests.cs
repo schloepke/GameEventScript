@@ -54,6 +54,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicCastsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCasts(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicCustomTypesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCustomTypes(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -148,6 +153,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCreateValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCreateValues(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCastsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCasts(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
@@ -342,6 +352,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicCreateValuesCases()
         => Cases("runtime/atomic/create-values.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicCastsCases()
+        => Cases("runtime/atomic/casts.json");
+
     public static IEnumerable<object[]> RuntimeAtomicCustomTypesCases()
         => Cases("runtime/atomic/custom-types.json");
 
@@ -395,6 +408,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCreateValuesCases()
         => NewVirtualMachineCases("runtime/atomic/create-values.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCastsCases()
+        => NewVirtualMachineCases("runtime/atomic/casts.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCustomTypesCases()
         => NewVirtualMachineCases("runtime/atomic/custom-types.json");

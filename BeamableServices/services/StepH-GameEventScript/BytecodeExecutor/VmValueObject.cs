@@ -38,11 +38,14 @@ internal class VmListObject(VmState ownerState, int size) : IVmIndexAccess<VmVal
 
 internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmValue> entries) : IVmKeyAccess<VmValue>
 {
+    internal const string HiddenRecordTypeField = "__type";
+
+    private readonly int _length = entries.Keys.Count(key => !key.StartsWith("_"));
     private VmListObject? _keys;
     private VmListObject? _values;
     private VmListObject? _entries;
     
-    public int Length => entries.Count;
+    public int Length => _length;
     public IReadOnlyDictionary<string, VmValue> Entries => entries;
     
     internal VmListObject KeyList => _keys ??= CreateListOfKeys();
@@ -62,7 +65,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
 
     private VmListObject CreateListOfKeys()
     {
-        var list = new VmListObject(ownerState, entries.Count);
+        var list = new VmListObject(ownerState, _length);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
@@ -74,7 +77,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
 
     private VmListObject CreateListOfValues()
     {
-        var list = new VmListObject(ownerState, entries.Count);
+        var list = new VmListObject(ownerState, _length);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
@@ -86,7 +89,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
 
     private VmListObject CreateListOfEntries()
     {
-        var list = new VmListObject(ownerState, entries.Count);
+        var list = new VmListObject(ownerState, _length);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {

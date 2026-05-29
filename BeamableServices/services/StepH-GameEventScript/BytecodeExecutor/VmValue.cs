@@ -275,6 +275,15 @@ internal struct VmValue
         ObjectValue = map;
     }
 
+    internal void SetRecord(VmMapObject record)
+    {
+        Kind = Custom;
+        Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = record.Length;
+        ObjectValue = record;
+    }
+
     internal void SetRange(long from, long to, long step)
     {
         Kind = GameEventScriptBytecodeTypeKind.Range;

@@ -611,11 +611,53 @@ Required operations:
 - `Default`
 - `Contains`, `ContainsValue`
 - `StartsWith`, `EndsWith`
-- `Intersect`, `Combine`, `Except`, `Zip`
+- `Union`, `Intersect`, `Zip`
 - `Min`, `Max`
 - direct unary opcodes such as `Negate`, `Not`, `Length`,
   `Abs`, and `LogN`
 - `Clamp`
+
+`Add` is primarily numeric, but has a collection fallback for single-value
+insertion. `List + any` appends exactly one value and `any + List` prepends
+exactly one value, so `List + List` nests the right list as one item. Dice values
+preserve dice semantics only for unitless positive integers:
+`Dice + Integer` and `Integer + Dice` insert one roll and write sorted dice.
+Other dice/scalar additions write `nothing`. `Add` is not text concatenation;
+text operands still enter the normal numeric coercion path before the collection
+fallback.
+
+`Subtract` is primarily numeric, but also removes from selected collection
+shapes. `List - scalar` removes one matching item, and `List - List` removes
+matching items with multiset semantics. `List - Dice` writes a list. `Dice -
+Integer` removes one roll and writes dice, `Dice - Dice` performs multiset
+subtraction and writes dice, and `Dice - List` writes a list. `scalar - List`
+and `List - Map` write `nothing`. `Map - Map` removes entries whose keys are
+present in the right map. `Map - Tag`, `Map - Text`, and `Map - List` of only
+tags/text remove matching keys. A map key-removal list containing any
+non-tag/non-text item writes `nothing`.
+
+`Union` is the bytecode form of source `|`. `List | List` combines both lists.
+`List | Dice` and `Dice | List` write a list. `Dice | Dice` writes sorted dice.
+`Map | Map` merges keys and values with right-hand keys replacing left-hand
+keys. `Map | List` treats the right operand as a key list and adds missing keys
+as boolean `true` flags while preserving existing values. Key lists must contain
+only tag/text values; invalid key lists and other operand shapes write
+`nothing`.
+
+`Intersect` is the bytecode form of source `&`. `List & List`, `List & Dice`,
+and `Dice & List` use multiset semantics and write a list. `Dice & Dice` writes
+sorted dice. `Map & Map` keeps keys present in both maps and preserves values
+from the left map. `Map & List` keeps only listed keys. Key lists must contain
+only tag/text values; invalid key lists write `nothing`. `Dice & Integer` and
+`Integer & Dice` are not defined and write `nothing`.
+
+`Zip` is defined only for list operands. It writes a list whose length is the
+shorter operand length. Each item is a map with `left` and `right` entries
+containing the paired values. Other operand combinations write `nothing`.
+
+There are no `Combine` or `Except` opcodes in portable bytecode. Source tags
+`:combine`, `:merge`, `:except`, and `:intersect` are ordinary tags, not
+collection operators.
 
 Numeric operations must preserve the language distinction between absent input
 and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and

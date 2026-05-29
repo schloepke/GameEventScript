@@ -91,7 +91,7 @@ internal class VmMapObject(VmState ownerState, IReadOnlyDictionary<string, VmVal
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
             if (key.StartsWith("_")) continue;
-            list.Items[i++].SetMap(new VmMapObject(ownerState, new Dictionary<string, VmValue> { ["key"] = VmValue.CreateTag(key), ["value"] = entries[key] }));
+            list.Items[i++].SetMap(new VmMapObject(ownerState, new Dictionary<string, VmValue> { ["key"] = ownerState.CreateTag(key), ["value"] = entries[key] }));
         }
 
         return list;

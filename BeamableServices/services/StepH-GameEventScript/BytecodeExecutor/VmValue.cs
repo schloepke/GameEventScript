@@ -3,11 +3,13 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static StepH.GameEventScript.BytecodeExecutor.VmMathConstants;
 using static StepH.GameEventScript.BytecodeExecutor.VmValue.VmValueFlags;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -58,46 +60,44 @@ internal struct VmValue
     internal bool IsStoragePointer => (Flags & StoragePointerFlag) != 0;
     internal bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
-    internal void UpdatedTextTruthinessCache()
-    {
-        if (IsTruthIndeterminate)
-        {
-            switch (Kind)
-            {
-                case Text:
-                    var resolvedText = IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
-                    if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1") Flags |= IsTrueFlag;
-                    else Flags |= IsFalseFlag;
-                    break;
-                case Tag:
-                    if ((IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
-                        {
-                            "true" => true,
-                            "infinity" => true,
-                            "negativeinfinity" => true,
-                            "pi" => true,
-                            "e" => true,
-                            "tau" => true,
-                            "phi" => true,
-                            _ => false
-                        })
-                    {
-                        Flags |= IsTrueFlag;
-                    }
-                    else
-                    {
-                        Flags |= IsFalseFlag;
-                    }
-
-                    break;
-            }
-        }
-    }
-
     internal void InitRegister(VmState state)
     {
         OwningState = state;
         SetNothing();
+    }
+
+    internal void UpdatedTextTruthinessCache()
+    {
+        if (!IsTruthIndeterminate) return;
+        switch (Kind)
+        {
+            case Text:
+                var resolvedText = IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+                if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1") Flags |= IsTrueFlag;
+                else Flags |= IsFalseFlag;
+                break;
+            case Tag:
+                if ((IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
+                    {
+                        "true" => true,
+                        "infinity" => true,
+                        "negativeinfinity" => true,
+                        "pi" => true,
+                        "e" => true,
+                        "tau" => true,
+                        "phi" => true,
+                        _ => false
+                    })
+                {
+                    Flags |= IsTrueFlag;
+                }
+                else
+                {
+                    Flags |= IsFalseFlag;
+                }
+
+                break;
+        }
     }
 
     internal void SetNothing()
@@ -134,6 +134,7 @@ internal struct VmValue
             SetNothing();
             return;
         }
+
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (double.IsFinite(value) && value is >= long.MinValue and <= long.MaxValue && value == Math.Truncate(value))
         {
@@ -254,33 +255,6 @@ internal struct VmValue
         ObjectValue = values;
     }
 
-    internal void SetMessageHandler(GameEventScriptMessageSignature handler)
-    {
-        Kind = Handler;
-        Flags = StorageObjectFlag | HasValueFlag;
-        Unit = UnitNone;
-        IntegerValue = 0;
-        ObjectValue = handler;
-    }
-
-    internal void SetMessage(GameEventScriptMessage message)
-    {
-        Kind = Message;
-        Flags = StorageObjectFlag | HasValueFlag;
-        Unit = UnitNone;
-        IntegerValue = 0;
-        ObjectValue = message;
-    }
-
-    internal void SetSeries(GameEventScriptSeriesValue series)
-    {
-        Kind = Series;
-        Flags = StorageObjectFlag | HasValueFlag;
-        Unit = UnitNone;
-        IntegerValue = 0;
-        ObjectValue = series;
-    }
-
     internal void SetList(VmListObject list)
     {
         Kind = List;
@@ -289,7 +263,7 @@ internal struct VmValue
         IntegerValue = list.Length;
         ObjectValue = list;
     }
-    
+
     internal void SetMap(VmMapObject map)
     {
         Kind = Map;
@@ -344,13 +318,31 @@ internal struct VmValue
 
     private static VmRange EmptyRange = new(0, 0, 0);
 
-    internal void CreateListBuilder()
+    internal void SetMessageHandler(GameEventScriptMessageSignature handler)
     {
-        Kind = List;
-        Flags = StorageObjectFlag;
+        Kind = Handler;
+        Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = 0;
-        ObjectValue = new List<VmValue>();
+        ObjectValue = handler;
+    }
+
+    internal void SetMessage(GameEventScriptMessage message)
+    {
+        Kind = Message;
+        Flags = StorageObjectFlag | HasValueFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = message;
+    }
+
+    internal void SetSeries(GameEventScriptSeriesValue series)
+    {
+        Kind = Series;
+        Flags = StorageObjectFlag | HasValueFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = series;
     }
 
     internal void SetStream(IVmStream value)
@@ -362,13 +354,27 @@ internal struct VmValue
         ObjectValue = value;
     }
 
+    internal void CreateListBuilder()
+    {
+        Kind = ListBuilder;
+        Flags = StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = new List<VmValue>();
+    }
+
     public double AsNumeric => Kind switch
     {
-        Float or Percentage => FloatValue,
         Integer => IntegerValue,
+        Float or Percentage => FloatValue,
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
+        Text when IsStoragePointer => double.TryParse(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue), NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : double.NaN,
+        Text when ObjectValue is string text => double.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : double.NaN,
+        Tag when IsStoragePointer => ResolveNumericTagValue(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue)),
+        Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
         _ => double.NaN,
     };
-
+    
     public double AsNumericWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
     {
         unit = Unit;
@@ -379,20 +385,6 @@ internal struct VmValue
             _ => double.NaN,
         };
     }
-    
-    internal static VmValue CreateText(string text)
-    {
-        var value = default(VmValue);
-        value.SetText(text);
-        return value;
-    }
-
-    internal static VmValue CreateTag(string tag)
-    {
-        var value = default(VmValue);
-        value.SetTag(tag);
-        return value;
-    }
 
     internal bool TryGetInteger(out long value)
     {
@@ -401,7 +393,7 @@ internal struct VmValue
             value = 0;
             return false;
         }
-        
+
         value = IntegerValue;
         return true;
     }
@@ -438,8 +430,6 @@ internal struct VmValue
             default:
                 stream = default;
                 return false;
-        }   
-
+        }
     }
-    
 }

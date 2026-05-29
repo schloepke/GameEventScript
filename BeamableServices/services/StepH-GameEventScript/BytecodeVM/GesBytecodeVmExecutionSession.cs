@@ -1099,9 +1099,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.ContainsValue:
             case GameEventScriptBytecodeOpCode.StartsWith:
             case GameEventScriptBytecodeOpCode.EndsWith:
+            case GameEventScriptBytecodeOpCode.Union:
             case GameEventScriptBytecodeOpCode.Intersect:
-            case GameEventScriptBytecodeOpCode.Combine:
-            case GameEventScriptBytecodeOpCode.Except:
             case GameEventScriptBytecodeOpCode.Zip:
             case GameEventScriptBytecodeOpCode.Min:
             case GameEventScriptBytecodeOpCode.Max:
@@ -4827,13 +4826,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return true;
         }
 
-        if (operation is "|" or "xor" or "&" or "->")
+        if (operation is "or" or "xor" or "and" or "->")
         {
             value = operation switch
             {
-                "|" => EvaluateLogicalOr(leftRawValue, rightRawValue),
+                "or" => EvaluateLogicalOr(leftRawValue, rightRawValue),
                 "xor" => EvaluateLogicalXor(leftRawValue, rightRawValue),
-                "&" => EvaluateLogicalAnd(leftRawValue, rightRawValue),
+                "and" => EvaluateLogicalAnd(leftRawValue, rightRawValue),
                 "->" => EvaluateLogicalImplies(leftRawValue, rightRawValue),
                 _ => BytecodeVmValue.Nothing
             };
@@ -4870,9 +4869,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "mod" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "mod", right)),
             "rem" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "rem", right)),
             "^" => BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(left, "^", right)),
-            "intersect" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionIntersect(left, right)),
-            "combine" or "merge" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionCombine(left, right)),
-            "except" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionExcept(left, right)),
+            "|" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionUnion(left, right)),
+            "&" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionIntersect(left, right)),
             "zip" => BytecodeVmValue.Reference(GesValueOperations.EvaluateCollectionZip(left, right)),
             _ => throw new InvalidOperationException($"BytecodeVM invariant failed: unknown binary operator '{operation}'.")
         };
@@ -4883,9 +4881,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private static string GetBinaryOperator(GameEventScriptBytecodeOpCode opCode)
         => opCode switch
         {
-            GameEventScriptBytecodeOpCode.Or => "|",
+            GameEventScriptBytecodeOpCode.Or => "or",
             GameEventScriptBytecodeOpCode.Xor => "xor",
-            GameEventScriptBytecodeOpCode.And => "&",
+            GameEventScriptBytecodeOpCode.And => "and",
             GameEventScriptBytecodeOpCode.Implies => "->",
             GameEventScriptBytecodeOpCode.Power => "^",
             GameEventScriptBytecodeOpCode.Equal => "=",
@@ -4907,9 +4905,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.ContainsValue => "value in",
             GameEventScriptBytecodeOpCode.StartsWith => "starts with",
             GameEventScriptBytecodeOpCode.EndsWith => "ends with",
-            GameEventScriptBytecodeOpCode.Intersect => "intersect",
-            GameEventScriptBytecodeOpCode.Combine => "combine",
-            GameEventScriptBytecodeOpCode.Except => "except",
+            GameEventScriptBytecodeOpCode.Union => "|",
+            GameEventScriptBytecodeOpCode.Intersect => "&",
             GameEventScriptBytecodeOpCode.Zip => "zip",
             _ => string.Empty
         };
@@ -4955,15 +4952,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return unit;
         }
 
+        if (GesValueOperations.TryCombineWithPlus(left, right, out var combined))
+        {
+            return combined;
+        }
+
         if (GesValueOperations.TryCoerceNumericForOperation(left, out var leftNumeric) &&
             GesValueOperations.TryCoerceNumericForOperation(right, out var rightNumeric))
         {
             return GesValueOperations.ToGameEventScriptNumericResult(left, "+", right, GesValueOperations.AddNumeric(leftNumeric, rightNumeric));
-        }
-
-        if (GesValueOperations.TryCombineWithPlus(left, right, out var combined))
-        {
-            return combined;
         }
 
         return GesFloatNaN();
@@ -4994,6 +4991,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (GesValueOperations.TryEvaluateUnitBinary(left, operation, right, out var unit))
         {
             return unit;
+        }
+
+        if (operation == "-" && GesValueOperations.TrySubtractWithMinus(left, right, out var collection))
+        {
+            return collection;
         }
 
         if (!GesValueOperations.TryCoerceNumericForOperation(left, out var leftNumeric) ||
@@ -7227,6 +7229,13 @@ internal readonly record struct BytecodeVmValue(
             return AddPercentage(left, right);
         }
 
+        var leftValue = left.ToGameEventScriptValue();
+        var rightValue = right.ToGameEventScriptValue();
+        if (GesValueOperations.TryCombineWithPlus(leftValue, rightValue, out var combined))
+        {
+            return FromGameEventScriptValue(combined);
+        }
+
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&
             right.TryGetPrimitiveFiniteNumber(out var rightPrimitive))
         {
@@ -7247,13 +7256,6 @@ internal readonly record struct BytecodeVmValue(
         if (!left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) ||
             !right.TryGetNumeric(out var rightNumber, out var rightUnit, out _))
         {
-            var leftValue = left.ToGameEventScriptValue();
-            var rightValue = right.ToGameEventScriptValue();
-            if (GesValueOperations.TryCombineWithPlus(leftValue, rightValue, out var combined))
-            {
-                return FromGameEventScriptValue(combined);
-            }
-
             return NaN();
         }
 
@@ -7295,6 +7297,13 @@ internal readonly record struct BytecodeVmValue(
         if (left.IsPercentageLike() || right.IsPercentageLike())
         {
             return SubtractPercentage(left, right);
+        }
+
+        var leftValue = left.ToGameEventScriptValue();
+        var rightValue = right.ToGameEventScriptValue();
+        if (GesValueOperations.TrySubtractWithMinus(leftValue, rightValue, out var subtracted))
+        {
+            return FromGameEventScriptValue(subtracted);
         }
 
         if (left.TryGetPrimitiveFiniteNumber(out var leftPrimitive) &&

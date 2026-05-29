@@ -47,20 +47,8 @@ internal sealed class GesParser
         return new GesParser(tokens, moduleName, resolvedSourceName, initialErrors).ParseScript();
     }
 
-    private static bool TryGetCollectionCombineOperator(string text, out GesBinaryOperator op)
-    {
-        op = text switch
-        {
-            "intersect" => GesBinaryOperator.Intersect,
-            "combine" => GesBinaryOperator.Combine,
-            "merge" => GesBinaryOperator.Merge,
-            "except" => GesBinaryOperator.Except,
-            "zip" => GesBinaryOperator.Zip,
-            _ => default
-        };
-
-        return text is "intersect" or "combine" or "merge" or "except" or "zip";
-    }
+    private static bool IsCollectionZipOperator(GesToken token)
+        => token.Kind == Tag && string.Equals(token.Text, ":zip", StringComparison.Ordinal);
 
     private sealed class GameEventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
     {
@@ -807,30 +795,57 @@ internal sealed class GesParser
 
     private ExpressionNode ParseDefaultExpression()
     {
-        var expression = ParseCollectionCombineExpression();
+        var expression = ParseCollectionUnionExpression();
 
         while (Current.Kind == Tag && string.Equals(Current.Text, ":default", StringComparison.Ordinal))
         {
             Advance();
             SkipNewLines();
-            var right = ParseCollectionCombineExpression();
+            var right = ParseCollectionUnionExpression();
             expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Default, right), expression, right);
         }
 
         return expression;
     }
 
-    private ExpressionNode ParseCollectionCombineExpression()
+    private ExpressionNode ParseCollectionUnionExpression()
+    {
+        var expression = ParseCollectionIntersectExpression();
+
+        while (Match(OperatorCollectionUnion))
+        {
+            SkipNewLines();
+            var right = ParseCollectionIntersectExpression();
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Union, right), expression, right);
+        }
+
+        return expression;
+    }
+
+    private ExpressionNode ParseCollectionIntersectExpression()
+    {
+        var expression = ParseCollectionZipExpression();
+
+        while (Match(OperatorCollectionIntersect))
+        {
+            SkipNewLines();
+            var right = ParseCollectionZipExpression();
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Intersect, right), expression, right);
+        }
+
+        return expression;
+    }
+
+    private ExpressionNode ParseCollectionZipExpression()
     {
         var expression = ParseOrExpression();
 
-        while (Current.Kind == Tag &&
-               TryGetCollectionCombineOperator(Current.Text[1..], out var op))
+        while (IsCollectionZipOperator(Current))
         {
             Advance();
             SkipNewLines();
             var right = ParseOrExpression();
-            expression = WithRange(new BinaryExpressionNode(expression, op, right), expression, right);
+            expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Zip, right), expression, right);
         }
 
         return expression;

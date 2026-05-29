@@ -739,12 +739,52 @@ units[:has [position: [x: 1, y: 2]]]
 Collection-level binary operators:
 
 ```ges
-a :combine b
-a :merge b
-a :intersect b
-a :except b
+a | b
+a & b
 a :zip b
 ```
+
+Collection addition uses `+` for single-value insertion. `list + any` appends
+exactly one value and `any + list` prepends exactly one value, so
+`[1, 2] + [3, 4]` becomes `[1, 2, [3, 4]]`. Dice values preserve dice semantics
+only for unitless positive integers: `dice + integer` and `integer + dice`
+insert one roll and return sorted dice. Other dice/scalar additions produce
+`nothing`.
+
+Collection union uses `|`. `list | list` combines both lists. `list | dice` and
+`dice | list` produce a list; `dice | dice` produces sorted dice. `map | map`
+merges keys and values with right-hand keys replacing left-hand keys.
+`map | listOfKeys` adds missing keys as flag entries with value `true` and
+keeps existing values. Other operand combinations produce `nothing`.
+
+Collection intersection uses `&`. `list & list`, `list & dice`, and
+`dice & list` use multiset semantics and produce a list. `dice & dice` produces
+sorted dice. `map & map` keeps keys present in both maps and values from the
+left map. `map & listOfKeys` keeps only listed keys. `dice & integer` and
+`integer & dice` are not defined; write `dice & :dice([integer])` when a
+single-roll dice intersection is intended.
+
+Collection subtraction uses `-`. `list - scalar` removes one matching item, and
+`list - list` and `list - dice` remove matching items with multiset semantics
+and produce a list. `dice - integer` removes one roll and returns dice,
+`dice - dice` performs multiset subtraction and returns dice, and `dice - list`
+returns a list. `scalar - list` and `list - map` produce `nothing`. `map - map`
+removes keys present in the right map. `map - tag`, `map - text`, and
+`map - listOfKeys` remove matching keys. Other unsupported operand
+combinations produce `nothing`.
+
+`:zip` is defined for lists only. It pairs items by index up to the shorter
+operand length and returns a list of maps with `left` and `right` entries.
+Other operand combinations produce `nothing`.
+
+`listOfKeys` means a list containing only text or tag values. A key list
+containing any other value produces `nothing`.
+
+`+` is not string concatenation. Text operands are first interpreted by numeric
+coercion, so `'100' + '200'` is numeric addition while non-numeric text addition
+is an invalid numeric operation. `:combine`, `:merge`, `:except`, and
+`:intersect` are not reserved collection operators; in expression position they
+are ordinary tags.
 
 ## Randomness, Dice, and Series
 

@@ -386,14 +386,11 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                 case ContainsValue:
                     _vmState.Register(instruction.DestinationSlot).VmContainsValue(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
+                case Union:
+                    _vmState.Register(instruction.DestinationSlot).VmUnion(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
+                    break;
                 case Intersect:
                     _vmState.Register(instruction.DestinationSlot).VmIntersect(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
-                    break;
-                case Combine:
-                    _vmState.Register(instruction.DestinationSlot).VmCombine(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
-                    break;
-                case Except:
-                    _vmState.Register(instruction.DestinationSlot).VmExcept(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);
                     break;
                 case Zip:
                     _vmState.Register(instruction.DestinationSlot).VmZip(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot), ref binary.TextConstantTable);

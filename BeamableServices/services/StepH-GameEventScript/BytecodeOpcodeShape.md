@@ -331,14 +331,13 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | 0x92 | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text operation. |
 | 0x93 | `Contains` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection/text membership operation. |
 | 0x94 | `ContainsValue` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection value membership operation. |
-| 0x95 | `Intersect` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
-| 0x96 | `Combine` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
-| 0x97 | `Except` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
-| 0x98 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection operation. |
-| 0x99 | `KeysOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
-| 0x9A | `ValuesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
-| 0x9B | `EntriesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
-| 0x9C..0xA0 | reserved | - | - | - | - | - | Reserved space after map projections. |
+| 0x95 | `Union` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |
+| 0x96 | `Intersect` | - | result slot | `XSlot`=left | `YSlot`=right | - | Map key intersection or list/dice multiset intersection; invalid shapes -> `nothing`. |
+| 0x97 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | List zip into `{ left, right }` maps up to the shorter length; invalid shapes -> `nothing`. |
+| 0x98 | `KeysOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
+| 0x99 | `ValuesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9A | `EntriesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
+| 0x9B..0xA0 | reserved | - | - | - | - | - | Reserved space after map projections. |
 | 0xA1 | `StreamCreate` | - | iterator slot | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
 | 0xA2 | `StreamNext` | - | item slot | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
 | 0xA3 | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |

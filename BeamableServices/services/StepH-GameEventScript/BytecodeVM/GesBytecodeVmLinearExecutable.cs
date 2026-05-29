@@ -1228,9 +1228,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.ContainsValue or
             GameEventScriptBytecodeOpCode.StartsWith or
             GameEventScriptBytecodeOpCode.EndsWith or
+            GameEventScriptBytecodeOpCode.Union or
             GameEventScriptBytecodeOpCode.Intersect or
-            GameEventScriptBytecodeOpCode.Combine or
-            GameEventScriptBytecodeOpCode.Except or
             GameEventScriptBytecodeOpCode.Zip or
             GameEventScriptBytecodeOpCode.Min or
             GameEventScriptBytecodeOpCode.Max;

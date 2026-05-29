@@ -2915,9 +2915,8 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.ContainsValue or
             GameEventScriptBytecodeOpCode.StartsWith or
             GameEventScriptBytecodeOpCode.EndsWith or
+            GameEventScriptBytecodeOpCode.Union or
             GameEventScriptBytecodeOpCode.Intersect or
-            GameEventScriptBytecodeOpCode.Combine or
-            GameEventScriptBytecodeOpCode.Except or
             GameEventScriptBytecodeOpCode.Zip or
             GameEventScriptBytecodeOpCode.Min or
             GameEventScriptBytecodeOpCode.Max;
@@ -3024,9 +3023,8 @@ internal sealed class GesLinearBytecodeBuilder
             GesBinaryOperator.ContainsValue => GameEventScriptBytecodeOpCode.ContainsValue,
             GesBinaryOperator.StartsWith => GameEventScriptBytecodeOpCode.StartsWith,
             GesBinaryOperator.EndsWith => GameEventScriptBytecodeOpCode.EndsWith,
+            GesBinaryOperator.Union => GameEventScriptBytecodeOpCode.Union,
             GesBinaryOperator.Intersect => GameEventScriptBytecodeOpCode.Intersect,
-            GesBinaryOperator.Combine or GesBinaryOperator.Merge => GameEventScriptBytecodeOpCode.Combine,
-            GesBinaryOperator.Except => GameEventScriptBytecodeOpCode.Except,
             GesBinaryOperator.Zip => GameEventScriptBytecodeOpCode.Zip,
             _ => throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support binary operator '{operation.ToSourceText()}'.")
         };

@@ -943,8 +943,12 @@
                   "value": "2"
                 },
                 "diceTotal": {
-                  "type": ":integer",
-                  "value": "6"
+                  "type": ":dice",
+                  "rolls": [
+                    4,
+                    1,
+                    1
+                  ]
                 },
                 "dropped": {
                   "type": ":dice",

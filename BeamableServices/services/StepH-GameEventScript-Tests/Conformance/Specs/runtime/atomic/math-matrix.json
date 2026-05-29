@@ -1139,6 +1139,355 @@
     },
     {
       "kind": "scriptApi",
+      "name": "add collection values",
+      "script": "module AtomicMathMatrixAddCollections\non Start {\n  let vList be [1, 2, 3]\n  let vListOther be [4, 5]\n  let vMap be [name: 'Ada', hp: 10]\n  let vMapOther be [hp: 12, mp: 5]\n  let vDice as :dice be [3, 1]\n  emit Done(listAppendInteger: vList + 4, listPrependInteger: 0 + vList, listAppendList: vList + vListOther, listAppendText: vList + 'end', listAppendMap: vList + vMap, mapMerge: vMap + vMapOther, mapPlusList: vMap + vList, mapPlusInteger: vMap + 1, diceAddInteger: vDice + 2, integerAddDice: 4 + vDice, diceAddFloat: vDice + 2.5)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "listAppendInteger": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "listPrependInteger": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "0"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "listAppendList": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":list",
+                      "items": [
+                        {
+                          "type": ":integer",
+                          "value": "4"
+                        },
+                        {
+                          "type": ":integer",
+                          "value": "5"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                "listAppendText": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "end"
+                    }
+                  ]
+                },
+                "listAppendMap": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "hp": {
+                          "type": ":integer",
+                          "value": "10"
+                        },
+                        "name": {
+                          "type": ":text",
+                          "value": "Ada"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "mapMerge": {
+                  "type": ":nothing"
+                },
+                "mapPlusList": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "hp": {
+                          "type": ":integer",
+                          "value": "10"
+                        },
+                        "name": {
+                          "type": ":text",
+                          "value": "Ada"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "mapPlusInteger": {
+                  "type": ":nothing"
+                },
+                "diceAddInteger": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    2,
+                    1
+                  ]
+                },
+                "integerAddDice": {
+                  "type": ":dice",
+                  "rolls": [
+                    4,
+                    3,
+                    1
+                  ]
+                },
+                "diceAddFloat": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "subtract collection values",
+      "script": "module AtomicMathMatrixSubtractCollections\non Start {\n  let vList be [1, 2, 2, 3]\n  let vListOther be [2, 3]\n  let vMap be [name: 'Ada', hp: 10, mp: 5]\n  let vMapOther be [hp: 99]\n  let vDice as :dice be [3, 2, 2, 1]\n  let vDiceOther as :dice be [2, 1]\n  emit Done(listRemoveInteger: vList - 2, listRemoveList: vList - vListOther, listMinusDice: vList - vDiceOther, listMinusMap: vList - vMap, scalarMinusList: 2 - vList, mapRemoveMap: vMap - vMapOther, mapRemoveTag: vMap - :hp, mapRemoveText: vMap - 'mp', mapRemoveKeyList: vMap - [:hp, 'mp'], mapMinusInvalidKeyList: vMap - [:hp, 2], diceRemoveInteger: vDice - 2, diceRemoveDice: vDice - vDiceOther, diceRemoveList: vDice - [2, 1], diceMinusFloat: vDice - 2.5)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "listRemoveInteger": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "listRemoveList": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                },
+                "listMinusDice": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "listMinusMap": {
+                  "type": ":nothing"
+                },
+                "scalarMinusList": {
+                  "type": ":nothing"
+                },
+                "mapRemoveMap": {
+                  "type": ":map",
+                  "entries": {
+                    "mp": {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "mapRemoveTag": {
+                  "type": ":map",
+                  "entries": {
+                    "mp": {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "mapRemoveText": {
+                  "type": ":map",
+                  "entries": {
+                    "hp": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "mapRemoveKeyList": {
+                  "type": ":map",
+                  "entries": {
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
+                  }
+                },
+                "mapMinusInvalidKeyList": {
+                  "type": ":nothing"
+                },
+                "diceRemoveInteger": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    2,
+                    1
+                  ]
+                },
+                "diceRemoveDice": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    2
+                  ]
+                },
+                "diceRemoveList": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                },
+                "diceMinusFloat": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "subtract nothing",
       "script": "module AtomicMathMatrixQ\non Start {\n  let a be missing\n  let vNothing be missing\n  let vInteger be 10\n  let vFloat be 10.3\n  let vPercentage be 10%\n  let vMeter be 10m\n  let vBoolean be true\n  let vTextNumber be '10.3'\n  let vTextInvalid be 'hello'\n  let vTagPi be :pi\n  let vTagNan be :nan\n  let vTagInfinity be :infinity\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(1, 2, 3)\n  emit Done(nothing: a - vNothing, integer: a - vInteger, float: a - vFloat, percentage: a - vPercentage, meter: a - vMeter, boolean: a - vBoolean, textNumber: a - vTextNumber, textInvalid: a - vTextInvalid, tagPi: a - vTagPi, tagNan: a - vTagNan, tagInfinity: a - vTagInfinity, vector: a - vVector, point: a - vPoint)\n}",
       "steps": [

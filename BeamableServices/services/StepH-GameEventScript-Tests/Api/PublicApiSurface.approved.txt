@@ -124,6 +124,7 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 DestinationSlot
   field System.UInt16 EntryAddress
   field System.UInt16 ExternalReferenceIndex
+  field System.UInt16 Index
   field System.UInt16 ListIndex
   field System.UInt16 MessageDestination
   field System.UInt16 SecondaryListIndex
@@ -181,42 +182,43 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CheckFractional = 28
   enum-field MoveSlot = 29
   enum-field MemberAccess = 30
-  enum-field IndexedAccess = 31
-  enum-field BindHandler = 32
-  enum-field LoadNothing = 33
-  enum-field LoadTrue = 34
-  enum-field LoadFalse = 35
-  enum-field LoadInteger = 36
-  enum-field LoadFloat = 37
-  enum-field LoadPercentage = 38
-  enum-field LoadText = 39
-  enum-field LoadTag = 40
-  enum-field LoadHandler = 41
-  enum-field LoadMessage = 42
-  enum-field StageRegister = 43
-  enum-field StageNothing = 44
-  enum-field StageTrue = 45
-  enum-field StageFalse = 46
-  enum-field StageInteger = 47
-  enum-field StageFloat = 48
-  enum-field StageText = 49
-  enum-field StageTag = 50
-  enum-field StagePercentage = 51
-  enum-field CreateDice = 52
-  enum-field CreateVector = 53
-  enum-field CreatePoint = 54
-  enum-field CreateList = 55
-  enum-field CreateMap = 56
-  enum-field CreateRange = 57
-  enum-field CreateRangeWithStep = 58
-  enum-field CreateRangeIterator = 59
-  enum-field CreateRangeIteratorWithStep = 60
-  enum-field CreateRangeIteratorShort = 61
-  enum-field CreateRecord = 62
-  enum-field CreateExternalType = 63
-  enum-field HasValue = 64
-  enum-field IsEmpty = 65
-  enum-field Default = 66
+  enum-field IndexAccess = 31
+  enum-field PropertyAccess = 32
+  enum-field BindHandler = 33
+  enum-field LoadNothing = 34
+  enum-field LoadTrue = 35
+  enum-field LoadFalse = 36
+  enum-field LoadInteger = 37
+  enum-field LoadFloat = 38
+  enum-field LoadPercentage = 39
+  enum-field LoadText = 40
+  enum-field LoadTag = 41
+  enum-field LoadHandler = 42
+  enum-field LoadMessage = 43
+  enum-field StageRegister = 44
+  enum-field StageNothing = 45
+  enum-field StageTrue = 46
+  enum-field StageFalse = 47
+  enum-field StageInteger = 48
+  enum-field StageFloat = 49
+  enum-field StageText = 50
+  enum-field StageTag = 51
+  enum-field StagePercentage = 52
+  enum-field CreateDice = 53
+  enum-field CreateVector = 54
+  enum-field CreatePoint = 55
+  enum-field CreateList = 56
+  enum-field CreateMap = 57
+  enum-field CreateRange = 58
+  enum-field CreateRangeWithStep = 59
+  enum-field CreateRangeIterator = 60
+  enum-field CreateRangeIteratorWithStep = 61
+  enum-field CreateRangeIteratorShort = 62
+  enum-field CreateRecord = 63
+  enum-field CreateExternalType = 64
+  enum-field HasValue = 65
+  enum-field IsEmpty = 66
+  enum-field Default = 67
   enum-field Or = 80
   enum-field And = 81
   enum-field Xor = 82
@@ -256,13 +258,12 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field EndsWith = 146
   enum-field Contains = 147
   enum-field ContainsValue = 148
-  enum-field Intersect = 149
-  enum-field Combine = 150
-  enum-field Except = 151
-  enum-field Zip = 152
-  enum-field KeysOfMap = 153
-  enum-field ValuesOfMap = 154
-  enum-field EntriesOfMap = 155
+  enum-field Union = 149
+  enum-field Intersect = 150
+  enum-field Zip = 151
+  enum-field KeysOfMap = 152
+  enum-field ValuesOfMap = 153
+  enum-field EntriesOfMap = 154
   enum-field StreamCreate = 161
   enum-field StreamNext = 162
   enum-field StreamClose = 163

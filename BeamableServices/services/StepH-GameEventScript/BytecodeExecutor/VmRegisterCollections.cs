@@ -12,10 +12,7 @@ internal static class VmRegisterCollections
     {
         var state = dst.OwningState;
         var list = new VmListObject(dst.OwningState, state.StageLength);
-        for (ushort i = 0; i < state.StageLength; i++)
-        {
-            list.Items[i] = state.RegisterStaged(i);
-        }
+        for (ushort i = 0; i < state.StageLength; i++) list.Items[i] = state.RegisterStaged(i);
         dst.SetList(list);
     }
 
@@ -46,10 +43,7 @@ internal static class VmRegisterCollections
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmListBuilderAdd(ref this VmValue listBuilder, ref VmValue value)
     {
-        if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder)
-        {
-            builder.Add(value);
-        }
+        if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder) builder.Add(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -101,6 +101,33 @@ internal class VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue CreateInteger(long integer)
+    {
+        var value = default(VmValue);
+        value.InitRegister(this);
+        value.SetInteger(integer);
+        return value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue CreateText(string text)
+    {
+        var value = default(VmValue);
+        value.InitRegister(this);
+        value.SetText(text);
+        return value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue CreateTag(string tag)
+    {
+        var value = default(VmValue);
+        value.InitRegister(this);
+        value.SetTag(tag);
+        return value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool HasMessageHandler(GameEventScriptMessage message)
         => InboundMessageHandlers.ContainsKey(message.SignatureId);
 

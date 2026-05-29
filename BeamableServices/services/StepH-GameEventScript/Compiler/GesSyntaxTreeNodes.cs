@@ -142,10 +142,8 @@ internal enum GesBinaryOperator
     ContainsValue,
     StartsWith,
     EndsWith,
+    Union,
     Intersect,
-    Combine,
-    Merge,
-    Except,
     Zip
 }
 
@@ -171,9 +169,9 @@ internal static class GesOperatorText
     public static string ToSourceText(this GesBinaryOperator op)
         => op switch
         {
-            GesBinaryOperator.Or => "|",
+            GesBinaryOperator.Or => "or",
             GesBinaryOperator.Xor => "xor",
-            GesBinaryOperator.And => "&",
+            GesBinaryOperator.And => "and",
             GesBinaryOperator.Implies => "->",
             GesBinaryOperator.Equal => "=",
             GesBinaryOperator.NotEqual => "<>",
@@ -195,10 +193,8 @@ internal static class GesOperatorText
             GesBinaryOperator.ContainsValue => "value in",
             GesBinaryOperator.StartsWith => "starts with",
             GesBinaryOperator.EndsWith => "ends with",
-            GesBinaryOperator.Intersect => "intersect",
-            GesBinaryOperator.Combine => "combine",
-            GesBinaryOperator.Merge => "merge",
-            GesBinaryOperator.Except => "except",
+            GesBinaryOperator.Union => "|",
+            GesBinaryOperator.Intersect => "&",
             GesBinaryOperator.Zip => "zip",
             _ => op.ToString()
         };

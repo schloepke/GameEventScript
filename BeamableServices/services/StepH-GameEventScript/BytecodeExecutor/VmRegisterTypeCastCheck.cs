@@ -57,7 +57,7 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCast(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type, ref GameEventScriptTextTable textTable)
+    internal static void VmCast(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type)
     {
         switch (type)
         {
@@ -69,7 +69,7 @@ internal static class VmRegisterTypeCastCheck
                 return;
             case Integer:
             {
-                var numberKind = xSlot.ReadNumeric(ref textTable, out var number);
+                var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
                 switch (numberKind)
                 {
                     case NumericFinite when number is >= long.MinValue and <= long.MaxValue:
@@ -87,7 +87,7 @@ internal static class VmRegisterTypeCastCheck
             }
             case Float:
             {
-                var numberKind = xSlot.ReadNumeric(ref textTable, out var number);
+                var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
                 switch (numberKind)
                 {
                     case NumericFinite:
@@ -112,7 +112,7 @@ internal static class VmRegisterTypeCastCheck
             }
             case Percentage:
             {
-                var numberKind = xSlot.ReadNumeric(ref textTable, out var number);
+                var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
                 switch (numberKind)
                 {
                     case NumericFinite:
@@ -178,9 +178,9 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCastNumeric(ref this VmValue dst, ref VmValue xSlot, ref GameEventScriptTextTable textTable)
+    internal static void VmCastNumeric(ref this VmValue dst, ref VmValue xSlot)
     {
-        var numberKind = xSlot.ReadNumeric(ref textTable, out var number);
+        var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
         switch (numberKind)
         {
             case NumericFinite:
@@ -205,9 +205,9 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCastCustom(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer, ref GameEventScriptTextTable textTable)
+    internal static void VmCastCustom(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer)
     {
-        if (IsCustomType(ref xSlot, textTable.Resolve(typeTextPointer), ref textTable))
+        if (IsCustomType(ref xSlot, dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer), ref dst.OwningState.Binary.TextConstantTable))
         {
             dst = xSlot;
             return;
@@ -228,30 +228,30 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCheckNumeric(ref this VmValue dst, ref VmValue xSlot, ref GameEventScriptTextTable textTable)
+    internal static void VmCheckNumeric(ref this VmValue dst, ref VmValue xSlot)
     {
-        var numberKind = ReadNumeric(ref xSlot, ref textTable, out _);
+        var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out _);
         dst.SetBoolean(numberKind != NumericNone && numberKind != NumericInvalid);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCheckInteger(ref this VmValue dst, ref VmValue xSlot, ref GameEventScriptTextTable textTable)
+    internal static void VmCheckInteger(ref this VmValue dst, ref VmValue xSlot)
     {
-        var numberKind = ReadNumeric(ref xSlot, ref textTable, out var number);
+        var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out var number);
         dst.SetBoolean(numberKind == NumericFinite && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCheckFractional(ref this VmValue dst, ref VmValue xSlot, ref GameEventScriptTextTable textTable)
+    internal static void VmCheckFractional(ref this VmValue dst, ref VmValue xSlot)
     {
-        var numberKind = ReadNumeric(ref xSlot, ref textTable, out var number);
+        var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out var number);
         dst.SetBoolean(numberKind == NumericFinite && number != Math.Truncate(number));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCheckCustomType(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer, ref GameEventScriptTextTable textTable)
+    internal static void VmCheckCustomType(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer)
     {
-        dst.SetBoolean(IsCustomType(ref xSlot, textTable.Resolve(typeTextPointer), ref textTable));
+        dst.SetBoolean(IsCustomType(ref xSlot, dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer), ref dst.OwningState.Binary.TextConstantTable));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

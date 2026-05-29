@@ -99,35 +99,35 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
 
                 case Cast:
-                    _vmState.Register(instruction.DestinationSlot).VmCast(ref _vmState.Register(instruction.XSlot), instruction.TypeKind, ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCast(ref _vmState.Register(instruction.XSlot), instruction.TypeKind);
                     break;
                 case CastCustom:
-                    _vmState.Register(instruction.DestinationSlot).VmCastCustom(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCastCustom(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
                     break;
                 case CastUnit:
                     _vmState.Register(instruction.DestinationSlot).VmCastUnit(ref _vmState.Register(instruction.XSlot), instruction.Unit);
                     break;
                 case CastNumeric:
-                    _vmState.Register(instruction.DestinationSlot).VmCastNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCastNumeric(ref _vmState.Register(instruction.XSlot));
                     break;
 
                 case CheckType:
                     _vmState.Register(instruction.DestinationSlot).VmCheckType(ref _vmState.Register(instruction.XSlot), instruction.TypeKind);
                     break;
                 case CheckCustomType:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckCustomType(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCheckCustomType(ref _vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
                     break;
                 case CheckUnit:
                     _vmState.Register(instruction.DestinationSlot).VmCheckUnit(ref _vmState.Register(instruction.XSlot), instruction.Unit);
                     break;
                 case CheckNumeric:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckNumeric(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCheckNumeric(ref _vmState.Register(instruction.XSlot));
                     break;
                 case CheckInteger:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckInteger(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCheckInteger(ref _vmState.Register(instruction.XSlot));
                     break;
                 case CheckFractional:
-                    _vmState.Register(instruction.DestinationSlot).VmCheckFractional(ref _vmState.Register(instruction.XSlot), ref binary.TextConstantTable);
+                    _vmState.Register(instruction.DestinationSlot).VmCheckFractional(ref _vmState.Register(instruction.XSlot));
                     break;
 
                 case MoveSlot:

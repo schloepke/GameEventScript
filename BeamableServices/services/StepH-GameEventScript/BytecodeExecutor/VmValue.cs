@@ -389,6 +389,9 @@ internal struct VmValue
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal string ReadTextOrTag() => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ReadOnlySpan<ushort> ResolveIntegerAsPointerList() => OwningState.Binary.Uint16ConstantTable.Resolve((ushort)IntegerValue);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool EqualsValue(ref VmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
@@ -400,6 +403,7 @@ internal struct VmValue
         _ => ReferenceEquals(ObjectValue, other.ObjectValue)
     };
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool TryGetInteger(out long value)
     {
         if (Kind != Integer)
@@ -412,6 +416,7 @@ internal struct VmValue
         return true;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool TryCreateStream(out IVmStream stream)
     {
         switch (Kind)

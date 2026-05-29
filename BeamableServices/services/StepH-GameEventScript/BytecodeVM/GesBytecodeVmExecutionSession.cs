@@ -4927,6 +4927,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateAddBinary(GameEventScriptValue left, GameEventScriptValue right)
     {
+        if ((left.IsText() || right.IsText()) &&
+            GesValueOperations.TryCombineWithPlus(left, right, out var textCombined))
+        {
+            return textCombined;
+        }
+
         if (GesValueOperations.TryEvaluatePointBinary(left, "+", right, out var point))
         {
             return point;
@@ -5938,6 +5944,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             ? numericUnit
             : (GameEventScriptBytecodeInstructionUnit?)null;
 
+        if (value.IsText())
+        {
+            return double.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedText)
+                ? ToNumberValue(parsedText, unit)
+                : GameEventScriptNothingValue.Instance;
+        }
+
         if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number))
         {
             return GameEventScriptNothingValue.Instance;
@@ -5966,6 +5979,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return GesFloat(number.Value, unit);
+    }
+
+    private static GameEventScriptValue ToNumberValue(double number, GameEventScriptBytecodeInstructionUnit? unit)
+    {
+        if (number >= long.MinValue &&
+            number <= long.MaxValue &&
+            number == Math.Truncate(number))
+        {
+            return GesInteger((long)number, unit);
+        }
+
+        return GesFloat(number, unit);
     }
 
     private static GameEventScriptValue ConvertToFloat(GameEventScriptValue value)
@@ -7204,6 +7229,14 @@ internal readonly record struct BytecodeVmValue(
             return nothingResult;
         }
 
+        var leftValue = left.ToGameEventScriptValue();
+        var rightValue = right.ToGameEventScriptValue();
+        if ((leftValue.IsText() || rightValue.IsText()) &&
+            GesValueOperations.TryCombineWithPlus(leftValue, rightValue, out var textCombined))
+        {
+            return FromGameEventScriptValue(textCombined);
+        }
+
         if (TryEvaluateIntegerBinary(left, "+", right, out var integerResult))
         {
             return integerResult;
@@ -7229,8 +7262,6 @@ internal readonly record struct BytecodeVmValue(
             return AddPercentage(left, right);
         }
 
-        var leftValue = left.ToGameEventScriptValue();
-        var rightValue = right.ToGameEventScriptValue();
         if (GesValueOperations.TryCombineWithPlus(leftValue, rightValue, out var combined))
         {
             return FromGameEventScriptValue(combined);

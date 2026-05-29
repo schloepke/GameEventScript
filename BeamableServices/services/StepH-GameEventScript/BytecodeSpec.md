@@ -569,10 +569,13 @@ Units are not declared type kinds: unit casts and checks use
 `CastUnit`/`CheckUnit` with the target unit in `UnitAndFlags`.
 `:number` lowers to `CastNumeric`; numeric casts keep integral values as
 integers and use floats only when the value does not fit the integer
-representation. `is numeric`, `is integer`, and `is fractional` are source-level
-check constructs that lower to `CheckNumeric`, `CheckInteger`, and
-`CheckFractional`. `numeric`, `integer`, and `fractional` are not declared type
-kinds or `:` tags.
+representation. `CastNumeric` is the only numeric path that parses text; invalid
+text writes `nothing`. `is numeric`, `is integer`, and `is fractional` are
+source-level check constructs that lower to `CheckNumeric`, `CheckInteger`, and
+`CheckFractional`; they do not parse text. Dice values are numeric for these
+checks through the sum of their rolls, but `CheckType :number` still checks the
+actual runtime kind. `numeric`, `integer`, and `fractional` are not declared
+type kinds or `:` tags.
 
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
@@ -622,9 +625,9 @@ insertion. `List + any` appends exactly one value and `any + List` prepends
 exactly one value, so `List + List` nests the right list as one item. Dice values
 preserve dice semantics only for unitless positive integers:
 `Dice + Integer` and `Integer + Dice` insert one roll and write sorted dice.
-Other dice/scalar additions write `nothing`. `Add` is not text concatenation;
-text operands still enter the normal numeric coercion path before the collection
-fallback.
+Other dice/scalar additions write `nothing`. When either operand is text, `Add`
+performs text concatenation before numeric or collection handling. The non-text
+operand is formatted with the same representation used by `as :text`.
 
 `Subtract` is primarily numeric, but also removes from selected collection
 shapes. `List - scalar` removes one matching item, and `List - List` removes

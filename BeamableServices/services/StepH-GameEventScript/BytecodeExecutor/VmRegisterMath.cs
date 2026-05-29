@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -49,6 +48,12 @@ internal static class VmRegisterMath
                 break;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
                 dst.SetFloat(double.NaN);
+                break;
+            case Text when b.Kind is not Nothing:
+                dst.SetText(a.ReadTextOrTag() + b.ConvertToText());
+                break;
+            case not Nothing when b.Kind is Text:
+                dst.SetText(a.ConvertToText() + b.ReadTextOrTag());
                 break;
             case List when b.Kind is not Nothing && a.ObjectValue is VmListObject aList:
             {
@@ -274,6 +279,7 @@ internal static class VmRegisterMath
 
                     if (!shouldRemove) resultLength++;
                 }
+
                 var list = new VmListObject(dst.OwningState, resultLength);
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
@@ -291,6 +297,7 @@ internal static class VmRegisterMath
 
                     if (!shouldRemove) list.Items[index++].SetInteger(aDice[i]);
                 }
+
                 dst.SetList(list);
                 return;
             }
@@ -379,6 +386,9 @@ internal static class VmRegisterMath
             case Percentage:
                 if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
                 else dst.SetNothing();
+                break;
+            case Dice:
+                dst.SetNothing();
                 break;
             case Nothing:
                 dst.SetNothing();
@@ -1157,7 +1167,6 @@ internal static class VmRegisterMath
                 break;
             case Text:
                 leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
-                leftIsNumeric = double.TryParse(leftText, NumberStyles.Number, CultureInfo.InvariantCulture, out leftNumber);
                 leftRank = 2;
                 break;
             case Tag:
@@ -1216,7 +1225,6 @@ internal static class VmRegisterMath
                 break;
             case Text:
                 rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
-                rightIsNumeric = double.TryParse(rightText, NumberStyles.Number, CultureInfo.InvariantCulture, out rightNumber);
                 rightRank = 2;
                 break;
             case Tag:
@@ -1378,7 +1386,6 @@ internal static class VmRegisterMath
                 break;
             case Text:
                 leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
-                leftIsNumeric = double.TryParse(leftText, NumberStyles.Number, CultureInfo.InvariantCulture, out leftNumber);
                 leftRank = 2;
                 break;
             case Tag:
@@ -1437,7 +1444,6 @@ internal static class VmRegisterMath
                 break;
             case Text:
                 rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
-                rightIsNumeric = double.TryParse(rightText, NumberStyles.Number, CultureInfo.InvariantCulture, out rightNumber);
                 rightRank = 2;
                 break;
             case Tag:
@@ -1889,4 +1895,5 @@ internal static class VmRegisterMath
                 return a.Unit == b.Unit;
         }
     }
+
 }

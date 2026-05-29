@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
@@ -851,6 +852,12 @@ internal static class GesOptimizer
                 value = EvaluateNumericComparison(left, right, comparison => comparison >= 0);
                 return true;
             case GesBinaryOperator.Add:
+                if ((left.IsText() || right.IsText()) &&
+                    GesValueOperations.TryCombineWithPlus(left, right, out value))
+                {
+                    return true;
+                }
+
                 if (GesValueOperations.TryEvaluatePointBinary(left, "+", right, out value))
                 {
                     return true;
@@ -872,6 +879,11 @@ internal static class GesOptimizer
                 }
 
                 if (GesValueOperations.TryEvaluateUnitBinary(left, "+", right, out value))
+                {
+                    return true;
+                }
+
+                if (GesValueOperations.TryCombineWithPlus(left, right, out value))
                 {
                     return true;
                 }
@@ -1283,6 +1295,13 @@ internal static class GesOptimizer
             ? numericUnit
             : (GameEventScriptBytecodeInstructionUnit?)null;
 
+        if (value.IsText())
+        {
+            return double.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedText)
+                ? ToNumberValue(parsedText, unit)
+                : GameEventScriptNothingValue.Instance;
+        }
+
         if (!GesValueOperations.TryCoerceNumericForOperation(value, out var number))
         {
             return GameEventScriptNothingValue.Instance;
@@ -1311,6 +1330,18 @@ internal static class GesOptimizer
         }
 
         return GameEventScriptValueFactory.GesFloat(number.Value, unit);
+    }
+
+    private static GameEventScriptValue ToNumberValue(double number, GameEventScriptBytecodeInstructionUnit? unit)
+    {
+        if (number >= long.MinValue &&
+            number <= long.MaxValue &&
+            number == Math.Truncate(number))
+        {
+            return GameEventScriptValueFactory.GesInteger((long)number, unit);
+        }
+
+        return GameEventScriptValueFactory.GesFloat(number, unit);
     }
 
     private static GameEventScriptValue ConvertToPercentage(GameEventScriptValue value)
@@ -1486,13 +1517,16 @@ internal static class GesOptimizer
                 number = value.AsNumber();
                 isFinite = true;
                 return true;
-            case GameEventScriptValueKind.Text:
             case GameEventScriptValueKind.Tag:
                 if (double.TryParse(value.AsText(), out var parsed))
                 {
                     number = parsed;
                     isFinite = true;
                 }
+                return true;
+            case GameEventScriptValueKind.Dice:
+                number = value.AsDice().Sum();
+                isFinite = true;
                 return true;
             case GameEventScriptValueKind.Boolean:
                 number = value.AsBoolean() ? 1d : 0d;
@@ -1564,16 +1598,10 @@ internal static class GesOptimizer
             return true;
         }
 
-        if (value.IsText())
+        if (value.Kind == GameEventScriptValueKind.Dice)
         {
-            if (double.TryParse(value.AsText(), out var parsed))
-            {
-                number = NumericValue.Finite(parsed);
-                return true;
-            }
-
-            number = default;
-            return false;
+            number = NumericValue.Finite(value.AsDice().Sum());
+            return true;
         }
 
         if (value.Kind == GameEventScriptValueKind.Boolean)

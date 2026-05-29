@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
@@ -194,7 +195,7 @@ internal struct VmValue
     internal void SetTagPointer(ushort pointer)
     {
         Kind = Tag;
-        Flags = IsNumericTag(OwningState.Binary.TextConstantTable.Resolve(pointer)) ? StoragePointerFlag | IsNumericFlag | HasValueFlag : StoragePointerFlag | HasValueFlag ;
+        Flags = IsNumericTag(OwningState.Binary.TextConstantTable.Resolve(pointer)) ? StoragePointerFlag | IsNumericFlag | HasValueFlag : StoragePointerFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -203,7 +204,7 @@ internal struct VmValue
     internal void SetTag(string tag)
     {
         Kind = Tag;
-        Flags = IsNumericTag(tag) ? StorageObjectFlag | IsNumericFlag | HasValueFlag : StorageObjectFlag | HasValueFlag ;
+        Flags = IsNumericTag(tag) ? StorageObjectFlag | IsNumericFlag | HasValueFlag : StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = tag;
@@ -369,14 +370,12 @@ internal struct VmValue
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
-        Text when IsStoragePointer => double.TryParse(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue), NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : double.NaN,
-        Text when ObjectValue is string text => double.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : double.NaN,
         Tag when IsStoragePointer => ResolveNumericTagValue(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue)),
         Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
-        Dice when ObjectValue is int[] dices => SumDices(dices), 
+        Dice when ObjectValue is int[] dices => SumDices(dices),
         _ => double.NaN,
     };
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long SumDices(int[] values)
     {
@@ -394,7 +393,7 @@ internal struct VmValue
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal string ReadTextOrTag() => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ReadOnlySpan<ushort> ResolveIntegerAsPointerList() => OwningState.Binary.Uint16ConstantTable.Resolve((ushort)IntegerValue);
 
@@ -456,4 +455,107 @@ internal struct VmValue
                 return false;
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal string ConvertToText()
+    {
+        return Kind switch
+        {
+            Nothing => string.Empty,
+            Integer => FormatNumber(IntegerValue, Unit),
+            Float => FormatNumber(FloatValue, Unit),
+            Percentage => $"{(FloatValue * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%",
+            GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
+            Text => ReadTextOrTag(),
+            Tag => ":" + ReadTextOrTag(),
+            Vector when ObjectValue is VmFloatTriplet vector => FormatTriplet("vector", vector, Unit),
+            Point when ObjectValue is VmFloatTriplet point => FormatTriplet("point", point, Unit),
+            Dice when ObjectValue is int[] dice => FormatDice(dice),
+            List when ObjectValue is VmListObject list => FormatList(list),
+            Map when ObjectValue is VmMapObject map => FormatMap(map),
+            GameEventScriptBytecodeTypeKind.Range when ObjectValue is VmRange range => FormatRange(range.from, range.to, range.step),
+            GameEventScriptBytecodeTypeKind.Range when ObjectValue is VmFloatRange range => FormatRange(range.from, range.to, range.step),
+            Series when ObjectValue is GameEventScriptSeriesValue series => $"series[{series.SignatureId} offset {series.Offset}]",
+            Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
+            Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
+            _ => Kind.ToString()
+        };
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit)
+        => unit.IsNumericUnit()
+            ? $"{value.ToString(CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
+            : value.ToString(CultureInfo.InvariantCulture);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit)
+    {
+        var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
+        return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatTriplet(string typeName, VmFloatTriplet triplet, GameEventScriptBytecodeInstructionUnit unit)
+        => $"{typeName}[x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)}]";
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatDice(int[] dice)
+    {
+        if (dice.Length == 0) return "dice[]";
+
+        var builder = new StringBuilder("dice[");
+        for (var i = 0; i < dice.Length; i++)
+        {
+            if (i > 0) builder.Append(", ");
+            builder.Append(dice[i].ToString(CultureInfo.InvariantCulture));
+        }
+
+        builder.Append(']');
+        return builder.ToString();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatList(VmListObject list)
+    {
+        var builder = new StringBuilder("[");
+        for (var i = 0; i < list.Length; i++)
+        {
+            if (i > 0) builder.Append(", ");
+            builder.Append(list.Items[i].ConvertToText());
+        }
+
+        builder.Append(']');
+        return builder.ToString();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatMap(VmMapObject map)
+    {
+        var builder = new StringBuilder("map[");
+        var first = true;
+        foreach (var pair in map.Entries)
+        {
+            if (!first) builder.Append(", ");
+            first = false;
+            builder.Append(pair.Key);
+            builder.Append(": ");
+            builder.Append(pair.Value.ConvertToText());
+        }
+
+        builder.Append(']');
+        return builder.ToString();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatRange(long from, long to, long step)
+        => $"range[{from.ToString(CultureInfo.InvariantCulture)} to {to.ToString(CultureInfo.InvariantCulture)} step {step.ToString(CultureInfo.InvariantCulture)}]";
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatRange(double from, double to, double step)
+        => $"range[{FormatRangeComponent(from)} to {FormatRangeComponent(to)} step {FormatRangeComponent(step)}]";
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static string FormatRangeComponent(double value)
+        => value.ToString("0.############################", CultureInfo.InvariantCulture);
 }

@@ -105,6 +105,12 @@ internal static class GesValueOperations
             return true;
         }
 
+        if (left.IsText() || right.IsText())
+        {
+            value = GameEventScriptValueFactory.GesText(ToText(left) + ToText(right));
+            return true;
+        }
+
         if (left.Kind == GameEventScriptValueKind.List)
         {
             value = GameEventScriptValueFactory.GesList(left.AsList().Append(right));
@@ -578,18 +584,6 @@ internal static class GesValueOperations
         {
             number = NumericValue.Finite(value.AsDice().Sum());
             return true;
-        }
-
-        if (value.IsText())
-        {
-            if (double.TryParse(value.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
-            {
-                number = NumericValue.Finite(parsed);
-                return true;
-            }
-
-            number = default;
-            return false;
         }
 
         if (value.Kind == GameEventScriptValueKind.Boolean)

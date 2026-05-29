@@ -180,6 +180,20 @@ internal static class VmRegisterTypeCastCheck
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCastNumeric(ref this VmValue dst, ref VmValue xSlot)
     {
+        if (xSlot.Kind is Text)
+        {
+            if (double.TryParse(xSlot.ReadTextOrTag(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+            {
+                dst.SetFloat(parsed);
+            }
+            else
+            {
+                dst.SetNothing();
+            }
+
+            return;
+        }
+
         var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
         switch (numberKind)
         {
@@ -233,6 +247,12 @@ internal static class VmRegisterTypeCastCheck
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckInteger(ref this VmValue dst, ref VmValue xSlot)
     {
+        if (!xSlot.IsNumeric)
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
         var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out var number);
         dst.SetBoolean(numberKind == NumericFinite && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
     }
@@ -240,6 +260,12 @@ internal static class VmRegisterTypeCastCheck
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckFractional(ref this VmValue dst, ref VmValue xSlot)
     {
+        if (!xSlot.IsNumeric)
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
         var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out var number);
         dst.SetBoolean(numberKind == NumericFinite && number != Math.Truncate(number));
     }
@@ -335,30 +361,19 @@ internal static class VmRegisterTypeCastCheck
             case GameEventScriptBytecodeTypeKind.Boolean:
                 number = value.IsTrue ? 1d : 0d;
                 return NumericFinite;
-            case Text when value.IsStoragePointer:
-                return ReadNumericText(textTable.Resolve((ushort)value.IntegerValue), out number);
-            case Text when value.ObjectValue is string text:
-                return ReadNumericText(text, out number);
             case Tag when value.IsStoragePointer:
                 return ReadNumericTag(textTable.Resolve((ushort)value.IntegerValue), out number);
             case Tag when value.ObjectValue is string tag:
                 return ReadNumericTag(tag, out number);
+            case Dice when value.ObjectValue is int[] dices:
+                long sum = 0;
+                foreach (var dice in dices) sum += dice;
+                number = sum;
+                return NumericFinite;
             default:
                 number = 0d;
                 return NumericNone;
         }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static NumericKind ReadNumericText(string text, out double number)
-    {
-        if (double.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out number))
-        {
-            return NumericFinite;
-        }
-
-        number = 0d;
-        return NumericInvalid;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

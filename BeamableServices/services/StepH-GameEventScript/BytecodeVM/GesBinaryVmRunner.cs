@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
@@ -401,6 +402,20 @@ internal sealed class GesBinaryVmRunState
             ? numericUnit
             : (GameEventScriptBytecodeInstructionUnit?)null;
 
+        if (boxed.IsText())
+        {
+            if (!double.TryParse(boxed.AsText(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsedText))
+            {
+                return GesBinaryVmValue.Nothing;
+            }
+
+            return parsedText >= long.MinValue &&
+                   parsedText <= long.MaxValue &&
+                   parsedText == Math.Truncate(parsedText)
+                ? GesBinaryVmValue.Integer((long)parsedText, unit)
+                : GesBinaryVmValue.Float(parsedText, unit);
+        }
+
         if (!GesValueOperations.TryCoerceNumericForOperation(boxed, out var number))
         {
             return GesBinaryVmValue.Nothing;
@@ -435,11 +450,21 @@ internal sealed class GesBinaryVmRunState
             return true;
         }
 
+        if (value.Kind is GesBinaryVmValueKind.Boolean)
+        {
+            return false;
+        }
+
         return GesValueOperations.TryCoerceNumericForOperation(value.ToGameEventScriptValue(), out _);
     }
 
     private static bool IsValueInteger(GesBinaryVmValue value)
     {
+        if (value.Kind is GesBinaryVmValueKind.Boolean)
+        {
+            return false;
+        }
+
         if (!GesValueOperations.TryCoerceNumericForOperation(value.ToGameEventScriptValue(), out var number))
         {
             return false;
@@ -453,6 +478,11 @@ internal sealed class GesBinaryVmRunState
 
     private static bool IsValueFractional(GesBinaryVmValue value)
     {
+        if (value.Kind is GesBinaryVmValueKind.Boolean)
+        {
+            return false;
+        }
+
         if (!GesValueOperations.TryCoerceNumericForOperation(value.ToGameEventScriptValue(), out var number))
         {
             return false;

@@ -439,6 +439,17 @@ value is fractional
 `:integer` and `:float` are not built-in type tags. In expression positions they
 are ordinary tags.
 
+Text values are not numeric for implicit mathematics or numeric checks:
+`'100' is numeric` is false, and `'100' + 200` is text concatenation. An
+explicit `as :number` cast parses text with invariant numeric syntax; invalid
+text casts to `nothing`.
+
+Dice have a numeric view only where an explicit numeric value is requested:
+`dice is numeric` and `dice is integer` are true, and `dice as :number` is the
+sum of the rolls. Dice-specific collection operations keep priority, so
+`dice + integer` adds a roll and `dice - integer` removes a roll instead of
+using the dice sum.
+
 `:abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their
 unit. Finite numeric results that are exactly integral are represented as
@@ -780,11 +791,11 @@ Other operand combinations produce `nothing`.
 `listOfKeys` means a list containing only text or tag values. A key list
 containing any other value produces `nothing`.
 
-`+` is not string concatenation. Text operands are first interpreted by numeric
-coercion, so `'100' + '200'` is numeric addition while non-numeric text addition
-is an invalid numeric operation. `:combine`, `:merge`, `:except`, and
-`:intersect` are not reserved collection operators; in expression position they
-are ordinary tags.
+`+` concatenates text when either operand is text. The non-text operand is
+formatted with the same text representation used by `as :text`, so
+`'100' + '200'` is `'100200'` and `'hp: ' + 10` is `'hp: 10'`. `:combine`,
+`:merge`, `:except`, and `:intersect` are not reserved collection operators; in
+expression position they are ordinary tags.
 
 ## Randomness, Dice, and Series
 

@@ -62,8 +62,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "-10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -136,8 +135,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -207,8 +205,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "2.33214389523559"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -306,8 +303,7 @@
                   "value": "20"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -317,32 +313,29 @@
                   "value": "11"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
                   "type": ":float",
                   "value": "Infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":float",
                   "value": "13.1415926535898"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10hello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "20.3"
+                  "type": ":text",
+                  "value": "1010.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -377,8 +370,7 @@
                   "value": "20.3"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -388,32 +380,29 @@
                   "value": "11.33"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
                   "type": ":float",
                   "value": "Infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":float",
                   "value": "13.4415926535898"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10.3hello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "20.6"
+                  "type": ":text",
+                  "value": "10.310.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -436,20 +425,16 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -459,32 +444,27 @@
                   "value": "0.2"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10%hello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10%10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -507,16 +487,13 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
                   "type": ":integer",
@@ -532,32 +509,27 @@
                   "unit": ":meter"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10mhello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10m10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -592,8 +564,7 @@
                   "value": "11"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -603,32 +574,29 @@
                   "value": "1.1"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
                   "type": ":float",
                   "value": "Infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":float",
                   "value": "4.14159265358979"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "Truehello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "11.3"
+                  "type": ":text",
+                  "value": "True10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -651,55 +619,55 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "11.3"
+                  "type": ":text",
+                  "value": "10.3True"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "20.6"
+                  "type": ":text",
+                  "value": "10.310.3"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "20.3"
+                  "type": ":text",
+                  "value": "10.310"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10.310m"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "11.33"
+                  "type": ":text",
+                  "value": "10.310%"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10.3point[x: 1, y: 2, z: 3]"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":text",
+                  "value": "10.3:infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10.3:nan"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "13.4415926535898"
+                  "type": ":text",
+                  "value": "10.3:pi"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10.3hello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "20.6"
+                  "type": ":text",
+                  "value": "10.310.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "10.3vector[x: 1, y: 2, z: 3]"
                 }
               }
             }
@@ -722,55 +690,55 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "helloTrue"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello10.3"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello10"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello10m"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello10%"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hellopoint[x: 1, y: 2, z: 3]"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello:infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello:nan"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello:pi"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hellohello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hello10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "hellovector[x: 1, y: 2, z: 3]"
                 }
               }
             }
@@ -805,8 +773,7 @@
                   "value": "13.1415926535898"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -816,32 +783,29 @@
                   "value": "3.45575191894877"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
                   "type": ":float",
                   "value": "Infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":float",
                   "value": "6.28318530717959"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": ":pihello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "13.4415926535898"
+                  "type": ":text",
+                  "value": ":pi10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -864,55 +828,45 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": ":nanhello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": ":nan10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -947,8 +901,7 @@
                   "value": "Infinity"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -958,32 +911,29 @@
                   "value": "Infinity"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
                   "type": ":float",
                   "value": "Infinity"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
                   "type": ":float",
                   "value": "Infinity"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": ":infinityhello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":text",
+                  "value": ":infinity10.3"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -1006,51 +956,42 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "vector[x: 1, y: 2, z: 3]hello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "vector[x: 1, y: 2, z: 3]10.3"
                 },
                 "vector": {
                   "type": ":vector",
@@ -1079,51 +1020,42 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "point[x: 1, y: 2, z: 3]hello"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":text",
+                  "value": "point[x: 1, y: 2, z: 3]10.3"
                 },
                 "vector": {
                   "type": ":point",
@@ -1151,6 +1083,25 @@
             {
               "name": "Done",
               "args": {
+                "diceAddFloat": {
+                  "type": ":nothing"
+                },
+                "diceAddInteger": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    2,
+                    1
+                  ]
+                },
+                "integerAddDice": {
+                  "type": ":dice",
+                  "rolls": [
+                    4,
+                    3,
+                    1
+                  ]
+                },
                 "listAppendInteger": {
                   "type": ":list",
                   "items": [
@@ -1169,27 +1120,6 @@
                     {
                       "type": ":integer",
                       "value": "4"
-                    }
-                  ]
-                },
-                "listPrependInteger": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "0"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
                     }
                   ]
                 },
@@ -1223,27 +1153,6 @@
                     }
                   ]
                 },
-                "listAppendText": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "end"
-                    }
-                  ]
-                },
                 "listAppendMap": {
                   "type": ":list",
                   "items": [
@@ -1274,7 +1183,35 @@
                     }
                   ]
                 },
+                "listAppendText": {
+                  "type": ":text",
+                  "value": "[1, 2, 3]end"
+                },
+                "listPrependInteger": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "0"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
                 "mapMerge": {
+                  "type": ":nothing"
+                },
+                "mapPlusInteger": {
                   "type": ":nothing"
                 },
                 "mapPlusList": {
@@ -1306,28 +1243,6 @@
                       "value": "3"
                     }
                   ]
-                },
-                "mapPlusInteger": {
-                  "type": ":nothing"
-                },
-                "diceAddInteger": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    2,
-                    1
-                  ]
-                },
-                "integerAddDice": {
-                  "type": ":dice",
-                  "rolls": [
-                    4,
-                    3,
-                    1
-                  ]
-                },
-                "diceAddFloat": {
-                  "type": ":nothing"
                 }
               }
             }
@@ -1603,8 +1518,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "-0.300000000000001"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -1674,8 +1588,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -1745,8 +1658,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -1818,8 +1730,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -1889,8 +1800,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "-9.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -1917,55 +1827,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "9.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "0.300000000000001"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "9.27"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "-Infinity"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "7.15840734641021"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -2031,8 +1929,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -2102,8 +1999,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "-7.15840734641021"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -2173,8 +2069,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -2244,8 +2139,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -2315,8 +2209,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -2390,8 +2283,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":point",
@@ -2523,8 +2415,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "103"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -2597,8 +2488,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "106.09"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -2671,8 +2561,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "1.03"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -2749,9 +2638,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "103",
-                  "unit": ":meter"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -2825,8 +2712,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -2855,58 +2741,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "106.09"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "103"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":integer",
-                  "value": "103",
-                  "unit": ":meter"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "1.03"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "32.3584043319749"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "106.09"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":vector",
-                  "x": "10.3",
-                  "y": "20.6",
-                  "z": "30.9"
+                  "type": ":nothing"
                 }
               }
             }
@@ -2972,8 +2843,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3044,8 +2914,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "32.3584043319749"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":vector",
@@ -3117,8 +2986,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3188,8 +3056,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3272,10 +3139,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":vector",
-                  "x": "10.3",
-                  "y": "20.6",
-                  "z": "30.9"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3345,8 +3209,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3475,8 +3338,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.970873786407767"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3546,8 +3408,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3617,8 +3478,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":percentage",
-                  "value": "0.00970873786407767"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3694,9 +3554,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.970873786407767",
-                  "unit": ":meter"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3766,8 +3624,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.0970873786407767"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3794,55 +3651,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "1.03"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "103"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.27859182769304"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -3908,8 +3753,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -3979,8 +3823,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.305008995494155"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4050,8 +3893,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4121,8 +3963,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4202,10 +4043,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":vector",
-                  "x": "0.0970873786407767",
-                  "y": "0.194174757281553",
-                  "z": "0.29126213592233"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4275,8 +4113,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4405,8 +4242,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4476,8 +4312,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4547,8 +4382,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4624,9 +4458,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0",
-                  "unit": ":meter"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4696,8 +4528,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4724,55 +4555,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "103"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":integer",
-                  "value": "3"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -4838,8 +4657,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4909,8 +4727,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -4980,8 +4797,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5051,8 +4867,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5122,8 +4937,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5193,8 +5007,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5323,8 +5136,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5394,8 +5206,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5465,8 +5276,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5537,8 +5347,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5608,8 +5417,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5636,55 +5444,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "0.300000000000001"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "0.300000000000001"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "0.0000000000000001387778780781"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "0.875222039230621"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -5750,8 +5546,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5821,8 +5616,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5892,8 +5686,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -5963,8 +5756,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6034,8 +5826,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6105,8 +5896,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6235,8 +6025,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6306,8 +6095,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6377,8 +6165,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6449,8 +6236,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6520,8 +6306,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6548,55 +6333,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "0.300000000000001"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "0.300000000000001"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "0.0000000000000001387778780781"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "0.875222039230621"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "0"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -6662,8 +6435,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6733,8 +6505,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6804,8 +6575,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6875,8 +6645,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -6946,8 +6715,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7017,8 +6785,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7147,8 +6914,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "19952623149.6888"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7218,8 +6984,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "27053497214.5545"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7289,8 +7054,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.0000000000501187233627272"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7361,8 +7125,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7432,8 +7195,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7460,55 +7222,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "27053497214.5545"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "13439163793.4412"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "1.26265214970457"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "1520.27440687653"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "27053497214.5545"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -7574,8 +7324,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7645,8 +7394,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "132021.203896669"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7716,8 +7464,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7787,8 +7534,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7858,8 +7604,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -7929,8 +7674,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -8267,7 +8011,9 @@
                   "unit": ":meter"
                 },
                 "textNumber": {
-                  "type": ":nothing"
+                  "type": ":integer",
+                  "value": "10",
+                  "unit": ":meter"
                 },
                 "vector": {
                   "type": ":integer",
@@ -8339,8 +8085,8 @@
                   "value": "hello"
                 },
                 "textNumber": {
-                  "type": ":boolean",
-                  "value": true
+                  "type": ":text",
+                  "value": "10.3"
                 },
                 "vector": {
                   "type": ":vector",
@@ -8369,11 +8115,11 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":boolean",
-                  "value": true
+                  "type": ":text",
+                  "value": "10.3"
                 },
                 "float": {
-                  "type": ":text",
+                  "type": ":float",
                   "value": "10.3"
                 },
                 "integer": {
@@ -8381,7 +8127,9 @@
                   "value": "10"
                 },
                 "meter": {
-                  "type": ":nothing"
+                  "type": ":integer",
+                  "value": "10",
+                  "unit": ":meter"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -8395,8 +8143,8 @@
                   "value": "10.3"
                 },
                 "tagInfinity": {
-                  "type": ":text",
-                  "value": "10.3"
+                  "type": ":tag",
+                  "value": "infinity"
                 },
                 "tagNan": {
                   "type": ":tag",
@@ -8695,8 +8443,8 @@
                   "value": "infinity"
                 },
                 "textNumber": {
-                  "type": ":text",
-                  "value": "10.3"
+                  "type": ":tag",
+                  "value": "infinity"
                 },
                 "vector": {
                   "type": ":tag",
@@ -9056,7 +8804,7 @@
                   "value": "hello"
                 },
                 "textNumber": {
-                  "type": ":float",
+                  "type": ":text",
                   "value": "10.3"
                 },
                 "vector": {
@@ -9200,7 +8948,8 @@
                   "value": "hello"
                 },
                 "textNumber": {
-                  "type": ":nothing"
+                  "type": ":text",
+                  "value": "10.3"
                 },
                 "vector": {
                   "type": ":vector",
@@ -9271,8 +9020,8 @@
                   "value": true
                 },
                 "textNumber": {
-                  "type": ":text",
-                  "value": "10.3"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "vector": {
                   "type": ":boolean",
@@ -9299,8 +9048,8 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":text",
-                  "value": "10.3"
+                  "type": ":boolean",
+                  "value": true
                 },
                 "float": {
                   "type": ":text",
@@ -9311,7 +9060,8 @@
                   "value": "10.3"
                 },
                 "meter": {
-                  "type": ":nothing"
+                  "type": ":text",
+                  "value": "10.3"
                 },
                 "nothing": {
                   "type": ":nothing"
@@ -9327,8 +9077,8 @@
                   "z": "3"
                 },
                 "tagInfinity": {
-                  "type": ":tag",
-                  "value": "infinity"
+                  "type": ":text",
+                  "value": "10.3"
                 },
                 "tagNan": {
                   "type": ":text",
@@ -9641,8 +9391,8 @@
                   "value": "hello"
                 },
                 "textNumber": {
-                  "type": ":tag",
-                  "value": "infinity"
+                  "type": ":text",
+                  "value": "10.3"
                 },
                 "vector": {
                   "type": ":vector",
@@ -10726,8 +10476,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -10797,8 +10546,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -10868,8 +10616,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -10939,8 +10686,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11010,8 +10756,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11038,55 +10783,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -11152,8 +10885,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11223,8 +10955,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11294,8 +11025,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11365,8 +11095,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11436,8 +11165,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11507,8 +11235,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11637,8 +11364,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11708,8 +11434,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11779,8 +11504,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11850,8 +11574,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11921,8 +11644,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -11949,55 +11671,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -12063,8 +11773,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12134,8 +11843,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12205,8 +11913,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12276,8 +11983,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12347,8 +12053,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12418,8 +12123,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12548,8 +12252,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12619,8 +12322,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12690,8 +12392,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "0.1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12761,8 +12462,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12832,8 +12532,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -12860,55 +12559,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "0.1"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -12974,8 +12661,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13045,8 +12731,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13116,8 +12801,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13187,8 +12871,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13258,8 +12941,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13329,8 +13011,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13459,8 +13140,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13530,8 +13210,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13601,8 +13280,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13673,8 +13351,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13744,8 +13421,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13772,55 +13448,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -13886,8 +13550,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -13957,8 +13620,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14028,8 +13690,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14099,8 +13760,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14170,8 +13830,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14241,8 +13900,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14371,8 +14029,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14442,8 +14099,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14513,8 +14169,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14584,8 +14239,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14655,8 +14309,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14683,55 +14336,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -14797,8 +14438,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14868,8 +14508,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -14939,8 +14578,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -15010,8 +14648,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -15081,8 +14718,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -15152,8 +14788,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -15239,55 +14874,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15310,55 +14933,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15381,55 +14992,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "0.1"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15452,55 +15051,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15523,55 +15110,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "1"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15594,55 +15169,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15665,55 +15228,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15736,55 +15287,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15807,55 +15346,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15878,55 +15405,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -15949,55 +15464,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -16020,55 +15523,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -16193,8 +15684,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16264,8 +15754,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16335,8 +15824,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16406,8 +15894,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16477,8 +15964,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16505,55 +15991,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -16619,8 +16093,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16690,8 +16163,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16761,8 +16233,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16832,8 +16303,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16903,8 +16373,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -16974,8 +16443,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17104,8 +16572,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17175,8 +16642,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17246,8 +16712,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17317,8 +16782,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17388,8 +16852,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17416,55 +16879,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -17530,8 +16981,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17601,8 +17051,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "3.14159265358979"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17672,8 +17121,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17743,8 +17191,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17814,8 +17261,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -17885,8 +17331,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18015,8 +17460,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18086,8 +17530,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18157,8 +17600,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18228,8 +17670,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18299,8 +17740,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18327,55 +17767,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -18441,8 +17869,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18512,8 +17939,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18583,8 +18009,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18654,8 +18079,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18725,8 +18149,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18796,8 +18219,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18926,8 +18348,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -18997,8 +18418,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19068,8 +18488,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19139,8 +18558,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19210,8 +18628,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19238,55 +18655,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -19352,8 +18757,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19423,8 +18827,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19494,8 +18897,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19565,8 +18967,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "Infinity"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19636,8 +19037,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19707,8 +19107,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19837,8 +19236,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19908,8 +19306,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -19979,8 +19376,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20050,8 +19446,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20121,8 +19516,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20149,55 +19543,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -20263,8 +19645,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20334,8 +19715,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20405,8 +19785,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20476,8 +19855,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20547,8 +19925,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20618,8 +19995,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20748,8 +20124,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20819,8 +20194,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20890,8 +20264,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -20961,8 +20334,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21032,8 +20404,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21060,55 +20431,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -21174,8 +20533,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21245,8 +20603,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21316,8 +20673,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21387,8 +20743,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21458,8 +20813,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21529,8 +20883,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21727,8 +21080,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21832,8 +21184,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -21937,8 +21288,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "4"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22043,8 +21393,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22148,8 +21497,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "4"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22210,55 +21558,43 @@
               "name": "Done",
               "args": {
                 "boolean": {
-                  "type": ":integer",
-                  "value": "4"
+                  "type": ":nothing"
                 },
                 "float": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "integer": {
-                  "type": ":integer",
-                  "value": "10"
+                  "type": ":nothing"
                 },
                 "meter": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "nothing": {
                   "type": ":nothing"
                 },
                 "percentage": {
-                  "type": ":integer",
-                  "value": "4"
+                  "type": ":nothing"
                 },
                 "point": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagInfinity": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagNan": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "tagPi": {
-                  "type": ":integer",
-                  "value": "4"
+                  "type": ":nothing"
                 },
                 "textInvalid": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "10.3"
+                  "type": ":nothing"
                 },
                 "vector": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 }
               }
             }
@@ -22358,8 +21694,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22463,8 +21798,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":integer",
-                  "value": "4"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22568,8 +21902,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22673,8 +22006,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22778,8 +22110,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",
@@ -22883,8 +22214,7 @@
                   "value": "NaN"
                 },
                 "textNumber": {
-                  "type": ":float",
-                  "value": "NaN"
+                  "type": ":nothing"
                 },
                 "vector": {
                   "type": ":float",

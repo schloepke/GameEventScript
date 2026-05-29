@@ -21,4 +21,6 @@ internal static class VmMathConstants
         _ => double.NaN
     };
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static bool IsNumericTag(string? tag) => tag is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
 }

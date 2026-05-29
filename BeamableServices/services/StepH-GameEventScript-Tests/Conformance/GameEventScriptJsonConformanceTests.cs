@@ -628,13 +628,13 @@ public abstract class GameEventScriptJsonConformanceTestBase
                 return false;
             }
 
-            if (!TryMatchMessages(step.ExpectedPublished, emitted, includeMessageDiff, out var emittedDiff))
+            if (!TryMatchMessages(testCase, stepIndex, "emitted messages", step.ExpectedPublished, emitted, includeMessageDiff, out var emittedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: emitted messages differ.{Environment.NewLine}{emittedDiff}";
                 return false;
             }
 
-            if (!TryMatchMessages(step.ExpectedOutboundPublished, published, includeMessageDiff, out var publishedDiff))
+            if (!TryMatchMessages(testCase, stepIndex, "published messages", step.ExpectedOutboundPublished, published, includeMessageDiff, out var publishedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: published messages differ.{Environment.NewLine}{publishedDiff}";
                 return false;
@@ -645,6 +645,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     }
 
     private static bool TryMatchMessages(
+        GameEventScriptConformanceCase testCase,
+        int stepIndex,
+        string label,
         IReadOnlyList<JsonElement>? expectedPublished,
         IReadOnlyList<GameEventScriptMessage> actual,
         bool includeMessageDiff,
@@ -660,11 +663,97 @@ public abstract class GameEventScriptJsonConformanceTestBase
         }
 
         diff = includeMessageDiff
-            ? $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
-              $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}"
+            ? BuildMessageDiff(testCase, stepIndex, label, expected, actual)
             : $"expectedMessages={expected.Length}, actualMessages={actual.Count}";
         return false;
     }
+
+    private static string BuildMessageDiff(
+        GameEventScriptConformanceCase testCase,
+        int stepIndex,
+        string label,
+        IReadOnlyList<GameEventScriptMessage> expected,
+        IReadOnlyList<GameEventScriptMessage> actual)
+    {
+        var builder = new StringBuilder();
+        builder.AppendLine($"Test: {testCase.Test.Name ?? testCase.ToString()}");
+        builder.AppendLine($"Step: {stepIndex + 1}");
+        builder.AppendLine($"Channel: {label}");
+
+        if (expected.Count != actual.Count)
+        {
+            AppendDiff(builder, "messageCount", expected.Count.ToString(), actual.Count.ToString());
+        }
+
+        var count = Math.Max(expected.Count, actual.Count);
+        for (var messageIndex = 0; messageIndex < count; messageIndex++)
+        {
+            if (messageIndex >= expected.Count)
+            {
+                AppendDiff(
+                    builder,
+                    $"message[{messageIndex}]",
+                    "<missing>",
+                    GameEventScriptConformanceValueCodec.ToCanonicalJson(actual[messageIndex]));
+                continue;
+            }
+
+            if (messageIndex >= actual.Count)
+            {
+                AppendDiff(
+                    builder,
+                    $"message[{messageIndex}]",
+                    GameEventScriptConformanceValueCodec.ToCanonicalJson(expected[messageIndex]),
+                    "<missing>");
+                continue;
+            }
+
+            AppendMessageDiff(builder, messageIndex, expected[messageIndex], actual[messageIndex]);
+        }
+
+        return builder.ToString();
+    }
+
+    private static void AppendMessageDiff(
+        StringBuilder builder,
+        int messageIndex,
+        GameEventScriptMessage expected,
+        GameEventScriptMessage actual)
+    {
+        if (!string.Equals(expected.Name, actual.Name, StringComparison.Ordinal))
+        {
+            AppendDiff(builder, $"message[{messageIndex}].name", Quote(expected.Name), Quote(actual.Name));
+        }
+
+        var expectedTags = JsonSerializer.Serialize(expected.Tags);
+        var actualTags = JsonSerializer.Serialize(actual.Tags);
+        if (!string.Equals(expectedTags, actualTags, StringComparison.Ordinal))
+        {
+            AppendDiff(builder, $"message[{messageIndex}].tags", expectedTags, actualTags);
+        }
+
+        foreach (var key in expected.Arguments.Keys.Concat(actual.Arguments.Keys).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
+        {
+            var hasExpected = expected.Arguments.TryGetValue(key, out var expectedValue);
+            var hasActual = actual.Arguments.TryGetValue(key, out var actualValue);
+            var expectedJson = hasExpected ? GameEventScriptConformanceValueCodec.ToCanonicalJson(expectedValue!) : "<missing>";
+            var actualJson = hasActual ? GameEventScriptConformanceValueCodec.ToCanonicalJson(actualValue!) : "<missing>";
+            if (!string.Equals(expectedJson, actualJson, StringComparison.Ordinal))
+            {
+                AppendDiff(builder, $"message[{messageIndex}].args.{key}", expectedJson, actualJson);
+            }
+        }
+    }
+
+    private static void AppendDiff(StringBuilder builder, string path, string expected, string actual)
+    {
+        builder.AppendLine(path);
+        builder.AppendLine($"  expected: {expected}");
+        builder.AppendLine($"  actual:   {actual}");
+    }
+
+    private static string Quote(string value)
+        => JsonSerializer.Serialize(value);
 
     private static bool HasDiagnosticExpectations(GameEventScriptApiStepSpec step)
         => step.ExpectedDiagnostics is { Count: > 0 } ||

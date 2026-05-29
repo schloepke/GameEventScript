@@ -194,7 +194,7 @@ internal struct VmValue
     internal void SetTagPointer(ushort pointer)
     {
         Kind = Tag;
-        Flags = StoragePointerFlag | HasValueFlag;
+        Flags = IsNumericTag(OwningState.Binary.TextConstantTable.Resolve(pointer)) ? StoragePointerFlag | IsNumericFlag | HasValueFlag : StoragePointerFlag | HasValueFlag ;
         Unit = UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -203,7 +203,7 @@ internal struct VmValue
     internal void SetTag(string tag)
     {
         Kind = Tag;
-        Flags = StorageObjectFlag | HasValueFlag;
+        Flags = IsNumericTag(tag) ? StorageObjectFlag | IsNumericFlag | HasValueFlag : StorageObjectFlag | HasValueFlag ;
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = tag;
@@ -248,7 +248,7 @@ internal struct VmValue
     internal void SetDice(int[] values)
     {
         Kind = Dice;
-        Flags = values.Length > 0 ? (HasValueFlag | StorageObjectFlag) : StorageObjectFlag;
+        Flags = values.Length > 0 ? HasValueFlag | StorageObjectFlag | IsNumericFlag : StorageObjectFlag | IsNumericFlag;
         Unit = UnitNone;
         IntegerValue = values.Length;
         Array.Sort(values);
@@ -373,18 +373,23 @@ internal struct VmValue
         Text when ObjectValue is string text => double.TryParse(text, NumberStyles.Number, CultureInfo.InvariantCulture, out var number) ? number : double.NaN,
         Tag when IsStoragePointer => ResolveNumericTagValue(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue)),
         Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
+        Dice when ObjectValue is int[] dices => SumDices(dices), 
         _ => double.NaN,
     };
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static long SumDices(int[] values)
+    {
+        long sum = 0;
+        foreach (var value in values) sum += value;
+        return sum;
+    }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double AsNumericWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
     {
         unit = Unit;
-        return Kind switch
-        {
-            Float or Percentage => FloatValue,
-            Integer => IntegerValue,
-            _ => double.NaN,
-        };
+        return AsNumeric;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

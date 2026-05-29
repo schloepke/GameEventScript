@@ -228,11 +228,7 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCheckNumeric(ref this VmValue dst, ref VmValue xSlot)
-    {
-        var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out _);
-        dst.SetBoolean(numberKind != NumericNone && numberKind != NumericInvalid);
-    }
+    internal static void VmCheckNumeric(ref this VmValue dst, ref VmValue xSlot) => dst.SetBoolean(xSlot.IsNumeric);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckInteger(ref this VmValue dst, ref VmValue xSlot)

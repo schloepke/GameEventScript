@@ -5,24 +5,11 @@ using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static StepH.GameEventScript.BytecodeExecutor.VmMathConstants;
-using static StepH.GameEventScript.BytecodeExecutor.VmRegisterTypeCastCheck.NumericKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterTypeCastCheck
 {
-
-    internal enum NumericKind : byte
-    {
-        NumericNone = 0,
-        NumericFinite = 1,
-        NumericNaN = 2,
-        NumericPositiveInfinity = 3,
-        NumericNegativeInfinity = 4,
-        NumericInvalid = 5,
-    }
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCastUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
@@ -68,66 +55,18 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetBoolean(xSlot.IsTrue);
                 return;
             case Integer:
-            {
-                var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
-                switch (numberKind)
-                {
-                    case NumericFinite when number is >= long.MinValue and <= long.MaxValue:
-                        dst.SetInteger((long)number, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
-                        break;
-                    case NumericNone:
-                        dst.SetNothing();
-                        break;
-                    default:
-                        dst.SetFloat(double.NaN);
-                        break;
-                }
-
+                var integerNumber = xSlot.AsNumeric;
+                if (double.IsFinite(integerNumber) && integerNumber is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)integerNumber, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
+                else dst.SetNothing();
                 return;
-            }
             case Float:
-            {
-                var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
-                switch (numberKind)
-                {
-                    case NumericFinite:
-                        dst.SetFloat(number, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
-                        return;
-                    case NumericNaN:
-                        dst.SetFloat(double.NaN);
-                        return;
-                    case NumericPositiveInfinity:
-                        dst.SetFloat(double.PositiveInfinity);
-                        return;
-                    case NumericNegativeInfinity:
-                        dst.SetFloat(double.NegativeInfinity);
-                        return;
-                    case NumericInvalid:
-                        dst.SetFloat(double.NaN);
-                        return;
-                    default:
-                        dst.SetNothing();
-                        return;
-                }
-            }
-            case Percentage:
-            {
-                var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
-                switch (numberKind)
-                {
-                    case NumericFinite:
-                        dst.SetPercentage(number is > 1d or < -1d ? number / 100d : number);
-                        break;
-                    case NumericNone:
-                        dst.SetNothing();
-                        break;
-                    default:
-                        dst.SetFloat(double.NaN);
-                        break;
-                }
-
+                dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
                 return;
-            }
+            case Percentage:
+                var percentageNumber = xSlot.AsNumeric;
+                if (double.IsFinite(percentageNumber)) dst.SetPercentage(percentageNumber is > 1d or < -1d ? percentageNumber / 100d : percentageNumber);
+                else dst.SetNothing();
+                return;
             case Text:
                 CastText(ref dst, ref xSlot);
                 return;
@@ -220,28 +159,7 @@ internal static class VmRegisterTypeCastCheck
             return;
         }
 
-        var numberKind = xSlot.ReadNumeric(ref dst.OwningState.Binary.TextConstantTable, out var number);
-        switch (numberKind)
-        {
-            case NumericFinite:
-                dst.SetFloat(number, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
-                break;
-            case NumericNaN:
-                dst.SetFloat(double.NaN);
-                break;
-            case NumericPositiveInfinity:
-                dst.SetFloat(double.PositiveInfinity);
-                break;
-            case NumericNegativeInfinity:
-                dst.SetFloat(double.NegativeInfinity);
-                break;
-            case NumericInvalid:
-                dst.SetFloat(double.NaN);
-                break;
-            default:
-                dst.SetNothing();
-                break;
-        }
+        dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -279,8 +197,8 @@ internal static class VmRegisterTypeCastCheck
             return;
         }
 
-        var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out var number);
-        dst.SetBoolean(numberKind == NumericFinite && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
+        var number = xSlot.AsNumeric;
+        dst.SetBoolean(double.IsFinite(number) && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -292,8 +210,8 @@ internal static class VmRegisterTypeCastCheck
             return;
         }
 
-        var numberKind = ReadNumeric(ref xSlot, ref dst.OwningState.Binary.TextConstantTable, out var number);
-        dst.SetBoolean(numberKind == NumericFinite && number != Math.Truncate(number));
+        var number = xSlot.AsNumeric;
+        dst.SetBoolean(double.IsFinite(number) && number != Math.Truncate(number));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -362,71 +280,6 @@ internal static class VmRegisterTypeCastCheck
             default:
                 dst.SetNothing();
                 return;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static NumericKind ReadNumeric(ref this VmValue value, ref GameEventScriptTextTable textTable, out double number)
-    {
-        switch (value.Kind)
-        {
-            case Integer:
-                number = value.IntegerValue;
-                return NumericFinite;
-            case Float:
-            case Percentage:
-                number = value.FloatValue;
-                return double.IsNaN(number)
-                    ? NumericNaN
-                    : double.IsPositiveInfinity(number)
-                        ? NumericPositiveInfinity
-                        : double.IsNegativeInfinity(number)
-                            ? NumericNegativeInfinity
-                            : NumericFinite;
-            case GameEventScriptBytecodeTypeKind.Boolean:
-                number = value.IsTrue ? 1d : 0d;
-                return NumericFinite;
-            case Tag when value.IsStoragePointer:
-                return ReadNumericTag(textTable.Resolve((ushort)value.IntegerValue), out number);
-            case Tag when value.ObjectValue is string tag:
-                return ReadNumericTag(tag, out number);
-            case Dice when value.ObjectValue is int[] dices:
-                long sum = 0;
-                foreach (var dice in dices) sum += dice;
-                number = sum;
-                return NumericFinite;
-            default:
-                number = 0d;
-                return NumericNone;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static NumericKind ReadNumericTag(string tag, out double number)
-    {
-        switch (tag)
-        {
-            case "infinity":
-                number = double.PositiveInfinity;
-                return NumericPositiveInfinity;
-            case "negativeinfinity":
-                number = double.NegativeInfinity;
-                return NumericNegativeInfinity;
-            case "pi":
-                number = GesPi;
-                return NumericFinite;
-            case "e":
-                number = GesEulerNumber;
-                return NumericFinite;
-            case "tau":
-                number = GesTau;
-                return NumericFinite;
-            case "phi":
-                number = GesPhi;
-                return NumericFinite;
-            default:
-                number = 0d;
-                return NumericInvalid;
         }
     }
 

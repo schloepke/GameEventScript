@@ -385,6 +385,32 @@ The source language recognizes these built-in type tags:
 - `:map`
 - `:dice`
 
+### Casts
+
+An explicit `as :type` cast reshapes a present value when the target type has a
+defined representation for it. A cast that would create a syntactically invalid
+value writes `nothing` instead of manufacturing a malformed value.
+
+Tag casts are strict. A runtime tag name is valid only when it matches the same
+shape as source tag names: the first character must be a lowercase letter and
+all following characters must be letters. Empty tags, numeric text, unit text,
+punctuation, whitespace, brackets, colons inside the value, and underscores are
+invalid tag names. `nothing as :tag` is `nothing`; numeric values and quantities
+cast to `:tag` as `nothing`; formatted vector, point, list, map, dice, and range
+text also cast to `:tag` as `nothing` because those strings are not valid tag
+names. Existing valid tags remain unchanged. Text casts to `:tag` only when the
+text is a valid tag name; the text values `'true'`, `'True'`, `'false'`, and
+`'False'` are normalized to `:true` and `:false`. Boolean casts to `:tag` also
+write `:true` or `:false`.
+
+Text casts are formatting casts and keep using the value's text representation;
+they do not require the formatted text to be a valid tag. Numeric text is parsed
+only by an explicit `as :number` cast. Invalid numeric text casts to `nothing`.
+
+Vector and point casts are structural conversions. A vector can be cast to a
+point by copying `x`, `y`, `z`, and the optional unit; a point can be cast to a
+vector the same way. This is a type reshape, not vector/point arithmetic.
+
 Custom record types are also type tags:
 
 ```ges

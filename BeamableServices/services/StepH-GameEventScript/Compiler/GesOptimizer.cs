@@ -1194,7 +1194,7 @@ internal static class GesOptimizer
                 converted = GameEventScriptNothingValue.Instance;
                 return true;
             case "tag":
-                converted = GameEventScriptValueFactory.GesTag(value.AsText());
+                converted = ConvertToTag(value);
                 return true;
             case "text":
                 converted = GameEventScriptValueFactory.GesText(value.AsText());
@@ -1332,6 +1332,26 @@ internal static class GesOptimizer
         return GameEventScriptValueFactory.GesFloat(number.Value, unit);
     }
 
+    private static GameEventScriptValue ConvertToTag(GameEventScriptValue value)
+    {
+        if (value.Kind == GameEventScriptValueKind.Boolean)
+        {
+            return GameEventScriptValueFactory.GesTag(value.AsBoolean() ? "true" : "false");
+        }
+
+        var text = value.AsText();
+        if (value.Kind == GameEventScriptValueKind.Text)
+        {
+            return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
+                ? GameEventScriptValueFactory.GesTag(normalized)
+                : GameEventScriptNothingValue.Instance;
+        }
+
+        return GameEventScriptTagValue.IsValidTagName(text)
+            ? GameEventScriptValueFactory.GesTag(text)
+            : GameEventScriptNothingValue.Instance;
+    }
+
     private static GameEventScriptValue ToNumberValue(double number, GameEventScriptBytecodeInstructionUnit? unit)
     {
         if (number >= long.MinValue &&
@@ -1411,11 +1431,6 @@ internal static class GesOptimizer
             return vector;
         }
 
-        if (unwrapped is GameEventScriptPointValue)
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
         if (TryCreateSpatialFromMembers("vector", unwrapped, out var vectorFromMembers))
         {
             return vectorFromMembers;
@@ -1440,11 +1455,6 @@ internal static class GesOptimizer
         if (unwrapped is GameEventScriptPointValue point)
         {
             return point;
-        }
-
-        if (unwrapped is GameEventScriptVectorValue)
-        {
-            return GameEventScriptNothingValue.Instance;
         }
 
         if (TryCreateSpatialFromMembers("point", unwrapped, out var pointFromMembers))

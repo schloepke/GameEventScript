@@ -61,8 +61,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": ""
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -237,7 +236,7 @@
                 },
                 "toTag": {
                   "type": ":tag",
-                  "value": "True"
+                  "value": "true"
                 },
                 "toText": {
                   "type": ":text",
@@ -416,8 +415,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "12"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -596,8 +594,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "12.5"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -777,8 +774,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "12m"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -956,8 +952,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "25%"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -1147,8 +1142,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "12.5"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -1911,7 +1905,10 @@
                   "type": ":nothing"
                 },
                 "toPoint": {
-                  "type": ":nothing"
+                  "type": ":point",
+                  "x": "1",
+                  "y": "2",
+                  "z": "3"
                 },
                 "toRange": {
                   "type": ":nothing"
@@ -1920,8 +1917,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "vector[x: 1, y: 2, z: 3]"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -2126,15 +2122,17 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "point[x: 4, y: 5, z: 6]"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
                   "value": "point[x: 4, y: 5, z: 6]"
                 },
                 "toVector": {
-                  "type": ":nothing"
+                  "type": ":vector",
+                  "x": "4",
+                  "y": "5",
+                  "z": "6"
                 }
               }
             }
@@ -2316,8 +2314,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": ""
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -2505,8 +2502,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": ""
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -2700,8 +2696,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "dice[3, 2, 1]"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -2892,8 +2887,7 @@
                   "type": ":nothing"
                 },
                 "toTag": {
-                  "type": ":tag",
-                  "value": "range[1 to 3 step 1]"
+                  "type": ":nothing"
                 },
                 "toText": {
                   "type": ":text",
@@ -3000,6 +2994,69 @@
                 "isVector": {
                   "type": ":boolean",
                   "value": false
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "cast boolean false to tag",
+      "script": "module AtomicCastBooleanFalseToTag\non Start {\n  let source be false\n  let toTag as :tag be source\n  emit Done(toTag: toTag)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "toTag": {
+                  "type": ":tag",
+                  "value": "false"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "cast boolean text words to tag",
+      "script": "module AtomicCastBooleanTextWordsToTag\non Start {\n  let upperTrue as :tag be 'True'\n  let lowerTrue as :tag be 'true'\n  let upperFalse as :tag be 'False'\n  let lowerFalse as :tag be 'false'\n  let upperWord as :tag be 'Hello'\n  emit Done(upperTrue: upperTrue, lowerTrue: lowerTrue, upperFalse: upperFalse, lowerFalse: lowerFalse, upperWord: upperWord)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "upperTrue": {
+                  "type": ":tag",
+                  "value": "true"
+                },
+                "lowerTrue": {
+                  "type": ":tag",
+                  "value": "true"
+                },
+                "upperFalse": {
+                  "type": ":tag",
+                  "value": "false"
+                },
+                "lowerFalse": {
+                  "type": ":tag",
+                  "value": "false"
+                },
+                "upperWord": {
+                  "type": ":nothing"
                 }
               }
             }

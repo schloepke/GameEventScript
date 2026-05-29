@@ -577,6 +577,20 @@ checks through the sum of their rolls, but `CheckType :number` still checks the
 actual runtime kind. `numeric`, `integer`, and `fractional` are not declared
 type kinds or `:` tags.
 
+`Cast :tag` is a validating cast. The target tag name must match source tag
+syntax: first character lowercase letter, remaining characters letters only.
+The empty string, numbers, quantities, percentages, formatted containers,
+formatted vector/point values, whitespace, punctuation, brackets, colons inside
+the value, and underscores are invalid and write `nothing`. Existing valid tags
+remain unchanged. Boolean sources write `:true` or `:false`; text sources write a
+tag only when the raw text is a valid tag name. Text values `true`, `True`,
+`false`, and `False` are accepted and normalized to `:true` and `:false`.
+
+`Cast :text` is the formatting cast and does not validate the formatted text as
+a tag. `Cast :vector` and `Cast :point` are structural conversions: vector to
+point and point to vector copy the three components and optional unit directly.
+These conversions are casts, not affine vector/point arithmetic.
+
 `let` lowers to expression code that writes into a temporary or final slot,
 followed by an optional direct cast and `Move` into the declared local slot.
 Handler and callable parameter type hints lower to optional direct casts over

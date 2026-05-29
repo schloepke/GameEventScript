@@ -734,7 +734,7 @@ internal static class GameEventScriptExternalTypeValueConverter
         return typeName switch
         {
             "nothing" => GesNothing(),
-            "tag" => GesTag(value.AsText()),
+            "tag" => CoerceToTag(value),
             "text" => GesText(GesValueOperations.ToText(value)),
             "percentage" => GesPercentage(value.AsNumber()),
             "degree" => GesDegree(value.AsNumber()),
@@ -746,6 +746,26 @@ internal static class GameEventScriptExternalTypeValueConverter
             "list" => GesList(value.AsList()),
             _ => value
         };
+    }
+
+    private static GameEventScriptValue CoerceToTag(GameEventScriptValue value)
+    {
+        if (value.Kind == GameEventScriptValueKind.Boolean)
+        {
+            return GesTag(value.AsBoolean() ? "true" : "false");
+        }
+
+        var text = value.AsText();
+        if (value.Kind == GameEventScriptValueKind.Text)
+        {
+            return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
+                ? GesTag(normalized)
+                : GesNothing();
+        }
+
+        return GameEventScriptTagValue.IsValidTagName(text)
+            ? GesTag(text)
+            : GesNothing();
     }
 
     public static object? ToClrValue(GameEventScriptValue value, Type targetType)

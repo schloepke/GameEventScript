@@ -5662,7 +5662,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var boxed = input.ToGameEventScriptValue();
         value = declaredType switch
         {
-            "tag" => BytecodeVmValue.Reference(GesTag(boxed.AsText())),
+            "tag" => BytecodeVmValue.FromGameEventScriptValue(ConvertToTag(boxed)),
             "text" => BytecodeVmValue.Reference(GesText(GesValueOperations.ToText(boxed))),
             "percentage" => BytecodeVmValue.FromGameEventScriptValue(ConvertToPercentage(boxed)),
             "degree" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumericUnit(boxed, GameEventScriptBytecodeInstructionUnit.UnitDegree)),
@@ -5981,6 +5981,26 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GesFloat(number.Value, unit);
     }
 
+    private static GameEventScriptValue ConvertToTag(GameEventScriptValue value)
+    {
+        if (value.Kind == GameEventScriptValueKind.Boolean)
+        {
+            return GesTag(value.AsBoolean() ? "true" : "false");
+        }
+
+        var text = value.AsText();
+        if (value.Kind == GameEventScriptValueKind.Text)
+        {
+            return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
+                ? GesTag(normalized)
+                : GameEventScriptNothingValue.Instance;
+        }
+
+        return GameEventScriptTagValue.IsValidTagName(text)
+            ? GesTag(text)
+            : GameEventScriptNothingValue.Instance;
+    }
+
     private static GameEventScriptValue ToNumberValue(double number, GameEventScriptBytecodeInstructionUnit? unit)
     {
         if (number >= long.MinValue &&
@@ -6072,11 +6092,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return vector;
         }
 
-        if (value is GameEventScriptPointValue)
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
         if (TryCreateSpatialFromMembers("vector", value, out var vectorFromMembers))
         {
             return vectorFromMembers;
@@ -6099,11 +6114,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (value is GameEventScriptPointValue point)
         {
             return point;
-        }
-
-        if (value is GameEventScriptVectorValue)
-        {
-            return GameEventScriptNothingValue.Instance;
         }
 
         if (TryCreateSpatialFromMembers("point", value, out var pointFromMembers))

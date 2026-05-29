@@ -134,6 +134,32 @@ internal static class VmRegisterTypeCastCheck
             case Tag:
                 CastTag(ref dst, ref xSlot);
                 return;
+            case Vector:
+                switch (xSlot.Kind)
+                {
+                    case Vector:
+                        dst = xSlot;
+                        return;
+                    case Point when xSlot.ObjectValue is VmFloatTriplet point:
+                        dst.SetVector(point, xSlot.Unit);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
+            case Point:
+                switch (xSlot.Kind)
+                {
+                    case Point:
+                        dst = xSlot;
+                        return;
+                    case Vector when xSlot.ObjectValue is VmFloatTriplet vector:
+                        dst.SetPoint(vector, xSlot.Unit);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
             case Dice:
                 switch (xSlot.Kind)
                 {
@@ -314,22 +340,21 @@ internal static class VmRegisterTypeCastCheck
         switch (xSlot.Kind)
         {
             case Tag:
-                dst = xSlot;
+                if (GameEventScriptTagValue.IsValidTagName(xSlot.ReadTextOrTag())) dst = xSlot;
+                else dst.SetNothing();
                 return;
             case Text when xSlot.IsStoragePointer:
-                dst.SetTagPointer((ushort)xSlot.IntegerValue);
+                var pointerText = xSlot.ReadTextOrTag();
+                if (GameEventScriptTagValue.TryNormalizeTextCast(pointerText, out var pointerTag))
+                {
+                    if (pointerTag == pointerText) dst.SetTagPointer((ushort)xSlot.IntegerValue);
+                    else dst.SetTag(pointerTag);
+                }
+                else dst.SetNothing();
                 return;
             case Text when xSlot.ObjectValue is string text:
-                dst.SetTag(text);
-                return;
-            case Integer:
-                dst.SetTag(xSlot.IntegerValue.ToString(CultureInfo.InvariantCulture));
-                return;
-            case Float:
-                dst.SetTag(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
-                return;
-            case Percentage:
-                dst.SetTag(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+                if (GameEventScriptTagValue.TryNormalizeTextCast(text, out var tag)) dst.SetTag(tag);
+                else dst.SetNothing();
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:
                 dst.SetTag(xSlot.IsTrue ? "true" : "false");

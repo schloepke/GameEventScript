@@ -145,7 +145,7 @@ GameEventScriptBytecodeInstruction
   XSlot/YSlot
   ConditionSlot/TargetAddress/EntryAddress
   StringIndex/ListIndex/SecondaryListIndex/ExternalReferenceIndex/TypeOperand
-  ImmediateX/ImmediateY/Count
+  ImmediateX/ImmediateY/Index/Count
   AU, BU, CU, DU
   AS, BS, CS, DS
   I64/Payload/F64
@@ -316,7 +316,7 @@ Instruction
   ConditionSlot, TargetAddress, EntryAddress
   StringIndex, ListIndex, SecondaryListIndex, ExternalReferenceIndex, TypeOperand
   Count
-  ImmediateX, ImmediateY
+  ImmediateX, ImmediateY, Index
   AU, BU, CU, DU
   AS, BS, CS, DS
   I64, Payload, F64
@@ -330,6 +330,7 @@ Operands are interpreted by opcode:
 - `StringIndex`, `ListIndex`, `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`:
   primary-word pool/table or type operands.
 - `ImmediateX`, `ImmediateY`: compact signed immediates in the primary word.
+- `Index`: compact unsigned 1-based index in the primary word for `IndexAccess`.
 - `Count`: signed local slot delta alias over `ImmediateX`.
 - `AU`, `BU`, `CU`, `DU`, plus signed `AS`, `BS`, `CS`, `DS` views:
   payload-word 16-bit views for wider opcodes.
@@ -824,6 +825,11 @@ compiler-assigned iterator slot.
   immediately before the opcode as map values; keys stay in `keyNameListIndex`
   for now.
 - `CreateRange dst fromSlot toSlot`
+
+`IndexAccess` is reserved for non-negative literal selectors that fit the
+unsigned 16-bit `Index` operand. Negative literal selectors and larger numeric
+selectors lower through `PropertyAccess`, so they keep the normal runtime
+selector semantics.
 - `CreateRangeWithStep dst fromSlot toSlot stepSlot`
 - `RandomTake dst fromSlot toSlot`
 - `RandomPush seedSlot`

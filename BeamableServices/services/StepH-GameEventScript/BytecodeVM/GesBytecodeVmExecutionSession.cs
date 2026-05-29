@@ -1160,7 +1160,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return DefineSlot(instruction.DestinationSlot, EvaluateDiceExpression(instruction.Count, instruction.ImmediateY));
 
             case GameEventScriptBytecodeOpCode.IndexAccess:
-                return DefineSlot(instruction.DestinationSlot, EvaluateIndexAccess(ResolveSlot(instruction.YSlot), instruction.ImmediateX));
+                return DefineSlot(instruction.DestinationSlot, EvaluateIndexAccess(ResolveSlot(instruction.YSlot), instruction.Index));
 
             case GameEventScriptBytecodeOpCode.PropertyAccess:
                 return DefineSlot(instruction.DestinationSlot, EvaluatePropertyAccess(ResolveSlot(instruction.YSlot), ResolveSlot(instruction.XSlot)));

@@ -181,6 +181,7 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(4)] public ushort StringIndex;
     [FieldOffset(4)] public ushort SecondaryListIndex;
     [FieldOffset(4)] public ushort ExternalReferenceIndex;
+    [FieldOffset(4)] public ushort Index;
     [FieldOffset(4)] public short Count;
 
     [FieldOffset(6)] public short ImmediateY;

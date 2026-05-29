@@ -798,8 +798,8 @@ internal sealed class GesLinearBytecodeBuilder
                     var target = EmitSourceExpression(collectionAccess.Target, context, state);
                     switch (selector.Expression)
                     {
-                        case IntegerLiteralExpressionNode integer when integer.Value >= short.MinValue && integer.Value <= short.MaxValue:
-                            return EmitIndexAccessInstruction(state, target, (short)integer.Value);
+                        case IntegerLiteralExpressionNode integer when integer.Value >= 0 && integer.Value <= ushort.MaxValue:
+                            return EmitIndexAccessInstruction(state, target, (ushort)integer.Value);
 
                         case TextLiteralExpressionNode text:
                             return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.MemberAccess, a: ResolveStringIndex(text.Value), b: target);
@@ -2492,14 +2492,14 @@ internal sealed class GesLinearBytecodeBuilder
         return dest;
     }
 
-    private int EmitIndexAccessInstruction(ExpressionState state, int target, short index)
+    private int EmitIndexAccessInstruction(ExpressionState state, int target, ushort index)
     {
         var dest = AllocateSlot(state);
         Emit(new GameEventScriptBytecodeInstruction
         {
             OpCode = GameEventScriptBytecodeOpCode.IndexAccess,
             DestinationSlot = ToUShortOperand(dest, "destination operand"),
-            ImmediateX = index,
+            Index = index,
             YSlot = ToUShortOperand(target, "object operand")
         });
 

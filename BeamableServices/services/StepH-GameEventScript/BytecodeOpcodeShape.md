@@ -27,6 +27,7 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(4)]  public ushort SecondaryListIndex;
     [FieldOffset(4)]  public ushort ExternalReferenceIndex;
     [FieldOffset(4)]  public short ImmediateX;
+    [FieldOffset(4)]  public ushort Index;
     [FieldOffset(4)]  public short Count;
 
     [FieldOffset(6)]  public ushort YSlot;
@@ -59,7 +60,7 @@ The byte layout is:
 | `0` | `OpCode` | `OpCode` | Opcode tag, backed by `byte`. |
 | `1` | `UnitAndFlags` | `UnitAndFlags` | Low 5 bits carry the numeric unit id; high 3 bits are reserved flags. |
 | `2..3` | `DestinationSlot` / `MessageDestination` | `DestinationSlot` | Destination/result slot or static message destination shape. |
-| `4..5` | `XSlot` / `ConditionSlot` / `StringIndex` / `SecondaryListIndex` / `ExternalReferenceIndex` / `ImmediateX` / `Count` | primary X bytes | First primary operand, signed immediate, or table index. |
+| `4..5` | `XSlot` / `ConditionSlot` / `StringIndex` / `SecondaryListIndex` / `ExternalReferenceIndex` / `ImmediateX` / `Index` / `Count` | primary X bytes | First primary operand, signed immediate, unsigned index, or table index. |
 | `6..7` | `YSlot` / `TargetAddress` / `EntryAddress` / `ListIndex` / `TypeOperand` / `ImmediateY` | primary Y bytes | Second primary operand, target/entry address, type operand, or primary list index. |
 | `8..9` | `AU` / `AS` | `I64`/`Payload`/`F64` bytes `0..1` | Payload word bytes `0..1`, or first payload 16-bit operand. |
 | `10..11` | `BU` / `BS` | `I64`/`Payload`/`F64` bytes `2..3` | Payload word bytes `2..3`, or second payload 16-bit operand. |
@@ -103,9 +104,11 @@ view instead of exposing the overlapping runtime fields:
   `DestinationSlot`, `MessageDestination`, `XSlot`, `YSlot`, `ConditionSlot`,
   `TargetAddress`, `EntryAddress`, `StringIndex`, `ListIndex`,
   `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`, `Count`,
-  `ImmediateX`, and `ImmediateY`.
+  `ImmediateX`, `ImmediateY`, and `Index`.
 - **Primary signed 16-bit operand view:** `ImmediateX` and `ImmediateY` are available for
   compact signed immediates in the primary word.
+- **Primary unsigned index operand view:** `Index` is available for `IndexAccess`
+  and stores a statically known 1-based selector in the same bytes as `XSlot`.
 - **Payload 16-bit operand view:** wider instructions use the aligned payload
   word as `AU..DU` or `AS..DS`. The opcode table documents this compactly as
   `AU`=..., `BU`=..., `AS`=..., `BS`=..., and so on.
@@ -218,7 +221,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x1C | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. |
 | 0x1D | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
 | 0x1E | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
-| 0x1F | `IndexAccess` | - | result slot | `ImmediateX`=1-based index | `YSlot`=object | - | Reads a statically known positional element. |
+| 0x1F | `IndexAccess` | - | result slot | `Index`=1-based index | `YSlot`=object | - | Reads a statically known positional element. |
 | 0x20 | `PropertyAccess` | - | result slot | `XSlot`=property/index selector | `YSlot`=object | - | Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics. |
 | 0x21 | `BindHandler` | - | result slot | `XSlot`=handler/signature slot | `ListIndex`=argument slots | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
 | 0x22 | `LoadNothing` | - | result slot | - | - | - | Loads `nothing`. |

@@ -137,7 +137,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).VmMemberAccess(instruction.XSlot, ref _vmState.Register(instruction.YSlot));
                     break;
                 case IndexAccess:
-                    _vmState.Register(instruction.DestinationSlot).VmIndexAccess(instruction.ImmediateX, ref _vmState.Register(instruction.YSlot));
+                    _vmState.Register(instruction.DestinationSlot).VmIndexAccess(instruction.Index, ref _vmState.Register(instruction.YSlot));
                     break;
                 case PropertyAccess:
                     _vmState.Register(instruction.DestinationSlot).VmPropertyAccess(ref _vmState.Register(instruction.XSlot), ref _vmState.Register(instruction.YSlot));

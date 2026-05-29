@@ -346,7 +346,7 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.IndexAccess:
-                builder.Append(" index=").Append(instruction.ImmediateX);
+                builder.Append(" index=").Append(instruction.Index);
                 AppendSlot(builder, "object", instruction.YSlot);
                 break;
 

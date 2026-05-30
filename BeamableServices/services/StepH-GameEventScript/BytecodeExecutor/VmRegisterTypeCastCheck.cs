@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Globalization;
 using StepH.GameEventScript.Api;
@@ -64,7 +65,7 @@ internal static class VmRegisterTypeCastCheck
                 return;
             case Percentage:
                 var percentageNumber = xSlot.AsNumeric;
-                if (double.IsFinite(percentageNumber)) dst.SetPercentage(percentageNumber is > 1d or < -1d ? percentageNumber / 100d : percentageNumber);
+                if (double.IsFinite(percentageNumber)) dst.SetPercentage(xSlot.Kind is Integer || percentageNumber is > 1d or < -1d ? percentageNumber / 100d : percentageNumber);
                 else dst.SetNothing();
                 return;
             case Text:
@@ -130,6 +131,52 @@ internal static class VmRegisterTypeCastCheck
                         dst.SetNothing();
                         return;
                 }
+            case List:
+                switch (xSlot.Kind)
+                {
+                    case List:
+                        dst = xSlot;
+                        return;
+                    case Map:
+                        dst.SetList(dst.OwningState.EmptyList);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
+            case Map:
+                if (xSlot.Kind is not Map)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                if (xSlot.ObjectValue is VmMapObject map)
+                {
+                    var visibleCount = 0;
+                    foreach (var key in map.Entries.Keys)
+                    {
+                        if (!key.StartsWith("_", StringComparison.Ordinal)) visibleCount++;
+                    }
+
+                    if (visibleCount == map.Entries.Count)
+                    {
+                        dst = xSlot;
+                        return;
+                    }
+
+                    var visibleEntries = new Dictionary<string, VmValue>(visibleCount, StringComparer.Ordinal);
+                    foreach (var (key, value) in map.Entries)
+                    {
+                        if (!key.StartsWith("_", StringComparison.Ordinal)) visibleEntries[key] = value;
+                    }
+
+                    dst.SetMap(new VmMapObject(dst.OwningState, visibleEntries));
+                    return;
+                }
+
+                dst.SetNothing();
+                return;
 
             case Custom:
             case Invalid:

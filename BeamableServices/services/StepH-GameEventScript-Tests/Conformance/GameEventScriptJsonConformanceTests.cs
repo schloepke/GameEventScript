@@ -465,8 +465,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
         if (!outcome.Passed)
         {
-            TestContext.WriteLine($"Script Dump:{Environment.NewLine}{DumpScriptForFailure(testCase)}");
-            TestContext.WriteLine($"Bytecode Dump:{Environment.NewLine}{DumpBytecodeForFailure(testCase)}");
+            TestContext.WriteLine(DumpBinaryAndScriptForFailure(testCase));
         }
 
         if (!softRun && !outcome.Passed)
@@ -524,45 +523,65 @@ public abstract class GameEventScriptJsonConformanceTestBase
         samples.Add($"{kind}: {testCase}: {detail}");
     }
 
-    private static string DumpBytecodeForFailure(GameEventScriptConformanceCase testCase)
+    private static string DumpBinaryAndScriptForFailure(GameEventScriptConformanceCase testCase)
     {
+        var builder = new StringBuilder();
         try
         {
-            return GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test).DumpBytecode();
+            builder.Append(GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test)
+                .ToGameEventScriptBinary()
+                .Dump(includeInstructionAddresses: true));
         }
         catch (Exception exception)
         {
-            return $"<bytecode dump unavailable: {exception.Message}>";
+            builder.AppendLine($"//\t<binary dump unavailable: {exception.Message}>");
         }
+
+        if (builder.Length > 0 && builder[^1] != '\n')
+        {
+            builder.AppendLine();
+        }
+
+        AppendCommentedScript(builder, testCase);
+        return builder.ToString();
     }
 
-    private static string DumpScriptForFailure(GameEventScriptConformanceCase testCase)
+    private static void AppendCommentedScript(StringBuilder builder, GameEventScriptConformanceCase testCase)
     {
         var test = testCase.Test;
         if (!string.IsNullOrWhiteSpace(test.Script))
         {
-            return test.Script;
+            AppendCommentedLines(builder, test.Script);
+            return;
         }
 
         if (test.Scripts is not { Count: > 0 })
         {
-            return "<script dump unavailable: test has no script text>";
+            builder.AppendLine("//\t<script dump unavailable: test has no script text>");
+            return;
         }
 
-        var builder = new StringBuilder();
         for (var index = 0; index < test.Scripts.Count; index++)
         {
             var source = test.Scripts[index];
             if (index > 0)
             {
-                builder.AppendLine();
+                builder.AppendLine("//\t");
             }
 
-            builder.AppendLine($"// source: {source.SourceName ?? $"script-{index + 1}"}");
-            builder.AppendLine(source.Text ?? string.Empty);
+            builder.AppendLine($"//\tsource: {source.SourceName ?? $"script-{index + 1}"}");
+            AppendCommentedLines(builder, source.Text ?? string.Empty);
         }
+    }
 
-        return builder.ToString();
+    private static void AppendCommentedLines(StringBuilder builder, string text)
+    {
+        using var reader = new StringReader(text);
+        while (reader.ReadLine() is { } line)
+        {
+            builder.Append("//\t");
+            builder.AppendLine(line);
+        }
     }
 
     private static IEnumerable<object[]> Cases(string relativeSpecFile)

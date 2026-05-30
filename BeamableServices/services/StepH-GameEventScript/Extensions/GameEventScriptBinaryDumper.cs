@@ -136,7 +136,13 @@ public static class GameEventScriptBinaryDumper
         {
             if (context.HasCodeLabel(i))
             {
-                builder.Append(context.CodeLabel(i)).AppendLine(":");
+                builder.Append(context.CodeLabel(i)).Append(':');
+                if (context.TryGetCodeLabelComment(i, out var labelComment))
+                {
+                    builder.Append(" // ").Append(labelComment);
+                }
+
+                builder.AppendLine();
             }
 
             var instruction = instructions[i];
@@ -300,6 +306,24 @@ public static class GameEventScriptBinaryDumper
                 case ExternalReference:
                     AddExternalReferenceComment(comments, context, instruction.OpCode, instruction.ExternalReferenceIndex);
                     break;
+                case CallableEntry:
+                    AddCodeEntryComment(comments, context, instruction.EntryAddress);
+                    break;
+                case PredicateEntry:
+                case NextEntry:
+                    AddCodeEntryComment(comments, context, instruction.EntryAddress);
+                    break;
+                case ReducerEntry:
+                    AddCodeEntryComment(comments, context, instruction.OpCode is GameEventScriptBytecodeOpCode.StreamReduce ? instruction.AU : instruction.BU);
+                    break;
+                case KeyEntry:
+                case FaceEntry:
+                    AddCodeEntryComment(comments, context, instruction.AU);
+                    break;
+                case ValueEntry:
+                case WeightEntry:
+                    AddCodeEntryComment(comments, context, instruction.BU);
+                    break;
             }
         }
 
@@ -367,6 +391,14 @@ public static class GameEventScriptBinaryDumper
     private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
     {
         comments.Add("\"" + Escape(context.ResolveText(entry.Name)) + "(" + string.Join(", ", entry.ArgumentNames.Select(context.ResolveText)) + ")\"");
+    }
+
+    private static void AddCodeEntryComment(List<string> comments, DisassemblyContext context, ushort address)
+    {
+        if (context.TryGetCodeLabelComment(address, out var comment))
+        {
+            comments.Add(comment);
+        }
     }
 
     private static void AppendListComment(StringBuilder builder, DisassemblyContext context, IReadOnlyList<ushort> values, ListRole role)
@@ -456,6 +488,8 @@ public static class GameEventScriptBinaryDumper
     {
         private readonly string[] _bindLabels;
         private readonly SortedSet<int> _codeLabels = [];
+        private readonly Dictionary<int, string> _codeLabelNames = [];
+        private readonly Dictionary<int, string> _codeLabelComments = [];
         private readonly string[] _listLabels;
         private readonly ListRole[] _listRoles;
         private readonly Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> _bindsByKindAndId = [];
@@ -467,7 +501,7 @@ public static class GameEventScriptBinaryDumper
             _listLabels = new string[binary.Uint16ConstantTable.Slices.Length];
             _listRoles = new ListRole[binary.Uint16ConstantTable.Slices.Length];
             BuildListLabels(binary, _listLabels, _listRoles);
-            BuildCodeLabels(binary, _codeLabels);
+            BuildCodeLabels(binary, _codeLabels, _codeLabelNames, _codeLabelComments);
         }
 
         internal GameEventScriptBinary Binary { get; }
@@ -479,7 +513,23 @@ public static class GameEventScriptBinaryDumper
             => address == NoAddress ? "L_none" : CodeLabel((int)address);
 
         internal string CodeLabel(int address)
-            => "L_" + address.ToString(CultureInfo.InvariantCulture);
+            => _codeLabelNames.TryGetValue(address, out var label)
+                ? label
+                : "L_" + address.ToString(CultureInfo.InvariantCulture);
+
+        internal bool TryGetCodeLabelComment(ushort address, out string comment)
+        {
+            if (address == NoAddress)
+            {
+                comment = string.Empty;
+                return false;
+            }
+
+            return TryGetCodeLabelComment((int)address, out comment);
+        }
+
+        internal bool TryGetCodeLabelComment(int address, out string comment)
+            => _codeLabelComments.TryGetValue(address, out comment);
 
         internal string ListLabel(int index)
             => (uint)index < (uint)_listLabels.Length ? _listLabels[index] : "U16_" + index.ToString(CultureInfo.InvariantCulture);
@@ -561,7 +611,11 @@ public static class GameEventScriptBinaryDumper
             }
         }
 
-        private static void BuildCodeLabels(GameEventScriptBinary binary, SortedSet<int> codeLabels)
+        private static void BuildCodeLabels(
+            GameEventScriptBinary binary,
+            SortedSet<int> codeLabels,
+            Dictionary<int, string> codeLabelNames,
+            Dictionary<int, string> codeLabelComments)
         {
             if (binary.InstructionTable.Length > 0)
             {
@@ -571,6 +625,7 @@ public static class GameEventScriptBinaryDumper
             foreach (var entry in binary.BindTable.Entries)
             {
                 AddCodeLabel(codeLabels, binary, entry.EntryAddress);
+                AddNamedCodeLabel(codeLabelNames, codeLabelComments, binary, entry);
             }
 
             foreach (var instruction in binary.InstructionTable)
@@ -613,6 +668,91 @@ public static class GameEventScriptBinaryDumper
             {
                 labels.Add(address);
             }
+        }
+
+        private static void AddNamedCodeLabel(
+            Dictionary<int, string> labels,
+            Dictionary<int, string> comments,
+            GameEventScriptBinary binary,
+            GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+        {
+            if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.InstructionTable.Length)
+            {
+                return;
+            }
+
+            if (entry.Kind is not (GameEventScriptBinaryBindKind.Function or GameEventScriptBinaryBindKind.Predicate))
+            {
+                return;
+            }
+
+            var name = entry.Name < binary.TextConstantTable.Slices.Length
+                ? binary.TextConstantTable.Resolve(entry.Name)
+                : string.Empty;
+            var label = ToCodeLabelName(name);
+            if (label.Length == 0)
+            {
+                return;
+            }
+
+            var candidate = label;
+            var suffix = 2;
+            while (labels.ContainsValue(candidate))
+            {
+                candidate = label + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+                suffix++;
+            }
+
+            labels[entry.EntryAddress] = candidate;
+            comments[entry.EntryAddress] = FormatCodeLabelComment(binary, entry);
+        }
+
+        private static string FormatCodeLabelComment(GameEventScriptBinary binary, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+        {
+            var kind = entry.Kind == GameEventScriptBinaryBindKind.Predicate ? "predicate" : "function";
+            var name = entry.Name < binary.TextConstantTable.Slices.Length
+                ? binary.TextConstantTable.Resolve(entry.Name)
+                : "#" + entry.Name.ToString(CultureInfo.InvariantCulture);
+            var args = entry.ArgumentNames
+                .Select(index => index < binary.TextConstantTable.Slices.Length
+                    ? binary.TextConstantTable.Resolve(index)
+                    : "#" + index.ToString(CultureInfo.InvariantCulture));
+            return kind + " " + name + "(" + string.Join(", ", args) + ")";
+        }
+
+        private static string ToCodeLabelName(string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                return string.Empty;
+            }
+
+            var builder = new StringBuilder(name.Length);
+            for (var i = 0; i < name.Length; i++)
+            {
+                var ch = name[i];
+                if (i == 0)
+                {
+                    if (char.IsLetter(ch) || ch == '_')
+                    {
+                        builder.Append(ch);
+                    }
+                    else
+                    {
+                        builder.Append('_');
+                        if (char.IsDigit(ch))
+                        {
+                            builder.Append(ch);
+                        }
+                    }
+
+                    continue;
+                }
+
+                builder.Append(char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_');
+            }
+
+            return builder.ToString();
         }
 
         private static string BindPrefix(GameEventScriptBinaryBindKind kind)

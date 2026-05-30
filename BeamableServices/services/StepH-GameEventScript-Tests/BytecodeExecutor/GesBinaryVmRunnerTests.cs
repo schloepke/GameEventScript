@@ -81,7 +81,7 @@ public sealed class BytecodeExecutorTests
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + compiled.DumpBytecode());
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("Binary file:\n" + binary.Dump());
+        TestContext.WriteLine("Binary file:\n" + binary.Dump(includeInstructionAddresses: true));
         TestContext.WriteLine("-----");
         
         var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);

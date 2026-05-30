@@ -1,0 +1,165 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "GameEventScript Assembler",
+  "scopeName": "source.gameeventscript.assembler",
+  "fileTypes": [
+    "gesa"
+  ],
+  "firstLineMatch": "^\\s*\\.gesb\\b",
+  "patterns": [
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#directives"
+    },
+    {
+      "include": "#labels"
+    },
+    {
+      "include": "#opcodes"
+    },
+    {
+      "include": "#operands"
+    },
+    {
+      "include": "#punctuation"
+    }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "match": "^\\s*@\\d{4,5}\\b",
+          "name": "comment.line.address.gameeventscript.assembler"
+        },
+        {
+          "match": "//.*$",
+          "name": "comment.line.double-slash.gameeventscript.assembler"
+        }
+      ]
+    },
+    "directives": {
+      "patterns": [
+        {
+          "captures": {
+            "1": {
+              "name": "keyword.control.directive.segment.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "support.type.bind-kind.gameeventscript.assembler"
+            }
+          },
+          "match": "^\\s*(\\.segment)\\s+(bind)\\b",
+          "name": "meta.directive.segment.gameeventscript.assembler"
+        },
+        {
+          "captures": {
+            "1": {
+              "name": "keyword.control.directive.segment.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.tag.gameeventscript"
+            }
+          },
+          "match": "^\\s*(\\.segment)\\s+(text|lists|code)\\b",
+          "name": "meta.directive.segment.gameeventscript.assembler"
+        },
+        {
+          "match": "(?<!\\S)\\.(?:gesb|module|flags|text|u16|registers|texts|bind)\\b",
+          "name": "keyword.control.directive.gameeventscript.assembler"
+        }
+      ]
+    },
+    "labels": {
+      "patterns": [
+        {
+          "captures": {
+            "1": {
+              "name": "entity.name.label.gameeventscript.assembler"
+            }
+          },
+          "match": "^\\s*([A-Za-z_][A-Za-z0-9_]*):",
+          "name": "meta.label.definition.gameeventscript.assembler"
+        },
+        {
+          "match": "\\b(?:L_\\d+|L_none|T_\\d+|U16_\\d+|Args_\\d+|Names_\\d+|Keys_\\d+|Shape_\\d+|StdExt_\\d+|Items_\\d+|Values_\\d+|Captures_\\d+|Tags_\\d+|Handler_\\d+|Function_\\d+|Predicate_\\d+|Extension_\\d+|Outbound_\\d+|ExternalType_\\d+|Bind_\\d+)\\b",
+          "name": "variable.other.label.reference.gameeventscript.assembler"
+        }
+      ]
+    },
+    "opcodes": {
+      "patterns": [
+        {
+          "match": "^\\s*(?:Nop|SlotLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|Call|CallStandard|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|MoveSlot|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|ApproxEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomPush|RandomPushConstant|RandomPop|SeriesTerm|SeriesTake|SeriesDrop|Length|StartsWith|EndsWith|Contains|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|StreamCreate|StreamNext|StreamClose|StreamReduce|StreamReduceOrDefault|StreamFold|StreamCollectList|StreamCollectMap|StreamCollectMapValue|StreamCollectFirst|StreamCollectLast|StreamCollectSingle|PipelineStream|PipelineHasAny|PipelineHasAll|PipelineContainsSingle|PipelineContainsAny|PipelineContainsAll|PipelineDistinct|PipelineDistinctBy|PipelineGroupBy|PipelineReverse|PipelineSortAscending|PipelineSortDescending|PipelineOrderByAscending|PipelineOrderByDescending|PipelineTakeFirst|PipelineTakeLast|PipelineTakeHighest|PipelineTakeLowest|PipelineDropFirst|PipelineDropLast|PipelineDropHighest|PipelineDropLowest|PipelineShuffle|PipelineDraw|PipelineChoose|PipelineChooseRandom|PipelineChooseWeighted|PipelineDicePatternCountAny|PipelineDicePatternCountFace|PipelineDicePatternFullHouse|PipelineDicePatternStraight|PipelineTakePatternCountAny|PipelineTakePatternCountFace|PipelineTakePatternFullHouse|PipelineTakePatternStraight|PipelineListCreateBuilder|PipelineListBuilderAdd|PipelineListBuilderFinish)\\b",
+          "name": "keyword.mnemonic.opcode.gameeventscript.assembler"
+        }
+      ]
+    },
+    "operands": {
+      "patterns": [
+        {
+          "match": "\\br\\d+\\b",
+          "name": "variable.other.register.gameeventscript.assembler"
+        },
+        {
+          "match": "#[+-]?(?:\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?|Infinity|-Infinity|NaN)\\b",
+          "name": "constant.numeric.immediate.gameeventscript.assembler"
+        },
+        {
+          "captures": {
+            "1": {
+              "name": "keyword.other.unit-prefix.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.tag.gameeventscript"
+            }
+          },
+          "match": "\\b(unit)(:(?:none|degree|meter|second))\\b"
+        },
+        {
+          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|Envelope|List|Dice|Map|ListBuilder|Stream|Series|Custom|Invalid)\\b",
+          "name": "support.type.bytecode.gameeventscript.assembler"
+        },
+        {
+          "match": "\\b(?:MessageHandler|Function|Predicate|ExtensionCall|OutboundMessage|ExternalType)\\b",
+          "name": "support.type.bind-kind.gameeventscript.assembler"
+        },
+        {
+          "match": "\\b(?:optimization|debug|none|NormalizeResultAsPredicate)\\b",
+          "name": "constant.language.flag.gameeventscript.assembler"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "match": "[\\[\\](),:]",
+          "name": "punctuation.separator.gameeventscript.assembler"
+        },
+        {
+          "match": "=",
+          "name": "keyword.operator.assignment.gameeventscript.assembler"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "begin": "\"",
+          "end": "\"",
+          "name": "string.quoted.double.gameeventscript.assembler",
+          "patterns": [
+            {
+              "match": "\\\\(?:[\"\\\\/bfnrt]|u[0-9A-Fa-f]{4})",
+              "name": "constant.character.escape.gameeventscript.assembler"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

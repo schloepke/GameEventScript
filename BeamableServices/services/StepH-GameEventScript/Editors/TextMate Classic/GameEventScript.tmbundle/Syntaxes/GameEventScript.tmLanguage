@@ -88,6 +88,12 @@
 				</dict>
 				<dict>
 					<key>match</key>
+					<string>:(?:true|false)\b</string>
+					<key>name</key>
+					<string>constant.language.boolean.tag.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
 					<string>:(?:infinity|negativeinfinity|pi|e|euler|tau|phi)\b|[∞∏ℇτφ]</string>
 					<key>name</key>
 					<string>constant.language.tag.numeric.gameeventscript</string>
@@ -232,7 +238,7 @@
 					</dict>
 					<dict>
 						<key>match</key>
-						<string>(?<!:)\b(?:numeric|integer|fractional)\b</string>
+							<string>(?&lt;!:)\b(?:numeric|integer|fractional)\b</string>
 						<key>name</key>
 						<string>support.type.primitive.gameeventscript</string>
 					</dict>
@@ -250,13 +256,13 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:chance|abs|ln|sqrt|cbrt|random|dice)\b</string>
+					<string>:(?:chance|abs|ln|sqrt|cbrt|random|dice|list|len|keys|values|entries|clamp|min|max|default)\b</string>
 					<key>name</key>
 					<string>support.function.prefix.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)?\b</string>
+					<string>:[a-z][A-Za-z]*(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>entity.name.type.custom.gameeventscript</string>
 				</dict>
@@ -274,7 +280,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:as|be|means|computed|by|clamped|between|of|weighted|ascending|descending|first|last|highest|lowest|pair|straight|full|house|at)\b</string>
+					<string>\b(?:as|be|means|computed|by|clamped|between|of|weighted|ascending|descending|first|last|highest|lowest|pair|straight|full|house|at|where|value|random)\b</string>
 					<key>name</key>
 					<string>keyword.other.definition.gameeventscript</string>
 				</dict>
@@ -395,7 +401,13 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>[!~&amp;|¬∧∨⊕∈∉]</string>
+					<string>[|&amp;]</string>
+					<key>name</key>
+					<string>keyword.operator.collection.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>[!~¬∧∨⊕∈∉]</string>
 					<key>name</key>
 					<string>keyword.operator.logical.gameeventscript</string>
 				</dict>
@@ -425,7 +437,7 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|map|distinct|group|order|term)\b</string>
+					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term)\b</string>
 					<key>name</key>
 					<string>support.function.selector.pipeline.gameeventscript</string>
 				</dict>

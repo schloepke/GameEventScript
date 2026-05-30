@@ -588,6 +588,7 @@ class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
   method System.Void Initialize(StepH.GameEventScript.Api.GameEventScriptSession session)
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
 static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper
   method static System.String DumpBytecode(StepH.GameEventScript.Api.GameEventScriptCompiled module)
 static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter

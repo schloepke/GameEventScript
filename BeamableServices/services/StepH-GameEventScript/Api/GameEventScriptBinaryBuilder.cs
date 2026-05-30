@@ -166,56 +166,50 @@ public static class GameEventScriptBinaryExtensions
             .AddUint16TableEntries(compiled.UShortListPool, out _)
             .AddBytecodeInstructions(compiled.Code);
 
+        var handlerId = 0;
         foreach (var handler in compiled.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal).SelectMany(pair => pair.Value.OrderBy(handler => handler.DeclarationOrder)))
         {
             builder
                 .AddStringPoolElement(handler.Message, out var messageIndex)
                 .AddStringPoolElements(handler.SignatureLabels, out var argumentIndexes)
                 .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.MessageHandler, messageIndex, argumentIndexes,
-                    handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)handler.EntryAddress)));
+                    handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)handler.EntryAddress),
+                    checked((ushort)handlerId++)));
         }
 
+        var callableId = 0;
         foreach (var callable in compiled.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
         {
             builder.AddStringPoolElement(callable.Name, out var messageIndex);
             builder.AddStringPoolElements(callable.SignatureLabels, out var argumentIndexes);
             builder.AddBind(new GameEventScriptBinaryBindEntry(callable.Kind == GameEventScriptBytecodeCallableKind.Predicate ? GameEventScriptBinaryBindKind.Predicate : GameEventScriptBinaryBindKind.Function, messageIndex, argumentIndexes,
-                callable.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)callable.EntryAddress)));
+                callable.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)callable.EntryAddress),
+                checked((ushort)callableId++)));
         }
 
-        foreach (var signatureIndex in compiled.OutboundMessageSignatures)
+        var outboundId = 0;
+        foreach (var signature in compiled.OutboundMessageSignatures)
         {
-            if (signatureIndex >= compiled.UShortListPool.Count)
-            {
-                throw new InvalidOperationException($"GameEventScriptBinary outbound message signature index {signatureIndex} is outside the UShortListPool.");
-            }
-
-            var signature = compiled.UShortListPool[signatureIndex];
-            if (signature.Count == 0 || signature.Any(index => index >= compiled.StringPool.Count))
-            {
-                throw new InvalidOperationException($"GameEventScriptBinary outbound message signature index {signatureIndex} is invalid.");
-            }
-
-            var messageName = compiled.StringPool[signature[0]];
-            var argumentNames = signature.Skip(1).Select(index => compiled.StringPool[index]).ToArray();
             builder
-                .AddStringPoolElement(messageName, out var messageIndex)
-                .AddStringPoolElements(argumentNames, out var argumentIndexes)
-                .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, messageIndex, argumentIndexes));
+                .AddStringPoolElement(signature.Name, out var messageIndex)
+                .AddStringPoolElements(signature.Parameters, out var argumentIndexes)
+                .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, messageIndex, argumentIndexes, id: checked((ushort)outboundId++)));
         }
 
+        var externalReferenceId = 0;
         foreach (var reference in compiled.ExternalReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))
         {
             builder.AddStringPoolElement(reference.ExtensionName + "." + reference.FunctionName, out var functionIndex);
             builder.AddStringPoolElements(reference.ArgumentLabels, out var argumentIndexes);
-            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExtensionCall, functionIndex, argumentIndexes));
+            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExtensionCall, functionIndex, argumentIndexes, id: checked((ushort)externalReferenceId++)));
         }
 
+        var externalTypeId = 0;
         foreach (var reference in compiled.ExternalTypeConstructorReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))
         {
             builder.AddStringPoolElement(reference.TypeName, out var typeNameIndex);
             builder.AddStringPoolElements(reference.ArgumentLabels, out var argumentIndexes);
-            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExternalType, typeNameIndex, argumentIndexes));
+            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExternalType, typeNameIndex, argumentIndexes, id: checked((ushort)externalTypeId++)));
         }
 
         return builder.Build();

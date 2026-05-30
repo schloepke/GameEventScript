@@ -13,12 +13,14 @@ internal sealed class GesBinaryVmRunner
 {
     private readonly GameEventScriptBinary _binary;
     private readonly GameEventScriptBytecodeInstruction[] _code;
+    private readonly GameEventScriptBinaryBindEntry[] _outboundMessageSignatures;
     private readonly int _frameSlotCount;
 
     public GesBinaryVmRunner(GameEventScriptBinary binary)
     {
         _binary = binary;
         _code = binary.InstructionTable ?? [];
+        _outboundMessageSignatures = BuildOutboundMessageSignatures(binary);
         _frameSlotCount = Math.Max(1, ComputeFrameSlotCount(_code));
     }
 
@@ -29,8 +31,33 @@ internal sealed class GesBinaryVmRunner
             return false;
         }
 
-        var state = new GesBinaryVmRunState(_binary, _code, _frameSlotCount, context, handler, message);
+        var state = new GesBinaryVmRunState(_binary, _code, _outboundMessageSignatures, _frameSlotCount, context, handler, message);
         return state.Run();
+    }
+
+    private static GameEventScriptBinaryBindEntry[] BuildOutboundMessageSignatures(GameEventScriptBinary binary)
+    {
+        var maxId = -1;
+        foreach (var entry in binary.BindTable.Entries)
+        {
+            if (entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage && entry.Id != ushort.MaxValue && entry.Id > maxId)
+            {
+                maxId = entry.Id;
+            }
+        }
+
+        if (maxId < 0) return [];
+
+        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
+        foreach (var entry in binary.BindTable.Entries)
+        {
+            if (entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage && entry.Id != ushort.MaxValue)
+            {
+                result[entry.Id] = entry;
+            }
+        }
+
+        return result;
     }
 
     private bool TryLookupHandler(GameEventScriptMessage message, out GameEventScriptBinaryBindEntry handler)
@@ -132,6 +159,7 @@ internal sealed class GesBinaryVmRunState
 {
     private readonly GameEventScriptBinary _binary;
     private readonly GameEventScriptBytecodeInstruction[] _code;
+    private readonly GameEventScriptBinaryBindEntry[] _outboundMessageSignatures;
     private readonly GameEventScriptSession _context;
     private readonly GameEventScriptBinaryBindEntry _handler;
     private readonly GameEventScriptMessage _message;
@@ -142,6 +170,7 @@ internal sealed class GesBinaryVmRunState
     public GesBinaryVmRunState(
         GameEventScriptBinary binary,
         GameEventScriptBytecodeInstruction[] code,
+        GameEventScriptBinaryBindEntry[] outboundMessageSignatures,
         int frameSlotCount,
         GameEventScriptSession context,
         GameEventScriptBinaryBindEntry handler,
@@ -149,6 +178,7 @@ internal sealed class GesBinaryVmRunState
     {
         _binary = binary;
         _code = code;
+        _outboundMessageSignatures = outboundMessageSignatures;
         _context = context;
         _handler = handler;
         _message = message;
@@ -342,19 +372,24 @@ internal sealed class GesBinaryVmRunState
 
     private bool PublishMessage(GameEventScriptBytecodeInstruction instruction, bool publish)
     {
-        var shape = _binary.Uint16ConstantTable.Resolve(instruction.MessageDestination);
         var argumentSlots = _binary.Uint16ConstantTable.Resolve(instruction.ListIndex);
-        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
+        if (instruction.MessageDestination >= _outboundMessageSignatures.Length)
         {
             return false;
         }
 
-        var messageName = _binary.TextConstantTable.Resolve(shape[0]);
+        var signature = _outboundMessageSignatures[instruction.MessageDestination];
+        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentSlots.Length != signature.ArgumentNames.Count)
+        {
+            return false;
+        }
+
+        var messageName = _binary.TextConstantTable.Resolve(signature.Name);
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(
-                _binary.TextConstantTable.Resolve(shape[index + 1]),
+                _binary.TextConstantTable.Resolve(signature.ArgumentNames[index]),
                 Get(argumentSlots[index]).ToGameEventScriptValue());
         }
 

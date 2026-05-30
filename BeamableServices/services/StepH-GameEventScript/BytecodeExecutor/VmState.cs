@@ -58,7 +58,7 @@ internal class VmState
     internal string? ErrorMessage { get; private set; }
 
     internal Dictionary<string, GameEventScriptBinaryBindEntry> InboundMessageHandlers { get; init; }
-    //internal List<GameEventScriptMessageSignature> OutboundMessageSignatures { get; init; }
+    internal GameEventScriptBinaryBindEntry[] OutboundMessageSignatures { get; init; }
 
     internal readonly ushort CodeSegmentSize; 
     private readonly int _maxRegisterSlots;
@@ -87,6 +87,35 @@ internal class VmState
         InboundMessageHandlers = binary.BindTable.Entries.Where(x => x.Kind == GameEventScriptBinaryBindKind.MessageHandler).ToDictionary(
             bind => GameEventScriptMessageSignature.CreateSignatureId(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve)),
             x => x);
+        OutboundMessageSignatures = BuildOutboundMessageSignatures(binary);
+    }
+
+    private static GameEventScriptBinaryBindEntry[] BuildOutboundMessageSignatures(GameEventScriptBinary binary)
+    {
+        var maxId = -1;
+        foreach (var entry in binary.BindTable.Entries)
+        {
+            if (entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage && entry.Id != ushort.MaxValue && entry.Id > maxId)
+            {
+                maxId = entry.Id;
+            }
+        }
+
+        if (maxId < 0)
+        {
+            return [];
+        }
+
+        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
+        foreach (var entry in binary.BindTable.Entries)
+        {
+            if (entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage && entry.Id != ushort.MaxValue)
+            {
+                result[entry.Id] = entry;
+            }
+        }
+
+        return result;
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

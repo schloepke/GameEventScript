@@ -392,14 +392,14 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             case GameEventScriptBytecodeOpCode.EmitMessage:
             case GameEventScriptBytecodeOpCode.PublishMessage:
-                ValidateMessageShape(module, instruction.MessageDestination, $"{context} message shape");
-                ValidateMessageArgumentSlotList(module, instruction.MessageDestination, instruction.ListIndex, $"{context} argument slots");
+                ValidateOutboundMessageSignature(module, instruction.MessageDestination, $"{context} outbound message signature");
+                ValidateOutboundMessageArgumentSlotList(module, instruction.MessageDestination, instruction.ListIndex, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
-                ValidateMessageShape(module, instruction.MessageDestination, $"{context} message shape");
-                ValidateMessageArgumentSlotList(module, instruction.MessageDestination, instruction.ListIndex, $"{context} argument slots");
+                ValidateOutboundMessageSignature(module, instruction.MessageDestination, $"{context} outbound message signature");
+                ValidateOutboundMessageArgumentSlotList(module, instruction.MessageDestination, instruction.ListIndex, $"{context} argument slots");
                 ValidateSlotListIndex(module, instruction.SecondaryListIndex, $"{context} tag slot list");
                 break;
 
@@ -705,7 +705,19 @@ internal sealed class GesBytecodeVmLinearExecutable
     {
         for (var index = 0; index < module.OutboundMessageSignatures.Count; index++)
         {
-            ValidateMessageShape(module, module.OutboundMessageSignatures[index], $"outbound message signature #{index}");
+            var signature = module.OutboundMessageSignatures[index];
+            if (string.IsNullOrWhiteSpace(signature.Name))
+            {
+                throw InvalidBytecode($"outbound message signature #{index} has an empty message name.");
+            }
+
+            for (var parameterIndex = 0; parameterIndex < signature.Parameters.Count; parameterIndex++)
+            {
+                if (string.IsNullOrWhiteSpace(signature.Parameters[parameterIndex]))
+                {
+                    throw InvalidBytecode($"outbound message signature #{index} has an empty argument name at position {parameterIndex}.");
+                }
+            }
         }
     }
 
@@ -764,6 +776,30 @@ internal sealed class GesBytecodeVmLinearExecutable
         if (slots.Count != argumentCount)
         {
             throw InvalidBytecode($"{context} count {slots.Count} does not match message shape argument count {argumentCount}.");
+        }
+
+        ValidateSlotList(module, slots, context);
+    }
+
+    private static void ValidateOutboundMessageSignature(GameEventScriptCompiled module, int index, string context)
+    {
+        ValidateIndex(module.OutboundMessageSignatures.Count, index, context);
+        var signature = module.OutboundMessageSignatures[index];
+        if (string.IsNullOrWhiteSpace(signature.Name))
+        {
+            throw InvalidBytecode($"{context} must contain a message name.");
+        }
+    }
+
+    private static void ValidateOutboundMessageArgumentSlotList(GameEventScriptCompiled module, int signatureIndex, int slotListIndex, string context)
+    {
+        ValidateOutboundMessageSignature(module, signatureIndex, context);
+        ValidateIndex(module.UShortListPool.Count, slotListIndex, context);
+        var argumentCount = module.OutboundMessageSignatures[signatureIndex].Parameters.Count;
+        var slots = module.UShortListPool[slotListIndex];
+        if (slots.Count != argumentCount)
+        {
+            throw InvalidBytecode($"{context} count {slots.Count} does not match outbound message argument count {argumentCount}.");
         }
 
         ValidateSlotList(module, slots, context);

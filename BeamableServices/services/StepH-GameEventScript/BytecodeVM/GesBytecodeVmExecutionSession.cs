@@ -2308,11 +2308,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryPublishLinearMessage(
         PublishKind publishKind,
-        int messageShapeListIndex,
+        int outboundMessageSignatureIndex,
         int argumentSlotListIndex,
         int tagSlotListIndex)
     {
-        if (!TryReadMessageShape(messageShapeListIndex, out var messageName, out var argumentNames) ||
+        if (!TryReadOutboundMessageSignature(outboundMessageSignatureIndex, out var messageName, out var argumentNames) ||
             !TryGetUShortListOrEmpty(argumentSlotListIndex, out var argumentSlots) ||
             argumentNames.Length != argumentSlots.Count)
         {
@@ -2339,6 +2339,21 @@ internal sealed partial class GesBytecodeVmExecutionSession
             signatureId);
         PublishMessage(publishKind, ApplyLinearTags(message, tagSlotListIndex));
         return true;
+    }
+
+    private bool TryReadOutboundMessageSignature(int index, out string messageName, out string[] argumentNames)
+    {
+        if ((uint)index >= (uint)_compiledScript.BytecodeModule.OutboundMessageSignatures.Count)
+        {
+            messageName = string.Empty;
+            argumentNames = [];
+            return false;
+        }
+
+        var signature = _compiledScript.BytecodeModule.OutboundMessageSignatures[index];
+        messageName = signature.Name;
+        argumentNames = signature.Parameters.ToArray();
+        return !string.IsNullOrWhiteSpace(messageName);
     }
 
     private bool TryPublishLinearMessageValue(

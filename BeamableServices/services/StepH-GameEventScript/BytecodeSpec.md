@@ -78,6 +78,7 @@ GameEventScriptBinary
   BindTable
     Kind                  0x10-0x1F export, 0x20-0x2F import
     MessageHandler | Function | Predicate | ExtensionCall | OutboundMessage | ExternalType
+    Id                    bind id within its kind-specific namespace
     Name                  string-pool index
     ArgumentNames         ordered string-pool indexes
     EntryAddress          global code address for exports, 0 for imports
@@ -971,15 +972,16 @@ Handlers may declare static tag filters:
 - no filter: any tag list matches as long as the message signature matches, or
   the message name matches for `MessageEnvelope` handlers.
 
-Publishing and emitting are distinct opcodes. Static message literals use a
-message shape and argument slot lists from `UShortListPool`; direct
-`EmitMessage*`/`PublishMessage*` opcodes store the shape in `MessageDestination`,
-the argument list in `ListIndex`, and tagged forms store the tag slot-list in
-`SecondaryListIndex`. Dynamic message values use the message slot in `XSlot`;
-tagged dynamic forms store their concrete tag slot-list index in `ListIndex`.
-The message shape is encoded as
-`[messageNameStringIndex, argumentNameStringIndex...]`. Zero-argument messages
-use a concrete empty argument-list entry in `UShortListPool`.
+Publishing and emitting are distinct opcodes. Static message literals are
+registered as `OutboundMessage` bind entries. Direct
+`EmitMessage*`/`PublishMessage*` opcodes store the outbound message bind id in
+`MessageDestination`, the argument slot-list in `ListIndex`, and tagged forms
+store the tag slot-list in `SecondaryListIndex`. Dynamic message values use the
+message slot in `XSlot`; tagged dynamic forms store their concrete tag slot-list
+index in `ListIndex`. Static outbound message signatures are not duplicated as
+message-shape entries in `UShortListPool`; only the argument and tag slot-lists
+remain there. Zero-argument messages use a concrete empty argument-list entry in
+`UShortListPool`.
 
 Arguments and tags are evaluated by preceding code into slots:
 
@@ -987,7 +989,7 @@ Arguments and tags are evaluated by preceding code into slots:
 @0400 Move dst=s20 src=sDamage
 @0401 Move dst=s21 src=sTarget
 @0402 LoadTag dst=s22 tag=:radio
-@0403 PublishMessageWithTags shape=#0 args=#1 tags=#2
+@0403 PublishMessageWithTags outbound=#0 args=#1 tags=#2
 ```
 
 Publishing or emitting a first-class message value uses `PublishMessageValue`
@@ -1155,7 +1157,8 @@ The VM records diagnostic events while executing normal instructions:
 - Function and predicate call events are derived from callable metadata and
   direct call entry addresses.
 - Let and expression-to-nothing events are derived from debug diagnostic sites.
-- Publish argument events are derived from message shape and slot-list metadata.
+- Publish argument events are derived from outbound-message bind metadata and
+  slot-list metadata.
 
 ## Debug Segment
 

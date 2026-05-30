@@ -71,10 +71,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
 
                 case EmitMessage:
-                    _vmState.VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
+                    _vmState.VmPublishMessage(instruction.MessageDestination, binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                     break;
                 case EmitMessageWithTags:
-                    _vmState.VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
+                    _vmState.VmPublishMessageWithTags(instruction.MessageDestination, binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
                         binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
                     break;
                 case EmitMessageValue:
@@ -85,10 +85,10 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     break;
 
                 case PublishMessage:
-                    _vmState.VmPublishMessage(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
+                    _vmState.VmPublishMessage(instruction.MessageDestination, binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                     break;
                 case PublishMessageWithTags:
-                    _vmState.VmPublishMessageWithTags(binary.Uint16ConstantTable.Resolve(instruction.MessageDestination), binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
+                    _vmState.VmPublishMessageWithTags(instruction.MessageDestination, binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
                         binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), true, session);
                     break;
                 case PublishMessageValue:

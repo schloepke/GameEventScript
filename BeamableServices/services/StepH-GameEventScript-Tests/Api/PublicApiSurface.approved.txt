@@ -18,10 +18,11 @@ struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry> Entries { get }
   property System.UInt16 EntryCount { get }
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry
-  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress)
+  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id)
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
   property System.Collections.Generic.IReadOnlyList<System.UInt16> ArgumentNames { get }
   property System.UInt16 EntryAddress { get }
+  property System.UInt16 Id { get }
   property System.UInt16 Name { get }
 class StepH.GameEventScript.Api.GameEventScriptBinaryBuilder
   ctor GameEventScriptBinaryBuilder()
@@ -395,11 +396,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageSignature> OutboundMessageSignatures { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExtensionReference> ExternalReferences { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get }
   property System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> UShortListPool { get }
   property System.Collections.Generic.IReadOnlyList<System.String> StringPool { get }
-  property System.Collections.Generic.IReadOnlyList<System.UInt16> OutboundMessageSignatures { get }
   property System.Int32 MaxFrameSlots { get }
   property System.String ModuleName { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException

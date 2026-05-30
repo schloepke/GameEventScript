@@ -63,16 +63,9 @@ public static class GameEventScriptBytecodeDumper
         builder.Append("outboundMessageSignatures[").Append(module.OutboundMessageSignatures.Count.ToString(CultureInfo.InvariantCulture)).AppendLine("]");
         for (var i = 0; i < module.OutboundMessageSignatures.Count; i++)
         {
-            var shapeIndex = module.OutboundMessageSignatures[i];
+            var signature = module.OutboundMessageSignatures[i];
             builder.Append("    #").Append(i.ToString("D3", CultureInfo.InvariantCulture))
-                .Append(": shape=").Append(shapeIndex.ToString(CultureInfo.InvariantCulture));
-            if (shapeIndex < module.UShortListPool.Count)
-            {
-                var signature = module.UShortListPool[shapeIndex]
-                    .Select(index => index < module.StringPool.Count ? module.StringPool[index] : "?")
-                    .ToArray();
-                builder.Append(" [").Append(string.Join(", ", signature)).Append(']');
-            }
+                .Append(": ").Append(signature.SignatureId);
 
             builder.AppendLine();
         }
@@ -389,13 +382,13 @@ public static class GameEventScriptBytecodeDumper
 
             case GameEventScriptBytecodeOpCode.EmitMessage:
             case GameEventScriptBytecodeOpCode.PublishMessage:
-                AppendIndex(builder, "shape", instruction.MessageDestination);
+                AppendOutboundMessageSignature(builder, "outbound", module, instruction.MessageDestination);
                 AppendIndex(builder, "args", instruction.ListIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.EmitMessageWithTags:
             case GameEventScriptBytecodeOpCode.PublishMessageWithTags:
-                AppendIndex(builder, "shape", instruction.MessageDestination);
+                AppendOutboundMessageSignature(builder, "outbound", module, instruction.MessageDestination);
                 AppendIndex(builder, "args", instruction.ListIndex);
                 AppendIndex(builder, "tags", instruction.SecondaryListIndex);
                 break;
@@ -709,6 +702,20 @@ public static class GameEventScriptBytecodeDumper
         if ((uint)index < (uint)module.ExternalTypeConstructorReferences.Count)
         {
             builder.Append('(').Append(module.ExternalTypeConstructorReferences[index].SignatureId).Append(')');
+        }
+    }
+
+    private static void AppendOutboundMessageSignature(StringBuilder builder, string name, GameEventScriptCompiled module, int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
+        if ((uint)index < (uint)module.OutboundMessageSignatures.Count)
+        {
+            builder.Append('(').Append(module.OutboundMessageSignatures[index].SignatureId).Append(')');
         }
     }
 

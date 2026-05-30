@@ -14,7 +14,7 @@ public sealed class GameEventScriptCompiled
         string moduleName,
         IReadOnlyList<string> stringPool,
         IReadOnlyList<IReadOnlyList<ushort>> uShortListPool,
-        IReadOnlyList<ushort> outboundMessageSignatures,
+        IReadOnlyList<GameEventScriptMessageSignature> outboundMessageSignatures,
         IReadOnlyList<GameEventScriptExtensionReference> externalReferences,
         IReadOnlyList<GameEventScriptExternalTypeConstructorReference> externalTypeConstructorReferences,
         IReadOnlyDictionary<string, GameEventScriptBytecodeCallable> callables,
@@ -47,7 +47,7 @@ public sealed class GameEventScriptCompiled
 
     public IReadOnlyList<IReadOnlyList<ushort>> UShortListPool { get; }
 
-    public IReadOnlyList<ushort> OutboundMessageSignatures { get; }
+    public IReadOnlyList<GameEventScriptMessageSignature> OutboundMessageSignatures { get; }
 
     public IReadOnlyList<GameEventScriptExtensionReference> ExternalReferences { get; }
 

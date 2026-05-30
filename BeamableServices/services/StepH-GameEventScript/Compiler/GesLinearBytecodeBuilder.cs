@@ -11,6 +11,7 @@ internal sealed class GesLinearBytecodeBuilder
 {
     private readonly Func<string, int> _resolveStringIndex;
     private readonly Func<IReadOnlyList<ushort>, int> _resolveUShortListIndex;
+    private readonly Func<MessageLiteralExpressionNode, int> _resolveOutboundMessageSignatureIndex;
     private readonly Func<GameEventScriptExtensionReference, int> _resolveExternalReferenceIndex;
     private readonly Func<GameEventScriptExternalTypeConstructorReference, int> _resolveExternalTypeConstructorReferenceIndex;
     private readonly IReadOnlyDictionary<string, GesCallableDefinition> _sourceCallables;
@@ -30,6 +31,7 @@ internal sealed class GesLinearBytecodeBuilder
     public GesLinearBytecodeBuilder(
         Func<string, int>? resolveStringIndex = null,
         Func<IReadOnlyList<ushort>, int>? resolveUShortListIndex = null,
+        Func<MessageLiteralExpressionNode, int>? resolveOutboundMessageSignatureIndex = null,
         Func<GameEventScriptExtensionReference, int>? resolveExternalReferenceIndex = null,
         Func<GameEventScriptExternalTypeConstructorReference, int>? resolveExternalTypeConstructorReferenceIndex = null,
         IReadOnlyDictionary<string, GesCallableDefinition>? sourceCallables = null,
@@ -39,6 +41,7 @@ internal sealed class GesLinearBytecodeBuilder
     {
         _resolveStringIndex = resolveStringIndex ?? (_ => -1);
         _resolveUShortListIndex = resolveUShortListIndex ?? (_ => -1);
+        _resolveOutboundMessageSignatureIndex = resolveOutboundMessageSignatureIndex ?? (_ => -1);
         _resolveExternalReferenceIndex = resolveExternalReferenceIndex ?? (_ => -1);
         _resolveExternalTypeConstructorReferenceIndex = resolveExternalTypeConstructorReferenceIndex ?? (_ => -1);
         _sourceCallables = sourceCallables ?? new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
@@ -534,7 +537,7 @@ internal sealed class GesLinearBytecodeBuilder
             };
             Emit(CreateInstruction(
                 opCode,
-                dest: ResolveMessageShapeIndex(message.Message, argumentNames),
+                dest: _resolveOutboundMessageSignatureIndex(message),
                 a: tagSlotListIndex,
                 b: ResolveRequiredSlotListIndex(argumentSlots)));
             return;

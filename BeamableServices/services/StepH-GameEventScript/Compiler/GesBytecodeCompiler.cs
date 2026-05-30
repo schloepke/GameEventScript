@@ -29,8 +29,8 @@ internal static class GesBytecodeCompiler
         private readonly List<GameEventScriptExternalTypeConstructorReference> _externalTypeConstructorReferences = [];
         private readonly Dictionary<string, int> _uShortListIndex = new(StringComparer.Ordinal);
         private readonly List<IReadOnlyList<ushort>> _uShortListPool = [];
-        private readonly HashSet<int> _outboundMessageSignatureIndex = [];
-        private readonly List<ushort> _outboundMessageSignatures = [];
+        private readonly HashSet<string> _outboundMessageSignatureIds = [];
+        private readonly List<GameEventScriptMessageSignature> _outboundMessageSignatures = [];
         private readonly Dictionary<GameEventScriptBytecodeHandler, EventHandlerNode> _handlerSources =
             new(ReferenceEqualityComparer<GameEventScriptBytecodeHandler>.Instance);
 
@@ -51,6 +51,7 @@ internal static class GesBytecodeCompiler
             var linearBuilder = new GesLinearBytecodeBuilder(
                 AddString,
                 AddUShortList,
+                AddOutboundMessageSignature,
                 AddExternalReference,
                 AddExternalTypeConstructorReference,
                 module.Callables,
@@ -201,14 +202,29 @@ internal static class GesBytecodeCompiler
             return AddUShortList(shape);
         }
 
-        private void AddOutboundMessageSignature(MessageLiteralExpressionNode message)
+        private int AddOutboundMessageSignature(MessageLiteralExpressionNode message)
         {
             var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
-            var shapeIndex = AddMessageShape(message.Message, argumentNames);
-            if (_outboundMessageSignatureIndex.Add(shapeIndex))
+            var signature = GameEventScriptMessageSignature.Create(message.Message, argumentNames);
+            if (!_outboundMessageSignatureIds.Add(signature.SignatureId))
             {
-                _outboundMessageSignatures.Add(ToUShortIndex(shapeIndex, "outbound message signature index"));
+                for (var index = 0; index < _outboundMessageSignatures.Count; index++)
+                {
+                    if (string.Equals(_outboundMessageSignatures[index].SignatureId, signature.SignatureId, StringComparison.Ordinal)) return index;
+                }
+
+                throw new GameEventScriptCompileException($"GameEventScript outbound message signature '{signature.SignatureId}' was indexed but not stored.");
             }
+
+            var signatureIndex = _outboundMessageSignatures.Count;
+            _outboundMessageSignatures.Add(signature);
+            AddString(signature.Name);
+            foreach (var argumentName in signature.Parameters)
+            {
+                AddString(argumentName);
+            }
+
+            return signatureIndex;
         }
 
         private static ushort ToUShortIndex(int value, string name)

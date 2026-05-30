@@ -194,7 +194,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeStoresPublishMetadataInUShortListPool()
+    public void PublicLinearBytecodeStoresPublishMetadataAsOutboundSignatures()
     {
         const string script =
             """
@@ -210,13 +210,12 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
 
         var direct = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessageWithTags);
-        Assert.IsLessThan(compiled.UShortListPool.Count, direct.MessageDestination);
+        Assert.IsLessThan(compiled.OutboundMessageSignatures.Count, direct.MessageDestination);
         Assert.IsLessThan(compiled.UShortListPool.Count, direct.ListIndex);
         Assert.IsLessThan(compiled.UShortListPool.Count, direct.SecondaryListIndex);
-        var shape = compiled.UShortListPool[direct.MessageDestination].Select(index => compiled.StringPool[index]).ToArray();
-        CollectionAssert.AreEqual(new[] { "Done", "value" }, shape);
         Assert.HasCount(1, compiled.OutboundMessageSignatures);
-        Assert.AreEqual(direct.MessageDestination, compiled.OutboundMessageSignatures[0]);
+        Assert.AreEqual("Done(value)", compiled.OutboundMessageSignatures[0].SignatureId);
+        Assert.AreEqual(0, direct.MessageDestination);
         Assert.HasCount(1, compiled.UShortListPool[direct.ListIndex]);
         Assert.HasCount(1, compiled.UShortListPool[direct.SecondaryListIndex]);
         Assert.IsTrue(compiled.Code.Any(instruction =>
@@ -226,6 +225,19 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var buildShape = compiled.UShortListPool[build.SecondaryListIndex].Select(index => compiled.StringPool[index]).ToArray();
         CollectionAssert.AreEqual(new[] { "Done", "value" }, buildShape);
         Assert.HasCount(1, compiled.UShortListPool[build.ListIndex]);
+
+        var directOnly = GameEventScriptManager.Compile(
+            """
+            module DirectOnly
+            on Start(value) {
+              emit Done(value: value)
+            }
+            """);
+        Assert.IsFalse(directOnly.UShortListPool.Any(layout =>
+            layout.Count == 2 &&
+            layout.All(index => index < directOnly.StringPool.Count) &&
+            directOnly.StringPool[layout[0]] == "Done" &&
+            directOnly.StringPool[layout[1]] == "value"));
     }
 
     [TestMethod]
@@ -389,7 +401,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(callable.ReturnSlot, linearCallable.ReturnSlot);
         Assert.IsTrue(executable.LinearExecutable.Code.Any(instruction =>
             instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessage or GameEventScriptBytecodeOpCode.EmitMessageWithTags &&
-            instruction.MessageDestination < compiled.UShortListPool.Count));
+            instruction.MessageDestination < compiled.OutboundMessageSignatures.Count));
     }
 
     [TestMethod]
@@ -2326,11 +2338,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             code,
             instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.EmitMessage);
         Assert.IsGreaterThanOrEqualTo(0, publishInstructionIndex);
-        code[publishInstructionIndex] = code[publishInstructionIndex] with { MessageDestination = (ushort)compiled.UShortListPool.Count };
+        code[publishInstructionIndex] = code[publishInstructionIndex] with { MessageDestination = (ushort)compiled.OutboundMessageSignatures.Count };
         var invalid = RebuildCompiledArtifactFromPublicData(compiled, code);
 
         var exception = Assert.ThrowsExactly<InvalidOperationException>(() => GesBytecodeVmExecutableBuilder.Build(invalid));
-        StringAssert.Contains(exception.Message, "message shape");
+        StringAssert.Contains(exception.Message, "outbound message signature");
     }
 
     [TestMethod]
@@ -2575,7 +2587,9 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             original.ModuleName,
             original.StringPool.ToArray(),
             original.UShortListPool.Select(layout => (IReadOnlyList<ushort>)layout.ToArray()).ToArray(),
-            original.OutboundMessageSignatures.ToArray(),
+            original.OutboundMessageSignatures
+                .Select(signature => GameEventScriptMessageSignature.Create(signature.Name, signature.Parameters.ToArray()))
+                .ToArray(),
             original.ExternalReferences
                 .Select(reference => new GameEventScriptExtensionReference(reference.ExtensionName, reference.FunctionName, reference.ArgumentLabels.ToArray()))
                 .ToArray(),

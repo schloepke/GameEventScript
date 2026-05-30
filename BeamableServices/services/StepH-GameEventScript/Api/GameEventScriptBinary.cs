@@ -76,9 +76,11 @@ public readonly struct GameEventScriptUInt16Table
 public readonly struct GameEventScriptBinaryBindTable
 {
     
-    public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind kind, ushort name, IReadOnlyList<ushort>? argumentNames, ushort entryAddress = 0xFFFF)
+    public readonly struct GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind kind, ushort name, IReadOnlyList<ushort>? argumentNames, ushort entryAddress = 0xFFFF, ushort id = 0xFFFF)
     {
         private readonly ushort[]? _argumentNames = argumentNames?.ToArray() ?? [];
+
+        public ushort Id { get; } = id;
 
         public GameEventScriptBinaryBindKind Kind { get; } = kind;
 

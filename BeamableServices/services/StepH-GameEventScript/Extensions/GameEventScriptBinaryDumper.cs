@@ -60,6 +60,7 @@ public static class GameEventScriptBinaryDumper
             var entry = table.Entries[i];
             builder
                 .Append(".index ").AppendLine(i.ToString(CultureInfo.InvariantCulture))
+                .Append(".id ").AppendLine(entry.Id.ToString(CultureInfo.InvariantCulture))
                 .Append(".kind ").AppendLine(entry.Kind.ToString())
                 .Append(".name ").Append(entry.Name.ToString(CultureInfo.InvariantCulture))
                 .Append(" \"").Append(Escape(stringTable.Resolve(entry.Name))).AppendLine("\"")

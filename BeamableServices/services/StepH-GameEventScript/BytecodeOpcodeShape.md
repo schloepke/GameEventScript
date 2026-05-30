@@ -59,7 +59,7 @@ The byte layout is:
 | --- | --- | --- | --- |
 | `0` | `OpCode` | `OpCode` | Opcode tag, backed by `byte`. |
 | `1` | `UnitAndFlags` | `UnitAndFlags` | Low 5 bits carry the numeric unit id; high 3 bits are reserved flags. |
-| `2..3` | `DestinationSlot` / `MessageDestination` | `DestinationSlot` | Destination/result slot or static message destination shape. |
+| `2..3` | `DestinationSlot` / `MessageDestination` | `DestinationSlot` | Destination/result slot or static outbound-message bind id. |
 | `4..5` | `XSlot` / `ConditionSlot` / `StringIndex` / `SecondaryListIndex` / `ExternalReferenceIndex` / `ImmediateX` / `Index` / `Count` | primary X bytes | First primary operand, signed immediate, unsigned index, or table index. |
 | `6..7` | `YSlot` / `TargetAddress` / `EntryAddress` / `ListIndex` / `TypeOperand` / `ImmediateY` | primary Y bytes | Second primary operand, target/entry address, type operand, or primary list index. |
 | `8..9` | `AU` / `AS` | `I64`/`Payload`/`F64` bytes `0..1` | Payload word bytes `0..1`, or first payload 16-bit operand. |
@@ -201,12 +201,12 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x08 | `CallExternal` | optional `NormalizeResultAsPredicate` | result slot | `ExternalReferenceIndex` | `ListIndex`=argument slots | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
 | 0x09 | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
 | 0x0A | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
-| 0x0B | `EmitMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Emits a statically shaped message without tags. |
-| 0x0C | `EmitMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Emits a statically shaped message with tags. |
+| 0x0B | `EmitMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument slot-list index | - | Emits a statically shaped message without tags. |
+| 0x0C | `EmitMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Emits a statically shaped message with tags. |
 | 0x0D | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
 | 0x0E | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Emits a dynamic message value with tags. |
-| 0x0F | `PublishMessage` | - | `MessageDestination`=message shape index | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
-| 0x10 | `PublishMessageWithTags` | - | `MessageDestination`=message shape index | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
+| 0x0F | `PublishMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message without tags. |
+| 0x10 | `PublishMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag slot-list index | `ListIndex`=argument slot-list index | - | Publishes a statically shaped message with tags. |
 | 0x11 | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
 | 0x12 | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag slot-list index | - | Publishes a dynamic message value with tags. |
 | 0x13 | `Cast` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. `Cast :tag` validates tag syntax; invalid tag text writes `nothing`. `Cast :vector`/`:point` structurally convert between vectors and points by copying components and unit. |

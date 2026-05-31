@@ -66,9 +66,10 @@ public sealed class GameEventScriptHost
     public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        handlers.Bind(_extensionRegistry, _externalTypeRegistry);
+
         if (handlers is GesBytecodeVmExecutable registerCompiled)
         {
-            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry, _externalTypeRegistry);
             RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
             return this;
         }
@@ -116,9 +117,9 @@ public sealed class GameEventScriptHost
     public GameEventScriptHost Subscribe(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
     {
         _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
+        handlers.Bind(_extensionRegistry, _externalTypeRegistry);
         if (handlers is GesBytecodeVmExecutable registerCompiled)
         {
-            GesDynamicLinker.Bind(registerCompiled, _extensionRegistry, _externalTypeRegistry);
             RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
             return this;
         }

@@ -77,7 +77,7 @@ GameEventScriptBinary
   UInt16SliceTable        compact ushort lists used by code and metadata
   BindTable
     Kind                  0x10-0x1F export, 0x20-0x2F import
-    MessageHandler | Function | Predicate | ExtensionCall | OutboundMessage | ExternalType
+    MessageHandler | EnvelopeHandler | Function | Predicate | ExtensionCall | OutboundMessage | ExternalType
     Id                    bind id within its kind-specific namespace
     Name                  string-pool index
     ArgumentNames         ordered string-pool indexes
@@ -454,7 +454,6 @@ starts.
 ```text
 HandlerEntry
   MessageName
-  DispatchKind: ExactSignature | MessageEnvelope
   SignatureId
   Parameters: ParameterEntry[]
   SignatureLabels
@@ -478,13 +477,13 @@ is encoded as non-negative `SlotLocals Count` at the entry address because it is
 a VM execution detail needed equally by exported handlers/callables and private
 helper entries.
 
-`ExactSignature` handlers subscribe by `SignatureId`. `MessageEnvelope` handlers
+`MessageHandler` entries subscribe by `SignatureId`. `EnvelopeHandler` entries
 subscribe by `MessageName` and tag filters only; the runtime invokes them with a
 single `:envelope` argument whose `message` field is the original message.
-Message-envelope handlers count as normal delivery and therefore prevent
-`undeliverable` fallback when their tag filters match. For `MessageEnvelope`
-handlers, `SignatureId` still records the synthetic envelope parameter signature
-such as `Damage(envelope)`, but it is metadata and not the dispatch key.
+Envelope handlers count as normal delivery and therefore prevent `undeliverable`
+fallback when their tag filters match. For `EnvelopeHandler` entries,
+`SignatureId` still records the synthetic envelope parameter signature such as
+`Damage(envelope)`, but it is metadata and not the dispatch key.
 
 System endpoint entries use reserved lowercase names outside normal message
 casing. The currently defined endpoints are:
@@ -494,13 +493,13 @@ initialization
 undeliverable as envelope
 ```
 
-`initialization` is encoded as an `ExactSignature` handler entry without
+`initialization` is encoded as a `MessageHandler` entry without
 arguments. It is not normal external dispatch input; the host queues all loaded
 initialization handlers directly when a `GameEventScriptSession` starts.
 
-`undeliverable` is encoded as a `MessageEnvelope` handler entry with message name
+`undeliverable` is encoded as an `EnvelopeHandler` entry with message name
 `undeliverable`. It receives a map-backed `:envelope` value when no
-`ExactSignature` or `MessageEnvelope` handler could be queued for the original
+`MessageHandler` or `EnvelopeHandler` could be queued for the original
 message after signature/name and tag filters were applied. System endpoints
 still use normal handler metadata, priority, and declaration order.
 `undeliverable` also supports tag filters; `initialization` is parameterless and
@@ -972,7 +971,7 @@ Handlers may declare static tag filters:
 - `matching :a, :b`: all required tags must be present.
 - `without :x, :y`: none of the excluded tags may be present.
 - no filter: any tag list matches as long as the message signature matches, or
-  the message name matches for `MessageEnvelope` handlers.
+  the message name matches for `EnvelopeHandler` entries.
 
 Publishing and emitting are distinct opcodes. Static message literals are
 registered as `OutboundMessage` bind entries. Direct

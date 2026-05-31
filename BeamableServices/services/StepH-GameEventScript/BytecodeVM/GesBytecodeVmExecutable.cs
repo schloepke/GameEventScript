@@ -79,9 +79,15 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptMessageHandlerCo
     internal void InvokeHandler(GesBytecodeVmCompiledHandler handler, GameEventScriptMessage message, GameEventScriptSession context)
         => GesBytecodeVmInvocationEngine.InvokeHandler(this, context, handler, message);
 
+    public void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
+    {
+        BindExtensions(extensionRegistry);
+        BindExternalTypes(typeRegistry);
+    }
+    
     internal void BindExtensions(IGameEventScriptExtensionRegistry registry)
     {
-        _extensionRegistry = registry ?? GameEventScriptEmptyExtensionRegistry.Instance;
+        _extensionRegistry = registry;
         if (BytecodeModule.ExternalReferences.Count == 0)
         {
             _boundExtensions = new Dictionary<string, IGameEventScriptExtensionFunction>(StringComparer.Ordinal);

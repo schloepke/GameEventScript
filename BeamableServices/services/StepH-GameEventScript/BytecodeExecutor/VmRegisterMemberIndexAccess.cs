@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Extensions;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -9,21 +11,61 @@ internal static class VmRegisterMemberIndexAccess
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMemberAccess(ref this VmValue dst, ushort memberNameIndex, ref VmValue obj)
     {
-        var key = dst.OwningState.Binary.TextConstantTable.Resolve(memberNameIndex);
+        dst.VmMemberAccess(dst.OwningState.Binary.TextConstantTable.Resolve(memberNameIndex), ref obj);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmMemberAccess(ref this VmValue dst, string key, ref VmValue obj)
+    {
         switch (obj.Kind)
         {
-            case Map or Custom when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
+            case Map or Custom or Envelope when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
                 dst = value;
                 return;
             case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(key, out var value):
                 dst.SetFloat(value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
-                // FIXME: Need to implement the member access for messages.
+                switch (key)
+                {
+                    case "name":
+                        dst.SetText(message.Name);
+                        return;
+                    case "arguments":
+                        var entries = new Dictionary<string, VmValue>();
+                        foreach(var argumentKey in message.Arguments.Keys)
+                        {
+                            var value = dst.OwningState.CreateRegister();
+                            value.BindArguments(message.Arguments[argumentKey]);
+                            entries.Add(argumentKey, value);
+                        }
+                        dst.SetMap(dst.OwningState.CreateMap(entries));
+                        return;
+                    case "signatureId":
+                        dst.SetText(message.SignatureId);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
             case Handler when obj.ObjectValue is GameEventScriptMessageSignature signature:
-                // FIXME: Need to implement the member access for message signatures.
-            case Envelope:
-                // FIXME: Need to implement the member access for envelopes.
+                switch (key)
+                {
+                    case "name":
+                        dst.SetText(signature.Name);
+                        return;
+                    case "parameters":
+                        var list = dst.OwningState.CreateList(signature.Parameters.Count);
+                        for (var i = 0; i < list.Length; i++) list.Items[i].SetText(signature.Parameters[i]);
+                        dst.SetList(list);
+                        return;
+                    case "signatureId":
+                        dst.SetText(signature.SignatureId);
+                        return;
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
             default:
                 dst.SetNothing();
                 return;
@@ -67,16 +109,10 @@ internal static class VmRegisterMemberIndexAccess
                 if (index < resolvedText.Length) dst.SetText(resolvedText[index].ToString());
                 else dst.SetNothing();
                 return;
-            case Text or Tag when obj is { IsStorageObject: true, ObjectValue: string text}:
+            case Text or Tag when obj is { IsStorageObject: true, ObjectValue: string text }:
                 if (index < text.Length) dst.SetText(text[index].ToString());
                 else dst.SetNothing();
                 return;
-            case Message when obj.ObjectValue is GameEventScriptMessage message:
-            // FIXME: Need to implement the index access for message signatures.
-            case Handler when obj.ObjectValue is GameEventScriptMessageSignature signature:
-            // FIXME: Need to implement the index access for message signatures.
-            case Envelope:
-            // FIXME: Need to implement the index access for envelopes.
             default:
                 dst.SetNothing();
                 return;
@@ -98,22 +134,11 @@ internal static class VmRegisterMemberIndexAccess
                 dst.VmMemberAccess((ushort)property.IntegerValue, ref obj);
                 return;
             case Text or Tag when property.ObjectValue is string key:
-                switch (obj.Kind)
-                {
-                    case Map or Custom when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
-                        dst = value;
-                        return;
-                    case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(key, out var value):
-                        dst.SetFloat(value, obj.Unit);
-                        return;
-                    default:
-                        dst.SetNothing();
-                        return;
-                }
+                dst.VmMemberAccess(key, ref obj);
+                return;
             default:
                 dst.SetNothing();
                 return;
         }
     }
-
 }

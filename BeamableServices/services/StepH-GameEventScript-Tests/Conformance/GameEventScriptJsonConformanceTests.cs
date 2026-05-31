@@ -530,7 +530,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         {
             builder.Append(GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test)
                 .ToGameEventScriptBinary()
-                .Dump(includeInstructionAddresses: true));
+                .Dump(includeInstructionAddresses: true, scriptSource: GetScriptSourceForDump(testCase)));
         }
         catch (Exception exception)
         {
@@ -541,47 +541,39 @@ public abstract class GameEventScriptJsonConformanceTestBase
         {
             builder.AppendLine();
         }
-
-        AppendCommentedScript(builder, testCase);
         return builder.ToString();
     }
 
-    private static void AppendCommentedScript(StringBuilder builder, GameEventScriptConformanceCase testCase)
+    private static string? GetScriptSourceForDump(GameEventScriptConformanceCase testCase)
     {
         var test = testCase.Test;
         if (!string.IsNullOrWhiteSpace(test.Script))
         {
-            AppendCommentedLines(builder, test.Script);
-            return;
+            return test.Script;
         }
 
         if (test.Scripts is not { Count: > 0 })
         {
-            builder.AppendLine("//\t<script dump unavailable: test has no script text>");
-            return;
+            return null;
         }
 
+        var builder = new StringBuilder();
         for (var index = 0; index < test.Scripts.Count; index++)
         {
             var source = test.Scripts[index];
             if (index > 0)
             {
-                builder.AppendLine("//\t");
+                builder.AppendLine();
             }
 
-            builder.AppendLine($"//\tsource: {source.SourceName ?? $"script-{index + 1}"}");
-            AppendCommentedLines(builder, source.Text ?? string.Empty);
+            builder.AppendLine($"// source: {source.SourceName ?? $"script-{index + 1}"}");
+            builder.Append(source.Text ?? string.Empty);
+            if (builder.Length > 0 && builder[^1] != '\n')
+            {
+                builder.AppendLine();
+            }
         }
-    }
-
-    private static void AppendCommentedLines(StringBuilder builder, string text)
-    {
-        using var reader = new StringReader(text);
-        while (reader.ReadLine() is { } line)
-        {
-            builder.Append("//\t");
-            builder.AppendLine(line);
-        }
+        return builder.ToString();
     }
 
     private static IEnumerable<object[]> Cases(string relativeSpecFile)

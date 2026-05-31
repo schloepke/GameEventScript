@@ -110,8 +110,9 @@ public readonly struct GameEventScriptBinaryBindTable
 public enum GameEventScriptBinaryBindKind : byte
 {
     MessageHandler = 0x10,
-    Function = 0x11,
-    Predicate = 0x12,
+    EnvelopeHandler = 0x11,
+    Function = 0x12,
+    Predicate = 0x13,
     ExtensionCall = 0x20,
     OutboundMessage = 0x21,
     Record = 0x30,

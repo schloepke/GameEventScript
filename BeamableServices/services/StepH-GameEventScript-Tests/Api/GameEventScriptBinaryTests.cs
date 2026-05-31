@@ -1,6 +1,7 @@
 using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Extensions;
 
 namespace StepH_GameEventScript_Tests.Api;
 
@@ -47,6 +48,65 @@ public sealed class GameEventScriptBinaryTests
         var import = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.ExtensionCall);
         Assert.AreEqual("math.floor", Resolve(binary, import.Name));
         CollectionAssert.AreEqual(new[] { "_" }, import.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
+    }
+
+    [TestMethod]
+    public void FromCompiledExportsEnvelopeHandlersWithDedicatedBindKind()
+    {
+        const string script =
+            """
+            module BinaryEnvelope
+
+            on Ping as envelope {
+              emit Done(value: envelope.message.name)
+            }
+            """;
+
+        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
+
+        var handler = binary.BindTable.Entries.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.EnvelopeHandler);
+        Assert.AreEqual("Ping", Resolve(binary, handler.Name));
+        CollectionAssert.AreEqual(new[] { "envelope" }, handler.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
+    }
+
+    [TestMethod]
+    public void BinaryDumperFormatsEnvelopeHandlersAsEnvelopeDispatch()
+    {
+        const string script =
+            """
+            module BinaryEnvelopeDump
+
+            on Ping as envelope {
+              emit Done(value: envelope.message.name)
+            }
+            """;
+
+        var dump = GameEventScriptManager.Compile(script).ToGameEventScriptBinary().Dump();
+
+        StringAssert.Contains(dump, "// \"Ping as envelope\"");
+        Assert.IsFalse(dump.Contains("// \"Ping(envelope)\"", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void BinaryDumperCanIncludeSourceScriptInHeader()
+    {
+        const string script =
+            """
+            module BinarySourceDump
+
+            on Start {
+              emit Done(value: 1)
+            }
+            """;
+
+        var dump = GameEventScriptManager.Compile(script).ToGameEventScriptBinary().Dump(
+            includeInstructionAddresses: true,
+            scriptSource: script);
+
+        StringAssert.Contains(dump, "// Script:");
+        StringAssert.Contains(dump, "//\t\tmodule BinarySourceDump");
+        StringAssert.Contains(dump, "//\t\ton Start {");
+        StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n\n.gesb ");
     }
 
     [TestMethod]

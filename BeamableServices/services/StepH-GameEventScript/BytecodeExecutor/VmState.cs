@@ -142,6 +142,24 @@ internal class VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue CreateRegister()
+    {
+        return new VmValue();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmListObject CreateList(int size)
+    {
+        return new VmListObject(this, size);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmMapObject CreateMap(IReadOnlyDictionary<string, VmValue> entries)
+    {
+        return new VmMapObject(this, entries);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateInteger(long integer)
     {
         var value = default(VmValue);

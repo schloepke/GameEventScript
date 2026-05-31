@@ -53,12 +53,6 @@
 			<array>
 				<dict>
 					<key>match</key>
-					<string>^\s*@\d{4,5}\b</string>
-					<key>name</key>
-					<string>comment.line.address.gameeventscript.assembler</string>
-				</dict>
-				<dict>
-					<key>match</key>
 					<string>//.*$</string>
 					<key>name</key>
 					<string>comment.line.double-slash.gameeventscript.assembler</string>
@@ -135,7 +129,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:L_\d+|L_none|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|Record_\d+|ExternalType_\d+|Bind_\d+)\b</string>
+					<string>\b(?:L_\d+|L_none|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_\d+|EnvelopeHandler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|Record_\d+|ExternalType_\d+|Bind_\d+)\b</string>
 					<key>name</key>
 					<string>variable.other.label.reference.gameeventscript.assembler</string>
 				</dict>
@@ -146,8 +140,16 @@
 			<key>patterns</key>
 			<array>
 				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>comment.line.address.gameeventscript.assembler</string>
+						</dict>
+					</dict>
 					<key>match</key>
-					<string>^\s*(?:Nop|SlotLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|Call|CallStandard|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|MoveSlot|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|ApproxEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomPush|RandomPushConstant|RandomPop|SeriesTerm|SeriesTake|SeriesDrop|Length|StartsWith|EndsWith|Contains|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|StreamCreate|StreamNext|StreamClose|StreamReduce|StreamReduceOrDefault|StreamFold|StreamCollectList|StreamCollectMap|StreamCollectMapValue|StreamCollectFirst|StreamCollectLast|StreamCollectSingle|PipelineStream|PipelineHasAny|PipelineHasAll|PipelineContainsSingle|PipelineContainsAny|PipelineContainsAll|PipelineDistinct|PipelineDistinctBy|PipelineGroupBy|PipelineReverse|PipelineSortAscending|PipelineSortDescending|PipelineOrderByAscending|PipelineOrderByDescending|PipelineTakeFirst|PipelineTakeLast|PipelineTakeHighest|PipelineTakeLowest|PipelineDropFirst|PipelineDropLast|PipelineDropHighest|PipelineDropLowest|PipelineShuffle|PipelineDraw|PipelineChoose|PipelineChooseRandom|PipelineChooseWeighted|PipelineDicePatternCountAny|PipelineDicePatternCountFace|PipelineDicePatternFullHouse|PipelineDicePatternStraight|PipelineTakePatternCountAny|PipelineTakePatternCountFace|PipelineTakePatternFullHouse|PipelineTakePatternStraight|PipelineListCreateBuilder|PipelineListBuilderAdd|PipelineListBuilderFinish)\b</string>
+					<string>^\s*(@\d{4,5}\b\s*)?(?:Nop|SlotLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|Call|CallStandard|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|MoveSlot|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|ApproxEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomPush|RandomPushConstant|RandomPop|SeriesTerm|SeriesTake|SeriesDrop|Length|StartsWith|EndsWith|Contains|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|StreamCreate|StreamNext|StreamClose|StreamReduce|StreamReduceOrDefault|StreamFold|StreamCollectList|StreamCollectMap|StreamCollectMapValue|StreamCollectFirst|StreamCollectLast|StreamCollectSingle|PipelineStream|PipelineHasAny|PipelineHasAll|PipelineContainsSingle|PipelineContainsAny|PipelineContainsAll|PipelineDistinct|PipelineDistinctBy|PipelineGroupBy|PipelineReverse|PipelineSortAscending|PipelineSortDescending|PipelineOrderByAscending|PipelineOrderByDescending|PipelineTakeFirst|PipelineTakeLast|PipelineTakeHighest|PipelineTakeLowest|PipelineDropFirst|PipelineDropLast|PipelineDropHighest|PipelineDropLowest|PipelineShuffle|PipelineDraw|PipelineChoose|PipelineChooseRandom|PipelineChooseWeighted|PipelineDicePatternCountAny|PipelineDicePatternCountFace|PipelineDicePatternFullHouse|PipelineDicePatternStraight|PipelineTakePatternCountAny|PipelineTakePatternCountFace|PipelineTakePatternFullHouse|PipelineTakePatternStraight|PipelineListCreateBuilder|PipelineListBuilderAdd|PipelineListBuilderFinish)\b</string>
 					<key>name</key>
 					<string>keyword.mnemonic.opcode.gameeventscript.assembler</string>
 				</dict>
@@ -194,7 +196,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:MessageHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\b</string>
+					<string>\b(?:MessageHandler|EnvelopeHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\b</string>
 					<key>name</key>
 					<string>support.type.bind-kind.gameeventscript.assembler</string>
 				</dict>

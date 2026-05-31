@@ -16,4 +16,7 @@ public interface IGameEventScriptMessageHandlerCollection
     /// when a message with a matching signature is received.
     /// </summary>
     IEnumerable<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptSession> Handler)> Handlers { get; }
+
+    void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry);
+
 }

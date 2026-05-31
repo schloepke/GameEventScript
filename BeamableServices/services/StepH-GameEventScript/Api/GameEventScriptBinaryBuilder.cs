@@ -169,10 +169,13 @@ public static class GameEventScriptBinaryExtensions
         var handlerId = 0;
         foreach (var handler in compiled.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal).SelectMany(pair => pair.Value.OrderBy(handler => handler.DeclarationOrder)))
         {
+            var handlerKind = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
+                ? GameEventScriptBinaryBindKind.EnvelopeHandler
+                : GameEventScriptBinaryBindKind.MessageHandler;
             builder
                 .AddStringPoolElement(handler.Message, out var messageIndex)
                 .AddStringPoolElements(handler.SignatureLabels, out var argumentIndexes)
-                .AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.MessageHandler, messageIndex, argumentIndexes,
+                .AddBind(new GameEventScriptBinaryBindEntry(handlerKind, messageIndex, argumentIndexes,
                     handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)handler.EntryAddress),
                     checked((ushort)handlerId++)));
         }

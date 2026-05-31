@@ -13,7 +13,7 @@ namespace StepH.GameEventScript.Extensions;
 /// </summary>
 public static class GameEventScriptBinaryDumper
 {
-    private const string CodeIndent = "\t\t\t\t";
+    private const string CodeIndent = "\t\t\t\t\t";
     private const ushort NoAddress = 0xFFFF;
 
     /// <summary>
@@ -23,14 +23,26 @@ public static class GameEventScriptBinaryDumper
         => Dump(binary, includeInstructionAddresses: false);
 
     /// <summary>
+    /// Dumps the binary header, source script, tables, binds, and code as an assembler-like text format.
+    /// </summary>
+    public static string Dump(this GameEventScriptBinary binary, string? scriptSource)
+        => Dump(binary, includeInstructionAddresses: false, scriptSource: scriptSource);
+
+    /// <summary>
     /// Dumps the binary header, tables, binds, and code as an assembler-like text format.
     /// </summary>
     public static string Dump(this GameEventScriptBinary binary, bool includeInstructionAddresses)
+        => Dump(binary, includeInstructionAddresses, scriptSource: null);
+
+    /// <summary>
+    /// Dumps the binary header, optional source script, tables, binds, and code as an assembler-like text format.
+    /// </summary>
+    public static string Dump(this GameEventScriptBinary binary, bool includeInstructionAddresses, string? scriptSource)
     {
         var context = new DisassemblyContext(binary);
         var builder = new StringBuilder();
 
-        AppendHeader(builder, binary);
+        AppendHeader(builder, binary, scriptSource);
 
         builder
             .Append(".gesb ").Append(binary.Header.Version.ToString(CultureInfo.InvariantCulture)).AppendLine()
@@ -44,7 +56,7 @@ public static class GameEventScriptBinaryDumper
         return builder.ToString();
     }
 
-    private static void AppendHeader(StringBuilder builder, GameEventScriptBinary binary)
+    private static void AppendHeader(StringBuilder builder, GameEventScriptBinary binary, string? scriptSource)
     {
         builder
             .AppendLine("// -------------------------------------------------------------------------------")
@@ -53,8 +65,28 @@ public static class GameEventScriptBinaryDumper
             .Append("//  Format version: ").Append(binary.Header.Version.ToString(CultureInfo.InvariantCulture)).AppendLine(".0")
             .AppendLine("//")
             .Append("//  Disassembled at ").AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
-            .AppendLine("// -------------------------------------------------------------------------------")
-            .AppendLine();
+            .AppendLine("// -------------------------------------------------------------------------------");
+
+        if (!string.IsNullOrWhiteSpace(scriptSource))
+        {
+            builder
+                .AppendLine("// Script:")
+                .AppendLine("//");
+            AppendHeaderScript(builder, scriptSource);
+            builder
+                .AppendLine("//")
+                .AppendLine("// -------------------------------------------------------------------------------");
+        }
+
+        builder.AppendLine();
+    }
+
+    private static void AppendHeaderScript(StringBuilder builder, string scriptSource)
+    {
+        foreach (var line in scriptSource.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n'))
+        {
+            builder.Append("//\t\t").AppendLine(line);
+        }
     }
 
     private static void AppendTextSegment(StringBuilder builder, GameEventScriptBinary binary)
@@ -120,11 +152,8 @@ public static class GameEventScriptBinaryDumper
             }
 
             builder
-                .Append(" // \"")
-                .Append(Escape(context.ResolveText(entry.Name)))
-                .Append('(')
-                .Append(Escape(string.Join(", ", entry.ArgumentNames.Select(context.ResolveText))))
-                .AppendLine(")\"");
+                .Append(" // ")
+                .AppendLine(FormatBindSignatureComment(context, entry));
         }
     }
 
@@ -148,7 +177,7 @@ public static class GameEventScriptBinaryDumper
             var instruction = instructions[i];
             if (includeInstructionAddresses)
             {
-                builder.Append('\t').Append('@').Append(i.ToString("0000", CultureInfo.InvariantCulture)).Append("\t\t");
+                builder.Append("\t\t").Append('@').Append(i.ToString("0000", CultureInfo.InvariantCulture)).Append("\t\t");
             }
             else
             {
@@ -404,7 +433,15 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
     {
-        comments.Add("\"" + Escape(context.ResolveText(entry.Name)) + "(" + string.Join(", ", entry.ArgumentNames.Select(context.ResolveText)) + ")\"");
+        comments.Add(FormatBindSignatureComment(context, entry));
+    }
+
+    private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+    {
+        var name = Escape(context.ResolveText(entry.Name));
+        return entry.Kind == GameEventScriptBinaryBindKind.EnvelopeHandler
+            ? "\"" + name + " as envelope\""
+            : "\"" + name + "(" + Escape(string.Join(", ", entry.ArgumentNames.Select(context.ResolveText))) + ")\"";
     }
 
     private static void AddCodeEntryComment(List<string> comments, DisassemblyContext context, ushort address)
@@ -470,7 +507,7 @@ public static class GameEventScriptBinaryDumper
     private static StringBuilder AppendAlignedLabel(StringBuilder builder, string label)
     {
         builder.Append(label).Append(':');
-        AppendTabsToColumn(builder, label.Length + 1, 16);
+        AppendTabsToColumn(builder, label.Length + 1, 20);
         return builder;
     }
 
@@ -781,6 +818,7 @@ public static class GameEventScriptBinaryDumper
             => kind switch
             {
                 GameEventScriptBinaryBindKind.MessageHandler => "Handler",
+                GameEventScriptBinaryBindKind.EnvelopeHandler => "EnvelopeHandler",
                 GameEventScriptBinaryBindKind.Function => "Function",
                 GameEventScriptBinaryBindKind.Predicate => "Predicate",
                 GameEventScriptBinaryBindKind.ExtensionCall => "Extension",

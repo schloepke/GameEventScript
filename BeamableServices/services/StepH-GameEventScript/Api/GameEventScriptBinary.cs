@@ -110,7 +110,7 @@ public readonly struct GameEventScriptBinaryBindTable
 public enum GameEventScriptBinaryBindKind : byte
 {
     MessageHandler = 0x10,
-    EnvelopeHandler = 0x11,
+    MessageNameHandler = 0x11,
     Function = 0x12,
     Predicate = 0x13,
     ExtensionCall = 0x20,
@@ -152,7 +152,6 @@ public enum GameEventScriptBytecodeTypeKind : byte
 
     Handler = 0x10,
     Message = 0x11,
-    Envelope = 0x12,
     
     List = 0x20,
     Dice = 0x21,

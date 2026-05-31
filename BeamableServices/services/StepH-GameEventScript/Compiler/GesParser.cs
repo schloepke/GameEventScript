@@ -364,13 +364,13 @@ internal sealed class GesParser
         if (Match(As))
         {
             SkipNewLines();
-            var envelopeToken = Current;
-            var envelopeLocalName = ExpectIdentifier();
-            dispatchKind = EventHandlerDispatchKind.MessageEnvelope;
+            var messageToken = Current;
+            var messageLocalName = ExpectIdentifier();
+            dispatchKind = EventHandlerDispatchKind.MessageName;
             parameters.Add(WithRange(new ParameterNode(
-                GameEventScriptSystemEndpoints.EnvelopeArgumentName,
-                envelopeLocalName,
-                GameEventScriptSystemEndpoints.EnvelopeTypeName), envelopeToken));
+                GameEventScriptSystemEndpoints.MessageArgumentName,
+                messageLocalName,
+                "message"), messageToken));
         }
         else if (Match(LeftParen))
         {

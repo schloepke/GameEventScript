@@ -97,7 +97,7 @@ public sealed class GameEventScriptBytecodeTypeFieldDefinition
 public enum GameEventScriptBytecodeHandlerDispatchKind
 {
     ExactSignature,
-    MessageEnvelope
+    MessageName
 }
 
 public sealed class GameEventScriptBytecodeHandler

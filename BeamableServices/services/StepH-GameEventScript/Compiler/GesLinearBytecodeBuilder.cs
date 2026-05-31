@@ -3024,7 +3024,6 @@ internal sealed class GesLinearBytecodeBuilder
             "vector" => GameEventScriptBytecodeTypeKind.Vector,
             "point" => GameEventScriptBytecodeTypeKind.Point,
             "series" => GameEventScriptBytecodeTypeKind.Series,
-            "envelope" => GameEventScriptBytecodeTypeKind.Envelope,
             "tag" => GameEventScriptBytecodeTypeKind.Tag,
             "text" => GameEventScriptBytecodeTypeKind.Text,
             "list" => GameEventScriptBytecodeTypeKind.List,

@@ -436,17 +436,6 @@
         "symbol": "undeliverable",
         "symbolKind": "Handler"
       }
-    },
-    {
-      "kind": "compileError",
-      "name": "undeliverable endpoint rejects legacy envelope parameter syntax",
-      "script": "on undeliverable(envelope as :envelope) {\n}",
-      "expectedError": {
-        "phase": "build",
-        "kind": "InvalidMessageCase",
-        "symbol": "undeliverable",
-        "symbolKind": "Handler"
-      }
     }
   ]
 }

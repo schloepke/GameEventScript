@@ -4668,7 +4668,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeTypeKind.Vector => "vector",
             GameEventScriptBytecodeTypeKind.Point => "point",
             GameEventScriptBytecodeTypeKind.Series => "series",
-            GameEventScriptBytecodeTypeKind.Envelope => "envelope",
             GameEventScriptBytecodeTypeKind.Tag => "tag",
             GameEventScriptBytecodeTypeKind.Text => "text",
             GameEventScriptBytecodeTypeKind.List => "list",
@@ -4724,9 +4723,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "point" => value.ReferenceValue?.IsPoint() ?? false,
             "boolean" => value.Kind == BytecodeVmValueKind.Boolean || value.ReferenceValue?.Kind == GameEventScriptValueKind.Boolean,
             "series" => value.ReferenceValue?.IsSeries() ?? false,
-            "envelope" => value.ReferenceValue is { } envelopeValue &&
-                          envelopeValue.TryGetCustomTypeName(out var envelopeTypeName) &&
-                          string.Equals(envelopeTypeName, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal),
             "list" => value.ReferenceValue?.IsList() ?? false,
             "range" => value.ReferenceValue?.IsRange() ?? false,
             "message" => value.ReferenceValue is { } messageValue &&
@@ -5752,10 +5748,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "point" => BytecodeVmValue.Reference(ConvertToPoint(boxed)),
             "number" or "numeric" => BytecodeVmValue.FromGameEventScriptValue(ConvertToNumber(boxed)),
             "series" => boxed.IsSeries()
-                ? input
-                : BytecodeVmValue.Nothing,
-            "envelope" => boxed.TryGetCustomTypeName(out var envelopeTypeName) &&
-                          string.Equals(envelopeTypeName, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal)
                 ? input
                 : BytecodeVmValue.Nothing,
             "list" => TryCheckMaterializedValue(boxed, "List conversion would materialize more range items than allowed.")

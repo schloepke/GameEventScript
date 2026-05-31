@@ -30,11 +30,11 @@ public sealed class GameEventScriptMessage
     public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments) => new(name, GameEventScriptNamedArguments.Create(arguments));
 
     /// <summary>
-    /// Creates a new message with the provided arguments and envelope tags. Tags are metadata and are not part of the message signature.
+    /// Creates a new message with the provided arguments and delivery tags. Tags are metadata and are not part of the message signature.
     /// </summary>
     /// <param name="name">The message name.</param>
     /// <param name="arguments">The named message arguments.</param>
-    /// <param name="tags">Envelope tags associated with the message.</param>
+    /// <param name="tags">Delivery tags associated with the message.</param>
     /// <returns>A new message instance.</returns>
     public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags) => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
 
@@ -74,7 +74,7 @@ public sealed class GameEventScriptMessage
     public GameEventScriptNamedArguments Arguments { get; }
 
     /// <summary>
-    /// Gets the normalized envelope tags associated with this message. Tags do not affect the message signature.
+    /// Gets the normalized delivery tags associated with this message. Tags do not affect the message signature.
     /// </summary>
     public IReadOnlyList<string> Tags { get; }
 
@@ -97,7 +97,7 @@ public sealed class GameEventScriptMessage
     }
 
     /// <summary>
-    /// Determines whether the message has the specified normalized envelope tag.
+    /// Determines whether the message has the specified normalized delivery tag.
     /// </summary>
     /// <param name="tag">The tag to check. A leading colon is accepted.</param>
     /// <returns><c>true</c> when the tag is present; otherwise <c>false</c>.</returns>
@@ -108,14 +108,14 @@ public sealed class GameEventScriptMessage
     }
 
     /// <summary>
-    /// Creates a copy of this message with the provided envelope tags merged into the existing tag set.
+    /// Creates a copy of this message with the provided delivery tags merged into the existing tag set.
     /// </summary>
     /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
     /// <returns>A message copy with the merged tags.</returns>
     public GameEventScriptMessage WithTags(IEnumerable<string>? tags) => new(Name, Arguments, SignatureId, NormalizeTags(Tags.Concat(tags ?? [])));
 
     /// <summary>
-    /// Creates a copy of this message with the provided envelope tags merged into the existing tag set.
+    /// Creates a copy of this message with the provided delivery tags merged into the existing tag set.
     /// </summary>
     /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
     /// <returns>A message copy with the merged tags.</returns>

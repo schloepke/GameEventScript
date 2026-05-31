@@ -57,7 +57,7 @@ public sealed class GameEventScriptHostSteppingTests
                 (message, _) => calls.Add(message.SignatureId),
                 matchArguments: false));
         host.Subscribe(
-            GameEventScriptMessageSignature.Create("Ping", ["envelope"]),
+            GameEventScriptMessageSignature.Create("Ping", ["message"]),
             (_, _) => calls.Add("exact"));
 
         var session = host.StartSession();

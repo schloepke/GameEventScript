@@ -51,40 +51,40 @@ public sealed class GameEventScriptBinaryTests
     }
 
     [TestMethod]
-    public void FromCompiledExportsEnvelopeHandlersWithDedicatedBindKind()
+    public void FromCompiledExportsMessageNameHandlersWithDedicatedBindKind()
     {
         const string script =
             """
-            module BinaryEnvelope
+            module BinaryMessageName
 
-            on Ping as envelope {
-              emit Done(value: envelope.message.name)
+            on Ping as message {
+              emit Done(value: message.name)
             }
             """;
 
         var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
 
-        var handler = binary.BindTable.Entries.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.EnvelopeHandler);
+        var handler = binary.BindTable.Entries.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler);
         Assert.AreEqual("Ping", Resolve(binary, handler.Name));
-        CollectionAssert.AreEqual(new[] { "envelope" }, handler.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
+        CollectionAssert.AreEqual(new[] { "message" }, handler.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
     }
 
     [TestMethod]
-    public void BinaryDumperFormatsEnvelopeHandlersAsEnvelopeDispatch()
+    public void BinaryDumperFormatsMessageNameHandlersAsMessageNameDispatch()
     {
         const string script =
             """
-            module BinaryEnvelopeDump
+            module BinaryMessageNameDump
 
-            on Ping as envelope {
-              emit Done(value: envelope.message.name)
+            on Ping as message {
+              emit Done(value: message.name)
             }
             """;
 
         var dump = GameEventScriptManager.Compile(script).ToGameEventScriptBinary().Dump();
 
-        StringAssert.Contains(dump, "// \"Ping as envelope\"");
-        Assert.IsFalse(dump.Contains("// \"Ping(envelope)\"", StringComparison.Ordinal));
+        StringAssert.Contains(dump, "// \"Ping as message\"");
+        Assert.IsFalse(dump.Contains("// \"Ping(message)\"", StringComparison.Ordinal));
     }
 
     [TestMethod]

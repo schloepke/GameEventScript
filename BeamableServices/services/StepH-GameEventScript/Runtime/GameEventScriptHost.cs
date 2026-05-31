@@ -24,7 +24,7 @@ public sealed class GameEventScriptHost
     private readonly GameEventScriptDispatcher _dispatcher;
     private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly Dictionary<string, MessageSubscription[]> _dispatchIndex = new(StringComparer.Ordinal);
-    private readonly Dictionary<string, MessageSubscription[]> _messageEnvelopeDispatchIndex = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, MessageSubscription[]> _messageNameDispatchIndex = new(StringComparer.Ordinal);
     private MessageSubscription[] _initializationSubscriptions = [];
     private readonly object _dispatchGate = new();
     private readonly object _pumpGate = new();
@@ -383,8 +383,8 @@ public sealed class GameEventScriptHost
     {
         if (!subscription.MatchArguments)
         {
-            _messageEnvelopeDispatchIndex[subscription.Definition.Name] =
-                _messageEnvelopeDispatchIndex.TryGetValue(subscription.Definition.Name, out var wildcardHandlers)
+            _messageNameDispatchIndex[subscription.Definition.Name] =
+                _messageNameDispatchIndex.TryGetValue(subscription.Definition.Name, out var wildcardHandlers)
                     ? InsertSubscriptionByDispatchOrder(wildcardHandlers, subscription)
                     : [subscription];
             return;
@@ -541,11 +541,11 @@ public sealed class GameEventScriptHost
         }
     }
 
-    private bool TryGetEnvelopeSubscriptions(string messageName, out MessageSubscription[] subscriptions)
+    private bool TryGetNameSubscriptions(string messageName, out MessageSubscription[] subscriptions)
     {
         lock (_dispatchGate)
         {
-            return _messageEnvelopeDispatchIndex.TryGetValue(messageName, out subscriptions!);
+            return _messageNameDispatchIndex.TryGetValue(messageName, out subscriptions!);
         }
     }
 
@@ -563,9 +563,9 @@ public sealed class GameEventScriptHost
 
         var hasExactSubscriptions = TryGetSubscriptions(message.SignatureId, out var exactSubscriptions) &&
                                     exactSubscriptions.Length > 0;
-        var hasEnvelopeSubscriptions = TryGetEnvelopeSubscriptions(message.Name, out var envelopeSubscriptions) &&
-                                       envelopeSubscriptions.Length > 0;
-        if (!hasExactSubscriptions && !hasEnvelopeSubscriptions)
+        var hasNameSubscriptions = TryGetNameSubscriptions(message.Name, out var nameSubscriptions) &&
+                                       nameSubscriptions.Length > 0;
+        if (!hasExactSubscriptions && !hasNameSubscriptions)
         {
             return TryEnqueueUndeliverableInvocation(state, message);
         }
@@ -575,8 +575,8 @@ public sealed class GameEventScriptHost
         foreach (var subscription in EnumerateDispatchSubscriptions(
                      exactSubscriptions,
                      hasExactSubscriptions,
-                     envelopeSubscriptions,
-                     hasEnvelopeSubscriptions))
+                     nameSubscriptions,
+                     hasNameSubscriptions))
         {
             if (!subscription.MatchesTags(message))
             {
@@ -601,9 +601,9 @@ public sealed class GameEventScriptHost
 
         var hasExactSubscriptions = TryGetSubscriptions(GameEventScriptSystemEndpoints.UndeliverableSignatureId, out var exactSubscriptions) &&
                                     exactSubscriptions.Length > 0;
-        var hasEnvelopeSubscriptions = TryGetEnvelopeSubscriptions(GameEventScriptSystemEndpoints.UndeliverableName, out var envelopeSubscriptions) &&
-                                       envelopeSubscriptions.Length > 0;
-        if (!hasExactSubscriptions && !hasEnvelopeSubscriptions)
+        var hasNameSubscriptions = TryGetNameSubscriptions(GameEventScriptSystemEndpoints.UndeliverableName, out var nameSubscriptions) &&
+                                       nameSubscriptions.Length > 0;
+        if (!hasExactSubscriptions && !hasNameSubscriptions)
         {
             return false;
         }
@@ -614,8 +614,8 @@ public sealed class GameEventScriptHost
         foreach (var subscription in EnumerateDispatchSubscriptions(
                      exactSubscriptions,
                      hasExactSubscriptions,
-                     envelopeSubscriptions,
-                     hasEnvelopeSubscriptions))
+                     nameSubscriptions,
+                     hasNameSubscriptions))
         {
             if (!subscription.MatchesTags(undeliverableMessage))
             {
@@ -657,12 +657,12 @@ public sealed class GameEventScriptHost
     private static IEnumerable<MessageSubscription> EnumerateDispatchSubscriptions(
         MessageSubscription[] exactSubscriptions,
         bool hasExactSubscriptions,
-        MessageSubscription[] envelopeSubscriptions,
-        bool hasEnvelopeSubscriptions)
+        MessageSubscription[] nameSubscriptions,
+        bool hasNameSubscriptions)
     {
         if (!hasExactSubscriptions)
         {
-            foreach (var subscription in envelopeSubscriptions)
+            foreach (var subscription in nameSubscriptions)
             {
                 yield return subscription;
             }
@@ -670,7 +670,7 @@ public sealed class GameEventScriptHost
             yield break;
         }
 
-        if (!hasEnvelopeSubscriptions)
+        if (!hasNameSubscriptions)
         {
             foreach (var subscription in exactSubscriptions)
             {
@@ -681,16 +681,16 @@ public sealed class GameEventScriptHost
         }
 
         var exactIndex = 0;
-        var envelopeIndex = 0;
-        while (exactIndex < exactSubscriptions.Length && envelopeIndex < envelopeSubscriptions.Length)
+        var nameIndex = 0;
+        while (exactIndex < exactSubscriptions.Length && nameIndex < nameSubscriptions.Length)
         {
-            if (CompareDispatchOrder(exactSubscriptions[exactIndex], envelopeSubscriptions[envelopeIndex]) <= 0)
+            if (CompareDispatchOrder(exactSubscriptions[exactIndex], nameSubscriptions[nameIndex]) <= 0)
             {
                 yield return exactSubscriptions[exactIndex++];
             }
             else
             {
-                yield return envelopeSubscriptions[envelopeIndex++];
+                yield return nameSubscriptions[nameIndex++];
             }
         }
 
@@ -699,9 +699,9 @@ public sealed class GameEventScriptHost
             yield return exactSubscriptions[exactIndex++];
         }
 
-        while (envelopeIndex < envelopeSubscriptions.Length)
+        while (nameIndex < nameSubscriptions.Length)
         {
-            yield return envelopeSubscriptions[envelopeIndex++];
+            yield return nameSubscriptions[nameIndex++];
         }
     }
 

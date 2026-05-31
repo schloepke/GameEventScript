@@ -50,9 +50,9 @@ Top-level declarations are:
 - `predicate name(...) means expression`
 - `function name(...) means expression`
 - `on Message(...) { ... }`
-- `on Message as envelope { ... }`
+- `on Message as message { ... }`
 - `on initialization { ... }`
-- `on undeliverable as envelope { ... }`
+- `on undeliverable as message { ... }`
 
 The module declaration is optional. If it is omitted, the compiler creates a
 stable anonymous module name from the source text.
@@ -114,22 +114,19 @@ on Move(unit, speed as :quantity(m)) {
 }
 ```
 
-Envelope handlers match by message name and tags, but receive one `:envelope`
-value instead of normal message arguments:
+Message-name handlers match by message name and tags, but receive one
+`:message` value instead of normal message arguments:
 
 ```ges
-on Hit as envelope matching :enemy {
-  emit Heard(message: envelope.message, tags: envelope.tags)
+on Hit as message matching :enemy {
+  emit Heard(name: message.name, tags: message.tags)
 }
 ```
 
-The envelope currently contains:
-
-- `message`: the original `:message`
-- `tags`: a `:list` of message tags
+The message value contains its name, signature id, argument map, and tags.
 
 `undeliverable` is a system endpoint. It receives messages that were not
-otherwise dispatched, and it must use envelope binding:
+otherwise dispatched, and it must use message binding:
 
 `initialization` is a parameterless system endpoint. It is queued when a host
 session starts and runs before later messages in that session:
@@ -141,21 +138,21 @@ on initialization {
 ```
 
 ```ges
-on undeliverable as envelope {
-  emit Unknown(message: envelope.message)
+on undeliverable as message {
+  emit Unknown(message: message)
 }
 ```
 
 Handlers can filter tags:
 
 ```ges
-on Radio as envelope matching :open, :enemy without :encrypted {
-  emit Intercepted(message: envelope.message)
+on Radio as message matching :open, :enemy without :encrypted {
+  emit Intercepted(message: message)
 }
 ```
 
 `matching` requires all listed tags. `without` rejects messages containing any
-listed tag. The envelope still contains all original tags.
+listed tag. The message still contains all original tags.
 
 ## Statements
 
@@ -378,7 +375,6 @@ The source language recognizes these built-in type tags:
 - `:range`
 - `:message`
 - `:handler`
-- `:envelope`
 - `:tag`
 - `:text`
 - `:list`
@@ -914,8 +910,8 @@ Core host concepts:
 - `GameEventScriptRuntimeLimits`: execution, loop, range, dice, and queue limits.
 - `GameEventScriptDiagnosticTraceCollector`: optional diagnostics collector.
 
-The runtime resolves handlers by signature and tag filters. Exact-signature
-handlers and envelope handlers can both observe the same message. A loaded host
+The runtime resolves handlers by signature/name and tag filters. Exact-signature
+handlers and message-name handlers can both observe the same message. A loaded host
 creates sessions with `StartSession()`. Published messages are sent through the
 host publish hook; emitted messages stay in the session dispatch queue. The host
 also exposes convenience publish/update methods for existing integrations.
@@ -928,7 +924,7 @@ Compilation validates:
 - duplicate definitions and duplicate parameters
 - callable arity
 - predicate return type (`:boolean` or `:nothing`)
-- handler envelope shape
+- handler message-name shape
 - record field definitions
 - seeded random seed type
 - removed or unknown built-in type forms
@@ -973,8 +969,8 @@ on Scanner(data as :scan) {
   }
 }
 
-on undeliverable as envelope {
-  emit Heard(message: envelope.message, tags: envelope.tags)
+on undeliverable as message {
+  emit Heard(message: message, tags: message.tags)
 }
 ```
 

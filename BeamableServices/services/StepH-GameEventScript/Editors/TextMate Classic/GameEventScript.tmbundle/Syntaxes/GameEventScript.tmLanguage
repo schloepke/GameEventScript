@@ -244,7 +244,7 @@
 					</dict>
 					<dict>
 						<key>match</key>
-						<string>:(?:quantity\((?:m|meter|s|second|degree|°)\)|nothing|text|boolean|number|percentage|vector|point|series|range|message|handler|envelope|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
+						<string>:(?:quantity\((?:m|meter|s|second|degree|°)\)|nothing|text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
 						<key>name</key>
 						<string>support.type.primitive.gameeventscript</string>
 					</dict>

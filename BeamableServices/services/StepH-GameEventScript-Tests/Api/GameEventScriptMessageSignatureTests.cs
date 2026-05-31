@@ -9,14 +9,14 @@ public sealed class GameEventScriptMessageSignatureTests
     [TestMethod]
     public void HandlerDescriptorCanMatchByMessageName()
     {
-        var exact = GameEventScriptMessageSignature.Create("Ping", ["envelope"]);
+        var exact = GameEventScriptMessageSignature.Create("Ping", ["message"]);
         var wildcard = new GameEventScriptMessageHandlerDescriptor(
             GameEventScriptMessageSignature.Create("Ping", ["ignored"]),
             (_, _) => { },
             matchArguments: false);
         var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptNumberValue.CreateInteger(7)));
 
-        Assert.AreEqual("Ping(envelope)", exact.SignatureId);
+        Assert.AreEqual("Ping(message)", exact.SignatureId);
         Assert.AreEqual("Ping(*)", wildcard.DispatchSignatureId);
         Assert.AreEqual("Ping(ignored)", wildcard.Signature.SignatureId);
         Assert.IsFalse(exact.Matches(message));

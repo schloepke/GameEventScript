@@ -361,8 +361,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "envelope member and index access",
-      "script": "module AtomicEnvelopeAccess\non Start {\n  emit Ping(amount: 7) with :radio\n}\n\non Ping as envelope {\n  emit Done(memberName: envelope.message.name, memberTag: envelope.tags[1], memberMissing: envelope.missing, indexName: envelope[:message].name, indexTag: envelope['tags'][1], indexMissing: envelope[:missing], indexOut: envelope[1])\n}",
+      "name": "message member and index access",
+      "script": "module AtomicMessageAccess\non Start {\n  emit Ping(amount: 7) with :radio\n}\n\non Ping as message {\n  emit Done(memberName: message.name, memberTag: message.tags[1], memberMissing: message.missing, indexName: message[:name], indexTag: message['tags'][1], indexMissing: message[:missing], indexOut: message[1])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

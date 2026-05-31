@@ -88,8 +88,8 @@ internal static class GesBytecodeCompiler
                     {
                         var bytecodeHandler = new GameEventScriptBytecodeHandler(
                             pair.Key,
-                            handler.DispatchKind == EventHandlerDispatchKind.MessageEnvelope
-                                ? GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
+                            handler.DispatchKind == EventHandlerDispatchKind.MessageName
+                                ? GameEventScriptBytecodeHandlerDispatchKind.MessageName
                                 : GameEventScriptBytecodeHandlerDispatchKind.ExactSignature,
                             handler.Parameters,
                             handler.SignatureLabels,

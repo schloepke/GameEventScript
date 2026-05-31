@@ -169,8 +169,8 @@ public static class GameEventScriptBinaryExtensions
         var handlerId = 0;
         foreach (var handler in compiled.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal).SelectMany(pair => pair.Value.OrderBy(handler => handler.DeclarationOrder)))
         {
-            var handlerKind = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
-                ? GameEventScriptBinaryBindKind.EnvelopeHandler
+            var handlerKind = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName
+                ? GameEventScriptBinaryBindKind.MessageNameHandler
                 : GameEventScriptBinaryBindKind.MessageHandler;
             builder
                 .AddStringPoolElement(handler.Message, out var messageIndex)

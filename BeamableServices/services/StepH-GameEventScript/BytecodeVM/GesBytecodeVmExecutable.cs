@@ -10,7 +10,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptModule
 {
     private readonly IReadOnlyList<GameEventScriptMessageHandlerDescriptor> _messageHandlers;
     private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _dispatchIndex;
-    private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _messageEnvelopeDispatchIndex;
+    private readonly IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> _messageNameDispatchIndex;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _boundExtensions = new Dictionary<string, IGameEventScriptExtensionFunction>(StringComparer.Ordinal);
     private IGameEventScriptExtensionFunction[] _boundExtensionSlots = [];
@@ -38,8 +38,8 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptModule
             CompiledHandlers.Where(handler => handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.ExactSignature),
             handler => handler.SignatureId,
             handler => handler.DeclarationOrder);
-        _messageEnvelopeDispatchIndex = GesInvocationKernel.BuildDispatchIndex(
-            CompiledHandlers.Where(handler => handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope),
+        _messageNameDispatchIndex = GesInvocationKernel.BuildDispatchIndex(
+            CompiledHandlers.Where(handler => handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName),
             handler => handler.Message,
             handler => handler.DeclarationOrder);
         _messageHandlers = CompiledHandlers
@@ -47,15 +47,15 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptModule
                 handler.Definition,
                 (message, context) =>
                 {
-                    var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope &&
+                    var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName &&
                                           !GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message)
-                        ? GameEventScriptSystemEndpoints.CreateEnvelopeDispatchMessage(message)
+                        ? GameEventScriptSystemEndpoints.CreateMessageDispatchMessage(message)
                         : message;
                     return GesBytecodeVmExecutionSession.CreateFiber(this, context, handler, dispatchMessage.Arguments);
                 },
                 handler.RequiredTags,
                 handler.ExcludedTags,
-                matchArguments: handler.DispatchKind != GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope))
+                matchArguments: handler.DispatchKind != GameEventScriptBytecodeHandlerDispatchKind.MessageName))
             .ToArray();
     }
 
@@ -77,7 +77,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptModule
 
     internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> DispatchIndex => _dispatchIndex;
 
-    internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> MessageEnvelopeDispatchIndex => _messageEnvelopeDispatchIndex;
+    internal IReadOnlyDictionary<string, IReadOnlyList<GesBytecodeVmCompiledHandler>> MessageNameDispatchIndex => _messageNameDispatchIndex;
 
     internal IGameEventScriptExtensionRegistry ExtensionRegistry => _extensionRegistry;
 

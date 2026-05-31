@@ -439,8 +439,8 @@ public static class GameEventScriptBinaryDumper
     private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
     {
         var name = Escape(context.ResolveText(entry.Name));
-        return entry.Kind == GameEventScriptBinaryBindKind.EnvelopeHandler
-            ? "\"" + name + " as envelope\""
+        return entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler
+            ? "\"" + name + " as message\""
             : "\"" + name + "(" + Escape(string.Join(", ", entry.ArgumentNames.Select(context.ResolveText))) + ")\"";
     }
 
@@ -818,7 +818,7 @@ public static class GameEventScriptBinaryDumper
             => kind switch
             {
                 GameEventScriptBinaryBindKind.MessageHandler => "Handler",
-                GameEventScriptBinaryBindKind.EnvelopeHandler => "EnvelopeHandler",
+                GameEventScriptBinaryBindKind.MessageNameHandler => "MessageNameHandler",
                 GameEventScriptBinaryBindKind.Function => "Function",
                 GameEventScriptBinaryBindKind.Predicate => "Predicate",
                 GameEventScriptBinaryBindKind.ExtensionCall => "Extension",

@@ -208,7 +208,7 @@ internal static class GesValidator
                     GameEventScriptSymbolKind.Handler,
                     "Handler message names must use message casing (start uppercase and contain only letters)",
                     errors);
-                ValidateMessageEnvelopeHandler(parsedScript, handler, errors);
+                ValidateMessageNameHandler(parsedScript, handler, errors);
             }
 
             foreach (var parameter in handler.Parameters)
@@ -284,11 +284,11 @@ internal static class GesValidator
         EventHandlerNode handler,
         GesValidationErrors errors)
     {
-        if (handler.DispatchKind != EventHandlerDispatchKind.MessageEnvelope)
+        if (handler.DispatchKind != EventHandlerDispatchKind.MessageName)
         {
             errors.Add(
                 parsedScript,
-                "System endpoint 'undeliverable' must use 'as envelope' syntax",
+                "System endpoint 'undeliverable' must use 'as message' syntax",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.InvalidMessageCase,
@@ -297,12 +297,12 @@ internal static class GesValidator
         }
 
         var parameter = handler.ParameterList[0];
-        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.EnvelopeArgumentName, StringComparison.Ordinal) ||
-            !string.Equals(parameter.DeclaredType, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal))
+        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.MessageArgumentName, StringComparison.Ordinal) ||
+            !string.Equals(parameter.DeclaredType, "message", StringComparison.Ordinal))
         {
             errors.Add(
                 parsedScript,
-                "System endpoint 'undeliverable' must bind an ':envelope' value",
+                "System endpoint 'undeliverable' must bind a ':message' value",
                 parameter.LocalName,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.InvalidMessageCase,
@@ -310,12 +310,12 @@ internal static class GesValidator
         }
     }
 
-    private static void ValidateMessageEnvelopeHandler(
+    private static void ValidateMessageNameHandler(
         ParsedScript parsedScript,
         EventHandlerNode handler,
         GesValidationErrors errors)
     {
-        if (handler.DispatchKind != EventHandlerDispatchKind.MessageEnvelope)
+        if (handler.DispatchKind != EventHandlerDispatchKind.MessageName)
         {
             return;
         }
@@ -324,7 +324,7 @@ internal static class GesValidator
         {
             errors.Add(
                 parsedScript,
-                "Message-envelope handlers expect exactly one envelope parameter",
+                "Message-name handlers expect exactly one message parameter",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.InvalidMessageCase,
@@ -333,12 +333,12 @@ internal static class GesValidator
         }
 
         var parameter = handler.ParameterList[0];
-        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.EnvelopeArgumentName, StringComparison.Ordinal) ||
-            !string.Equals(parameter.DeclaredType, GameEventScriptSystemEndpoints.EnvelopeTypeName, StringComparison.Ordinal))
+        if (!string.Equals(parameter.SignatureLabel, GameEventScriptSystemEndpoints.MessageArgumentName, StringComparison.Ordinal) ||
+            !string.Equals(parameter.DeclaredType, "message", StringComparison.Ordinal))
         {
             errors.Add(
                 parsedScript,
-                "Message-envelope handlers must bind an ':envelope' value",
+                "Message-name handlers must bind a ':message' value",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.InvalidMessageCase,
@@ -1517,7 +1517,7 @@ internal static class GesValidator
     private static bool IsBuiltinConstructorType(string typeName)
         => typeName is "nothing" or "tag" or "text" or "percentage" or
             "vector" or "point" or "boolean" or "number" or "numeric" or "series" or
-            "list" or "range" or "message" or "handler" or "envelope" or "map" or "dice" ||
+            "list" or "range" or "message" or "handler" or "map" or "dice" ||
             GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(typeName, out _);
 
     private static void ValidateRemovedType(

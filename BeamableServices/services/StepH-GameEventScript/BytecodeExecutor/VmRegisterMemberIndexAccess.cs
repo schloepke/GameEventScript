@@ -19,7 +19,7 @@ internal static class VmRegisterMemberIndexAccess
     {
         switch (obj.Kind)
         {
-            case Map or Custom or Envelope when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
+            case Map or Custom when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
                 dst = value;
                 return;
             case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(key, out var value):

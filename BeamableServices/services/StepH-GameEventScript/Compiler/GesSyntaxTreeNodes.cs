@@ -51,7 +51,7 @@ internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) :
 internal enum EventHandlerDispatchKind
 {
     ExactSignature,
-    MessageEnvelope
+    MessageName
 }
 
 internal sealed record EventHandlerNode(

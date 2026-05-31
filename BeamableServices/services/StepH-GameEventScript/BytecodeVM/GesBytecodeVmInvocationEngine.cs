@@ -9,13 +9,14 @@ internal static class GesBytecodeVmInvocationEngine
     public static void InvokeMessage(GesBytecodeVmExecutable compiledScript, GameEventScriptSession context, GameEventScriptMessage message)
     {
         var exactHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.DispatchIndex, message);
-        var envelopeHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.MessageEnvelopeDispatchIndex, message.Name);
-        foreach (var handler in exactHandlers.Concat(envelopeHandlers).OrderBy(handler => handler.DeclarationOrder))
+        var nameHandlers = GesInvocationKernel.GetMatchingHandlers(compiledScript.MessageNameDispatchIndex, message.Name);
+        foreach (var handler in exactHandlers.Concat(nameHandlers).OrderBy(handler => handler.DeclarationOrder))
         {
             if (MatchesTags(handler, message))
             {
-                var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
-                    ? GameEventScriptSystemEndpoints.CreateEnvelopeDispatchMessage(message)
+                var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName &&
+                                      !GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message)
+                    ? GameEventScriptSystemEndpoints.CreateMessageDispatchMessage(message)
                     : message;
                 InvokeHandler(compiledScript, context, handler, dispatchMessage);
             }

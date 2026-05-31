@@ -129,7 +129,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:L_\d+|L_none|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_\d+|EnvelopeHandler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|Record_\d+|ExternalType_\d+|Bind_\d+)\b</string>
+					<string>\b(?:L_\d+|L_none|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_\d+|MessageNameHandler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|Record_\d+|ExternalType_\d+|Bind_\d+)\b</string>
 					<key>name</key>
 					<string>variable.other.label.reference.gameeventscript.assembler</string>
 				</dict>
@@ -190,13 +190,13 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|Envelope|List|Dice|Map|ListBuilder|Stream|Series|Custom|Invalid)\b</string>
+					<string>\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|Stream|Series|Custom|Invalid)\b</string>
 					<key>name</key>
 					<string>support.type.bytecode.gameeventscript.assembler</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:MessageHandler|EnvelopeHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\b</string>
+					<string>\b(?:MessageHandler|MessageNameHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\b</string>
 					<key>name</key>
 					<string>support.type.bind-kind.gameeventscript.assembler</string>
 				</dict>

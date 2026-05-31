@@ -8,7 +8,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBinary
   property System.String ModuleName { get }
 enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
   enum-field MessageHandler = 16
-  enum-field EnvelopeHandler = 17
+  enum-field MessageNameHandler = 17
   enum-field Function = 18
   enum-field Predicate = 19
   enum-field ExtensionCall = 32
@@ -105,7 +105,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
   property System.String Message { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
   enum-field ExactSignature = 0
-  enum-field MessageEnvelope = 1
+  enum-field MessageName = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
   field StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind TypeKind
@@ -342,7 +342,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field Range = 10
   enum-field Handler = 16
   enum-field Message = 17
-  enum-field Envelope = 18
   enum-field List = 32
   enum-field Dice = 33
   enum-field Map = 34

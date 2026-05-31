@@ -393,10 +393,17 @@ internal sealed class GesBinaryVmRunState
                 Get(argumentSlots[index]).ToGameEventScriptValue());
         }
 
-        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
-        return publish
-            ? _context.Publish(message)
-            : _context.Emit(message);
+        try
+        {
+            var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
+            return publish
+                ? _context.Publish(message)
+                : _context.Emit(message);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     private static GesBinaryVmValue CastValue(GesBinaryVmValue value, GameEventScriptBytecodeTypeKind typeKind)

@@ -427,7 +427,6 @@ enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
   enum-field NormalizeResultAsPredicate = 32
 sealed class StepH.GameEventScript.Api.GameEventScriptMessage
-  field static StepH.GameEventScript.Api.GameEventScriptMessage Empty
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.Collections.Generic.IEnumerable<System.String> tags)
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.String[] tags)
   method System.Boolean HasTag(System.String tag)
@@ -439,17 +438,25 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
   property System.String Name { get }
   property System.String SignatureId { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor
+  ctor GameEventScriptMessageHandlerDescriptor(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Collections.Generic.IReadOnlyCollection<System.String> requiredTags, System.Collections.Generic.IReadOnlyCollection<System.String> excludedTags, System.Boolean matchArguments)
+  ctor GameEventScriptMessageHandlerDescriptor(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession, StepH.GameEventScript.Api.IGameEventScriptMessageInvocation> invoke, System.Collections.Generic.IReadOnlyCollection<System.String> requiredTags, System.Collections.Generic.IReadOnlyCollection<System.String> excludedTags, System.Boolean matchArguments)
+  method StepH.GameEventScript.Api.IGameEventScriptMessageInvocation Invoke(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
+  property StepH.GameEventScript.Api.GameEventScriptMessageSignature Signature { get }
+  property System.Boolean MatchArguments { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> ExcludedTags { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> RequiredTags { get }
+  property System.String DispatchSignatureId { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   field static StepH.GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
   method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Types.GameEventScriptValue[] arguments)
   method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
-  method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters, System.Boolean matchArguments)
-  method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames, System.Boolean matchArguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
+  method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
   method static System.String NormalizeMessageName(System.String name)
   method static System.String NormalizeParameterName(System.String name)
-  property System.Boolean MatchArguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.String Name { get }
   property System.String SignatureId { get }
@@ -581,9 +588,13 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesText(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesValues(StepH.GameEventScript.Types.GameEventScriptValue source)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? unit)
-interface StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection
+interface StepH.GameEventScript.Api.IGameEventScriptMessageInvocation
+  method System.Int32 RunSlice(System.Int32 maxOpcodes)
+  property System.Boolean IsCompleted { get }
+interface StepH.GameEventScript.Api.IGameEventScriptModule
   method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
-  property System.Collections.Generic.IEnumerable<System.ValueTuple<StepH.GameEventScript.Api.GameEventScriptMessageSignature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession>>> Handlers { get }
+  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
+  property System.String ModuleName { get }
 interface StepH.GameEventScript.Api.IGameEventScriptSeries
   method System.Boolean TryGetTerm(System.Int64 index, StepH.GameEventScript.Types.GameEventScriptValue& value)
   property System.String SignatureId { get }
@@ -731,10 +742,11 @@ struct StepH.GameEventScript.Runtime.GameEventScriptFastValue
 sealed class StepH.GameEventScript.Runtime.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptSession StartSession()
   method StepH.GameEventScript.Runtime.GameEventScriptHost Load(StepH.GameEventScript.Api.GameEventScriptCompiled bytecode, System.Int32 priority)
-  method StepH.GameEventScript.Runtime.GameEventScriptHost Load(StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection handlers, System.Int32 priority)
+  method StepH.GameEventScript.Runtime.GameEventScriptHost Load(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
+  method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor handler, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Int32 priority)
-  method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.IGameEventScriptMessageHandlerCollection handlers, System.Int32 priority)
+  method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
@@ -872,7 +884,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptMapValue
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> EmptyView { get }
   property System.Collections.ObjectModel.ReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> VisibleView { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptMessageValue
-  field static StepH.GameEventScript.Types.GameEventScriptMessageValue Empty
   method System.Boolean TryGetMapMember(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
   method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsMap()
   method System.String AsText()

@@ -58,12 +58,12 @@ public sealed class BytecodeVmPerformanceReportTests
         WarmUp(input);
 
         var bytecodeVmCompile = Measure("ges compile", () => BuildPerformanceBytecode(false));
-        var bytecodeVmBuild = Measure<IGameEventScriptMessageHandlerCollection>("bytecodevm build", () => BuildExecutable(bytecodeVmCompile.Value));
+        var bytecodeVmBuild = Measure<IGameEventScriptModule>("bytecodevm build", () => BuildExecutable(bytecodeVmCompile.Value));
 
         var bytecodeVmRun = MeasureRun(bytecodeVmBuild.Value, input, MeasuredRuns);
 
         var bytecodeVmCompileDiag = Measure("ges compile", () => BuildPerformanceBytecode(true));
-        var bytecodeVmBuildDiag = Measure<IGameEventScriptMessageHandlerCollection>("bytecodevm build", () => BuildExecutable(bytecodeVmCompileDiag.Value));
+        var bytecodeVmBuildDiag = Measure<IGameEventScriptModule>("bytecodevm build", () => BuildExecutable(bytecodeVmCompileDiag.Value));
 
         var bytecodeVmRunDiag = MeasureRun(bytecodeVmBuildDiag.Value, input, MeasuredRuns, new GameEventScriptDiagnosticTraceCollector());
         MeasureRun(bytecodeVmBuildDiag.Value, input, 1, diagnosticCollector);
@@ -105,10 +105,10 @@ public sealed class BytecodeVmPerformanceReportTests
         return new Measured<T>(name, value, stopwatch.Elapsed, GC.GetAllocatedBytesForCurrentThread() - beforeAllocated);
     }
 
-    private static EngineRunMetrics MeasureRun(IGameEventScriptMessageHandlerCollection compiled, GameEventScriptMessage input, int iterations, IGameEventScriptDiagnosticCollector? diagnosticCollector = null)
+    private static EngineRunMetrics MeasureRun(IGameEventScriptModule compiled, GameEventScriptMessage input, int iterations, IGameEventScriptDiagnosticCollector? diagnosticCollector = null)
     {
         var publishedCount = 0;
-        var lastMessage = GameEventScriptMessage.Empty;
+        var lastMessage = input;
         var builder = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits
             {
@@ -133,7 +133,7 @@ public sealed class BytecodeVmPerformanceReportTests
         return new EngineRunMetrics(stopwatch.Elapsed, GC.GetAllocatedBytesForCurrentThread() - beforeAllocated, publishedCount, lastMessage);
     }
 
-    private void WriteReport(string runCase, Measured<GameEventScriptCompiled> compile, Measured<IGameEventScriptMessageHandlerCollection> lowered, EngineRunMetrics run)
+    private void WriteReport(string runCase, Measured<GameEventScriptCompiled> compile, Measured<IGameEventScriptModule> lowered, EngineRunMetrics run)
     {
         TestContext.WriteLine(
             "{0}:\n    Ges Compile:      {1,9:#,##0.000} ms / {2,9} cumulated allocation\n    Executable Build: {3,9:#,##0.000} ms / {4,9} cumulated allocation\n    Run ({7} emits): {5,9:#,##0.000} ms / {6,9} cumulated allocation (average per emit {8})",

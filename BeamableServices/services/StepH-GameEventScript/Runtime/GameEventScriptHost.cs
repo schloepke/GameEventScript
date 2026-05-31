@@ -63,22 +63,16 @@ public sealed class GameEventScriptHost
         return Load(GesBytecodeVmExecutableBuilder.Build(bytecode), priority);
     }
 
-    public GameEventScriptHost Load(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
+    public GameEventScriptHost Load(IGameEventScriptModule module, int priority = NormalPriority)
     {
-        _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        handlers.Bind(_extensionRegistry, _externalTypeRegistry);
+        _ = module ?? throw new ArgumentNullException(nameof(module));
+        module.Bind(_extensionRegistry, _externalTypeRegistry);
 
-        if (handlers is GesBytecodeVmExecutable registerCompiled)
+        var handlerEntries = module.Handlers.ToArray();
+        foreach (var handler in handlerEntries)
         {
-            RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
-            return this;
-        }
-
-        var handlerEntries = handlers.Handlers.ToArray();
-        foreach (var (signature, handler) in handlerEntries)
-        {
-            _ = signature ?? throw new ArgumentException("Handler collection contains a null signature.", nameof(handlers));
-            _ = handler ?? throw new ArgumentException("Handler collection contains a null handler.", nameof(handlers));
+            _ = handler ?? throw new ArgumentException("Module contains a null handler.", nameof(module));
+            _ = handler.Signature ?? throw new ArgumentException("Module contains a handler with a null signature.", nameof(module));
         }
 
         RegisterMany(handlerEntries, priority);
@@ -98,6 +92,17 @@ public sealed class GameEventScriptHost
         return this;
     }
 
+    public GameEventScriptHost Subscribe(GameEventScriptMessageHandlerDescriptor handler, int priority = NormalPriority)
+    {
+        _ = handler ?? throw new ArgumentNullException(nameof(handler));
+        lock (_dispatchGate)
+        {
+            RegisterLocked(handler, priority);
+        }
+
+        return this;
+    }
+
     public GameEventScriptHost Subscribe(
         GameEventScriptMessageSignature signature,
         Action<GameEventScriptMessage, GameEventScriptSession> handler,
@@ -114,21 +119,16 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(IGameEventScriptMessageHandlerCollection handlers, int priority = NormalPriority)
+    public GameEventScriptHost Subscribe(IGameEventScriptModule module, int priority = NormalPriority)
     {
-        _ = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        handlers.Bind(_extensionRegistry, _externalTypeRegistry);
-        if (handlers is GesBytecodeVmExecutable registerCompiled)
-        {
-            RegisterMany(registerCompiled.CompiledHandlers, registerCompiled, priority);
-            return this;
-        }
+        _ = module ?? throw new ArgumentNullException(nameof(module));
+        module.Bind(_extensionRegistry, _externalTypeRegistry);
 
-        var handlerEntries = handlers.Handlers.ToArray();
-        foreach (var (signature, handler) in handlerEntries)
+        var handlerEntries = module.Handlers.ToArray();
+        foreach (var handler in handlerEntries)
         {
-            _ = signature ?? throw new ArgumentException("Handler collection contains a null signature.", nameof(handlers));
-            _ = handler ?? throw new ArgumentException("Handler collection contains a null handler.", nameof(handlers));
+            _ = handler ?? throw new ArgumentException("Module contains a null handler.", nameof(module));
+            _ = handler.Signature ?? throw new ArgumentException("Module contains a handler with a null signature.", nameof(module));
         }
 
         RegisterMany(handlerEntries, priority);
@@ -343,29 +343,14 @@ public sealed class GameEventScriptHost
     }
 
     private void RegisterMany(
-        IReadOnlyList<(GameEventScriptMessageSignature Signature, Action<GameEventScriptMessage, GameEventScriptSession> Handler)> handlers,
-        int priority)
-    {
-        lock (_dispatchGate)
-        {
-            foreach (var (signature, handler) in handlers)
-            {
-                RegisterLocked(signature, priority, handler);
-            }
-        }
-    }
-
-    private void RegisterMany(
-        IReadOnlyList<GesBytecodeVmCompiledHandler> handlers,
-        GesBytecodeVmExecutable executable,
+        IReadOnlyList<GameEventScriptMessageHandlerDescriptor> handlers,
         int priority)
     {
         lock (_dispatchGate)
         {
             foreach (var handler in handlers)
             {
-                _ = handler ?? throw new ArgumentException("Handler collection contains a null compiled handler.", nameof(handlers));
-                RegisterLocked(handler.Definition, priority, executable, handler);
+                RegisterLocked(handler, priority);
             }
         }
     }
@@ -376,17 +361,14 @@ public sealed class GameEventScriptHost
         Action<GameEventScriptMessage, GameEventScriptSession> handler,
         IReadOnlyCollection<string>? matchingTags = null,
         IReadOnlyCollection<string>? withoutTags = null)
+        => RegisterLocked(new GameEventScriptMessageHandlerDescriptor(signature, handler, matchingTags, withoutTags), priority);
+
+    private void RegisterLocked(GameEventScriptMessageHandlerDescriptor handler, int priority)
     {
         var subscription = new MessageSubscription(
-            signature,
-            GameEventScriptBytecodeHandlerDispatchKind.ExactSignature,
-            priority,
-            _nextRegistrationOrder++,
             handler,
-            null,
-            null,
-            GameEventScriptMessage.NormalizeTags(matchingTags),
-            GameEventScriptMessage.NormalizeTags(withoutTags));
+            priority,
+            _nextRegistrationOrder++);
 
         if (GameEventScriptSystemEndpoints.IsInitializationName(subscription.Definition.Name))
         {
@@ -394,39 +376,16 @@ public sealed class GameEventScriptHost
             return;
         }
 
-        _dispatchIndex[subscription.Definition.SignatureId] = _dispatchIndex.TryGetValue(subscription.Definition.SignatureId, out var handlers)
-            ? InsertSubscriptionByDispatchOrder(handlers, subscription)
-            : [subscription];
+        RegisterDispatchSubscription(subscription);
     }
 
-    private void RegisterLocked(
-        GameEventScriptMessageSignature signature,
-        int priority,
-        GesBytecodeVmExecutable executable,
-        GesBytecodeVmCompiledHandler handler)
+    private void RegisterDispatchSubscription(MessageSubscription subscription)
     {
-        var subscription = new MessageSubscription(
-            signature,
-            handler.DispatchKind,
-            priority,
-            _nextRegistrationOrder++,
-            null,
-            executable,
-            handler,
-            handler.RequiredTags,
-            handler.ExcludedTags);
-
-        if (GameEventScriptSystemEndpoints.IsInitializationName(subscription.Definition.Name))
-        {
-            _initializationSubscriptions = InsertSubscriptionByDispatchOrder(_initializationSubscriptions, subscription);
-            return;
-        }
-
-        if (handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope)
+        if (!subscription.MatchArguments)
         {
             _messageEnvelopeDispatchIndex[subscription.Definition.Name] =
-                _messageEnvelopeDispatchIndex.TryGetValue(subscription.Definition.Name, out var envelopeHandlers)
-                    ? InsertSubscriptionByDispatchOrder(envelopeHandlers, subscription)
+                _messageEnvelopeDispatchIndex.TryGetValue(subscription.Definition.Name, out var wildcardHandlers)
+                    ? InsertSubscriptionByDispatchOrder(wildcardHandlers, subscription)
                     : [subscription];
             return;
         }
@@ -513,7 +472,7 @@ public sealed class GameEventScriptHost
     private void StartDispatch(GameEventScriptHostRunState state, QueuedInvocation queuedInvocation)
     {
         var queuedEvent = queuedInvocation.Message;
-        state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Name, queuedEvent.Arguments, $"Deliver '{queuedEvent.Name}' to {queuedInvocation.Subscription.Definition.SignatureId}");
+        state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Name, queuedEvent.Arguments, $"Deliver '{queuedEvent.Name}' to {queuedInvocation.Subscription.DispatchSignatureId}");
         state.StartDispatch(queuedInvocation);
     }
 
@@ -521,48 +480,37 @@ public sealed class GameEventScriptHost
     {
         var remainingOpcodes = maxOpcodes;
         var subscription = state.ActiveSubscription!;
-        if (state.ActiveScriptFiber is not null)
+        if (state.ActiveInvocation is not null)
         {
-            var executed = RunScriptFiberSlice(state, state.ActiveScriptFiber, remainingOpcodes);
-            if (!state.ActiveScriptFiber.IsCompleted)
+            var executed = RunMessageInvocationSlice(state, state.ActiveInvocation, remainingOpcodes);
+            if (!state.ActiveInvocation.IsCompleted)
             {
                 return;
             }
 
-            state.ClearActiveScriptFiber();
+            state.ClearActiveInvocation();
             state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchCompleted, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Delivery '{state.ActiveMessage.Name}' completed");
             state.CompleteDispatch();
             return;
         }
 
-        state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberMatched, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Subscriber matched: {subscription.Definition.SignatureId}");
+        state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberMatched, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Subscriber matched: {subscription.DispatchSignatureId}");
 
         try
         {
             state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.SubscriberInvoked, state.ActiveMessage.Name, state.ActiveMessage.Arguments, "Subscriber invoked");
-            if (subscription.ScriptExecutable is not null && subscription.ScriptHandler is not null)
+            var invocation = subscription.Handler.Invoke(state.ActiveMessage, state.Session);
+            state.SetActiveInvocation(invocation);
+            var executed = RunMessageInvocationSlice(
+                state,
+                invocation,
+                allowSynchronousScriptFastPath ? int.MaxValue : remainingOpcodes);
+            if (!invocation.IsCompleted)
             {
-                if (allowSynchronousScriptFastPath)
-                {
-                    subscription.ScriptExecutable.InvokeHandler(subscription.ScriptHandler, state.ActiveMessage, state.Session);
-                }
-                else
-                {
-                    var fiber = GesBytecodeVmExecutionSession.CreateFiber(subscription.ScriptExecutable, state.Session, subscription.ScriptHandler, state.ActiveMessage.Arguments);
-                    state.SetActiveScriptFiber(fiber);
-                    var executed = RunScriptFiberSlice(state, fiber, remainingOpcodes);
-                    if (!fiber.IsCompleted)
-                    {
-                        return;
-                    }
+                return;
+            }
 
-                    state.ClearActiveScriptFiber();
-                }
-            }
-            else
-            {
-                subscription.Handler!(state.ActiveMessage, state.Session);
-            }
+            state.ClearActiveInvocation();
         }
         catch (GameEventScriptFatalRuntimeException)
         {
@@ -571,16 +519,16 @@ public sealed class GameEventScriptHost
         catch
         {
             // Runtime dispatch must remain lenient.
-            state.ClearActiveScriptFiber();
+            state.ClearActiveInvocation();
         }
 
         state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchCompleted, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Delivery '{state.ActiveMessage.Name}' completed");
         state.CompleteDispatch();
     }
 
-    private static int RunScriptFiberSlice(GameEventScriptHostRunState state, GesBytecodeVmExecutionSession.Fiber fiber, int maxOpcodes)
+    private static int RunMessageInvocationSlice(GameEventScriptHostRunState state, IGameEventScriptMessageInvocation invocation, int maxOpcodes)
     {
-        var executed = fiber.RunSlice(maxOpcodes);
+        var executed = invocation.RunSlice(maxOpcodes);
         state.RecordExecutedOpcodes(executed);
         return executed;
     }
@@ -636,10 +584,7 @@ public sealed class GameEventScriptHost
             }
 
             matched = true;
-            var dispatchMessage = subscription.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope
-                ? GameEventScriptSystemEndpoints.CreateEnvelopeDispatchMessage(message)
-                : message;
-            accepted |= state.Enqueue(new QueuedInvocation(dispatchMessage, subscription));
+            accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
         }
 
         return matched
@@ -790,19 +735,19 @@ public sealed class GameEventScriptHost
     }
 
     internal sealed record MessageSubscription(
-        GameEventScriptMessageSignature Definition,
-        GameEventScriptBytecodeHandlerDispatchKind DispatchKind,
+        GameEventScriptMessageHandlerDescriptor Handler,
         int Priority,
-        long RegistrationOrder,
-        Action<GameEventScriptMessage, GameEventScriptSession>? Handler,
-        GesBytecodeVmExecutable? ScriptExecutable,
-        GesBytecodeVmCompiledHandler? ScriptHandler,
-        IReadOnlyList<string> RequiredTags,
-        IReadOnlyList<string> ExcludedTags)
+        long RegistrationOrder)
     {
+        public GameEventScriptMessageSignature Definition => Handler.Signature;
+
+        public bool MatchArguments => Handler.MatchArguments;
+
+        public string DispatchSignatureId => Handler.DispatchSignatureId;
+
         public bool MatchesTags(GameEventScriptMessage message)
         {
-            foreach (var tag in RequiredTags)
+            foreach (var tag in Handler.RequiredTags)
             {
                 if (!message.HasTag(tag))
                 {
@@ -810,7 +755,7 @@ public sealed class GameEventScriptHost
                 }
             }
 
-            foreach (var tag in ExcludedTags)
+            foreach (var tag in Handler.ExcludedTags)
             {
                 if (message.HasTag(tag))
                 {
@@ -867,7 +812,7 @@ internal sealed class GameEventScriptHostRunState
 
     public GameEventScriptHost.MessageSubscription? ActiveSubscription { get; private set; }
 
-    public GesBytecodeVmExecutionSession.Fiber? ActiveScriptFiber { get; private set; }
+    public IGameEventScriptMessageInvocation? ActiveInvocation { get; private set; }
 
     public int StartedEventCount { get; private set; }
 
@@ -980,21 +925,21 @@ internal sealed class GameEventScriptHostRunState
     {
         ActiveMessage = queuedInvocation.Message;
         ActiveSubscription = queuedInvocation.Subscription;
-        ActiveScriptFiber = null;
+        ActiveInvocation = null;
     }
 
     public void CompleteDispatch()
     {
         ActiveMessage = null;
         ActiveSubscription = null;
-        ActiveScriptFiber = null;
+        ActiveInvocation = null;
     }
 
-    public void SetActiveScriptFiber(GesBytecodeVmExecutionSession.Fiber fiber)
-        => ActiveScriptFiber = fiber;
+    public void SetActiveInvocation(IGameEventScriptMessageInvocation invocation)
+        => ActiveInvocation = invocation;
 
-    public void ClearActiveScriptFiber()
-        => ActiveScriptFiber = null;
+    public void ClearActiveInvocation()
+        => ActiveInvocation = null;
 
     public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
         => Session.RecordDiagnostic(kind, name, arguments, detail);

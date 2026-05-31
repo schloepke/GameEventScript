@@ -22,8 +22,15 @@ internal static class VmStatePublisher
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.Binary.TextConstantTable.Resolve(signature.ArgumentNames[index]), vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
         }
 
-        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
-        return publish ? session.Publish(message) : session.Emit(message);
+        try
+        {
+            var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
+            return publish ? session.Publish(message) : session.Emit(message);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -45,8 +52,15 @@ internal static class VmStatePublisher
             AddTagsToList(tags, vmState.Register(tagSlots[index]).ToGameEventScriptValue());
         }
 
-        var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);
-        return publish ? session.Publish(message) : session.Emit(message);
+        try
+        {
+            var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);
+            return publish ? session.Publish(message) : session.Emit(message);
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

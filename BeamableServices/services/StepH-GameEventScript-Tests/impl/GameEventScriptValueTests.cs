@@ -51,8 +51,40 @@ public class GameEventScriptValueScenarios
         Assert.AreSame(GesList(null), GesList(Array.Empty<GameEventScriptValue>()));
         Assert.AreSame(GesMap(null), GesMap(new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)));
         Assert.AreSame(GesDice((GameEventScriptDiceValue?)null), GameEventScriptDiceValue.Create(Array.Empty<int>()));
-        Assert.AreSame(GesMessage(GameEventScriptMessage.Empty), GesMessage(GameEventScriptMessage.Empty));
         Assert.AreSame(GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])), GesHandler(GameEventScriptMessageSignature.Create(string.Empty, [])));
+    }
+
+    [TestMethod]
+    public void MessageValuesExposeTagsAsPartOfTheValue()
+    {
+        var message = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GesInteger(7) }, ["radio", "encrypted"]);
+        var value = GesMessage(message);
+
+        var map = value.AsMap();
+        Assert.IsTrue(map.TryGetValue("tags", out var tags));
+        CollectionAssert.AreEqual(
+            new[] { "radio", "encrypted" },
+            tags.AsList().Select(tag => tag.AsText()).ToArray());
+    }
+
+    [TestMethod]
+    public void MessageEqualityIncludesTags()
+    {
+        var args = new Dictionary<string, GameEventScriptValue> { ["amount"] = GesInteger(7) };
+        var untagged = GesMessage(GameEventScriptMessage.Create("Ping", args));
+        var tagged = GesMessage(GameEventScriptMessage.Create("Ping", args, ["radio"]));
+
+        Assert.AreNotEqual(untagged, tagged);
+        Assert.AreEqual(
+            ((GameEventScriptMessageValue)untagged).Value.SignatureId,
+            ((GameEventScriptMessageValue)tagged).Value.SignatureId);
+    }
+
+    [TestMethod]
+    public void MessagesRequireNames()
+    {
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessage.Create(string.Empty));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessage.Create("   "));
     }
 
     [TestMethod]

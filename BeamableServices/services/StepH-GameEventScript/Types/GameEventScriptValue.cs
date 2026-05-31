@@ -285,7 +285,8 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                                               ((GameEventScriptRangeValue)this).ToNumber == ((GameEventScriptRangeValue)other).ToNumber &&
                                               ((GameEventScriptRangeValue)this).StepNumber == ((GameEventScriptRangeValue)other).StepNumber,
             GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.SignatureId == ((GameEventScriptMessageValue)other).Value.SignatureId &&
-                                                EqualsDictionary(((GameEventScriptMessageValue)this).Value.Arguments, ((GameEventScriptMessageValue)other).Value.Arguments),
+                                                EqualsDictionary(((GameEventScriptMessageValue)this).Value.Arguments, ((GameEventScriptMessageValue)other).Value.Arguments) &&
+                                                ((GameEventScriptMessageValue)this).Value.Tags.SequenceEqual(((GameEventScriptMessageValue)other).Value.Tags, StringComparer.Ordinal),
             GameEventScriptValueKind.Handler => ((GameEventScriptHandlerValue)this).Signature.SignatureId == ((GameEventScriptHandlerValue)other).Signature.SignatureId,
             GameEventScriptValueKind.List => AsList().SequenceEqual(other.AsList()),
             GameEventScriptValueKind.Map => EqualsDictionary(AsMap(), other.AsMap()),
@@ -364,6 +365,11 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 {
                     hash.Add(pair.Key, StringComparer.Ordinal);
                     hash.Add(pair.Value);
+                }
+
+                foreach (var tag in ((GameEventScriptMessageValue)this).Value.Tags)
+                {
+                    hash.Add(tag, StringComparer.Ordinal);
                 }
 
                 break;
@@ -655,7 +661,23 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
         private static int CompareMessage(GameEventScriptMessageValue left, GameEventScriptMessageValue right)
         {
             var bySignature = StringComparer.Ordinal.Compare(left.Value.SignatureId, right.Value.SignatureId);
-            return bySignature != 0 ? bySignature : CompareDictionary(left.Value.Arguments, right.Value.Arguments);
+            if (bySignature != 0) return bySignature;
+            var byArguments = CompareDictionary(left.Value.Arguments, right.Value.Arguments);
+            return byArguments != 0 ? byArguments : CompareTags(left.Value.Tags, right.Value.Tags);
+        }
+
+        private static int CompareTags(IReadOnlyList<string> left, IReadOnlyList<string> right)
+        {
+            var byCount = left.Count.CompareTo(right.Count);
+            if (byCount != 0) return byCount;
+
+            for (var i = 0; i < left.Count; i++)
+            {
+                var byTag = StringComparer.Ordinal.Compare(left[i], right[i]);
+                if (byTag != 0) return byTag;
+            }
+
+            return 0;
         }
 
         private static int CompareHandler(GameEventScriptHandlerValue left, GameEventScriptHandlerValue right) =>

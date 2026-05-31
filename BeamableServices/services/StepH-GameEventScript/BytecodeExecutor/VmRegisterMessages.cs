@@ -40,7 +40,14 @@ internal static class VmRegisterMessages
         {
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(dest.OwningState.Binary.TextConstantTable.Resolve(shape[index + 1]), dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue());
         }
-        dest.SetMessage(GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
+        try
+        {
+            dest.SetMessage(GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
+        }
+        catch (ArgumentException)
+        {
+            dest.SetNothing();
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -88,7 +88,7 @@ internal static class GameEventScriptConformanceRunner
 
     internal static void RunScriptApiTest(
         GameEventScriptConformanceCase testCase,
-        Func<GameEventScriptConformanceTest, IGameEventScriptMessageHandlerCollection>? compileScripts = null)
+        Func<GameEventScriptConformanceTest, IGameEventScriptModule>? compileScripts = null)
     {
         var test = testCase.Test;
         var compiled = (compileScripts ?? CompileScripts)(test);
@@ -130,7 +130,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    internal static IGameEventScriptMessageHandlerCollection CompileScripts(GameEventScriptConformanceTest test)
+    internal static IGameEventScriptModule CompileScripts(GameEventScriptConformanceTest test)
     {
         return GesBytecodeVmExecutableBuilder.Build(CompileBytecode(test));
     }
@@ -511,7 +511,7 @@ internal static class GameEventScriptConformanceRunner
     }
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(
-        IGameEventScriptMessageHandlerCollection compiled)
+        IGameEventScriptModule compiled)
     {
         return compiled.Handlers
             .GroupBy(handler => handler.Signature.Name, StringComparer.Ordinal)

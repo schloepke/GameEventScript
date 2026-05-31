@@ -7,36 +7,41 @@ namespace StepH_GameEventScript_Tests.Api;
 public sealed class GameEventScriptMessageSignatureTests
 {
     [TestMethod]
-    public void WildcardSignatureHasDistinctSignatureIdAndMatchesByMessageName()
+    public void HandlerDescriptorCanMatchByMessageName()
     {
         var exact = GameEventScriptMessageSignature.Create("Ping", ["envelope"]);
-        var wildcard = GameEventScriptMessageSignature.Create("Ping", ["ignored"], matchArguments: false);
+        var wildcard = new GameEventScriptMessageHandlerDescriptor(
+            GameEventScriptMessageSignature.Create("Ping", ["ignored"]),
+            (_, _) => { },
+            matchArguments: false);
         var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptNumberValue.CreateInteger(7)));
 
         Assert.AreEqual("Ping(envelope)", exact.SignatureId);
-        Assert.AreEqual("Ping(*)", wildcard.SignatureId);
-        Assert.IsEmpty(wildcard.Parameters);
+        Assert.AreEqual("Ping(*)", wildcard.DispatchSignatureId);
+        Assert.AreEqual("Ping(ignored)", wildcard.Signature.SignatureId);
         Assert.IsFalse(exact.Matches(message));
-        Assert.IsTrue(wildcard.Matches(message));
+        Assert.IsFalse(wildcard.Signature.Matches(message));
+        Assert.IsFalse(wildcard.MatchArguments);
     }
 
     [TestMethod]
-    public void WildcardSignatureDoesNotUseParametersForMatching()
+    public void HandlerDescriptorWildcardKeepsTheSignatureShape()
     {
-        var noParameters = GameEventScriptMessageSignature.Create("Ping", [], matchArguments: false);
-        var multipleParameters = GameEventScriptMessageSignature.Create("Ping", ["one", "two"], matchArguments: false);
+        var noParameters = new GameEventScriptMessageHandlerDescriptor(GameEventScriptMessageSignature.Create("Ping", []), (_, _) => { }, matchArguments: false);
+        var multipleParameters = new GameEventScriptMessageHandlerDescriptor(GameEventScriptMessageSignature.Create("Ping", ["one", "two"]), (_, _) => { }, matchArguments: false);
 
-        Assert.AreEqual("Ping(*)", noParameters.SignatureId);
-        Assert.AreEqual("Ping(*)", multipleParameters.SignatureId);
-        Assert.IsEmpty(noParameters.Parameters);
-        Assert.IsEmpty(multipleParameters.Parameters);
+        Assert.AreEqual("Ping(*)", noParameters.DispatchSignatureId);
+        Assert.AreEqual("Ping(*)", multipleParameters.DispatchSignatureId);
+        Assert.IsEmpty(noParameters.Signature.Parameters);
+        CollectionAssert.AreEqual(new[] { "one", "two" }, multipleParameters.Signature.Parameters.ToArray());
     }
 
     [TestMethod]
-    public void WildcardSignatureCannotCreateNormalMessage()
+    public void MessageSignatureAlwaysCreatesNormalMessages()
     {
-        var wildcard = GameEventScriptMessageSignature.Create("Ping", [], matchArguments: false);
+        var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
 
-        Assert.IsFalse(wildcard.TryCreateMessage([GameEventScriptNumberValue.CreateInteger(7)], out _));
+        Assert.IsTrue(signature.TryCreateMessage([GameEventScriptNumberValue.CreateInteger(7)], out var message));
+        Assert.AreEqual("Ping(amount)", message.SignatureId);
     }
 }

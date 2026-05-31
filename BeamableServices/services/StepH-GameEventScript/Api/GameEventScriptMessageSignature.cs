@@ -26,17 +26,16 @@ public sealed class GameEventScriptMessageSignature
     /// Represents an empty and default instance of the <see cref="GameEventScriptMessageSignature"/> class.
     /// This instance serves as a placeholder or null-equivalent for signatures where no specific definition is required.
     /// </summary>
-    public static readonly GameEventScriptMessageSignature Empty = new(string.Empty, [], matchArguments: true);
+    public static readonly GameEventScriptMessageSignature Empty = new(string.Empty, []);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptMessageSignature"/> representing a message signature
-    /// with the specified name, parameters, and a flag indicating whether arguments should be matched during message handling.
+    /// with the specified name and parameters.
     /// </summary>
     /// <param name="name">The name of the message. This must be a non-null and non-empty string.</param>
     /// <param name="parameters">An optional collection of parameter names associated with the message. Can be null if the message does not require parameters.</param>
-    /// <param name="matchArguments">A boolean indicating whether the message signature should include argument matching during execution.</param>
     /// <returns>A new <see cref="GameEventScriptMessageSignature"/> instance representing the provided message signature.</returns>
-    public static GameEventScriptMessageSignature Create(string name, IEnumerable<string>? parameters, bool matchArguments = true) => new(name, parameters, matchArguments);
+    public static GameEventScriptMessageSignature Create(string name, IEnumerable<string>? parameters) => new(name, parameters);
 
     /// <summary>
     /// Normalizes the given message name by trimming whitespace and ensuring it is not null or empty.
@@ -68,14 +67,11 @@ public sealed class GameEventScriptMessageSignature
     /// by trimming whitespace.</param>
     /// <param name="parameterNames">An optional collection of parameter names associated with the message.
     /// If null, an empty list of parameters is considered, and it will also normalize each parameter name.</param>
-    /// <param name="matchArguments">An optional parameter indicating if the signature matches the inidivial
-    /// arguments or the whole message.</param>
     /// <returns>A string representing the signature ID, which combines the normalized message name and
     /// a comma-separated list of its parameter names enclosed in parentheses.</returns>
-    public static string CreateSignatureId(string name, IEnumerable<string>? parameterNames, bool matchArguments = true)
+    public static string CreateSignatureId(string name, IEnumerable<string>? parameterNames)
     {
         var normalizedName = NormalizeMessageName(name);
-        if (!matchArguments) return $"{normalizedName}(*)";
         IReadOnlyList<string> normalizedParameters = parameterNames is null ? [] : parameterNames.Select(NormalizeParameterName).ToArray();
         return $"{normalizedName}({string.Join(",", normalizedParameters)})";
     }
@@ -101,21 +97,13 @@ public sealed class GameEventScriptMessageSignature
     public string SignatureId { get; }
 
     /// <summary>
-    /// Indicates whether the arguments associated with a message signature
-    /// must strictly match the defined parameters in both count and order
-    /// during validation or message creation. When set to true, the signature
-    /// enforces strict argument matching.
-    /// </summary>
-    public bool MatchArguments { get; }
-
-    /// <summary>
     /// Determines whether the specified <see cref="GameEventScriptMessage"/> matches the current
     /// <see cref="GameEventScriptMessageSignature"/> based on the message name and, when enabled, the argument signature.
     /// </summary>
     /// <param name="message">The <see cref="GameEventScriptMessage"/> to check against the current signature.
     /// The message must contain a name and a signature ID for comparison.</param>
     /// <returns>True if the name and signature ID of the provided message match those of the current signature; otherwise, false.</returns>
-    public bool Matches(GameEventScriptMessage message) => string.Equals(Name, message.Name, StringComparison.Ordinal) && (!MatchArguments || string.Equals(SignatureId, message.SignatureId, StringComparison.Ordinal));
+    public bool Matches(GameEventScriptMessage message) => string.Equals(Name, message.Name, StringComparison.Ordinal) && string.Equals(SignatureId, message.SignatureId, StringComparison.Ordinal);
 
     /// <summary>
     /// Creates a message by binding the provided values to this signature's parameters in declaration order.
@@ -130,12 +118,12 @@ public sealed class GameEventScriptMessageSignature
     /// Attempts to create a message by binding ordered values to this signature's parameter names.
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
-    /// <param name="message">The created message when the argument count matches; otherwise <see cref="GameEventScriptMessage.Empty"/>.</param>
+    /// <param name="message">The created message when the argument count matches; otherwise undefined.</param>
     /// <returns><c>true</c> when the argument count matches the signature; otherwise <c>false</c>.</returns>
     public bool TryCreateMessage(IReadOnlyList<GameEventScriptValue> arguments, out GameEventScriptMessage message)
     {
-        message = GameEventScriptMessage.Empty;
-        if (!MatchArguments) return false;
+        message = default!;
+        if (Name.Length == 0) return false;
         if (arguments.Count != Parameters.Count) return false;
         if (arguments.Count == 0)
         {
@@ -152,11 +140,10 @@ public sealed class GameEventScriptMessageSignature
         return true;
     }
 
-    private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters, bool matchArguments)
+    private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)
     {
         Name = NormalizeMessageName(name);
-        MatchArguments = matchArguments;
-        Parameters = MatchArguments && parameters is not null ? parameters.Select(NormalizeParameterName).ToArray() : [];
-        SignatureId = CreateSignatureId(Name, Parameters, MatchArguments);
+        Parameters = parameters is not null ? parameters.Select(NormalizeParameterName).ToArray() : [];
+        SignatureId = CreateSignatureId(Name, Parameters);
     }
 }

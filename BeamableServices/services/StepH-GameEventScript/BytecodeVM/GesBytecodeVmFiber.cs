@@ -18,7 +18,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return new Fiber(session, handler, args);
     }
 
-    internal sealed class Fiber
+    internal sealed class Fiber : IGameEventScriptMessageInvocation
     {
         private readonly GesBytecodeVmExecutionSession _session;
         private readonly Stack<Frame> _frames = new();

@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
@@ -10,10 +11,8 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptMessageValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptMessageValue Empty = new(Api.GameEventScriptMessage.Empty);
-
-    public static GameEventScriptMessageValue Create(GameEventScriptMessage? message)
-        => message == null || message.SignatureId == Api.GameEventScriptMessage.Empty.SignatureId ? Empty : new GameEventScriptMessageValue(message);
+    public static GameEventScriptMessageValue Create(GameEventScriptMessage message)
+        => new(message ?? throw new ArgumentNullException(nameof(message)));
 
     private GameEventScriptMessageValue(GameEventScriptMessage message)
     {
@@ -23,7 +22,8 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
         {
             ["name"] = GesText(message.Name),
             ["arguments"] = GesMap(message.Arguments),
-            ["signatureid"] = GesText(message.SignatureId)
+            ["signatureid"] = GesText(message.SignatureId),
+            ["tags"] = GesList(message.Tags.Select(GesTag))
         };
 
         _members = new ReadOnlyDictionary<string, GameEventScriptValue>(map);

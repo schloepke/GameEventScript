@@ -14,17 +14,10 @@ internal static class GesBytecodeVmExecutableBuilder
         var handlers = compiled.Handlers.ToDictionary(
             pair => pair.Key,
             pair => (IReadOnlyList<GesBytecodeVmCompiledHandler>)pair.Value
-                .Select(handler =>
-                {
-                    var signatureId = GameEventScriptMessageSignature.CreateSignatureId(
-                        handler.Message,
-                        handler.SignatureLabels,
-                        handler.DispatchKind != GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope);
-                    return new GesBytecodeVmCompiledHandler(
-                        handler,
-                        compiled.Options.EnableDiagnostics,
-                        handler.Parameters.Count);
-                })
+                .Select(handler => new GesBytecodeVmCompiledHandler(
+                    handler,
+                    compiled.Options.EnableDiagnostics,
+                    handler.Parameters.Count))
                 .ToArray(),
             StringComparer.Ordinal);
 

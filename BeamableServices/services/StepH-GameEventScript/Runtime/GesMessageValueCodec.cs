@@ -33,7 +33,7 @@ internal static class GesMessageValueCodec
 
     public static bool TryReadMessageValue(GameEventScriptValue value, out GameEventScriptMessage message)
     {
-        message = GameEventScriptMessage.Empty;
+        message = default!;
         if (value is not GameEventScriptMessageValue typedMessage)
         {
             return false;
@@ -45,7 +45,7 @@ internal static class GesMessageValueCodec
 
     public static bool TryBindHandlerValue(GameEventScriptValue handlerValue, IReadOnlyDictionary<string, GameEventScriptValue> arguments, out GameEventScriptMessage message)
     {
-        message = GameEventScriptMessage.Empty;
+        message = default!;
         if (!TryReadHandlerValue(handlerValue, out var handler))
         {
             return false;

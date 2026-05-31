@@ -6241,6 +6241,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         var sourceValues = value.AsMap().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
+        if (typeDefinition.ConstructorEntryAddress >= 0)
+        {
+            var constructorOperands = new BytecodeVmValue[typeDefinition.Fields.Count];
+            for (var index = 0; index < typeDefinition.Fields.Count; index++)
+            {
+                var field = typeDefinition.Fields[index];
+                constructorOperands[index] = sourceValues.TryGetValue(field.Name, out var rawValue)
+                    ? BytecodeVmValue.FromGameEventScriptValue(rawValue)
+                    : BytecodeVmValue.Nothing;
+            }
+
+            if (TryEvaluateRecordConstructorEntry(typeDefinition.ConstructorEntryAddress, constructorOperands, out var recordValue))
+            {
+                return recordValue.ToGameEventScriptValue();
+            }
+        }
+
         var materializedValues = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
 
         foreach (var field in typeDefinition.Fields.Where(field => !IsComputedTypeField(field)))

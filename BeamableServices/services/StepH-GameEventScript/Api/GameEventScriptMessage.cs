@@ -53,13 +53,6 @@ public sealed class GameEventScriptMessage
         => new(name, GameEventScriptNamedArguments.CreateOrdered(arguments.Select(pair => new KeyValuePair<string, GameEventScriptValue>(pair.name, pair.value)).ToArray()));
 
     /// <summary>
-    /// Represents an empty or default message instance for the GameEventScriptMessage class.
-    /// This instance is commonly used to signify the absence of meaningful data
-    /// or as a default value in operations involving game event script messaging.
-    /// </summary>
-    public static readonly GameEventScriptMessage Empty = new(string.Empty);
-
-    /// <summary>
     /// Gets the name of the message associated with the GameEventScriptMessage instance.
     /// This name serves as a key identifier for the message, which is normalized to ensure
     /// a consistent format and allow for accurate handling and comparison within the
@@ -131,6 +124,11 @@ public sealed class GameEventScriptMessage
     private GameEventScriptMessage(string name, GameEventScriptNamedArguments? arguments = null, IEnumerable<string>? tags = null)
     {
         Name = GameEventScriptMessageSignature.NormalizeMessageName(name);
+        if (Name.Length == 0)
+        {
+            throw new ArgumentException("Message name must not be null, empty, or whitespace.", nameof(name));
+        }
+
         Arguments = arguments ?? GameEventScriptNamedArguments.Empty;
         SignatureId = GameEventScriptMessageSignature.CreateSignatureId(Name, Arguments.SignatureLabels);
         Tags = NormalizeTags(tags);
@@ -138,6 +136,11 @@ public sealed class GameEventScriptMessage
 
     private GameEventScriptMessage(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId, IReadOnlyList<string>? tags = null)
     {
+        if (string.IsNullOrWhiteSpace(normalizedName))
+        {
+            throw new ArgumentException("Message name must not be null, empty, or whitespace.", nameof(normalizedName));
+        }
+
         Name = normalizedName;
         Arguments = arguments;
         SignatureId = signatureId;

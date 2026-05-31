@@ -47,6 +47,26 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
+    public void WildcardMessageSignatureMatchesByNameWithoutOldVmDispatchKind()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe(
+            new GameEventScriptMessageHandlerDescriptor(
+                GameEventScriptMessageSignature.Create("Ping", []),
+                (message, _) => calls.Add(message.SignatureId),
+                matchArguments: false));
+        host.Subscribe(
+            GameEventScriptMessageSignature.Create("Ping", ["envelope"]),
+            (_, _) => calls.Add("exact"));
+
+        var session = host.StartSession();
+
+        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)))));
+        CollectionAssert.AreEqual(new[] { "Ping(amount)" }, calls);
+    }
+
+    [TestMethod]
     public void SessionStartQueuesInitializationHandlersBeforeExternalMessages()
     {
         var bytecode = GameEventScriptBuilder.Create()

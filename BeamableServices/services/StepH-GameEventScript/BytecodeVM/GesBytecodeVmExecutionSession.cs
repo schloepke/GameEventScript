@@ -456,17 +456,24 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
             case GameEventScriptBytecodeOpCode.CreateRecord:
             {
-                if (!TryReadStringPool(instruction.StringIndex, out var typeName) ||
-                    !TryReadStringList(instruction.ListIndex, out var constructorArgumentNames))
+                var typeDefinition = _compiledScript.TypeDefinitions.Values
+                    .OrderBy(type => type.Name, StringComparer.Ordinal)
+                    .ElementAtOrDefault(instruction.ExternalReferenceIndex);
+                if (typeDefinition is null)
                 {
                     return false;
                 }
 
                 var constructorOperands = stagedArguments?.ToArray() ?? [];
                 stagedArguments = null;
+                if (!TryEvaluateRecordConstructorEntry(typeDefinition.ConstructorEntryAddress, constructorOperands, out var recordValue))
+                {
+                    return false;
+                }
+
                 if (!DefineSlot(
                         instruction.DestinationSlot,
-                        EvaluateRecordConstructor(typeName, constructorArgumentNames, constructorOperands, 0, constructorOperands.Length)))
+                        recordValue))
                 {
                     return false;
                 }
@@ -2210,6 +2217,64 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             return returned;
+        }
+        finally
+        {
+            _locals = previousLocals;
+            _assignedSlots = previousAssignedSlots;
+            _activeLocalSlotCount = previousActiveLocalSlotCount;
+            _changes = previousChanges;
+            _scopeMarks = previousScopeMarks;
+            _trackedLocalSlotCount = previousTrackedLocalSlotCount;
+        }
+    }
+
+    private bool TryEvaluateRecordConstructorEntry(
+        int entryAddress,
+        IReadOnlyList<BytecodeVmValue> inputs,
+        out BytecodeVmValue value)
+    {
+        value = BytecodeVmValue.Nothing;
+        if ((uint)entryAddress >= (uint)_compiledScript.LinearExecutable.Code.Count)
+        {
+            return false;
+        }
+
+        var initialSlotCount = inputs.Count;
+        var slotCount = initialSlotCount + GetLinearEntryLocalSlotCount(entryAddress);
+        if (initialSlotCount > slotCount)
+        {
+            return false;
+        }
+
+        var previousLocals = _locals;
+        var previousAssignedSlots = _assignedSlots;
+        var previousActiveLocalSlotCount = _activeLocalSlotCount;
+        var previousChanges = _changes;
+        var previousScopeMarks = _scopeMarks;
+        var previousTrackedLocalSlotCount = _trackedLocalSlotCount;
+
+        _locals = new BytecodeVmValue[slotCount];
+        _assignedSlots = new bool[slotCount];
+        _activeLocalSlotCount = initialSlotCount;
+        for (var index = 0; index < inputs.Count; index++)
+        {
+            _locals[index] = inputs[index];
+            _assignedSlots[index] = true;
+        }
+
+        _changes = [];
+        _scopeMarks = [];
+        _trackedLocalSlotCount = initialSlotCount;
+        try
+        {
+            return TryExecuteLinearRange(
+                       entryAddress,
+                       _compiledScript.LinearExecutable.Code.Count,
+                       null,
+                       out var returned,
+                       out value) &&
+                   returned;
         }
         finally
         {

@@ -253,7 +253,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x3C | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
 | 0x3D | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
 | 0x3E | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x3F | `CreateRecord` | - | result slot | `StringIndex`=record type name | `ListIndex`=argument names | - | Constructs a script record from named staged argument values. |
+| 0x3F | `CreateRecord` | - | result slot | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with field-ordered staged values. |
 | 0x40 | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
 | 0x41 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
 | 0x42 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
@@ -412,11 +412,12 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateRecord`, `CreateExternalType`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateExternalType`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
 | `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message
-builder opcodes now reference entry addresses or `StringPool`/`UShortListPool`
-directly from the instruction word.
+builder opcodes now reference bind ids, entry addresses, or `StringPool`/`UShortListPool`
+directly from the instruction word. Record constructor code addresses live in
+`Record` bind entries, not in `CreateRecord` instructions.
 Pipeline selectors are lowered into linear helper entries and fixed iterator or
 terminal opcodes; there are no pipeline selector or pattern pools.

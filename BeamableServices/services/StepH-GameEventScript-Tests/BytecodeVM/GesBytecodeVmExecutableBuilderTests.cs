@@ -188,9 +188,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.CreatePoint &&
             instruction.ImmediateX == 0));
-        Assert.IsFalse(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRecord &&
-            compiled.StringPool[(int)instruction.StringIndex] is "vector" or "point"));
+        Assert.IsFalse(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRecord));
     }
 
     [TestMethod]

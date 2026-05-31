@@ -135,7 +135,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:L_\d+|L_none|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|ExternalType_\d+|Bind_\d+)\b</string>
+					<string>\b(?:L_\d+|L_none|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|Record_\d+|ExternalType_\d+|Bind_\d+)\b</string>
 					<key>name</key>
 					<string>variable.other.label.reference.gameeventscript.assembler</string>
 				</dict>
@@ -194,7 +194,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:MessageHandler|Function|Predicate|ExtensionCall|OutboundMessage|ExternalType)\b</string>
+					<string>\b(?:MessageHandler|Function|Predicate|ExtensionCall|OutboundMessage|Record|ExternalType)\b</string>
 					<key>name</key>
 					<string>support.type.bind-kind.gameeventscript.assembler</string>
 				</dict>

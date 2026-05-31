@@ -409,7 +409,7 @@ internal static class VmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Map when a.ObjectValue is VmMapObject map:
+            case Map or Custom when a.ObjectValue is VmMapObject map:
                 dst.SetList(map.ValueList);
                 break;
             default:
@@ -423,7 +423,7 @@ internal static class VmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Map when a.ObjectValue is VmMapObject map:
+            case Map or Custom when a.ObjectValue is VmMapObject map:
                 dst.SetList(map.KeyList);
                 break;
             default:
@@ -437,7 +437,7 @@ internal static class VmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Map when a.ObjectValue is VmMapObject map:
+            case Map or Custom when a.ObjectValue is VmMapObject map:
                 dst.SetList(map.EntryList);
                 break;
             default:

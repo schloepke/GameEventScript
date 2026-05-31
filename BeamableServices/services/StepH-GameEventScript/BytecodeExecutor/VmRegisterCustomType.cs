@@ -6,13 +6,6 @@ internal static class VmRegisterCustomType
 {
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCreateRecord(ref this VmValue dst, ushort typeNameIndex, ushort argumentNamesIndex)
-    {
-        // FIXME: creating the real custom type here
-        dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateExternalType(ref this VmValue dst, ushort externalTypeConstructorReferenceIndex, ushort argumentNamesIndex)
     {
         // FIXME: creating the real custom type here

@@ -53,6 +53,7 @@ internal static class GesBytecodeCompiler
                 AddUShortList,
                 AddOutboundMessageSignature,
                 AddExternalReference,
+                ResolveRecordConstructorReference,
                 AddExternalTypeConstructorReference,
                 module.Callables,
                 module.TypeDefinitions,
@@ -132,6 +133,22 @@ internal static class GesBytecodeCompiler
             }
 
             return index;
+        }
+
+        private int ResolveRecordConstructorReference(string typeName)
+        {
+            var index = 0;
+            foreach (var name in module.TypeDefinitions.Keys.OrderBy(name => name, StringComparer.Ordinal))
+            {
+                if (string.Equals(name, typeName, StringComparison.Ordinal))
+                {
+                    return index;
+                }
+
+                index++;
+            }
+
+            throw new GameEventScriptCompileException($"GameEventScript record type ':{typeName}' is not registered.");
         }
 
         private int AddExternalTypeConstructorReference(GameEventScriptExternalTypeConstructorReference reference)

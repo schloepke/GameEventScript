@@ -114,7 +114,8 @@ public enum GameEventScriptBinaryBindKind : byte
     Predicate = 0x12,
     ExtensionCall = 0x20,
     OutboundMessage = 0x21,
-    ExternalType = 0x30
+    Record = 0x30,
+    ExternalType = 0x31
 }
 
 public enum GameEventScriptBytecodeInstructionUnit : byte

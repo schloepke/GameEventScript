@@ -240,8 +240,7 @@ public class GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort
                     _vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                     break;
                 case CreateRecord:
-                    _vmState.Register(instruction.DestinationSlot).VmCreateRecord(instruction.StringIndex, instruction.ListIndex);
-                    _vmState.ClearStage();
+                    _vmState.CallRecordConstructor(instruction.ExternalReferenceIndex, instruction.DestinationSlot);
                     break;
                 case CreateExternalType:
                     _vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.ExternalReferenceIndex, instruction.ListIndex);

@@ -59,6 +59,7 @@ internal class VmState
 
     internal Dictionary<string, GameEventScriptBinaryBindEntry> InboundMessageHandlers { get; init; }
     internal GameEventScriptBinaryBindEntry[] OutboundMessageSignatures { get; init; }
+    internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; init; }
 
     internal readonly ushort CodeSegmentSize; 
     private readonly int _maxRegisterSlots;
@@ -88,14 +89,25 @@ internal class VmState
             bind => GameEventScriptMessageSignature.CreateSignatureId(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve)),
             x => x);
         OutboundMessageSignatures = BuildOutboundMessageSignatures(binary);
+        RecordConstructors = BuildRecordConstructors(binary);
     }
 
     private static GameEventScriptBinaryBindEntry[] BuildOutboundMessageSignatures(GameEventScriptBinary binary)
     {
+        return BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
+    }
+
+    private static GameEventScriptBinaryBindEntry[] BuildRecordConstructors(GameEventScriptBinary binary)
+    {
+        return BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
+    }
+
+    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptBinary binary, GameEventScriptBinaryBindKind kind)
+    {
         var maxId = -1;
         foreach (var entry in binary.BindTable.Entries)
         {
-            if (entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage && entry.Id != ushort.MaxValue && entry.Id > maxId)
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId)
             {
                 maxId = entry.Id;
             }
@@ -109,7 +121,7 @@ internal class VmState
         var result = new GameEventScriptBinaryBindEntry[maxId + 1];
         foreach (var entry in binary.BindTable.Entries)
         {
-            if (entry.Kind == GameEventScriptBinaryBindKind.OutboundMessage && entry.Id != ushort.MaxValue)
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue)
             {
                 result[entry.Id] = entry;
             }
@@ -251,6 +263,17 @@ internal class VmState
         RegisterFrameLength = nextRegisterFrameLength;
         StageLength = 0;
         return true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal bool CallRecordConstructor(ushort recordId, ushort resultRegister)
+    {
+        if (recordId >= RecordConstructors.Length) return RaiseError($"Record constructor '{recordId}' was not found.");
+        var bind = RecordConstructors[recordId];
+        if (bind.Kind != GameEventScriptBinaryBindKind.Record) return RaiseError($"Record constructor '{recordId}' has invalid bind kind.");
+        if (bind.EntryAddress >= CodeSegmentSize) return RaiseError($"Record constructor '{recordId}' has an invalid entry address.");
+        if (StageLength != bind.ArgumentNames.Count) return RaiseError($"Record constructor '{recordId}' has the wrong number of arguments.");
+        return CallAddress(bind.EntryAddress, resultRegister);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

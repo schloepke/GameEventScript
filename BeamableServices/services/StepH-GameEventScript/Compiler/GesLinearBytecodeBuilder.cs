@@ -13,6 +13,7 @@ internal sealed class GesLinearBytecodeBuilder
     private readonly Func<IReadOnlyList<ushort>, int> _resolveUShortListIndex;
     private readonly Func<MessageLiteralExpressionNode, int> _resolveOutboundMessageSignatureIndex;
     private readonly Func<GameEventScriptExtensionReference, int> _resolveExternalReferenceIndex;
+    private readonly Func<string, int> _resolveRecordConstructorReferenceIndex;
     private readonly Func<GameEventScriptExternalTypeConstructorReference, int> _resolveExternalTypeConstructorReferenceIndex;
     private readonly IReadOnlyDictionary<string, GesCallableDefinition> _sourceCallables;
     private readonly IReadOnlyDictionary<string, TypeDefinitionNode> _sourceTypeDefinitions;
@@ -33,6 +34,7 @@ internal sealed class GesLinearBytecodeBuilder
         Func<IReadOnlyList<ushort>, int>? resolveUShortListIndex = null,
         Func<MessageLiteralExpressionNode, int>? resolveOutboundMessageSignatureIndex = null,
         Func<GameEventScriptExtensionReference, int>? resolveExternalReferenceIndex = null,
+        Func<string, int>? resolveRecordConstructorReferenceIndex = null,
         Func<GameEventScriptExternalTypeConstructorReference, int>? resolveExternalTypeConstructorReferenceIndex = null,
         IReadOnlyDictionary<string, GesCallableDefinition>? sourceCallables = null,
         IReadOnlyDictionary<string, TypeDefinitionNode>? sourceTypeDefinitions = null,
@@ -43,6 +45,7 @@ internal sealed class GesLinearBytecodeBuilder
         _resolveUShortListIndex = resolveUShortListIndex ?? (_ => -1);
         _resolveOutboundMessageSignatureIndex = resolveOutboundMessageSignatureIndex ?? (_ => -1);
         _resolveExternalReferenceIndex = resolveExternalReferenceIndex ?? (_ => -1);
+        _resolveRecordConstructorReferenceIndex = resolveRecordConstructorReferenceIndex ?? (_ => -1);
         _resolveExternalTypeConstructorReferenceIndex = resolveExternalTypeConstructorReferenceIndex ?? (_ => -1);
         _sourceCallables = sourceCallables ?? new Dictionary<string, GesCallableDefinition>(StringComparer.Ordinal);
         _sourceTypeDefinitions = sourceTypeDefinitions ?? new Dictionary<string, TypeDefinitionNode>(StringComparer.Ordinal);
@@ -186,8 +189,6 @@ internal sealed class GesLinearBytecodeBuilder
         IEnumerable<GameEventScriptBytecodeTypeDefinition> types,
         IReadOnlyDictionary<string, TypeDefinitionNode> sourceTypes)
     {
-        var slots = GesBytecodeLowerer.CollectTypeDefinitionSlots(_sourceCallables, sourceTypes);
-        var context = new SourceContext(slots);
         foreach (var type in types)
         {
             if (!sourceTypes.TryGetValue(type.Name, out var sourceType))
@@ -195,32 +196,67 @@ internal sealed class GesLinearBytecodeBuilder
                 continue;
             }
 
-            var sourceFields = sourceType.Fields.ToDictionary(field => field.Name, StringComparer.Ordinal);
-            foreach (var field in type.Fields)
-            {
-                if (!sourceFields.TryGetValue(field.Name, out var sourceField))
-                {
-                    continue;
-                }
-
-                if (sourceField.MinimumExpression is not null)
-                {
-                    field.MinimumEntryAddress = EmitSourceExpressionEntry(sourceField.MinimumExpression, context);
-                }
-
-                if (sourceField.MaximumExpression is not null)
-                {
-                    field.MaximumEntryAddress = EmitSourceExpressionEntry(sourceField.MaximumExpression, context);
-                }
-
-                if (sourceField.ComputedExpression is not null)
-                {
-                    field.ComputedEntryAddress = EmitSourceExpressionEntry(sourceField.ComputedExpression, context);
-                }
-            }
+            EmitSourceRecordConstructor(type, sourceType);
         }
 
         FlushDeferredHelpers();
+    }
+
+    private void EmitSourceRecordConstructor(GameEventScriptBytecodeTypeDefinition type, TypeDefinitionNode sourceType)
+    {
+        var slots = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
+        {
+            slots[sourceType.Fields[fieldIndex].Name] = fieldIndex;
+        }
+
+        var context = new SourceContext(slots);
+        var state = new ExpressionState(sourceType.Fields.Count);
+        type.ConstructorEntryAddress = _code.Count;
+        var slotLocalsAddress = EmitSlotLocals(0);
+        _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, sourceType.Fields.Count);
+        _maxFrameSlots = Math.Max(_maxFrameSlots, sourceType.Fields.Count);
+
+        for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
+        {
+            var field = sourceType.Fields[fieldIndex];
+            if (field.ComputedExpression is not null)
+            {
+                var computedSlot = EmitSourceExpression(field.ComputedExpression, context, state);
+                EmitCastSlot(fieldIndex, computedSlot, field.TypeName);
+                continue;
+            }
+
+            EmitCastSlot(fieldIndex, fieldIndex, field.TypeName);
+            if (field.MinimumExpression is not null && field.MaximumExpression is not null)
+            {
+                var minimumSlot = EmitSourceExpression(field.MinimumExpression, context, state);
+                var maximumSlot = EmitSourceExpression(field.MaximumExpression, context, state);
+                Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Clamp, dest: fieldIndex, a: fieldIndex, b: minimumSlot, c: maximumSlot));
+                EmitCastSlot(fieldIndex, fieldIndex, field.TypeName);
+            }
+        }
+
+        for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
+        {
+            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StageRegister, a: fieldIndex));
+        }
+
+        Emit(new GameEventScriptBytecodeInstruction
+        {
+            OpCode = GameEventScriptBytecodeOpCode.StageTag,
+            StringIndex = ToUShortOperand(ResolveStringIndex(type.Name), "record type name")
+        });
+
+        var keyNames = sourceType.Fields.Select(field => field.Name).Concat([GameEventScriptValue.HiddenTypeKey]).ToArray();
+        var keyNameListIndex = ResolveStringListIndex(keyNames);
+        var mapSlot = AllocateSlot(state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CreateMap, dest: mapSlot, a: keyNameListIndex));
+        var recordSlot = AllocateSlot(state);
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CastCustom, dest: recordSlot, a: mapSlot, b: ResolveStringIndex(type.Name)));
+        EmitReturnValue(recordSlot);
+        PatchSlotLocals(slotLocalsAddress, state.NextSlot - sourceType.Fields.Count);
+        _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
     }
 
     private int EmitSourceExpressionEntry(ExpressionNode expression, SourceContext context)
@@ -1519,6 +1555,33 @@ internal sealed class GesLinearBytecodeBuilder
             return EmitValueInstruction(state, operand.CastOpCode, a: value, b: operand.TypeOperand, unitAndFlags: operand.UnitAndFlags);
         }
 
+        if (_sourceTypeDefinitions.ContainsKey(typeConstructor.TypeName))
+        {
+            var sourceType = _sourceTypeDefinitions[typeConstructor.TypeName];
+            var argumentsByName = typeConstructor.Arguments.ToDictionary(argument => argument.Name, StringComparer.Ordinal);
+            for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
+            {
+                if (argumentsByName.TryGetValue(sourceType.Fields[fieldIndex].Name, out var argument))
+                {
+                    EmitStageArgument(PrepareStageArgument(argument.Expression, context, state));
+                    continue;
+                }
+
+                Emit(new GameEventScriptBytecodeInstruction { OpCode = GameEventScriptBytecodeOpCode.StageNothing });
+            }
+
+            var referenceIndex = _resolveRecordConstructorReferenceIndex(typeConstructor.TypeName);
+            if (referenceIndex < 0)
+            {
+                throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer could not resolve record constructor ':{typeConstructor.TypeName}'.");
+            }
+
+            return EmitValueInstruction(
+                state,
+                GameEventScriptBytecodeOpCode.CreateRecord,
+                a: referenceIndex);
+        }
+
         var argumentNames = new string[typeConstructor.Arguments.Count];
         var argumentValues = new StageArgumentPlan[typeConstructor.Arguments.Count];
         for (var argumentIndex = 0; argumentIndex < typeConstructor.Arguments.Count; argumentIndex++)
@@ -1533,17 +1596,7 @@ internal sealed class GesLinearBytecodeBuilder
             EmitStageArgument(argumentValues[argumentIndex]);
         }
 
-        var typeNameIndex = ResolveStringIndex(typeConstructor.TypeName);
         var argumentNameListIndex = ResolveStringListIndex(argumentNames);
-        if (_sourceTypeDefinitions.ContainsKey(typeConstructor.TypeName))
-        {
-            return EmitValueInstruction(
-                state,
-                GameEventScriptBytecodeOpCode.CreateRecord,
-                a: typeNameIndex,
-                b: argumentNameListIndex);
-        }
-
         if (_externalTypeDefinitions.ContainsKey(typeConstructor.TypeName))
         {
             var referenceIndex = _resolveExternalTypeConstructorReferenceIndex(new GameEventScriptExternalTypeConstructorReference(

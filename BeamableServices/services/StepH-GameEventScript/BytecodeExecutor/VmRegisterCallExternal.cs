@@ -298,6 +298,7 @@ internal static class VmRegisterCallExternal
         Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
         List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
         Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
+        Custom when a.ObjectValue is VmMapObject map => map.ToGameEventScriptCustomTypeValue(a.OwningState),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
@@ -325,10 +326,27 @@ internal static class VmRegisterCallExternal
         var result = new Dictionary<string, GameEventScriptValue>(map.Length, StringComparer.Ordinal);
         foreach (var (key, value) in map.Entries)
         {
+            if (key.StartsWith("_", StringComparison.Ordinal)) continue;
             var x = value;
             result.Add(key, x.ToGameEventScriptValue());
         }
 
         return result;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this VmMapObject map, VmState state)
+    {
+        var typeName = string.Empty;
+        if (map.TryGet(GameEventScriptValue.HiddenTypeKey, out var marker) && marker.Kind is Tag)
+        {
+            typeName = marker.IsStoragePointer
+                ? state.Binary.TextConstantTable.Resolve((ushort)marker.IntegerValue)
+                : marker.ObjectValue as string ?? string.Empty;
+        }
+
+        return string.IsNullOrEmpty(typeName)
+            ? GameEventScriptValueFactory.GesNothing()
+            : GameEventScriptValueFactory.GesCustomType(typeName, map.ToGameEventScriptValues());
     }
 }

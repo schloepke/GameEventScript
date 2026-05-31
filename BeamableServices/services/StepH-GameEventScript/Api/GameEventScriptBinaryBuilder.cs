@@ -204,6 +204,16 @@ public static class GameEventScriptBinaryExtensions
             builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.ExtensionCall, functionIndex, argumentIndexes, id: checked((ushort)externalReferenceId++)));
         }
 
+        var recordId = 0;
+        foreach (var type in compiled.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
+        {
+            builder.AddStringPoolElement(type.Name, out var typeNameIndex);
+            builder.AddStringPoolElements(type.Fields.Select(field => field.Name).ToArray(), out var fieldNameIndexes);
+            builder.AddBind(new GameEventScriptBinaryBindEntry(GameEventScriptBinaryBindKind.Record, typeNameIndex, fieldNameIndexes,
+                type.ConstructorEntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary record exports require non-negative constructor entry addresses.") : checked((ushort)type.ConstructorEntryAddress),
+                checked((ushort)recordId++)));
+        }
+
         var externalTypeId = 0;
         foreach (var reference in compiled.ExternalTypeConstructorReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))
         {

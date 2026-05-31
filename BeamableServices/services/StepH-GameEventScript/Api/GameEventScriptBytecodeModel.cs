@@ -56,6 +56,8 @@ public sealed class GameEventScriptBytecodeTypeDefinition(
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
     public IReadOnlyList<GameEventScriptBytecodeTypeFieldDefinition> Fields { get; } = fields ?? throw new ArgumentNullException(nameof(fields));
+
+    public int ConstructorEntryAddress { get; internal set; } = -1;
 }
 
 public sealed class GameEventScriptBytecodeTypeFieldDefinition

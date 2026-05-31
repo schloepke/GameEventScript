@@ -138,6 +138,7 @@ internal static class VmRegisterTypeCastCheck
                         dst = xSlot;
                         return;
                     case Map:
+                    case Custom:
                         dst.SetList(dst.OwningState.EmptyList);
                         return;
                     default:
@@ -145,7 +146,7 @@ internal static class VmRegisterTypeCastCheck
                         return;
                 }
             case Map:
-                if (xSlot.Kind is not Map)
+                if (xSlot.Kind is not (Map or Custom))
                 {
                     dst.SetNothing();
                     return;
@@ -212,7 +213,20 @@ internal static class VmRegisterTypeCastCheck
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCastCustom(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer)
     {
-        if (IsCustomType(ref xSlot, dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer), ref dst.OwningState.Binary.TextConstantTable))
+        var typeName = dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer);
+        if (!IsCustomType(ref xSlot, typeName, ref dst.OwningState.Binary.TextConstantTable))
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (xSlot.ObjectValue is VmMapObject map)
+        {
+            dst.SetRecord(map);
+            return;
+        }
+
+        if (xSlot.Kind is Custom)
         {
             dst = xSlot;
             return;
@@ -337,7 +351,7 @@ internal static class VmRegisterTypeCastCheck
         return value.Kind switch
         {
             Custom when value.ObjectValue is string customTypeName => string.Equals(customTypeName, typeName, StringComparison.Ordinal),
-            Map when value.ObjectValue is IVmKeyAccess<VmValue> map && map.TryGet(GameEventScriptValue.HiddenTypeKey, out var marker) => marker.Kind switch
+            Map or Custom when value.ObjectValue is IVmKeyAccess<VmValue> map && map.TryGet(GameEventScriptValue.HiddenTypeKey, out var marker) => marker.Kind switch
             {
                 Tag when marker.IsStoragePointer => string.Equals(textTable.Resolve((ushort)marker.IntegerValue), typeName, StringComparison.Ordinal),
                 Tag when marker.ObjectValue is string markerTypeName => string.Equals(markerTypeName, typeName, StringComparison.Ordinal),

@@ -38,6 +38,8 @@ public class GameEventScriptOpcodePrinter
         FromRegister,
         ToRegister,
         StepRegister,
+        MinimumRegister,
+        MaximumRegister,
 
         LocalRegisterDelta,
         DiceCount,
@@ -80,6 +82,7 @@ public class GameEventScriptOpcodePrinter
         ValueRegisterList,
         CaptureRegisterList,
         TagRegisterList,
+        RecordReference,
         ExternalReference
     }
 
@@ -156,7 +159,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CreateRangeIterator => [TargetRegister, FromRegister, ToRegister],
             GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep => [TargetRegister, FromRegister, ToRegister, StepRegister],
             GameEventScriptBytecodeOpCode.CreateRangeIteratorShort => [TargetRegister, FromImmediate, ToImmediate, StepImmediate],
-            GameEventScriptBytecodeOpCode.CreateRecord => [TargetRegister, TypeName, ArgumentNameList],
+            GameEventScriptBytecodeOpCode.CreateRecord => [TargetRegister, RecordReference],
             GameEventScriptBytecodeOpCode.CreateExternalType => [TargetRegister, ExternalReference, ArgumentNameList],
             GameEventScriptBytecodeOpCode.HasValue => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.IsEmpty => [TargetRegister, OperandRegister],
@@ -188,7 +191,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.Abs => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.LogN => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.Chance => [TargetRegister, OperandRegister],
-            GameEventScriptBytecodeOpCode.Clamp => [TargetRegister, SourceRegister, LeftRegister, RightRegister],
+            GameEventScriptBytecodeOpCode.Clamp => [TargetRegister, SourceRegister, MinimumRegister, MaximumRegister],
             GameEventScriptBytecodeOpCode.RandomTake => [TargetRegister, FromRegister, ToRegister],
             GameEventScriptBytecodeOpCode.RandomPush => [SeedRegister],
             GameEventScriptBytecodeOpCode.RandomPushConstant => [IntegerImmediate],

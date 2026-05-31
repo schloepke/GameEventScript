@@ -209,6 +209,8 @@ public static class GameEventScriptBinaryDumper
 
             ItemBindingRegister => Register(operandIndex >= 3 ? instruction.AU : instruction.YSlot),
             StepRegister => Register(instruction.AU),
+            MinimumRegister => Register(instruction.YSlot),
+            MaximumRegister => Register(instruction.AU),
 
             LocalRegisterDelta => Immediate(instruction.Count),
             DiceCount => Immediate(instruction.Count),
@@ -253,6 +255,7 @@ public static class GameEventScriptBinaryDumper
             TagRegisterList => context.ListLabel(instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
                 ? instruction.SecondaryListIndex
                 : instruction.ListIndex),
+            RecordReference => context.RecordLabel(instruction.ExternalReferenceIndex),
             ExternalReference => context.ExternalReferenceLabel(instruction.OpCode, instruction.ExternalReferenceIndex),
 
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
@@ -302,6 +305,9 @@ public static class GameEventScriptBinaryDumper
                     break;
                 case OutboundMessage:
                     AddOutboundMessageComment(comments, context, instruction.MessageDestination);
+                    break;
+                case RecordReference:
+                    AddRecordComment(comments, context, instruction.ExternalReferenceIndex);
                     break;
                 case ExternalReference:
                     AddExternalReferenceComment(comments, context, instruction.OpCode, instruction.ExternalReferenceIndex);
@@ -372,6 +378,14 @@ public static class GameEventScriptBinaryDumper
     private static void AddOutboundMessageComment(List<string> comments, DisassemblyContext context, ushort id)
     {
         if (context.TryGetBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, id, out var entry))
+        {
+            AddBindSignatureComment(comments, context, entry);
+        }
+    }
+
+    private static void AddRecordComment(List<string> comments, DisassemblyContext context, ushort id)
+    {
+        if (context.TryGetBindEntry(GameEventScriptBinaryBindKind.Record, id, out var entry))
         {
             AddBindSignatureComment(comments, context, entry);
         }
@@ -543,6 +557,9 @@ public static class GameEventScriptBinaryDumper
         internal string OutboundMessageLabel(ushort id)
             => BindLabel(GameEventScriptBinaryBindKind.OutboundMessage, id, "Outbound_" + id.ToString(CultureInfo.InvariantCulture));
 
+        internal string RecordLabel(ushort id)
+            => BindLabel(GameEventScriptBinaryBindKind.Record, id, "Record_" + id.ToString(CultureInfo.InvariantCulture));
+
         internal string ExternalReferenceLabel(GameEventScriptBytecodeOpCode opCode, ushort id)
             => opCode == GameEventScriptBytecodeOpCode.CreateExternalType
                 ? BindLabel(GameEventScriptBinaryBindKind.ExternalType, id, "ExternalType_" + id.ToString(CultureInfo.InvariantCulture))
@@ -681,7 +698,7 @@ public static class GameEventScriptBinaryDumper
                 return;
             }
 
-            if (entry.Kind is not (GameEventScriptBinaryBindKind.Function or GameEventScriptBinaryBindKind.Predicate))
+            if (entry.Kind is not (GameEventScriptBinaryBindKind.Function or GameEventScriptBinaryBindKind.Predicate or GameEventScriptBinaryBindKind.Record))
             {
                 return;
             }
@@ -709,7 +726,12 @@ public static class GameEventScriptBinaryDumper
 
         private static string FormatCodeLabelComment(GameEventScriptBinary binary, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
         {
-            var kind = entry.Kind == GameEventScriptBinaryBindKind.Predicate ? "predicate" : "function";
+            var kind = entry.Kind switch
+            {
+                GameEventScriptBinaryBindKind.Predicate => "predicate",
+                GameEventScriptBinaryBindKind.Record => "record",
+                _ => "function"
+            };
             var name = entry.Name < binary.TextConstantTable.Slices.Length
                 ? binary.TextConstantTable.Resolve(entry.Name)
                 : "#" + entry.Name.ToString(CultureInfo.InvariantCulture);
@@ -763,6 +785,7 @@ public static class GameEventScriptBinaryDumper
                 GameEventScriptBinaryBindKind.Predicate => "Predicate",
                 GameEventScriptBinaryBindKind.ExtensionCall => "Extension",
                 GameEventScriptBinaryBindKind.OutboundMessage => "Outbound",
+                GameEventScriptBinaryBindKind.Record => "Record",
                 GameEventScriptBinaryBindKind.ExternalType => "ExternalType",
                 _ => "Bind"
             };

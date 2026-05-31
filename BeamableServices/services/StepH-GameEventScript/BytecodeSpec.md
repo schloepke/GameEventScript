@@ -814,8 +814,9 @@ plus `Call` with `NormalizeResultAsPredicate`.
 
 Type constructors, variadic operators, collection builders, maps,
 message literals, handler binding, local calls, and predicate calls now
-reference entry addresses, `StringPool`, or `UShortListPool` directly from the
-instruction word.
+reference bind ids, entry addresses, `StringPool`, or `UShortListPool` directly
+from the instruction word. Record constructor code addresses are stored on
+`Record` bind entries so later module linking can rebind them centrally.
 
 Call frame state:
 
@@ -895,9 +896,10 @@ selector semantics.
 - `RandomPush seedSlot`
 - `RandomPushConstant seedI64`
 - `RandomPop`
-- `CreateRecord dst typeNameIndex argumentNameListIndex` consumes the
-  contiguous staged value sequence immediately before the opcode as constructor
-  values.
+- `CreateRecord dst recordBindId` consumes the contiguous staged value sequence
+  immediately before the opcode as field-ordered constructor values. The bind
+  entry supplies the record type name, field names, and constructor entry
+  address.
 - `CreateExternalType dst externalTypeConstructorReferenceIndex argumentNameListIndex`
   consumes the contiguous staged value sequence immediately before the opcode
   as constructor values.
@@ -908,9 +910,9 @@ other value-loading and construction instructions. `CreateRecord` and
 script records and host-bound external values.
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
-`StringPool` indexes, while slot lists contain frame slot indexes. Record,
-external type, list, map, vector, and point constructors consume staged values
-instead of argument slot lists.
+`StringPool` indexes, while slot lists contain frame slot indexes. Record
+constructors reference `Record` bind ids; external type, list, map, vector, and
+point constructors consume staged values instead of argument slot lists.
 Vector and point constructors are fixed built-ins. Their source arguments are
 lowered into staged component values in canonical `x, y, z` order; `immediateX`
 stores the first staged component index (`0`, `1`, or `2`) so leading missing

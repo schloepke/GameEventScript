@@ -416,8 +416,7 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateRecord:
-                AppendPoolIndex(builder, "type", module.StringPool, instruction.StringIndex);
-                AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
+                AppendRecordConstructorReference(builder, "record", module, instruction.ExternalReferenceIndex);
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateExternalType:
@@ -702,6 +701,21 @@ public static class GameEventScriptBytecodeDumper
         if ((uint)index < (uint)module.ExternalTypeConstructorReferences.Count)
         {
             builder.Append('(').Append(module.ExternalTypeConstructorReferences[index].SignatureId).Append(')');
+        }
+    }
+
+    private static void AppendRecordConstructorReference(StringBuilder builder, string name, GameEventScriptCompiled module, int index)
+    {
+        if (index < 0)
+        {
+            return;
+        }
+
+        builder.Append(' ').Append(name).Append('=').Append(index.ToString(CultureInfo.InvariantCulture));
+        var record = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAtOrDefault(index);
+        if (record is not null)
+        {
+            builder.Append('(').Append(record.Name).Append(')');
         }
     }
 

@@ -92,6 +92,7 @@ internal sealed class GesBytecodeVmLinearExecutable
         var typeFields = module.TypeDefinitions.Values
             .SelectMany(type => type.Fields.Select(field =>
             {
+                ValidateAddress(module, code, type.ConstructorEntryAddress, $"type '{type.Name}' constructor entry");
                 ValidateOptionalEntryAddress(module, code, field.MinimumEntryAddress, $"type '{type.Name}.{field.Name}' minimum entry");
                 ValidateOptionalEntryAddress(module, code, field.MaximumEntryAddress, $"type '{type.Name}.{field.Name}' maximum entry");
                 ValidateOptionalEntryAddress(module, code, field.ComputedEntryAddress, $"type '{type.Name}.{field.Name}' computed entry");
@@ -193,7 +194,15 @@ internal sealed class GesBytecodeVmLinearExecutable
                         throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
                     }
                 }
-                else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord or GameEventScriptBytecodeOpCode.CreateExternalType)
+                else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord)
+                {
+                    var expected = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count;
+                    if (expected != 0)
+                    {
+                        throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
+                    }
+                }
+                else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateExternalType)
                 {
                     var expected = module.UShortListPool[instruction.ListIndex].Count;
                     if (expected != 0)
@@ -233,7 +242,20 @@ internal sealed class GesBytecodeVmLinearExecutable
                 continue;
             }
 
-            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord or GameEventScriptBytecodeOpCode.CreateExternalType)
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord)
+            {
+                var expectedStagedValues = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count;
+                if (expectedStagedValues != stagedCount)
+                {
+                    throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expectedStagedValues} staged value(s), but {stagedCount} value(s) were staged.");
+                }
+
+                stagedCount = 0;
+                stageStartAddress = -1;
+                continue;
+            }
+
+            if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateExternalType)
             {
                 var expectedStagedValues = module.UShortListPool[instruction.ListIndex].Count;
                 if (expectedStagedValues != stagedCount)
@@ -611,8 +633,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateRecord:
-                ValidateIndex(module.StringPool.Count, instruction.StringIndex, $"{context} type name");
-                ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
+                ValidateIndex(module.TypeDefinitions.Count, instruction.ExternalReferenceIndex, $"{context} record constructor reference");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateExternalType:

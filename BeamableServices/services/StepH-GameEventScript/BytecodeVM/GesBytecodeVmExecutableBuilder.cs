@@ -16,7 +16,10 @@ internal static class GesBytecodeVmExecutableBuilder
             pair => (IReadOnlyList<GesBytecodeVmCompiledHandler>)pair.Value
                 .Select(handler =>
                 {
-                    var signatureId = GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels);
+                    var signatureId = GameEventScriptMessageSignature.CreateSignatureId(
+                        handler.Message,
+                        handler.SignatureLabels,
+                        handler.DispatchKind != GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope);
                     return new GesBytecodeVmCompiledHandler(
                         handler,
                         compiled.Options.EnableDiagnostics,

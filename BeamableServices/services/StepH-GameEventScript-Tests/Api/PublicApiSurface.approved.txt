@@ -445,10 +445,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Types.GameEventScriptValue[] arguments)
   method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
-  method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
-  method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
+  method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters, System.Boolean matchArguments)
+  method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames, System.Boolean matchArguments)
   method static System.String NormalizeMessageName(System.String name)
   method static System.String NormalizeParameterName(System.String name)
+  property System.Boolean MatchArguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.String Name { get }
   property System.String SignatureId { get }

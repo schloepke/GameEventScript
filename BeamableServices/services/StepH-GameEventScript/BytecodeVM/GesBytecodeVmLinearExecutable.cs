@@ -53,7 +53,10 @@ internal sealed class GesBytecodeVmLinearExecutable
             .SelectMany(group => group)
             .Select(handler =>
             {
-                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(handler.Message, handler.SignatureLabels);
+                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(
+                    handler.Message,
+                    handler.SignatureLabels,
+                    handler.DispatchKind != GameEventScriptBytecodeHandlerDispatchKind.MessageEnvelope);
                 ValidateAddress(module, code, handler.EntryAddress, $"handler '{signatureId}' entry");
                 var localSlotCount = ReadEntrySlotCount(module, code, handler.EntryAddress, $"handler '{signatureId}' entry");
                 return new GesBytecodeVmLinearHandlerEntry(

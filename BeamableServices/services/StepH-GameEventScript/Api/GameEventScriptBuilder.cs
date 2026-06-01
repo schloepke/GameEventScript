@@ -220,7 +220,7 @@ public sealed class GameEventScriptBuilder
                 continue;
             }
 
-            var fields = externalType.Fields.Select(field => new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null)).ToArray();
+            var fields = externalType.Fields.Select(field => new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null, field.Name)).ToArray();
             map[externalType.Name] = new TypeDefinitionNode(externalType.Name, fields);
         }
 

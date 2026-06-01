@@ -1378,12 +1378,20 @@ internal static class GesValidator
             return;
         }
 
-        if (constructor.Arguments.Any(argument => argument.Label is null))
+        var constructorFields = typeDefinition.Fields.Where(field => field.IsConstructorParameter).ToArray();
+        var unlabeledConstructorFieldCount = constructorFields.Count(field =>
+            string.Equals(field.ConstructorLabel, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal));
+        var unlabeledArgumentCount = constructor.Arguments.Count(argument => argument.Label is null);
+        if (unlabeledArgumentCount > unlabeledConstructorFieldCount)
         {
             AddTypeConstructorError(parsedScriptContext, constructor.TypeName, $"Custom type constructor ':{constructor.TypeName}' requires labeled field arguments", errors);
         }
 
-        var fieldNames = new HashSet<string>(typeDefinition.Fields.Select(field => field.Name), StringComparer.Ordinal);
+        var fieldNames = new HashSet<string>(
+            constructorFields
+                .Where(field => !string.Equals(field.ConstructorLabel, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+                .Select(field => field.ConstructorLabel!),
+            StringComparer.Ordinal);
         foreach (var argument in constructor.Arguments.Where(argument => argument.Label is not null))
         {
             if (!fieldNames.Contains(argument.Label!))
@@ -1391,7 +1399,7 @@ internal static class GesValidator
                 AddTypeConstructorError(
                     parsedScriptContext,
                     constructor.TypeName,
-                    $"Custom type constructor ':{constructor.TypeName}' has unknown field '{argument.Label}'",
+                    $"Custom type constructor ':{constructor.TypeName}' has unknown constructor field '{argument.Label}'",
                     errors);
             }
         }

@@ -80,6 +80,72 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeCallableLocalsIgnoreRecordFieldSlots()
+    {
+        const string script =
+            """
+            module CallableLocals
+
+            record :gauge as {
+              current: :number clamped between 0 and maximum,
+              maximum: :number clamped between 0 and :infinity,
+              percentage: :percentage computed by
+                0% when maximum <= 0,
+                otherwise (current / maximum) as :percentage
+            }
+
+            predicate low(_ value) means value <= 40
+
+            on Start(value) {
+              if value is low {
+                emit Done(value: value)
+              }
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var callable = compiled.Callables["low"];
+        var prolog = compiled.Code[callable.EntryAddress];
+
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.SlotLocals, prolog.OpCode);
+        Assert.AreEqual((short)2, prolog.Count);
+    }
+
+    [TestMethod]
+    public void PublicLinearBytecodeRecordConstructorsExcludeComputedFieldsAndAllowUnlabeledConstructorFields()
+    {
+        const string script =
+            """
+            module RecordConstructorShape
+
+            record :super as {
+              _ xValue: :number clamped between 1 and 10,
+              yValue: :number,
+              zValue: :number computed by xValue * yValue + 10%
+            }
+
+            on Start(value) {
+              let rec be :super(value, yValue: 10)
+              emit Done(z: rec.zValue)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var binary = compiled.ToGameEventScriptBinary();
+        var recordBind = binary.BindTable.Entries.Single(bind => bind.Kind == GameEventScriptBinaryBindKind.Record);
+        var argumentLabels = recordBind.ArgumentNames
+            .Select(index => binary.TextConstantTable.Resolve(index))
+            .ToArray();
+        var createRecordAddress = compiled.Code
+            .Select((instruction, index) => (instruction, index))
+            .Single(pair => pair.instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRecord)
+            .index;
+
+        CollectionAssert.AreEqual(new[] { "_", "yValue" }, argumentLabels);
+        Assert.AreEqual(2, CountStagedValuesBefore(compiled.Code, createRecordAddress));
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeLowersImplicationWithBranchingTriStateShape()
     {
         const string script =
@@ -2478,6 +2544,30 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             step = host.Update(1);
         }
         while (step.State != GameEventScriptRunState.Completed);
+    }
+
+    private static int CountStagedValuesBefore(IReadOnlyList<GameEventScriptBytecodeInstruction> code, int address)
+    {
+        var count = 0;
+        for (var index = address - 1; index >= 0; index--)
+        {
+            if (code[index].OpCode is not (GameEventScriptBytecodeOpCode.StageRegister or
+                GameEventScriptBytecodeOpCode.StageNothing or
+                GameEventScriptBytecodeOpCode.StageTrue or
+                GameEventScriptBytecodeOpCode.StageFalse or
+                GameEventScriptBytecodeOpCode.StageInteger or
+                GameEventScriptBytecodeOpCode.StageFloat or
+                GameEventScriptBytecodeOpCode.StageText or
+                GameEventScriptBytecodeOpCode.StageTag or
+                GameEventScriptBytecodeOpCode.StagePercentage))
+            {
+                break;
+            }
+
+            count++;
+        }
+
+        return count;
     }
 
     private static bool ContainsBytecodeVmType(Type type)

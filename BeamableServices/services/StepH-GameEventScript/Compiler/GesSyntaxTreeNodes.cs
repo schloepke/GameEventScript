@@ -72,7 +72,10 @@ internal sealed record EventHandlerNode(
 }
 
 internal sealed record TypeDefinitionNode(string Name, IReadOnlyList<TypeFieldDefinitionNode> Fields) : ScriptNode;
-internal sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression) : ScriptNode;
+internal sealed record TypeFieldDefinitionNode(string Name, string TypeName, ExpressionNode? MinimumExpression, ExpressionNode? MaximumExpression, ExpressionNode? ComputedExpression, string? ConstructorLabel) : ScriptNode
+{
+    public bool IsConstructorParameter => ConstructorLabel is not null;
+}
 internal sealed record PredicateDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
 {
     public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();

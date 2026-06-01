@@ -323,9 +323,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   property System.Int32 ConstructorEntryAddress { get set }
   property System.String Name { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition
+  property System.Boolean IsConstructorParameter { get }
   property System.Int32 ComputedEntryAddress { get set }
   property System.Int32 MaximumEntryAddress { get set }
   property System.Int32 MinimumEntryAddress { get set }
+  property System.String ConstructorLabel { get }
   property System.String Name { get }
   property System.String TypeName { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind

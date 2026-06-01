@@ -31,8 +31,6 @@ internal static class GesBytecodeLowerer
             slotCollector.AddSlot(parameter);
         }
 
-        slotCollector.CollectTypeDefinitions();
-
         foreach (var statement in statements)
         {
             slotCollector.CollectStatement(statement);
@@ -54,7 +52,8 @@ internal static class GesBytecodeLowerer
                 var field = typeDefinition.Fields[fieldIndex];
                 fields[fieldIndex] = new GameEventScriptBytecodeTypeFieldDefinition(
                     field.Name,
-                    field.TypeName);
+                    field.TypeName,
+                    field.ConstructorLabel);
             }
 
             result[typeDefinition.Name] = new GameEventScriptBytecodeTypeDefinition(typeDefinition.Name, fields);
@@ -76,7 +75,6 @@ internal static class GesBytecodeLowerer
                 slotCollector.AddSlot(parameter);
             }
 
-            slotCollector.CollectTypeDefinitions();
             slotCollector.CollectExpression(callable.Expression);
             result[callable.Name] = new GameEventScriptBytecodeCallable(
                 callable.Name,
@@ -100,7 +98,6 @@ internal static class GesBytecodeLowerer
             slotCollector.AddSlot(parameter);
         }
 
-        slotCollector.CollectTypeDefinitions();
         slotCollector.CollectExpression(callable.Expression);
         return new Dictionary<string, int>(slotCollector.Slots, StringComparer.Ordinal);
     }

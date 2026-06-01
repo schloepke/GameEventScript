@@ -257,6 +257,12 @@ internal sealed class GesParser
     private TypeFieldDefinitionNode ParseTypeFieldDefinition()
     {
         var startToken = Current;
+        var isUnlabeledConstructorParameter = Match(Underscore);
+        if (isUnlabeledConstructorParameter)
+        {
+            SkipNewLines();
+        }
+
         var name = ExpectIdentifier();
         Expect(Colon);
         SkipNewLines();
@@ -282,7 +288,18 @@ internal sealed class GesParser
             computedExpression = ParseExpression();
         }
 
-        return WithRange(new TypeFieldDefinitionNode(name, typeName, minimumExpression, maximumExpression, computedExpression), startToken);
+        if (isUnlabeledConstructorParameter && computedExpression is not null)
+        {
+            throw new GameEventScriptParseException("Computed record fields cannot be constructor parameters.", startToken);
+        }
+
+        var constructorLabel = computedExpression is null
+            ? isUnlabeledConstructorParameter
+                ? GameEventScriptMessageSignature.UnlabeledParameterName
+                : name
+            : null;
+
+        return WithRange(new TypeFieldDefinitionNode(name, typeName, minimumExpression, maximumExpression, computedExpression, constructorLabel), startToken);
     }
 
     private PredicateDefinitionNode ParsePredicateDefinition()

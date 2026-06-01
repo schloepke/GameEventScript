@@ -26,7 +26,7 @@ public sealed class BytecodeExecutorTests
             function divide(_ dividend, _ divisor) means dividend / divisor
             
             record :super as {
-                xValue: :number clamped between 1 and 10,
+                _ xValue: :number clamped between 1 and 10,
                 yValue: :number,
                 zValue: :number computed by xValue * yValue + 10%
             } 
@@ -40,7 +40,7 @@ public sealed class BytecodeExecutorTests
             on Start(value) {
                 let xx be 3.6
                 let yy be :integer.ceil x
-                let rec be :super(xValue: xx, yValue: yy)
+                let rec be :super(xx, yValue: yy)
                 let someDice be :dice 4d6
                 let someList be [1, :b, 'hello', 0.7m]
                 let someMap be [a: 3, b: 'Jelly', c: 3.3m, d: :pi]

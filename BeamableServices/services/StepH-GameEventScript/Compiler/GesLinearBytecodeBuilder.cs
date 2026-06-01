@@ -204,6 +204,7 @@ internal sealed class GesLinearBytecodeBuilder
 
     private void EmitSourceRecordConstructor(GameEventScriptBytecodeTypeDefinition type, TypeDefinitionNode sourceType)
     {
+        var constructorFieldCount = sourceType.Fields.Count(field => field.IsConstructorParameter);
         var slots = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
         {
@@ -255,7 +256,7 @@ internal sealed class GesLinearBytecodeBuilder
         var recordSlot = AllocateSlot(state);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.CastCustom, dest: recordSlot, a: mapSlot, b: ResolveStringIndex(type.Name)));
         EmitReturnValue(recordSlot);
-        PatchSlotLocals(slotLocalsAddress, state.NextSlot - sourceType.Fields.Count);
+        PatchSlotLocals(slotLocalsAddress, state.NextSlot - constructorFieldCount);
         _maxFrameSlots = Math.Max(_maxFrameSlots, state.NextSlot);
     }
 
@@ -1558,10 +1559,34 @@ internal sealed class GesLinearBytecodeBuilder
         if (_sourceTypeDefinitions.ContainsKey(typeConstructor.TypeName))
         {
             var sourceType = _sourceTypeDefinitions[typeConstructor.TypeName];
-            var argumentsByName = typeConstructor.Arguments.ToDictionary(argument => argument.Name, StringComparer.Ordinal);
+            var argumentsByName = typeConstructor.Arguments
+                .Where(argument => argument.Label is not null)
+                .ToDictionary(argument => argument.Name, StringComparer.Ordinal);
+            var unlabeledArguments = typeConstructor.Arguments
+                .Where(argument => argument.Label is null)
+                .ToArray();
+            var unlabeledArgumentIndex = 0;
             for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
             {
-                if (argumentsByName.TryGetValue(sourceType.Fields[fieldIndex].Name, out var argument))
+                var field = sourceType.Fields[fieldIndex];
+                if (!field.IsConstructorParameter)
+                {
+                    continue;
+                }
+
+                if (field.ConstructorLabel == GameEventScriptMessageSignature.UnlabeledParameterName)
+                {
+                    if (unlabeledArgumentIndex < unlabeledArguments.Length)
+                    {
+                        EmitStageArgument(PrepareStageArgument(unlabeledArguments[unlabeledArgumentIndex++].Expression, context, state));
+                        continue;
+                    }
+
+                    Emit(new GameEventScriptBytecodeInstruction { OpCode = GameEventScriptBytecodeOpCode.StageNothing });
+                    continue;
+                }
+
+                if (argumentsByName.TryGetValue(field.ConstructorLabel!, out var argument))
                 {
                     EmitStageArgument(PrepareStageArgument(argument.Expression, context, state));
                     continue;

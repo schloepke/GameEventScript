@@ -198,7 +198,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 }
                 else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord)
                 {
-                    var expected = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count;
+                    var expected = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count(field => field.IsConstructorParameter);
                     if (expected != 0)
                     {
                         throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
@@ -246,7 +246,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord)
             {
-                var expectedStagedValues = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count;
+                var expectedStagedValues = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count(field => field.IsConstructorParameter);
                 if (expectedStagedValues != stagedCount)
                 {
                     throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expectedStagedValues} staged value(s), but {stagedCount} value(s) were staged.");

@@ -896,9 +896,10 @@ selector semantics.
 - `RandomPushConstant seedI64`
 - `RandomPop`
 - `CreateRecord dst recordBindId` consumes the contiguous staged value sequence
-  immediately before the opcode as field-ordered constructor values. The bind
-  entry supplies the record type name, field names, and constructor entry
-  address.
+  immediately before the opcode as constructor values. The bind entry supplies
+  the record type name, constructor parameter labels, and constructor entry
+  address. Computed record fields are not constructor parameters; the
+  constructor routine derives them.
 - `CreateExternalType dst externalTypeConstructorReferenceIndex argumentNameListIndex`
   consumes the contiguous staged value sequence immediately before the opcode
   as constructor values.

@@ -253,7 +253,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x3C | `CreateRangeIterator` | - | iterator slot | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
 | 0x3D | `CreateRangeIteratorWithStep` | - | iterator slot | `XSlot`=from | `YSlot`=to | `AU`=step slot | Creates a VM-internal range iterator with an explicit step. |
 | 0x3E | `CreateRangeIteratorShort` | - | iterator slot | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x3F | `CreateRecord` | - | result slot | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with field-ordered staged values. |
+| 0x3F | `CreateRecord` | - | result slot | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside the constructor. |
 | 0x40 | `CreateExternalType` | - | result slot | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
 | 0x41 | `HasValue` | - | result slot | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
 | 0x42 | `IsEmpty` | - | result slot | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |

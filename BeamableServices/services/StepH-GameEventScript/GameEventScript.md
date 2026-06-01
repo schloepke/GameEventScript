@@ -890,6 +890,20 @@ Field constraints:
 - A field type casts the input value.
 - `clamped between min and max` clamps numeric values.
 - `computed by expression` derives the field from other fields.
+- Computed fields are not constructor parameters and cannot be set by record
+  construction.
+- Prefixing a non-computed field with `_` makes that constructor parameter
+  positional/unlabeled while keeping the field name for member access:
+
+```ges
+record :super as {
+  _ xValue: :number clamped between 1 and 10,
+  yValue: :number,
+  zValue: :number computed by xValue * yValue + 10%
+}
+
+let rec be :super(10, yValue: 10)
+```
 
 Custom type checks use `is :typeName`.
 

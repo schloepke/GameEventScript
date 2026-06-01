@@ -6235,10 +6235,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
         var sourceValues = value.AsMap().ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
         if (typeDefinition.ConstructorEntryAddress >= 0)
         {
-            var constructorOperands = new BytecodeVmValue[typeDefinition.Fields.Count];
-            for (var index = 0; index < typeDefinition.Fields.Count; index++)
+            var constructorFields = typeDefinition.Fields.Where(field => field.IsConstructorParameter).ToArray();
+            var constructorOperands = new BytecodeVmValue[constructorFields.Length];
+            for (var index = 0; index < constructorFields.Length; index++)
             {
-                var field = typeDefinition.Fields[index];
+                var field = constructorFields[index];
                 constructorOperands[index] = sourceValues.TryGetValue(field.Name, out var rawValue)
                     ? BytecodeVmValue.FromGameEventScriptValue(rawValue)
                     : BytecodeVmValue.Nothing;

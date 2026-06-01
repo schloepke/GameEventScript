@@ -64,20 +64,23 @@ public sealed class GameEventScriptBytecodeTypeFieldDefinition
 {
     internal GameEventScriptBytecodeTypeFieldDefinition(
         string name,
-        string typeName)
-        : this(name, typeName, -1, -1, -1)
+        string typeName,
+        string? constructorLabel)
+        : this(name, typeName, constructorLabel, -1, -1, -1)
     {
     }
 
     private GameEventScriptBytecodeTypeFieldDefinition(
         string name,
         string typeName,
+        string? constructorLabel,
         int minimumEntryAddress,
         int maximumEntryAddress,
         int computedEntryAddress)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
+        ConstructorLabel = constructorLabel;
         MinimumEntryAddress = minimumEntryAddress;
         MaximumEntryAddress = maximumEntryAddress;
         ComputedEntryAddress = computedEntryAddress;
@@ -86,6 +89,10 @@ public sealed class GameEventScriptBytecodeTypeFieldDefinition
     public string Name { get; }
 
     public string TypeName { get; }
+
+    public string? ConstructorLabel { get; }
+
+    public bool IsConstructorParameter => ConstructorLabel is not null;
 
     public int MinimumEntryAddress { get; internal set; }
 

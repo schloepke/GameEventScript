@@ -17,10 +17,10 @@
       "include": "#directives"
     },
     {
-      "include": "#labels"
+      "include": "#opcodes"
     },
     {
-      "include": "#opcodes"
+      "include": "#labels"
     },
     {
       "include": "#operands"
@@ -82,7 +82,7 @@
           "name": "meta.label.definition.gameeventscript.assembler"
         },
         {
-          "match": "\\b(?:L_\\d+|L_none|T_\\d+|U16_\\d+|Args_\\d+|Names_\\d+|Keys_\\d+|Shape_\\d+|StdExt_\\d+|Items_\\d+|Values_\\d+|Captures_\\d+|Tags_\\d+|Handler_\\d+|MessageNameHandler_\\d+|Function_\\d+|Predicate_\\d+|Extension_\\d+|Outbound_\\d+|Record_\\d+|ExternalType_\\d+|Bind_\\d+)\\b",
+          "match": "\\b(?:L_\\d+|L_none|T_[A-Za-z_][A-Za-z0-9_]*|T_\\d+|U16_\\d+|Args_\\d+|Names_\\d+|Keys_\\d+|Shape_\\d+|StdExt_\\d+|Items_\\d+|Values_\\d+|Captures_\\d+|Tags_\\d+|Handler_[A-Za-z_][A-Za-z0-9_]*|Handler_\\d+|Function_\\d+|Predicate_\\d+|Extension_\\d+|Outbound_\\d+|Record_\\d+|ExternalType_\\d+|Bind_\\d+)\\b",
           "name": "variable.other.label.reference.gameeventscript.assembler"
         }
       ]
@@ -92,11 +92,17 @@
         {
           "captures": {
             "1": {
+              "name": "entity.name.label.gameeventscript.assembler"
+            },
+            "2": {
               "name": "comment.line.address.gameeventscript.assembler"
+            },
+            "3": {
+              "name": "keyword.mnemonic.opcode.gameeventscript.assembler"
             }
           },
-          "match": "^\\s*(@\\d{4,5}\\b\\s*)?(?:Nop|SlotLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|Call|CallStandard|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|MoveSlot|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|ApproxEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomPush|RandomPushConstant|RandomPop|SeriesTerm|SeriesTake|SeriesDrop|Length|StartsWith|EndsWith|Contains|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|StreamCreate|StreamNext|StreamClose|StreamReduce|StreamReduceOrDefault|StreamFold|StreamCollectList|StreamCollectMap|StreamCollectMapValue|StreamCollectFirst|StreamCollectLast|StreamCollectSingle|PipelineStream|PipelineHasAny|PipelineHasAll|PipelineContainsSingle|PipelineContainsAny|PipelineContainsAll|PipelineDistinct|PipelineDistinctBy|PipelineGroupBy|PipelineReverse|PipelineSortAscending|PipelineSortDescending|PipelineOrderByAscending|PipelineOrderByDescending|PipelineTakeFirst|PipelineTakeLast|PipelineTakeHighest|PipelineTakeLowest|PipelineDropFirst|PipelineDropLast|PipelineDropHighest|PipelineDropLowest|PipelineShuffle|PipelineDraw|PipelineChoose|PipelineChooseRandom|PipelineChooseWeighted|PipelineDicePatternCountAny|PipelineDicePatternCountFace|PipelineDicePatternFullHouse|PipelineDicePatternStraight|PipelineTakePatternCountAny|PipelineTakePatternCountFace|PipelineTakePatternFullHouse|PipelineTakePatternStraight|PipelineListCreateBuilder|PipelineListBuilderAdd|PipelineListBuilderFinish)\\b",
-          "name": "keyword.mnemonic.opcode.gameeventscript.assembler"
+          "match": "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(?:Nop|SlotLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|Call|CallStandard|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|MoveSlot|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|ApproxEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomPush|RandomPushConstant|RandomPop|SeriesTerm|SeriesTake|SeriesDrop|Length|StartsWith|EndsWith|Contains|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|StreamCreate|StreamNext|StreamClose|StreamReduce|StreamReduceOrDefault|StreamFold|StreamCollectList|StreamCollectMap|StreamCollectMapValue|StreamCollectFirst|StreamCollectLast|StreamCollectSingle|PipelineStream|PipelineHasAny|PipelineHasAll|PipelineContainsSingle|PipelineContainsAny|PipelineContainsAll|PipelineDistinct|PipelineDistinctBy|PipelineGroupBy|PipelineReverse|PipelineSortAscending|PipelineSortDescending|PipelineOrderByAscending|PipelineOrderByDescending|PipelineTakeFirst|PipelineTakeLast|PipelineTakeHighest|PipelineTakeLowest|PipelineDropFirst|PipelineDropLast|PipelineDropHighest|PipelineDropLowest|PipelineShuffle|PipelineDraw|PipelineChoose|PipelineChooseRandom|PipelineChooseWeighted|PipelineDicePatternCountAny|PipelineDicePatternCountFace|PipelineDicePatternFullHouse|PipelineDicePatternStraight|PipelineTakePatternCountAny|PipelineTakePatternCountFace|PipelineTakePatternFullHouse|PipelineTakePatternStraight|PipelineListCreateBuilder|PipelineListBuilderAdd|PipelineListBuilderFinish)\\b",
+          "name": "meta.instruction.gameeventscript.assembler"
         }
       ]
     },

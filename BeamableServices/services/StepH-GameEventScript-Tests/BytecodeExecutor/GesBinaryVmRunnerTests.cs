@@ -16,7 +16,7 @@ public sealed class BytecodeExecutorTests
     [TestMethod]
     public void SimpleArithmeticWorks()
     {
-        const string script =
+        const string script1 =
             """
             module BinaryExecutor
 
@@ -62,6 +62,10 @@ public sealed class BytecodeExecutorTests
                     let bb be y² + 3
                 }
             }
+            
+            on Done(total) {
+                // do nothing
+            }
             """;
         const string script2 =
             """
@@ -82,6 +86,7 @@ public sealed class BytecodeExecutorTests
             }
             """;
         
+        var script = script1;
         var compiled = GameEventScriptManager.Compile(script);
         var binary = compiled.ToGameEventScriptBinary();
         var published = new List<GameEventScriptMessage>();
@@ -96,7 +101,7 @@ public sealed class BytecodeExecutorTests
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + compiled.DumpBytecode());
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("Binary file:\n" + binary.Dump(includeInstructionAddresses: false));
+        TestContext.WriteLine("Binary file:\n" + binary.Dump(includeInstructionAddresses: false, script));
         TestContext.WriteLine("-----");
         
         var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);

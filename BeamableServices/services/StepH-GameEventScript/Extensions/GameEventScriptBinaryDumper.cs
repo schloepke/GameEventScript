@@ -49,7 +49,7 @@ public static class GameEventScriptBinaryDumper
             .Append(".module \"").Append(Escape(binary.ModuleName)).AppendLine("\"")
             .Append(".flags ").AppendLine(FormatHeaderFlags(binary.Header.Flags));
 
-        AppendTextSegment(builder, binary);
+        AppendTextSegment(builder, context);
         AppendListSegment(builder, context);
         AppendBindSegment(builder, context);
         AppendCodeSegment(builder, context, includeInstructionAddresses);
@@ -89,14 +89,14 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendTextSegment(StringBuilder builder, GameEventScriptBinary binary)
+    private static void AppendTextSegment(StringBuilder builder, DisassemblyContext context)
     {
         builder.AppendLine().AppendLine().AppendLine(".segment text").AppendLine();
-        for (var i = 0; i < binary.TextConstantTable.Slices.Length; i++)
+        for (var i = 0; i < context.Binary.TextConstantTable.Slices.Length; i++)
         {
-            AppendAlignedLabel(builder, TextLabel(i))
+            AppendAlignedLabel(builder, context.TextLabel(i))
                 .Append(".text \"")
-                .Append(Escape(binary.TextConstantTable.Resolve(checked((ushort)i))))
+                .Append(Escape(context.Binary.TextConstantTable.Resolve(checked((ushort)i))))
                 .AppendLine("\"");
         }
     }
@@ -116,7 +116,7 @@ public static class GameEventScriptBinaryDumper
                     builder.Append(".registers [").Append(string.Join(", ", values.Select(Register))).Append(']');
                     break;
                 case ListRole.Texts:
-                    builder.Append(".texts [").Append(string.Join(", ", values.Select(value => TextLabel(value)))).Append(']');
+                    builder.Append(".texts [").Append(string.Join(", ", values.Select(value => context.TextLabel(value)))).Append(']');
                     break;
                 default:
                     builder.Append(".u16 [").Append(string.Join(", ", values.Select(value => value.ToString(CultureInfo.InvariantCulture)))).Append(']');
@@ -141,9 +141,9 @@ public static class GameEventScriptBinaryDumper
                 .Append(" id=")
                 .Append(entry.Id == NoAddress ? "none" : entry.Id.ToString(CultureInfo.InvariantCulture))
                 .Append(" name=")
-                .Append(TextLabel(entry.Name))
+                .Append(context.TextLabel(entry.Name))
                 .Append(" args=[")
-                .Append(string.Join(", ", entry.ArgumentNames.Select(value => TextLabel(value))))
+                .Append(string.Join(", ", entry.ArgumentNames.Select(value => context.TextLabel(value))))
                 .Append(']');
 
             if (entry.EntryAddress != NoAddress)
@@ -163,9 +163,17 @@ public static class GameEventScriptBinaryDumper
         builder.AppendLine().AppendLine().AppendLine(".segment code").AppendLine();
         for (var i = 0; i < instructions.Length; i++)
         {
-            if (context.HasCodeLabel(i))
+            var hasCodeLabel = context.HasCodeLabel(i);
+            var isNamedCodeEntry = hasCodeLabel && context.IsNamedCodeEntry(i);
+            var inlineLocalLabel = hasCodeLabel && !isNamedCodeEntry && !includeInstructionAddresses;
+            if (hasCodeLabel && !inlineLocalLabel)
             {
-                builder.Append(context.CodeLabel(i)).Append(':');
+                if (isNamedCodeEntry && i > 0)
+                {
+                    builder.AppendLine();
+                }
+
+                AppendAlignedLabel(builder, context.CodeLabel(i));
                 if (context.TryGetCodeLabelComment(i, out var labelComment))
                 {
                     builder.Append(" // ").Append(labelComment);
@@ -178,6 +186,10 @@ public static class GameEventScriptBinaryDumper
             if (includeInstructionAddresses)
             {
                 builder.Append("\t\t").Append('@').Append(i.ToString("0000", CultureInfo.InvariantCulture)).Append("\t\t");
+            }
+            else if (inlineLocalLabel)
+            {
+                AppendAlignedLabel(builder, context.CodeLabel(i));
             }
             else
             {
@@ -265,13 +277,13 @@ public static class GameEventScriptBinaryDumper
             FaceEntry => context.CodeLabel(instruction.AU),
             WeightEntry => context.CodeLabel(instruction.BU),
 
-            GameEventScriptOpcodePrinter.OperandPart.String => FormatTextReference(instruction.StringIndex),
-            Text => FormatTextReference(instruction.StringIndex),
-            Tag => FormatTextReference(instruction.StringIndex),
-            MemberName => FormatTextReference(instruction.StringIndex),
+            GameEventScriptOpcodePrinter.OperandPart.String => FormatTextReference(context, instruction.StringIndex),
+            Text => FormatTextReference(context, instruction.StringIndex),
+            Tag => FormatTextReference(context, instruction.StringIndex),
+            MemberName => FormatTextReference(context, instruction.StringIndex),
             TypeKind => instruction.TypeKind.ToString(),
-            CustomTypeName => FormatTextReference(instruction.SecondaryStringIndex),
-            TypeName => FormatTextReference(instruction.StringIndex),
+            CustomTypeName => FormatTextReference(context, instruction.SecondaryStringIndex),
+            TypeName => FormatTextReference(context, instruction.StringIndex),
 
             MessageShapeList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex),
             StandardExtensionShapeList => context.ListLabel(instruction.SecondaryListIndex),
@@ -486,8 +498,8 @@ public static class GameEventScriptBinaryDumper
     private static string FormatHeaderFlags(GameEventScriptBinaryHeader.GameEventScriptBinaryFlags flags)
         => flags == GameEventScriptBinaryHeader.GameEventScriptBinaryFlags.None ? "none" : flags.ToString().ToLowerInvariant();
 
-    private static string FormatTextReference(ushort index)
-        => TextLabel(index);
+    private static string FormatTextReference(DisassemblyContext context, ushort index)
+        => context.TextLabel(index);
 
     private static string FormatUnit(byte unitAndFlags)
     {
@@ -522,9 +534,6 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static string TextLabel(int index)
-        => "T_" + index.ToString(CultureInfo.InvariantCulture);
-
     private static string Escape(string value)
         => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
 
@@ -541,6 +550,7 @@ public static class GameEventScriptBinaryDumper
         private readonly SortedSet<int> _codeLabels = [];
         private readonly Dictionary<int, string> _codeLabelNames = [];
         private readonly Dictionary<int, string> _codeLabelComments = [];
+        private readonly string[] _textLabels;
         private readonly string[] _listLabels;
         private readonly ListRole[] _listRoles;
         private readonly Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> _bindsByKindAndId = [];
@@ -549,6 +559,7 @@ public static class GameEventScriptBinaryDumper
         {
             Binary = binary;
             _bindLabels = BuildBindLabels(binary, _bindsByKindAndId);
+            _textLabels = BuildTextLabels(binary);
             _listLabels = new string[binary.Uint16ConstantTable.Slices.Length];
             _listRoles = new ListRole[binary.Uint16ConstantTable.Slices.Length];
             BuildListLabels(binary, _listLabels, _listRoles);
@@ -560,6 +571,9 @@ public static class GameEventScriptBinaryDumper
         internal bool HasCodeLabel(int address)
             => _codeLabels.Contains(address);
 
+        internal bool IsNamedCodeEntry(int address)
+            => _codeLabelComments.ContainsKey(address);
+
         internal string CodeLabel(ushort address)
             => address == NoAddress ? "L_none" : CodeLabel((int)address);
 
@@ -567,6 +581,9 @@ public static class GameEventScriptBinaryDumper
             => _codeLabelNames.TryGetValue(address, out var label)
                 ? label
                 : "L_" + address.ToString(CultureInfo.InvariantCulture);
+
+        internal string TextLabel(int index)
+            => (uint)index < (uint)_textLabels.Length ? _textLabels[index] : "T_" + index.ToString(CultureInfo.InvariantCulture);
 
         internal bool TryGetCodeLabelComment(ushort address, out string comment)
         {
@@ -620,14 +637,50 @@ public static class GameEventScriptBinaryDumper
         private string BindLabel(GameEventScriptBinaryBindKind kind, ushort id, string fallback)
             => _bindsByKindAndId.TryGetValue((kind, id), out var index) ? BindLabel(index) : fallback;
 
+        private static string[] BuildTextLabels(GameEventScriptBinary binary)
+        {
+            var labels = new string[binary.TextConstantTable.Slices.Length];
+            var used = new HashSet<string>(StringComparer.Ordinal);
+            for (var i = 0; i < labels.Length; i++)
+            {
+                var text = binary.TextConstantTable.Resolve(checked((ushort)i));
+                var baseName = ToCodeLabelName(text);
+                if (baseName.Length == 0 || baseName == "_")
+                {
+                    labels[i] = "T_" + i.ToString(CultureInfo.InvariantCulture);
+                    used.Add(labels[i]);
+                    continue;
+                }
+
+                var candidate = "T_" + baseName;
+                if (!used.Add(candidate))
+                {
+                    var suffix = 2;
+                    var unique = candidate + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+                    while (!used.Add(unique))
+                    {
+                        suffix++;
+                        unique = candidate + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    candidate = unique;
+                }
+
+                labels[i] = candidate;
+            }
+
+            return labels;
+        }
+
         private static string[] BuildBindLabels(GameEventScriptBinary binary, Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> bindsByKindAndId)
         {
             var entries = binary.BindTable.Entries;
             var labels = new string[entries.Count];
+            var used = new HashSet<string>(StringComparer.Ordinal);
             for (var i = 0; i < entries.Count; i++)
             {
                 var entry = entries[i];
-                labels[i] = BindPrefix(entry.Kind) + "_" + (entry.Id == NoAddress ? i : entry.Id).ToString(CultureInfo.InvariantCulture);
+                labels[i] = BuildBindLabel(binary, entry, i, used);
                 if (entry.Id != NoAddress)
                 {
                     bindsByKindAndId[(entry.Kind, entry.Id)] = i;
@@ -635,6 +688,36 @@ public static class GameEventScriptBinaryDumper
             }
 
             return labels;
+        }
+
+        private static string BuildBindLabel(
+            GameEventScriptBinary binary,
+            GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry,
+            int index,
+            HashSet<string> used)
+        {
+            var prefix = BindPrefix(entry.Kind);
+            var name = entry.Name < binary.TextConstantTable.Slices.Length
+                ? ToCodeLabelName(binary.TextConstantTable.Resolve(entry.Name))
+                : string.Empty;
+            var candidate = name.Length == 0 || name == "_"
+                ? prefix + "_" + (entry.Id == NoAddress ? index : entry.Id).ToString(CultureInfo.InvariantCulture)
+                : prefix + "_" + name;
+
+            if (used.Add(candidate))
+            {
+                return candidate;
+            }
+
+            var suffix = 2;
+            var unique = candidate + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+            while (!used.Add(unique))
+            {
+                suffix++;
+                unique = candidate + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+            }
+
+            return unique;
         }
 
         private static void BuildListLabels(GameEventScriptBinary binary, string[] labels, ListRole[] roles)
@@ -689,6 +772,8 @@ public static class GameEventScriptBinaryDumper
                     AddCodeLabelsForOperand(codeLabels, binary, instruction, part);
                 }
             }
+
+            AddScopedCodeLabels(codeLabels, codeLabelNames);
         }
 
         private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptBinary binary, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
@@ -735,7 +820,7 @@ public static class GameEventScriptBinaryDumper
                 return;
             }
 
-            if (entry.Kind is not (GameEventScriptBinaryBindKind.Function or GameEventScriptBinaryBindKind.Predicate or GameEventScriptBinaryBindKind.Record))
+            if (entry.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler or GameEventScriptBinaryBindKind.Function or GameEventScriptBinaryBindKind.Predicate or GameEventScriptBinaryBindKind.Record))
             {
                 return;
             }
@@ -749,8 +834,8 @@ public static class GameEventScriptBinaryDumper
                 return;
             }
 
-            var candidate = label;
-            var suffix = 2;
+            var candidate = CodeLabelPrefix(entry.Kind) + label;
+            var suffix = 1;
             while (labels.ContainsValue(candidate))
             {
                 candidate = label + "_" + suffix.ToString(CultureInfo.InvariantCulture);
@@ -761,10 +846,63 @@ public static class GameEventScriptBinaryDumper
             comments[entry.EntryAddress] = FormatCodeLabelComment(binary, entry);
         }
 
+        private static void AddScopedCodeLabels(SortedSet<int> codeLabels, Dictionary<int, string> codeLabelNames)
+        {
+            if (codeLabelNames.Count == 0)
+            {
+                return;
+            }
+
+            var namedAddresses = codeLabelNames.Keys.OrderBy(address => address).ToArray();
+            var usedNames = new HashSet<string>(codeLabelNames.Values, StringComparer.Ordinal);
+            foreach (var address in codeLabels)
+            {
+                if (codeLabelNames.ContainsKey(address))
+                {
+                    continue;
+                }
+
+                var ownerIndex = -1;
+                for (var i = 0; i < namedAddresses.Length; i++)
+                {
+                    if (namedAddresses[i] > address)
+                    {
+                        break;
+                    }
+
+                    ownerIndex = i;
+                }
+
+                if (ownerIndex < 0)
+                {
+                    continue;
+                }
+
+                var owner = codeLabelNames[namedAddresses[ownerIndex]];
+                var candidate = owner + "_" + address.ToString(CultureInfo.InvariantCulture);
+                if (!usedNames.Add(candidate))
+                {
+                    var suffix = 1;
+                    var unique = candidate + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+                    while (!usedNames.Add(unique))
+                    {
+                        suffix++;
+                        unique = candidate + "_" + suffix.ToString(CultureInfo.InvariantCulture);
+                    }
+
+                    candidate = unique;
+                }
+
+                codeLabelNames[address] = candidate;
+            }
+        }
+
         private static string FormatCodeLabelComment(GameEventScriptBinary binary, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
         {
             var kind = entry.Kind switch
             {
+                GameEventScriptBinaryBindKind.MessageHandler => "handler",
+                GameEventScriptBinaryBindKind.MessageNameHandler => "handler",
                 GameEventScriptBinaryBindKind.Predicate => "predicate",
                 GameEventScriptBinaryBindKind.Record => "record",
                 _ => "function"
@@ -776,8 +914,22 @@ public static class GameEventScriptBinaryDumper
                 .Select(index => index < binary.TextConstantTable.Slices.Length
                     ? binary.TextConstantTable.Resolve(index)
                     : "#" + index.ToString(CultureInfo.InvariantCulture));
+            if (entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler)
+            {
+                return kind + " " + name + " as message";
+            }
+
             return kind + " " + name + "(" + string.Join(", ", args) + ")";
         }
+
+        private static string CodeLabelPrefix(GameEventScriptBinaryBindKind kind)
+            => kind switch
+            {
+                GameEventScriptBinaryBindKind.Function => "function_",
+                GameEventScriptBinaryBindKind.Predicate => "predicate_",
+                GameEventScriptBinaryBindKind.Record => "record_",
+                _ => string.Empty
+            };
 
         private static string ToCodeLabelName(string name)
         {
@@ -818,7 +970,7 @@ public static class GameEventScriptBinaryDumper
             => kind switch
             {
                 GameEventScriptBinaryBindKind.MessageHandler => "Handler",
-                GameEventScriptBinaryBindKind.MessageNameHandler => "MessageNameHandler",
+                GameEventScriptBinaryBindKind.MessageNameHandler => "Handler",
                 GameEventScriptBinaryBindKind.Function => "Function",
                 GameEventScriptBinaryBindKind.Predicate => "Predicate",
                 GameEventScriptBinaryBindKind.ExtensionCall => "Extension",

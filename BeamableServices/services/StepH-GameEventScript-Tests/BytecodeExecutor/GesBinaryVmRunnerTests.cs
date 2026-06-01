@@ -55,7 +55,7 @@ public sealed class BytecodeExecutorTests
                 let y be x * 4
                 let z be divide(divide(y, 2), 2)
                 if value is low {
-                    publish Done(total: z)                
+                    publish Done(total: z)
                 }
                 for x from 1 to 10 {
                     let aa be x * 2

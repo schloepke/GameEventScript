@@ -61,7 +61,7 @@ public class GameEventScriptDiagnosticTest
             })
             .WithDiagnosticCollector(collector)
             .Build()
-            .Load(bytecode);
+            .Load(GesBytecodeVmExecutableBuilder.Build(bytecode));
         
         host.PublishToCompletion(input);
         

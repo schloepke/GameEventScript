@@ -62,6 +62,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(System.Type[] types)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithOptimization(System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptCompiled Compile(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+  method StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind Kind { get }
@@ -617,6 +618,7 @@ class StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter
 static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateBuilder()
   method static StepH.GameEventScript.Api.GameEventScriptCompiled Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+  method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
 sealed class StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent
   ctor GameEventScriptDiagnosticEvent(System.Int32 Sequence, StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind Kind, System.String Name, StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments, System.String Detail)
   method StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent <Clone>$()
@@ -742,7 +744,6 @@ struct StepH.GameEventScript.Runtime.GameEventScriptFastValue
   property System.String Text { get }
 sealed class StepH.GameEventScript.Runtime.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptSession StartSession()
-  method StepH.GameEventScript.Runtime.GameEventScriptHost Load(StepH.GameEventScript.Api.GameEventScriptCompiled bytecode, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Load(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor handler, System.Int32 priority)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)

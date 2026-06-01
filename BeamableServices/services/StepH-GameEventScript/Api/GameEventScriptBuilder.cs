@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
@@ -134,6 +135,14 @@ public sealed class GameEventScriptBuilder
         var compileOptions = (options ?? _options).NormalizeDebugInfo();
         return GesBytecodeCompiler.Compile(BuildModule(compileOptions), compileOptions);
     }
+
+    /// <summary>
+    /// Compiles the configured GameEventScript sources into a bindable runtime module.
+    /// </summary>
+    /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
+    /// <returns>A bindable runtime module that exports the compiled message handlers.</returns>
+    public IGameEventScriptModule CompileModule(GameEventScriptCompileOptions? options = null)
+        => GesBytecodeVmExecutableBuilder.Build(Compile(options));
 
     /// <summary>
     /// Builds and returns a new internal module model based on the configured sources.

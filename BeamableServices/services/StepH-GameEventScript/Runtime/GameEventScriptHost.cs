@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 
@@ -56,12 +55,6 @@ public sealed class GameEventScriptHost
     public static GameEventScriptHostBuilder CreateBuilder() => new();
 
     #region Public interface
-
-    public GameEventScriptHost Load(GameEventScriptCompiled bytecode, int priority = NormalPriority)
-    {
-        _ = bytecode ?? throw new ArgumentNullException(nameof(bytecode));
-        return Load(GesBytecodeVmExecutableBuilder.Build(bytecode), priority);
-    }
 
     public GameEventScriptHost Load(IGameEventScriptModule module, int priority = NormalPriority)
     {

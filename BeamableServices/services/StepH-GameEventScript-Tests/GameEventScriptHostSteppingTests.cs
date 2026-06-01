@@ -80,7 +80,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Started
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var calls = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
             .Build()
@@ -175,7 +175,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Seen(value: 999)
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var seen = new List<long>();
         var messages = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
@@ -250,7 +250,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit ShouldNotRun
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var outbound = new List<GameEventScriptMessage>();
         var observed = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
@@ -282,7 +282,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit B
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(message => published.Add(message.Name))
@@ -317,7 +317,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Done
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(message => published.Add(message.Name))
@@ -346,7 +346,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Done
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var completed = new ManualResetEventSlim(false);
         var host = GameEventScriptHost.CreateBuilder()
             .WithAutomaticDispatch()
@@ -376,7 +376,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Done
                 }
                 """)
-            .Compile();
+            .CompileModule();
         using var dispatcher = GameEventScriptDispatcher.Create(workerCount: 1);
         var completed = new CountdownEvent(2);
         var first = GameEventScriptHost.CreateBuilder()
@@ -444,7 +444,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Done
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = 1 })
@@ -476,7 +476,7 @@ public sealed class GameEventScriptHostSteppingTests
                   }
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var published = new List<long>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(message => published.Add(message.Arguments["value"].AsInteger()))
@@ -507,7 +507,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit Done(total: total, first: seeded[1], label: label)
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
@@ -559,7 +559,7 @@ public sealed class GameEventScriptHostSteppingTests
                   emit B
                 }
                 """)
-            .Compile();
+            .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(message => published.Add(message.Name))

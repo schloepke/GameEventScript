@@ -1,4 +1,5 @@
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
@@ -38,7 +39,7 @@ public sealed class GameEventScriptExternalTypeTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypes(registry)
             .Build()
-            .Load(bytecode)
+            .Load(GesBytecodeVmExecutableBuilder.Build(bytecode))
             .Subscribe("Done", ["isAim", "bearing", "range", "steps", "directionZ", "checksum"], (message, _) => received.Add(message));
 
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));
@@ -73,7 +74,7 @@ public sealed class GameEventScriptExternalTypeTests
         Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() =>
             GameEventScriptHost.CreateBuilder()
                 .Build()
-                .Load(bytecode));
+                .Load(GesBytecodeVmExecutableBuilder.Build(bytecode)));
     }
 
     [TestMethod]
@@ -122,7 +123,7 @@ public sealed class GameEventScriptExternalTypeTests
             .WithExternalTypes(registry)
             .WithRegistry(GameEventScriptExtensionRegistry.Create(typeof(AimExtensionFunctions)))
             .Build()
-            .Load(bytecode)
+            .Load(GesBytecodeVmExecutableBuilder.Build(bytecode))
             .Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
 
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));

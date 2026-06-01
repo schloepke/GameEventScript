@@ -11,4 +11,5 @@ public static class GameEventScriptManager
 
     public static GameEventScriptCompiled Compile(string input, GameEventScriptCompileOptions? options = null) => CreateBuilder().AddScript(input).Compile(options);
 
+    public static IGameEventScriptModule CompileModule(string input, GameEventScriptCompileOptions? options = null) => CreateBuilder().AddScript(input).CompileModule(options);
 }

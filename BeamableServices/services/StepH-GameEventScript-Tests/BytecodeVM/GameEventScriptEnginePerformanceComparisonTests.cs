@@ -77,7 +77,7 @@ public sealed class BytecodeVmPerformanceReportTests
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("Binary file:\n" + bytecodeVmCompileDiag.Value.ToGameEventScriptBinary().Dump());
+        TestContext.WriteLine("Binary file:\n" + bytecodeVmCompileDiag.Value.ToGameEventScriptBinary().Dump(PerformanceScript));
         /*
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Diagnostics:\n" +diagnosticCollector.ToString());

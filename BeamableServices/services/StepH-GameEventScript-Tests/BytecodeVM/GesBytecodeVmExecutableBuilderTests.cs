@@ -372,7 +372,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxExecutionSteps = 200 })
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(GameEventScriptManager.Compile(script));
+            .Load(GameEventScriptManager.CompileModule(script));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -386,6 +386,33 @@ public sealed class GesBytecodeVmExecutableBuilderTests
                 GameEventScriptValueFactory.GesInteger(99)
             },
             published.Select(message => message.Arguments["value"]).ToArray());
+    }
+
+    [TestMethod]
+    public void PublicCompileModuleReturnsBindableHostModule()
+    {
+        const string script =
+            """
+            module HostModule
+
+            on Start {
+              emit Done(value: 42)
+            }
+            """;
+
+        var published = new List<GameEventScriptMessage>();
+        var module = GameEventScriptManager.CompileModule(script);
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(module);
+
+        host.PublishToCompletion(Create("Start"));
+
+        Assert.AreEqual("HostModule", module.ModuleName);
+        Assert.AreEqual(1, published.Count);
+        Assert.AreEqual("Done", published[0].Name);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(42), published[0].Arguments["value"]);
     }
 
     [TestMethod]
@@ -626,7 +653,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .Build()
-            .Load(compiled)
+            .Load(GesBytecodeVmExecutableBuilder.Build(compiled))
             .Subscribe("Done", ["result"], (message, _) => received.Add(message));
 
         Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.Add));
@@ -698,7 +725,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -744,7 +771,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -783,7 +810,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -823,7 +850,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -862,7 +889,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -899,7 +926,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -937,7 +964,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -974,7 +1001,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1002,7 +1029,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRangeItems = 1 })
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(GameEventScriptManager.Compile(script));
+            .Load(GameEventScriptManager.CompileModule(script));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1038,7 +1065,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1075,7 +1102,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1113,7 +1140,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1150,7 +1177,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1188,7 +1215,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1225,7 +1252,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1270,7 +1297,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1314,7 +1341,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1342,7 +1369,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRangeItems = 1 })
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(GameEventScriptManager.Compile(script));
+            .Load(GameEventScriptManager.CompileModule(script));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1379,7 +1406,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1417,7 +1444,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1459,7 +1486,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1500,7 +1527,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1540,7 +1567,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1579,7 +1606,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1620,7 +1647,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1661,7 +1688,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1704,7 +1731,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1745,7 +1772,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1788,7 +1815,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1830,7 +1857,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1875,7 +1902,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1919,7 +1946,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -1960,7 +1987,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -2001,7 +2028,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -2047,7 +2074,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -2094,7 +2121,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -2146,7 +2173,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -2196,7 +2223,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -2243,7 +2270,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -2288,7 +2315,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -2331,7 +2358,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -2373,7 +2400,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rewritten);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
         Assert.IsTrue(host.Publish(Create("Start")));
         DrainHostWithSingleOpcodeBudget(host);
@@ -2503,7 +2530,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(rebuiltBytecode);
+            .Load(GesBytecodeVmExecutableBuilder.Build(rebuiltBytecode));
 
         host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(5))));
 
@@ -2733,7 +2760,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(compiled);
+            .Load(GesBytecodeVmExecutableBuilder.Build(compiled));
 
         host.PublishToCompletion(Create(
             "Start",
@@ -2764,7 +2791,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         StringAssert.Contains(dump, "externalReferences[1]");
         StringAssert.Contains(dump, "math.floor(_)");
         var exception = Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() =>
-            GameEventScriptHost.CreateBuilder().Build().Load(compiled));
+            GameEventScriptHost.CreateBuilder().Build().Load(GesBytecodeVmExecutableBuilder.Build(compiled)));
         StringAssert.Contains(exception.Message, "math.floor(_)");
         StringAssert.Contains(exception.Message, "registry is required");
 
@@ -2773,7 +2800,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRegistry(TestExtensionRegistry.Instance)
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(compiled);
+            .Load(GesBytecodeVmExecutableBuilder.Build(compiled));
 
         host.PublishToCompletion(Create(
             "Start",
@@ -2805,7 +2832,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             GameEventScriptHost.CreateBuilder()
                 .WithRegistry(TestExtensionRegistry.Instance)
                 .Build()
-                .Load(compiled));
+                .Load(GesBytecodeVmExecutableBuilder.Build(compiled)));
 
         StringAssert.Contains(exception.Message, "missing.floor(_)");
         StringAssert.Contains(exception.Message, "not registered in the configured registry");
@@ -2832,7 +2859,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             GameEventScriptHost.CreateBuilder()
                 .WithRegistry(NavExtensionRegistry.Instance)
                 .Build()
-                .Load(compiled));
+                .Load(GesBytecodeVmExecutableBuilder.Build(compiled)));
         StringAssert.Contains(exception.Message, "nav.shortestTurn(to,from)");
     }
 
@@ -2853,7 +2880,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRegistry(StandardOverrideRegistry.Instance)
             .WithPublishedMessageObserver(published.Add)
             .Build()
-            .Load(GameEventScriptManager.Compile(script));
+            .Load(GameEventScriptManager.CompileModule(script));
 
         host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesFloat(10.9d))));
 

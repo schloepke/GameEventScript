@@ -176,7 +176,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot) = vmState.Register(instruction.XSlot);
                             break;
                         case MemberAccess:
-                            vmState.Register(instruction.DestinationSlot).VmMemberAccess(instruction.XSlot, ref vmState.Register(instruction.YSlot));
+                            vmState.Register(instruction.DestinationSlot).VmMemberAccess(instruction.StringIndex, ref vmState.Register(instruction.YSlot));
                             break;
                         case IndexAccess:
                             vmState.Register(instruction.DestinationSlot).VmIndexAccess(instruction.Index, ref vmState.Register(instruction.YSlot));

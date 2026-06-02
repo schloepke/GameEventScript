@@ -113,9 +113,6 @@ internal class VmState
     internal ref VmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal VmValue CreateRegister() => new();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue[] CreateRegisterArray(int size)
     {
         var values = new VmValue[size];
@@ -130,9 +127,26 @@ internal class VmState
     internal VmMapObject CreateMap(IReadOnlyDictionary<string, VmValue> entries) => new(this, entries);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue CreateNothing()
+    {
+        var value = new VmValue();
+        value.InitRegister(this);
+        value.SetNothing();
+        return value;
+    }
+
+    internal VmValue CreateBoolean(bool boolean)
+    {
+        var value = new VmValue();
+        value.InitRegister(this);
+        value.SetBoolean(boolean);
+        return value;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateInteger(long integer)
     {
-        var value = default(VmValue);
+        var value = new VmValue();
         value.InitRegister(this);
         value.SetInteger(integer);
         return value;
@@ -141,7 +155,7 @@ internal class VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateText(string text)
     {
-        var value = default(VmValue);
+        var value = new VmValue();
         value.InitRegister(this);
         value.SetText(text);
         return value;
@@ -150,7 +164,7 @@ internal class VmState
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateTag(string tag)
     {
-        var value = default(VmValue);
+        var value = new VmValue();
         value.InitRegister(this);
         value.SetTag(tag);
         return value;

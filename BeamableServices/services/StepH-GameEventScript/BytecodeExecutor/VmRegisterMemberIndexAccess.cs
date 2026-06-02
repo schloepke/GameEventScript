@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Extensions;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -35,7 +34,7 @@ internal static class VmRegisterMemberIndexAccess
                         var entries = new Dictionary<string, VmValue>();
                         foreach(var argumentKey in message.Arguments.Keys)
                         {
-                            var value = dst.OwningState.CreateRegister();
+                            var value = dst.OwningState.CreateNothing();
                             value.BindArguments(message.Arguments[argumentKey]);
                             entries.Add(argumentKey, value);
                         }

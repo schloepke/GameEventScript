@@ -184,8 +184,8 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetNothing();
                 return;
             default:
-                dst = xSlot.Kind == type ? xSlot : default;
-                if (xSlot.Kind != type) dst.SetNothing();
+                if (xSlot.Kind == type) dst = xSlot;
+                else dst.SetNothing(); 
                 return;
         }
     }

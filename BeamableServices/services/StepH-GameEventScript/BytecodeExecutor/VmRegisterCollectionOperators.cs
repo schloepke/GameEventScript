@@ -129,8 +129,7 @@ internal static class VmRegisterCollectionOperators
 
                             var key = keyValue.ReadTextOrTag();
                             if (map.ContainsKey(key)) continue;
-                            var flag = default(VmValue);
-                            flag.SetBoolean(true);
+                            var flag = dst.OwningState.CreateBoolean(true);
                             map[key] = flag;
                         }
 

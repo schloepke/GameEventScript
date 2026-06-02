@@ -230,8 +230,7 @@ internal static class VmRegisterCallExternal
                 var entries = new Dictionary<string, VmValue>(sourceEntries.Count, StringComparer.Ordinal);
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
-                    var value = default(VmValue);
-                    value.InitRegister(destination.OwningState);
+                    var value = destination.OwningState.CreateNothing();
                     value.BindArguments(sourceValue);
                     entries[key] = value;
                 }

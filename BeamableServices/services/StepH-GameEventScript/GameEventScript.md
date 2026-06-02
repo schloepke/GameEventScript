@@ -670,6 +670,29 @@ let hasEnemyFlag be :enemy in flags
 let containsUnit be unit value in units
 ```
 
+`x in y` checks membership in `y`. Text and tags use ordinal substring
+matching over their raw text, without a leading `:` for tags. Lists and dice
+check whether one item equals `x`. Ranges check whether numeric `x` is one of
+the range terms. Maps and map-like values check whether text/tag `x` is a
+visible key; non-text keys are false. Vector and point values check their
+numeric components.
+
+`x value in y` checks visible values of map-like `y`. It is defined for maps,
+records/custom values, external map-like values, vectors, and points. For maps
+and records it compares only visible, non-hidden fields. For vectors and points
+it compares the `x`, `y`, and `z` components. `nothing value in y` follows the
+same comparison rule; `x value in nothing` is `nothing`. Lists, dice, ranges,
+text, tags, and scalar values are not value-membership containers and return
+`false`.
+
+`x starts with y` and `x ends with y` are boundary checks. Text and tags compare
+raw text with ordinal rules. Lists, dice, and ranges compare sequence prefixes
+or suffixes; the right operand must also be a list, dice, or range. Empty
+right-hand sequences match. If the left sequence is shorter than the right
+sequence, the result is `false`. `nothing starts with y` and
+`nothing ends with y` produce `nothing`; other unsupported shapes return
+`false`.
+
 ### Streamable Selectors
 
 Selectors operate on lists, ranges, dice, and other enumerable values.

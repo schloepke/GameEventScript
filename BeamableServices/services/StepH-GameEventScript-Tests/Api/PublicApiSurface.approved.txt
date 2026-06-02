@@ -1002,6 +1002,9 @@ sealed class StepH.GameEventScript.Types.GameEventScriptSeriesValue
 sealed class StepH.GameEventScript.Types.GameEventScriptTagValue
   field static StepH.GameEventScript.Types.GameEventScriptTagValue Empty
   method System.Boolean AsBoolean()
+  method System.Boolean Contains(StepH.GameEventScript.Types.GameEventScriptValue needle)
+  method System.Boolean EndsWith(StepH.GameEventScript.Types.GameEventScriptValue suffix)
+  method System.Boolean StartsWith(StepH.GameEventScript.Types.GameEventScriptValue prefix)
   method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
   method System.Double AsNumber()

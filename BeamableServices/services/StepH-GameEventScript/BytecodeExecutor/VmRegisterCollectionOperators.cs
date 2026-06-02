@@ -38,20 +38,115 @@ internal static class VmRegisterCollectionOperators
         {
             case Text or Tag when b.Kind is Text or Tag:
                 dst.SetBoolean(a.ReadTextOrTag().StartsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
-                break;
-            case List or Dice:
-                dst.SetBoolean(false);
-                break;
-            case GameEventScriptBytecodeTypeKind.Range:
-                dst.SetNothing();
-                break;
+                return;
             case Nothing:
                 dst.SetNothing();
+                return;
+            case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        VmListObject? leftList = null;
+        VmListObject? rightList = null;
+        int[]? leftDice = null;
+        int[]? rightDice = null;
+        VmRange? leftRange = null;
+        VmRange? rightRange = null;
+        VmFloatRange? leftFloatRange = null;
+        VmFloatRange? rightFloatRange = null;
+
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is VmListObject value:
+                leftList = value;
+                break;
+            case Dice when a.ObjectValue is int[] value:
+                leftDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange value:
+                leftRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange value:
+                leftFloatRange = value;
                 break;
             default:
                 dst.SetBoolean(false);
-                break;
+                return;
         }
+
+        switch (b.Kind)
+        {
+            case List when b.ObjectValue is VmListObject value:
+                rightList = value;
+                break;
+            case Dice when b.ObjectValue is int[] value:
+                rightDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is VmRange value:
+                rightRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is VmFloatRange value:
+                rightFloatRange = value;
+                break;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.IntegerValue > a.IntegerValue)
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        var leftInteger = leftRange?.from ?? 0;
+        var rightInteger = rightRange?.from ?? 0;
+        var leftFloat = leftFloatRange?.from ?? 0d;
+        var rightFloat = rightFloatRange?.from ?? 0d;
+
+        for (var i = 0; i < b.IntegerValue; i++)
+        {
+            var left = dst.OwningState.CreateNothing();
+            if (leftList is not null) left = leftList.Items[i];
+            else if (leftDice is not null) left.SetInteger(leftDice[i]);
+            else if (leftRange is not null)
+            {
+                left.SetInteger(leftInteger);
+                leftInteger += leftRange.step;
+            }
+            else if (leftFloatRange is not null)
+            {
+                left.SetFloat(leftFloat);
+                leftFloat += leftFloatRange.step;
+            }
+
+            var right = dst.OwningState.CreateNothing();
+            if (rightList is not null) right = rightList.Items[i];
+            else if (rightDice is not null) right.SetInteger(rightDice[i]);
+            else if (rightRange is not null)
+            {
+                right.SetInteger(rightInteger);
+                rightInteger += rightRange.step;
+            }
+            else if (rightFloatRange is not null)
+            {
+                right.SetFloat(rightFloat);
+                rightFloat += rightFloatRange.step;
+            }
+
+            if (left.EqualsValue(ref right)) continue;
+            dst.SetBoolean(false);
+            return;
+        }
+
+        dst.SetBoolean(true);
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -61,29 +156,282 @@ internal static class VmRegisterCollectionOperators
         {
             case Text or Tag when b.Kind is Text or Tag:
                 dst.SetBoolean(a.ReadTextOrTag().EndsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
-                break;
-            case List or Dice or GameEventScriptBytecodeTypeKind.Range:
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
                 dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        VmListObject? leftList = null;
+        VmListObject? rightList = null;
+        int[]? leftDice = null;
+        int[]? rightDice = null;
+        VmRange? leftRange = null;
+        VmRange? rightRange = null;
+        VmFloatRange? leftFloatRange = null;
+        VmFloatRange? rightFloatRange = null;
+
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is VmListObject value:
+                leftList = value;
+                break;
+            case Dice when a.ObjectValue is int[] value:
+                leftDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange value:
+                leftRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange value:
+                leftFloatRange = value;
                 break;
             default:
                 dst.SetBoolean(false);
-                break;
+                return;
         }
+
+        switch (b.Kind)
+        {
+            case List when b.ObjectValue is VmListObject value:
+                rightList = value;
+                break;
+            case Dice when b.ObjectValue is int[] value:
+                rightDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is VmRange value:
+                rightRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is VmFloatRange value:
+                rightFloatRange = value;
+                break;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.IntegerValue > a.IntegerValue)
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        var leftOffset = a.IntegerValue - b.IntegerValue;
+        var leftInteger = leftRange is not null ? leftRange.from + leftRange.step * leftOffset : 0;
+        var rightInteger = rightRange?.from ?? 0;
+        var leftFloat = leftFloatRange is not null ? leftFloatRange.from + leftFloatRange.step * leftOffset : 0d;
+        var rightFloat = rightFloatRange?.from ?? 0d;
+
+        for (var i = 0; i < b.IntegerValue; i++)
+        {
+            var leftIndex = leftOffset + i;
+            var left = dst.OwningState.CreateNothing();
+            if (leftList is not null) left = leftList.Items[leftIndex];
+            else if (leftDice is not null) left.SetInteger(leftDice[leftIndex]);
+            else if (leftRange is not null)
+            {
+                left.SetInteger(leftInteger);
+                leftInteger += leftRange.step;
+            }
+            else if (leftFloatRange is not null)
+            {
+                left.SetFloat(leftFloat);
+                leftFloat += leftFloatRange.step;
+            }
+
+            var right = dst.OwningState.CreateNothing();
+            if (rightList is not null) right = rightList.Items[i];
+            else if (rightDice is not null) right.SetInteger(rightDice[i]);
+            else if (rightRange is not null)
+            {
+                right.SetInteger(rightInteger);
+                rightInteger += rightRange.step;
+            }
+            else if (rightFloatRange is not null)
+            {
+                right.SetFloat(rightFloat);
+                rightFloat += rightFloatRange.step;
+            }
+
+            if (left.EqualsValue(ref right)) continue;
+            dst.SetBoolean(false);
+            return;
+        }
+
+        dst.SetBoolean(true);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContains(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
-        if (a.Kind is Text or Tag && b.Kind is Text or Tag)
+        switch (b.Kind)
         {
-            dst.SetBoolean(b.ReadTextOrTag().Contains(a.ReadTextOrTag(), StringComparison.Ordinal));
-            return;
+            case Text or Tag when a.Kind is Text or Tag:
+                dst.SetBoolean(b.ReadTextOrTag().Contains(a.ReadTextOrTag(), StringComparison.Ordinal));
+                return;
+            case Text or Tag:
+                dst.SetBoolean(false);
+                return;
+            case List when b.ObjectValue is VmListObject list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    if (!list.Items[i].EqualsValue(ref a)) continue;
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case Dice when b.ObjectValue is int[] dice:
+                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    if (dice[i] != a.IntegerValue) continue;
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case Map when b.ObjectValue is VmMapObject map:
+                if (a.Kind is not (Text or Tag))
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var key = a.ReadTextOrTag();
+                dst.SetBoolean(!key.StartsWith("_", StringComparison.Ordinal) && map.Entries.ContainsKey(key));
+                return;
+            case Vector or Point when b.ObjectValue is VmFloatTriplet triplet:
+                if (!a.IsNumeric)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var value = dst.OwningState.CreateNothing();
+                value.SetFloat(triplet.X, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Y, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Z, b.Unit);
+                dst.SetBoolean(value.EqualsValue(ref a));
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is VmRange range:
+                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || range.step == 0)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                dst.SetBoolean(range.step > 0
+                    ? a.IntegerValue >= range.from && a.IntegerValue <= range.to && unchecked((ulong)a.IntegerValue - (ulong)range.from) % (ulong)range.step == 0UL
+                    : a.IntegerValue <= range.from && a.IntegerValue >= range.to && unchecked((ulong)range.from - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.step) == 0UL);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is VmFloatRange range:
+                if (!a.IsNumeric || range.step == 0d)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var number = a.AsNumeric;
+                if (!double.IsFinite(number))
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                if (range.step > 0d)
+                {
+                    var quotient = (number - range.from) / range.step;
+                    dst.SetBoolean(number >= range.from && number <= range.to && quotient == Math.Truncate(quotient));
+                    return;
+                }
+
+                var descendingQuotient = (range.from - number) / -range.step;
+                dst.SetBoolean(number <= range.from && number >= range.to && descendingQuotient == Math.Truncate(descendingQuotient));
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            default:
+                dst.SetBoolean(false);
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContainsValue(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
+        switch (b.Kind)
+        {
+            case Map or Custom when b.ObjectValue is VmMapObject map:
+                foreach (var pair in map.Entries)
+                {
+                    if (pair.Key.StartsWith("_", StringComparison.Ordinal) || !pair.Value.EqualsValue(ref a)) continue;
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case Vector or Point when b.ObjectValue is VmFloatTriplet triplet:
+                if (!a.IsNumeric)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var value = dst.OwningState.CreateNothing();
+                value.SetFloat(triplet.X, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Y, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Z, b.Unit);
+                dst.SetBoolean(value.EqualsValue(ref a));
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

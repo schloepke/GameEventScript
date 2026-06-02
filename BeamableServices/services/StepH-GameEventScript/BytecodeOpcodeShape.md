@@ -329,10 +329,10 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 0x90 | `Length` | - | result slot | `XSlot`=operand | - | - | Length operation. Text and tags use raw text length. |
-| 0x91 | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag boundary operation. |
-| 0x92 | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag boundary operation. |
-| 0x93 | `Contains` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection/text membership operation. |
-| 0x94 | `ContainsValue` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection value membership operation. |
+| 0x91 | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text prefix check or list/dice/range sequence prefix check. |
+| 0x92 | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text suffix check or list/dice/range sequence suffix check. |
+| 0x93 | `Contains` | - | result slot | `XSlot`=needle | `YSlot`=container | - | Text/tag substring, map key, list/dice/range membership, or vector/point component membership. |
+| 0x94 | `ContainsValue` | - | result slot | `XSlot`=needle | `YSlot`=container | - | Value membership for map-like containers, vectors, and points. |
 | 0x95 | `Union` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |
 | 0x96 | `Intersect` | - | result slot | `XSlot`=left | `YSlot`=right | - | Map key intersection or list/dice multiset intersection; invalid shapes -> `nothing`. |
 | 0x97 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | List zip into `{ left, right }` maps up to the shorter length; invalid shapes -> `nothing`. |

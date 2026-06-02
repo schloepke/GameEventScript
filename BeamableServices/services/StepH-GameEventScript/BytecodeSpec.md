@@ -639,6 +639,30 @@ and `EndsWith`: comparisons use raw text without the `:` tag prefix, using
 ordinal comparison, and `Length` counts raw text characters. Other operand
 shapes follow their collection or invalid-operation semantics.
 
+`Contains left, right` writes membership of `left` in `right`. For text/tag
+right operands, `left` must also be text/tag and the operation performs an
+ordinal raw-text substring check. For `List`, it checks item equality. For
+`Dice`, `left` must be a unitless integer roll. For `Range`, `left` must be
+numeric and equal to one range term. For `Map`/record/custom values, `left`
+must be text/tag and is checked as a visible key. For `Vector` and `Point`,
+`left` must be numeric and is compared with the three components. `right`
+`Nothing` writes `Nothing`; unsupported shapes write boolean `false`.
+
+`ContainsValue left, right` writes value membership of map-like `right`.
+It is defined for `Map`, record/custom/external map-like values, `Vector`, and
+`Point`. Map-like values compare only visible, non-hidden values. Vectors and
+points compare their `x`, `y`, and `z` components. `right` `Nothing` writes
+`Nothing`; lists, dice, ranges, text, tags, and scalar values write boolean
+`false`.
+
+`StartsWith left, right` and `EndsWith left, right` write boundary checks.
+Text/tag operands compare raw text with ordinal rules. Sequence operands are
+limited to `List`, `Dice`, and `Range`; both operands must be one of those
+sequence shapes. The right sequence is matched as a prefix or suffix of the
+left sequence. An empty right sequence matches, and a right sequence longer
+than the left sequence writes boolean `false`. A `Nothing` left operand writes
+`Nothing`; unsupported shapes write boolean `false`.
+
 `Add` is primarily numeric, but has a collection fallback for single-value
 insertion. `List + any` appends exactly one value and `any + List` prepends
 exactly one value, so `List + List` nests the right list as one item. Dice values

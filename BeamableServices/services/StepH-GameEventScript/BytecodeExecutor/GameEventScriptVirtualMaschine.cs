@@ -620,8 +620,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
             IsCompleted = true;
             if (vmState.State == Error)
             {
-                Console.WriteLine($"Execution halted due to error at address {vmState.InstructionPointer} and error {vmState.ErrorMessage}");
-                Console.WriteLine($"Binary\n{vmState.Binary.Dump(true)}");
+                Console.WriteLine(vmState.Dump());
             }
 
             vmState.Reset();

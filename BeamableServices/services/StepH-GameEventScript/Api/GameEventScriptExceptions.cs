@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 // ReSharper disable UnusedMember.Global
 
 namespace StepH.GameEventScript.Api;
@@ -56,7 +57,6 @@ public class GameEventScriptCompileException : Exception
             : $"GameEventScript compilation failed with {errors.Count} error(s):{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", errors.Select(it => it.ToString()))}";
 }
 
-
 /// <summary>
 /// Represents a detailed error encountered during the compilation of a Game Event Script.
 /// This error provides comprehensive information about the issue, including its location,
@@ -86,13 +86,7 @@ public class GameEventScriptCompileException : Exception
 /// The precise source location where the error occurred, including file name and optional
 /// line/column details.
 /// </param>
-public sealed record GameEventScriptCompileError(
-    string Message,
-    string ModuleName,
-    string Symbol,
-    GameEventScriptSymbolKind SymbolKind,
-    GameEventScriptCompileErrorKind Kind,
-    GameEventScriptSourceLocation SourceLocation)
+public sealed record GameEventScriptCompileError(string Message, string ModuleName, string Symbol, GameEventScriptSymbolKind SymbolKind, GameEventScriptCompileErrorKind Kind, GameEventScriptSourceLocation SourceLocation)
 {
     /// <summary>
     /// Returns a string representation of the current GameEventScriptCompileError instance,
@@ -101,7 +95,6 @@ public sealed record GameEventScriptCompileError(
     /// <returns>A string describing the error, formatted with module name, message, and source location.</returns>
     public override string ToString() => $"Module '{ModuleName}': {Message} [{SourceLocation}]";
 }
-
 
 /// <summary>
 /// Defines the different types of errors that can occur during the compilation process of a Game Event Script.
@@ -277,7 +270,6 @@ public enum GameEventScriptCompileErrorKind
     InvalidTypeConstructor
 }
 
-
 /// <summary>
 /// Defines the different kinds of symbols used within a Game Event Script.
 /// This enumeration is used to classify the functional or semantic roles
@@ -370,7 +362,6 @@ public enum GameEventScriptSymbolKind
     GlobalDefinition
 }
 
-
 /// <summary>
 /// Represents a fatal runtime exception that occurs specifically during the execution
 /// of a Game Event Script. This exception is meant to signal critical issues that
@@ -394,7 +385,6 @@ public abstract class GameEventScriptFatalRuntimeException : Exception
     {
     }
 }
-
 
 /// <summary>
 /// Represents an exception thrown when a dynamic linking error occurs

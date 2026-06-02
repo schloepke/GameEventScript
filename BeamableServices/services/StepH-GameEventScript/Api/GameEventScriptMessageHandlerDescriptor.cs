@@ -61,7 +61,7 @@ public sealed class GameEventScriptMessageHandlerDescriptor
 
         public bool IsCompleted => _completed;
 
-        public int RunSlice(int maxOpcodes)
+        public int RunSlice(int maxSteps)
         {
             if (_completed)
             {

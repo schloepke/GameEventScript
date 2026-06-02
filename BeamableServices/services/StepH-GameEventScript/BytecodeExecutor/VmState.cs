@@ -3,10 +3,10 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
+using static StepH.GameEventScript.BytecodeExecutor.VmState.StateValue;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -18,10 +18,9 @@ internal class VmState
 
     internal enum StateValue
     {
-        Initialized,
         Ready,
-        Running,
-        Halted,
+        Processing,
+        Finished,
         Error
     }
 
@@ -34,7 +33,7 @@ internal class VmState
         internal bool NormalizeResultAsPredicate;
     }
 
-    internal  VmListObject EmptyList { get; init; }
+    internal VmListObject EmptyList { get; init; }
 
     internal GameEventScriptBinary Binary { get; init; }
 
@@ -53,27 +52,19 @@ internal class VmState
 
     internal ushort RegisterFrameStart = 0;
     internal ushort RegisterFrameLength = 0;
-    internal ushort StageLength  { get; private set; }
-    
-    internal string? ErrorMessage { get; private set; }
+    internal ushort StageLength { get; private set; }
 
-    internal Dictionary<string, GameEventScriptBinaryBindEntry> InboundMessageHandlers { get; init; }
+    internal string? ErrorMessage { get; private set; }
     internal GameEventScriptBinaryBindEntry[] OutboundMessageSignatures { get; init; }
     internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; init; }
 
-    internal readonly ushort CodeSegmentSize; 
-    private readonly int _maxRegisterSlots;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ref VmValue RegisterStaged(ushort index) =>  ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
+    internal readonly ushort CodeSegmentSize;
+    internal readonly int MaxRegisterSlots;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
-        _maxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
+        MaxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
         EmptyList = new VmListObject(this, 0);
         Binary = binary;
         CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
@@ -85,79 +76,58 @@ internal class VmState
         RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = GameEventScriptRandomGenerator.Create(); // INFO: We create one here so that we always have one. but it should be set for the message from the context!
-        InboundMessageHandlers = binary.BindTable.Entries.Where(x => x.Kind == GameEventScriptBinaryBindKind.MessageHandler).ToDictionary(
-            bind => GameEventScriptMessageSignature.CreateSignatureId(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve)),
-            x => x);
-        OutboundMessageSignatures = BuildOutboundMessageSignatures(binary);
-        RecordConstructors = BuildRecordConstructors(binary);
+        OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
+        RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
     }
 
-    private static GameEventScriptBinaryBindEntry[] BuildOutboundMessageSignatures(GameEventScriptBinary binary)
+    internal bool PrepareStateForMessage(GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptSession session)
     {
-        return BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
+        if (State != Ready) return RaiseError("State not ready to receive new messages.");
+        if (entryAddress >= CodeSegmentSize) return RaiseError($"Illegal entry address {entryAddress} for message.");
+        InstructionPointer = entryAddress;
+        RegisterFrameStart = 0;
+        StageLength = 0;
+        RandomGenerator = session.Random;
+        RandomGeneratorsPointer = 0;
+        if (callAsArguments)
+        {
+            var arguments = message.Arguments;
+            if (!EnsureRegisterCapacity(arguments.Count)) return false;
+            RegisterFrameLength = (ushort)arguments.Count;
+            for (var i = 0; i < RegisterFrameLength; i++) RegisterSlots[i].BindArguments(arguments[i]);
+        }
+        else
+        {
+            if (!EnsureRegisterCapacity(1)) return false;
+            RegisterFrameLength = 1;
+            RegisterSlots[0].SetMessage(message);
+        }
+        State = Processing;
+        return true;
     }
 
-    private static GameEventScriptBinaryBindEntry[] BuildRecordConstructors(GameEventScriptBinary binary)
-    {
-        return BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
 
-    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptBinary binary, GameEventScriptBinaryBindKind kind)
-    {
-        var maxId = -1;
-        foreach (var entry in binary.BindTable.Entries)
-        {
-            if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId)
-            {
-                maxId = entry.Id;
-            }
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref VmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
 
-        if (maxId < 0)
-        {
-            return [];
-        }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal VmValue CreateRegister() => new();
 
-        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
-        foreach (var entry in binary.BindTable.Entries)
-        {
-            if (entry.Kind == kind && entry.Id != ushort.MaxValue)
-            {
-                result[entry.Id] = entry;
-            }
-        }
-
-        return result;
-    }
-    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue[] CreateRegisterArray(int size)
     {
         var values = new VmValue[size];
-        for (var i = 0; i < values.Length; i++)
-        {
-            values[i].InitRegister(this);
-        }
+        for (var i = 0; i < values.Length; i++) values[i].InitRegister(this);
         return values;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal VmValue CreateRegister()
-    {
-        return new VmValue();
-    }
+    internal VmListObject CreateList(int size) => size == 0 ? EmptyList : new VmListObject(this, size);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal VmListObject CreateList(int size)
-    {
-        return new VmListObject(this, size);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal VmMapObject CreateMap(IReadOnlyDictionary<string, VmValue> entries)
-    {
-        return new VmMapObject(this, entries);
-    }
+    internal VmMapObject CreateMap(IReadOnlyDictionary<string, VmValue> entries) => new(this, entries);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateInteger(long integer)
@@ -187,35 +157,6 @@ internal class VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool HasMessageHandler(GameEventScriptMessage message)
-        => InboundMessageHandlers.ContainsKey(message.SignatureId);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal bool PrepareMessage(GameEventScriptMessage message, GameEventScriptSession context)
-    {
-        if (State != StateValue.Initialized) return RaiseError("Handler can only be loaded when the VM is initialized.");
-        var signatureId = message.SignatureId;
-        if (!InboundMessageHandlers.TryGetValue(signatureId, out var bind)) return RaiseError($"No handler found for message '{signatureId}'.");
-        if (bind.Kind != GameEventScriptBinaryBindKind.MessageHandler) return RaiseError($"Message '{signatureId}' is not a handler.");
-        if (bind.ArgumentNames.Count != message.Arguments.Count) return RaiseError($"Message '{signatureId}' has the wrong number of arguments.");
-        var arguments = message.Arguments;
-        if (!EnsureRegisterCapacity(arguments.Count)) return false;
-        if (bind.EntryAddress >= CodeSegmentSize) return RaiseError($"Message '{signatureId}' has an invalid entry address.");
-        InstructionPointer = bind.EntryAddress;
-        RegisterFrameStart = 0;
-        RegisterFrameLength = (ushort)arguments.Count;
-        StageLength = 0;
-        for (var i = 0; i < RegisterFrameLength; i++) 
-        {
-            RegisterSlots[i].BindArguments(arguments[i]);
-        }
-        RandomGenerator = context.Random;
-        RandomGeneratorsPointer = 0;
-        State = StateValue.Ready;
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
     {
         if (RandomGeneratorsPointer >= RandomGenerators.Length) return RaiseError("Random generator stack overflow");
@@ -223,7 +164,7 @@ internal class VmState
         RandomGenerator = randomGenerator;
         return true;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool PopRandom()
     {
@@ -231,28 +172,26 @@ internal class VmState
         RandomGenerator = RandomGenerators[--RandomGeneratorsPointer];
         return true;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool RaiseError(string message)
     {
-        State = StateValue.Error;
+        State = Error;
         ErrorMessage = message;
         return false;
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void Reset()
     {
         InstructionPointer = 0;
         CallStackPointer = 0;
-        State = StateValue.Initialized;
         RegisterFrameStart = 0;
         RegisterFrameLength = 0;
         StageLength = 0;
         RandomGeneratorsPointer = 0;
-        for (var i = 0; i < RegisterSlots.Length; i++) {
-            RegisterSlots[i].SetNothing();
-        }
+        for (var i = 0; i < RegisterSlots.Length; i++) RegisterSlots[i].SetNothing();
+        State = Ready;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -302,7 +241,7 @@ internal class VmState
             ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
             RegisterFrameLength = 0;
             StageLength = 0;
-            State = StateValue.Halted;
+            State = Finished;
             return;
         }
 
@@ -324,7 +263,7 @@ internal class VmState
             ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
             RegisterFrameLength = 0;
             StageLength = 0;
-            State = StateValue.Halted;
+            State = Finished;
             return;
         }
 
@@ -340,23 +279,14 @@ internal class VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
-    {
-        return InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
-    }
+    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal string FetchStringByPointer(ushort index)
-    {
-        return Binary.TextConstantTable.Resolve(index);
-    }
+    internal string FetchStringByPointer(ushort index) => Binary.TextConstantTable.Resolve(index);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index)
-    {
-        return Binary.Uint16ConstantTable.Resolve(index);
-    }
-    
+    internal ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ModifyLocalSlots(short slotCount)
     {
@@ -368,6 +298,7 @@ internal class VmState
                 {
                     RegisterFrameLength += (ushort)slotCount;
                 }
+
                 break;
             case < 0:
                 var tempSlotCount = -slotCount;
@@ -380,10 +311,11 @@ internal class VmState
                     ClearRegisterRange(RegisterFrameStart + RegisterFrameLength - tempSlotCount, tempSlotCount);
                     RegisterFrameLength -= (ushort)tempSlotCount;
                 }
+
                 break;
         }
     }
-    
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ClearStage()
     {
@@ -392,26 +324,48 @@ internal class VmState
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void ClearRegisterRange(int start, int count)
-    {
-        var end = start + count;
-        for (var index = start; index < end; index++)
-        {
-            RegisterSlots[index].SetNothing();
-        }
-    }
+    internal void StageRegister(ushort index) => AddStageSlot() = RegisterSlots[index + RegisterFrameStart];
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageNothing() => AddStageSlot().SetNothing();
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageBoolean(bool value) => AddStageSlot().SetBoolean(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetInteger(value, unit);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetFloat(value, unit);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StagePercentage(double value) => AddStageSlot().SetPercentage(value);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageTextConstant(ushort constantIndex) => AddStageSlot().SetTextPointer(constantIndex);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageTagConstant(ushort constantIndex) => AddStageSlot().SetTagPointer(constantIndex);
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private ref VmValue AddStageSlot()
+    {
+        var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;
+        if (!EnsureRegisterCapacity(stageRegisterIndex + 1)) return ref _overflowRegister;
+        StageLength++;
+        return ref RegisterSlots[stageRegisterIndex];
+    }
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool EnsureRegisterCapacity(int requiredSlots)
     {
         if (requiredSlots <= RegisterSlots.Length) return true;
-        if (requiredSlots > _maxRegisterSlots) return RaiseError($"Register overflow. Required {requiredSlots} slots but maximum is {_maxRegisterSlots}.");
+        if (requiredSlots > MaxRegisterSlots) return RaiseError($"Register overflow. Required {requiredSlots} slots but maximum is {MaxRegisterSlots}.");
         var newLength = RegisterSlots.Length;
         do
         {
-            newLength = Math.Min(newLength + RegisterCapacityGrowth, _maxRegisterSlots);
-        }
-        while (newLength < requiredSlots);
+            newLength = Math.Min(newLength + RegisterCapacityGrowth, MaxRegisterSlots);
+        } while (newLength < requiredSlots);
 
         var oldLength = RegisterSlots.Length;
         var expanded = new VmValue[newLength];
@@ -426,59 +380,31 @@ internal class VmState
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private ref VmValue AddStageSlot()
+    private void ClearRegisterRange(int start, int count)
     {
-        var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;
-        if (!EnsureRegisterCapacity(stageRegisterIndex + 1)) 
+        var end = start + count;
+        for (var index = start; index < end; index++)
         {
-            return ref _overflowRegister;
+            RegisterSlots[index].SetNothing();
+        }
+    }
+ 
+    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptBinary binary, GameEventScriptBinaryBindKind kind)
+    {
+        var maxId = -1;
+        foreach (var entry in binary.BindTable.Entries)
+        {
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId) maxId = entry.Id;
         }
 
-        StageLength++;
-        return ref RegisterSlots[stageRegisterIndex];
-    }
+        if (maxId < 0) return [];
+        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
+        foreach (var entry in binary.BindTable.Entries)
+        {
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue) result[entry.Id] = entry;
+        }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageRegister(ushort index)
-    {
-        AddStageSlot() = RegisterSlots[index + RegisterFrameStart];
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageNothing()
-    {
-        AddStageSlot().SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageBoolean(bool value)
-    {
-        AddStageSlot().SetBoolean(value);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit)
-    {
-        AddStageSlot().SetInteger(value, unit);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit)
-    {
-        AddStageSlot().SetFloat(value, unit);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StagePercentage(double value)
-    {
-        AddStageSlot().SetPercentage(value);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageTextConstant(ushort constantIndex)
-    {
-        AddStageSlot().SetTextPointer(constantIndex);
-    }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal void StageTagConstant(ushort constantIndex)
-    {
-        AddStageSlot().SetTagPointer(constantIndex);
+        return result;
     }
     
 }

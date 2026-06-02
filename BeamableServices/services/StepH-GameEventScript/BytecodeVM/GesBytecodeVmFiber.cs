@@ -42,11 +42,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         public int ExecutedOpcodesInLastSlice { get; private set; }
 
-        public int RunSlice(int maxOpcodes)
+        public int RunSlice(int maxSteps)
         {
-            if (maxOpcodes <= 0)
+            if (maxSteps <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(maxOpcodes), "VM slice opcode budget must be greater than zero.");
+                throw new ArgumentOutOfRangeException(nameof(maxSteps), "VM slice opcode budget must be greater than zero.");
             }
 
             if (IsCompleted)
@@ -55,7 +55,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return 0;
             }
 
-            _remainingOpcodes = maxOpcodes;
+            _remainingOpcodes = maxSteps;
             ExecutedOpcodesInLastSlice = 0;
 
             while (!IsCompleted && !Failed && _frames.Count > 0)

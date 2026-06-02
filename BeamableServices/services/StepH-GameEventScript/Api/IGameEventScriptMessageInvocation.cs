@@ -11,7 +11,7 @@ public interface IGameEventScriptMessageInvocation
     bool IsCompleted { get; }
 
     /// <summary>
-    /// Runs at most <paramref name="maxOpcodes"/> opcodes and returns how many opcodes were executed.
+    /// Runs at most <paramref name="maxSteps"/> opcodes and returns how many opcodes were executed.
     /// </summary>
-    int RunSlice(int maxOpcodes);
+    int RunSlice(int maxSteps);
 }

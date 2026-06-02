@@ -591,7 +591,7 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesValues(StepH.GameEventScript.Types.GameEventScriptValue source)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? unit)
 interface StepH.GameEventScript.Api.IGameEventScriptMessageInvocation
-  method System.Int32 RunSlice(System.Int32 maxOpcodes)
+  method System.Int32 RunSlice(System.Int32 maxSteps)
   property System.Boolean IsCompleted { get }
 interface StepH.GameEventScript.Api.IGameEventScriptModule
   method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
@@ -603,7 +603,11 @@ interface StepH.GameEventScript.Api.IGameEventScriptSeries
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
   ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
-  method System.Void Initialize(StepH.GameEventScript.Api.GameEventScriptSession session)
+  method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
+  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
+  property System.String ModuleName { get }
+class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVmException
+  ctor GameEventScriptVmException(System.String message)
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)

@@ -136,7 +136,7 @@ public sealed class BytecodeExecutorTests
             });
 
         var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);
-        runner.Initialize(session);
+        runner.ExecuteMessage(GameEventScriptSystemEndpoints.CreateInitializationMessage(), session);
 
         Assert.HasCount(1, emitted);
         Assert.AreEqual("Ready", emitted[0].Name);

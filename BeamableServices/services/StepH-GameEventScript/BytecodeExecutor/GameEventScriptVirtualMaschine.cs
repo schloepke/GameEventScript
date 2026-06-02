@@ -26,8 +26,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
     {
         // currently nothing to implement
     }
+    
+    public static GameEventScriptVirtualMaschine Create(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
+    {
+        return new GameEventScriptVirtualMaschine(binary, registerSize, stackSize);
+    }
 
-    public GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
+    private GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         ModuleName = binary.ModuleName;
         _vmState = new VmState(binary, registerSize, stackSize);

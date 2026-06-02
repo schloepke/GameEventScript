@@ -7,7 +7,6 @@ using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 
@@ -95,7 +94,7 @@ internal static class GameEventScriptConformanceRunner
         var collector = new GameEventScriptDiagnosticTraceCollector();
         var published = new List<GameEventScriptMessage>();
         var outboundPublished = new List<GameEventScriptMessage>();
-        var builder = GameEventScriptHost.CreateBuilder()
+        var builder = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(CreateRandom(test.RandomSequence))
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
             .WithExternalTypes(ExternalTypeRegistry)
@@ -132,7 +131,7 @@ internal static class GameEventScriptConformanceRunner
 
     internal static IGameEventScriptModule CompileScripts(GameEventScriptConformanceTest test)
     {
-        return GesBytecodeVmExecutableBuilder.Build(CompileBytecode(test));
+        return CreateScriptBuilder(test).CompileModule(CreateCompileOptions(test));
     }
 
     internal static GameEventScriptCompiled CompileBytecodeForTest(GameEventScriptConformanceTest test)
@@ -495,20 +494,28 @@ internal static class GameEventScriptConformanceRunner
 
     private static GameEventScriptCompiled CompileBytecode(GameEventScriptConformanceTest test)
     {
-        var builder = GameEventScriptBuilder.Create()
+        return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
+    }
+
+    private static GameEventScriptBuilder CreateScriptBuilder(GameEventScriptConformanceTest test)
+    {
+        var builder = GameEventScriptManager.CreateScriptBuilder()
             .WithExternalTypes(ExternalTypeRegistry);
         foreach (var source in GetSources(test))
         {
             builder.AddScript(source.Text!, source.SourceName);
         }
 
-        return builder.Compile(new GameEventScriptCompileOptions
+        return builder;
+    }
+
+    private static GameEventScriptCompileOptions CreateCompileOptions(GameEventScriptConformanceTest test)
+        => new()
         {
             Optimize = test.CompileOptions?.Optimize ?? true,
             EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false,
             EnableDebugInfo = test.CompileOptions?.EnableDebugInfo ?? false
-        });
-    }
+        };
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(
         IGameEventScriptModule compiled)

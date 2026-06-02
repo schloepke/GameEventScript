@@ -1,7 +1,5 @@
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.BytecodeExecutor;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
@@ -90,22 +88,19 @@ public sealed class BytecodeExecutorTests
         var compiled = GameEventScriptManager.Compile(script);
         var binary = compiled.ToGameEventScriptBinary();
         var published = new List<GameEventScriptMessage>();
-        var context = new GameEventScriptSession(
-            GameEventScriptRandomGenerator.FromSeed(1),
-            message =>
-            {
-                published.Add(message);
-                return true;
-            });
 
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + compiled.DumpBytecode());
         TestContext.WriteLine("-----");
         TestContext.WriteLine("Binary file:\n" + binary.Dump(includeInstructionAddresses: false, script));
         TestContext.WriteLine("-----");
-        
-        var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);
-        var handled = runner.ExecuteMessage(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(40))), context);
+
+        var host = GameEventScriptManager.CreateHostBuilder()
+            .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
+            .WithPublishedMessageObserver(published.Add)
+            .Build()
+            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+        var handled = host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(40))));
 
         Assert.IsTrue(handled);
         Assert.HasCount(1, published);
@@ -125,18 +120,14 @@ public sealed class BytecodeExecutorTests
             }
             """;
 
-        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
         var emitted = new List<GameEventScriptMessage>();
-        var session = new GameEventScriptSession(
-            GameEventScriptRandomGenerator.FromSeed(1),
-            message =>
-            {
-                emitted.Add(message);
-                return true;
-            });
+        var host = GameEventScriptManager.CreateHostBuilder()
+            .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
+            .WithPublishedMessageObserver(emitted.Add)
+            .Build()
+            .Load(GameEventScriptManager.CompileModuleNewVm(script));
 
-        var runner = new GameEventScriptVirtualMaschine(binary, 128, 128);
-        runner.ExecuteMessage(GameEventScriptSystemEndpoints.CreateInitializationMessage(), session);
+        host.StartSession().Update(100);
 
         Assert.HasCount(1, emitted);
         Assert.AreEqual("Ready", emitted[0].Name);
@@ -162,18 +153,13 @@ public sealed class BytecodeExecutorTests
             }
             """;
 
-        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
         var emitted = new List<GameEventScriptMessage>();
-        var session = new GameEventScriptSession(
-            GameEventScriptRandomGenerator.FromSeed(1),
-            message =>
-            {
-                emitted.Add(message);
-                return true;
-            });
-
-        var runner = new GameEventScriptVirtualMaschine(binary, 64, 128);
-        var handled = runner.ExecuteMessage(Create("Start"), session);
+        var host = GameEventScriptManager.CreateHostBuilder()
+            .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
+            .WithPublishedMessageObserver(emitted.Add)
+            .Build()
+            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+        var handled = host.PublishToCompletion(Create("Start"));
 
         Assert.IsTrue(handled);
         Assert.HasCount(1, emitted);

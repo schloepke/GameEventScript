@@ -601,9 +601,9 @@ interface StepH.GameEventScript.Api.IGameEventScriptSeries
   method System.Boolean TryGetTerm(System.Int64 index, StepH.GameEventScript.Types.GameEventScriptValue& value)
   property System.String SignatureId { get }
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
-  ctor GameEventScriptVirtualMaschine(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
   method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
+  method static StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine Create(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
   property System.String ModuleName { get }
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVmException
@@ -620,9 +620,12 @@ static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter
 class StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter
   ctor GameEventScriptOpcodePrinter()
 static class StepH.GameEventScript.GameEventScriptManager
-  method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateBuilder()
+  method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()
   method static StepH.GameEventScript.Api.GameEventScriptCompiled Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+  method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
   method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+  method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModuleNewVm(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+  method static StepH.GameEventScript.Api.IGameEventScriptModule CreateModuleNewVm(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
 sealed class StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent
   ctor GameEventScriptDiagnosticEvent(System.Int32 Sequence, StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind Kind, System.String Name, StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments, System.String Detail)
   method StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent <Clone>$()

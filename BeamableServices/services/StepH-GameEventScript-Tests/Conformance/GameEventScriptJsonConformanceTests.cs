@@ -603,30 +603,29 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         var random = GameEventScriptConformanceRunner.CreateRandomForTest(test.RandomSequence);
         var runtimeLimits = GameEventScriptConformanceRunner.CreateRuntimeLimitsForTest(test.RuntimeLimits);
+        var diagnostics = new GameEventScriptDiagnosticTraceCollector();
+        var emitted = new List<GameEventScriptMessage>();
+        var published = new List<GameEventScriptMessage>();
+        var host = GameEventScriptManager.CreateHostBuilder()
+            .WithRandom(random)
+            .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
+            .WithRuntimeLimits(runtimeLimits)
+            .WithDiagnosticCollector(diagnostics)
+            .WithPublishedMessageObserver(emitted.Add)
+            .WithPublishHook(message =>
+            {
+                published.Add(message);
+                return true;
+            })
+            .Build()
+            .Load(GameEventScriptManager.CreateModuleNewVm(binary, 4096, 256));
 
         for (var stepIndex = 0; stepIndex < test.Steps.Count; stepIndex++)
         {
             var step = test.Steps[stepIndex];
-            var diagnostics = new GameEventScriptDiagnosticTraceCollector();
-            var emitted = new List<GameEventScriptMessage>();
-            var published = new List<GameEventScriptMessage>();
-            var context = new GameEventScriptSession(
-                random,
-                message =>
-                {
-                    emitted.Add(message);
-                    return true;
-                },
-                diagnosticCollector: diagnostics,
-                runtimeLimits: runtimeLimits,
-                extensionRegistry: GameEventScriptConformanceExtensionRegistry.Instance,
-                publish: message =>
-                {
-                    published.Add(message);
-                    return true;
-                });
-            var vm = new GameEventScriptVirtualMaschine(binary, 4096, 256);
-            var handled = vm.ExecuteMessage(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input), context);
+            emitted.Clear();
+            published.Clear();
+            var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
             if (!handled)
             {
                 mismatch = $"step {stepIndex + 1}: handler was not found or could not start.";

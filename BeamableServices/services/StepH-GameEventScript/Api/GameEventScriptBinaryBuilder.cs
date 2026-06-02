@@ -200,7 +200,7 @@ public static class GameEventScriptBinaryExtensions
         }
 
         var externalReferenceId = 0;
-        foreach (var reference in compiled.ExternalReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))
+        foreach (var reference in compiled.ExternalReferences)
         {
             builder.AddStringPoolElement(reference.ExtensionName + "." + reference.FunctionName, out var functionIndex);
             builder.AddStringPoolElements(reference.ArgumentLabels, out var argumentIndexes);
@@ -218,7 +218,7 @@ public static class GameEventScriptBinaryExtensions
         }
 
         var externalTypeId = 0;
-        foreach (var reference in compiled.ExternalTypeConstructorReferences.OrderBy(reference => reference.SignatureId, StringComparer.Ordinal))
+        foreach (var reference in compiled.ExternalTypeConstructorReferences)
         {
             builder.AddStringPoolElement(reference.TypeName, out var typeNameIndex);
             builder.AddStringPoolElements(reference.ArgumentLabels, out var argumentIndexes);

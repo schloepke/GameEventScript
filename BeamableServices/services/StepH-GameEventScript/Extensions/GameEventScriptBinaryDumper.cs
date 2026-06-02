@@ -296,8 +296,8 @@ public static class GameEventScriptBinaryDumper
             TagRegisterList => context.ListLabel(instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
                 ? instruction.SecondaryListIndex
                 : instruction.ListIndex),
-            RecordReference => context.RecordLabel(instruction.ExternalReferenceIndex),
-            ExternalReference => context.ExternalReferenceLabel(instruction.OpCode, instruction.ExternalReferenceIndex),
+            RecordReference => context.RecordLabel(instruction.BindId),
+            ExternalReference => context.ExternalReferenceLabel(instruction.OpCode, instruction.BindId),
 
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
         };
@@ -348,10 +348,10 @@ public static class GameEventScriptBinaryDumper
                     AddOutboundMessageComment(comments, context, instruction.MessageDestination);
                     break;
                 case RecordReference:
-                    AddRecordComment(comments, context, instruction.ExternalReferenceIndex);
+                    AddRecordComment(comments, context, instruction.BindId);
                     break;
                 case ExternalReference:
-                    AddExternalReferenceComment(comments, context, instruction.OpCode, instruction.ExternalReferenceIndex);
+                    AddExternalReferenceComment(comments, context, instruction.OpCode, instruction.BindId);
                     break;
                 case CallableEntry:
                     AddCodeEntryComment(comments, context, instruction.EntryAddress);

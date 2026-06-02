@@ -603,10 +603,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         Assert.HasCount(2, compiled.ExternalReferences);
         Assert.HasCount(
-            compiled.ExternalReferences[functionCall.ExternalReferenceIndex].ArgumentLabels.Count,
+            compiled.ExternalReferences[functionCall.BindId].ArgumentLabels.Count,
             compiled.UShortListPool[functionCall.ListIndex]);
         Assert.HasCount(
-            compiled.ExternalReferences[predicateCall.ExternalReferenceIndex].ArgumentLabels.Count,
+            compiled.ExternalReferences[predicateCall.BindId].ArgumentLabels.Count,
             compiled.UShortListPool[predicateCall.ListIndex]);
     }
 

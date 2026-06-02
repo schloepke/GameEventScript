@@ -458,7 +458,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             {
                 var typeDefinition = _compiledScript.TypeDefinitions.Values
                     .OrderBy(type => type.Name, StringComparer.Ordinal)
-                    .ElementAtOrDefault(instruction.ExternalReferenceIndex);
+                    .ElementAtOrDefault(instruction.BindId);
                 if (typeDefinition is null)
                 {
                     return false;
@@ -494,7 +494,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 if (!DefineSlot(
                         instruction.DestinationSlot,
                         EvaluateExternalTypeConstructor(
-                            instruction.ExternalReferenceIndex,
+                            instruction.BindId,
                             constructorArgumentNames,
                             constructorOperands,
                             0,
@@ -1343,7 +1343,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.CallExternal:
             {
                 if (!TryCallExternal(
-                        instruction.ExternalReferenceIndex,
+                        instruction.BindId,
                         instruction.ListIndex,
                         instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate),
                         out var externalValue))

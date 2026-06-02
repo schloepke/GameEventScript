@@ -198,7 +198,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 }
                 else if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord)
                 {
-                    var expected = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count(field => field.IsConstructorParameter);
+                    var expected = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.BindId).Fields.Count(field => field.IsConstructorParameter);
                     if (expected != 0)
                     {
                         throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expected} staged value(s), but no stage sequence precedes it.");
@@ -246,7 +246,7 @@ internal sealed class GesBytecodeVmLinearExecutable
 
             if (instruction.OpCode is GameEventScriptBytecodeOpCode.CreateRecord)
             {
-                var expectedStagedValues = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.ExternalReferenceIndex).Fields.Count(field => field.IsConstructorParameter);
+                var expectedStagedValues = module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal).ElementAt((int)instruction.BindId).Fields.Count(field => field.IsConstructorParameter);
                 if (expectedStagedValues != stagedCount)
                 {
                     throw InvalidBytecode($"instruction @{address.ToString("0000", System.Globalization.CultureInfo.InvariantCulture)} {instruction.OpCode} expects {expectedStagedValues} staged value(s), but {stagedCount} value(s) were staged.");
@@ -635,13 +635,13 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateRecord:
-                ValidateIndex(module.TypeDefinitions.Count, instruction.ExternalReferenceIndex, $"{context} record constructor reference");
+                ValidateIndex(module.TypeDefinitions.Count, instruction.BindId, $"{context} record constructor reference");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateExternalType:
-                ValidateIndex(module.ExternalTypeConstructorReferences.Count, instruction.ExternalReferenceIndex, $"{context} external type constructor reference");
+                ValidateIndex(module.ExternalTypeConstructorReferences.Count, instruction.BindId, $"{context} external type constructor reference");
                 ValidateStringListIndex(module, instruction.ListIndex, $"{context} argument names");
-                ValidateExternalTypeConstructorArgumentNames(module, instruction.ExternalReferenceIndex, instruction.ListIndex, $"{context} argument names");
+                ValidateExternalTypeConstructorArgumentNames(module, instruction.BindId, instruction.ListIndex, $"{context} argument names");
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateVector:
@@ -673,9 +673,9 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.CallExternal:
-                ValidateIndex(module.ExternalReferences.Count, instruction.ExternalReferenceIndex, $"{context} external reference");
+                ValidateIndex(module.ExternalReferences.Count, instruction.BindId, $"{context} external reference");
                 ValidateSlotListIndex(module, instruction.ListIndex, $"{context} argument slots");
-                ValidateExternalReferenceArgumentSlots(module, instruction.ExternalReferenceIndex, instruction.ListIndex, $"{context} argument slots");
+                ValidateExternalReferenceArgumentSlots(module, instruction.BindId, instruction.ListIndex, $"{context} argument slots");
                 break;
 
             case GameEventScriptBytecodeOpCode.Call:

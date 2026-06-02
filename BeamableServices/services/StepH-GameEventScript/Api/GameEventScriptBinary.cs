@@ -183,7 +183,7 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(4)] public ushort XSlot;
     [FieldOffset(4)] public ushort StringIndex;
     [FieldOffset(4)] public ushort SecondaryListIndex;
-    [FieldOffset(4)] public ushort ExternalReferenceIndex;
+    [FieldOffset(4)] public ushort BindId;
     [FieldOffset(4)] public ushort Index;
     [FieldOffset(4)] public short Count;
 

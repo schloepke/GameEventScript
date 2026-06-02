@@ -416,11 +416,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateRecord:
-                AppendRecordConstructorReference(builder, "record", module, instruction.ExternalReferenceIndex);
+                AppendRecordConstructorReference(builder, "record", module, instruction.BindId);
                 break;
 
             case GameEventScriptBytecodeOpCode.CreateExternalType:
-                AppendExternalTypeConstructorReference(builder, "externalType", module, instruction.ExternalReferenceIndex);
+                AppendExternalTypeConstructorReference(builder, "externalType", module, instruction.BindId);
                 AppendStringListPoolIndex(builder, "names", module, instruction.ListIndex);
                 break;
 
@@ -449,7 +449,7 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.CallExternal:
-                AppendIndex(builder, "external", instruction.ExternalReferenceIndex);
+                AppendIndex(builder, "external", instruction.BindId);
                 AppendSlotListPoolIndex(builder, "args", module, instruction.ListIndex);
                 break;
 

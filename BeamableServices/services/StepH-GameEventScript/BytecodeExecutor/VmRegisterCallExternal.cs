@@ -13,10 +13,10 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterCallExternal
 {
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, bool isPredicate)
+    internal static void VmCallStandard(ref this VmValue dst, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
     {
         var state = dst.OwningState;
-        var shape = state.FetchUInt16SliceTableByPointer(extensionShape);
+        var shape = state.FetchUInt16SliceTableByPointer(extensionShapeIndex);
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (shape.Length < 2 || argumentSlots.Length != shape.Length - 2)
         {
@@ -66,29 +66,26 @@ internal static class VmRegisterCallExternal
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCallExternal(ref this VmValue dst, ushort extensionShape, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
+    internal static void VmCallExternal(ref this VmValue dst, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
         var state = dst.OwningState;
-        var externalReferenceIndex = 0;
         var found = false;
         GameEventScriptBinaryBindEntry bind = default;
         foreach (var entry in state.Binary.BindTable.Entries)
         {
             if (entry.Kind != GameEventScriptBinaryBindKind.ExtensionCall) continue;
-            if (externalReferenceIndex == extensionShape)
+            if (entry.Id == externalBindId)
             {
                 bind = entry;
                 found = true;
                 break;
             }
-
-            externalReferenceIndex++;
         }
 
         if (!found)
         {
             dst.SetNothing();
-            state.RaiseError($"External extension reference slot '{extensionShape}' was not found.");
+            state.RaiseError($"External extension bind id '{externalBindId}' was not found.");
             return;
         }
 
@@ -121,7 +118,7 @@ internal static class VmRegisterCallExternal
         if (!session.ExtensionRegistry.TryResolve(reference, out var function))
         {
             dst.SetNothing();
-            state.RaiseError($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to reference slot '{extensionShape}'.");
+            state.RaiseError($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{externalBindId}'.");
             return;
         }
 

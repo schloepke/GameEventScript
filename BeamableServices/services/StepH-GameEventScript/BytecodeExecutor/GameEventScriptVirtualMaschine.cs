@@ -102,7 +102,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmCallStandard(instruction.SecondaryListIndex, instruction.ListIndex, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
                         case CallExternal:
-                            vmState.Register(instruction.DestinationSlot).VmCallExternal(instruction.SecondaryListIndex, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.Register(instruction.DestinationSlot).VmCallExternal(instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
 
                         case ReturnVoid:
@@ -282,10 +282,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                             break;
                         case CreateRecord:
-                            vmState.CallRecordConstructor(instruction.ExternalReferenceIndex, instruction.DestinationSlot);
+                            vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationSlot);
                             break;
                         case CreateExternalType:
-                            vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.ExternalReferenceIndex, instruction.ListIndex);
+                            vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.BindId, instruction.ListIndex);
                             vmState.ClearStage();
                             break;
 

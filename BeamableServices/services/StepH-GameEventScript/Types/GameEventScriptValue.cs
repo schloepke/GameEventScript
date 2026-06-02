@@ -559,7 +559,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
         return value.Kind switch
         {
-            GameEventScriptValueKind.Text => value.AsText(),
+            GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag => value.AsText(),
                 GameEventScriptValueKind.Number => value.ToString(),
                 GameEventScriptValueKind.Boolean => value.AsBoolean().ToString(),
                 _ => value.ToString()

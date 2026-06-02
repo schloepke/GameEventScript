@@ -40,10 +40,12 @@ public sealed class GameEventScriptTextValue : GameEventScriptValue
         => Value.Contains(ToComparableText(needle), System.StringComparison.Ordinal);
 
     public override bool StartsWith(GameEventScriptValue prefix)
-        => prefix.Kind == GameEventScriptValueKind.Text && Value.StartsWith(prefix.AsText(), System.StringComparison.Ordinal);
+        => prefix.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+           Value.StartsWith(prefix.AsText(), System.StringComparison.Ordinal);
 
     public override bool EndsWith(GameEventScriptValue suffix)
-        => suffix.Kind == GameEventScriptValueKind.Text && Value.EndsWith(suffix.AsText(), System.StringComparison.Ordinal);
+        => suffix.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+           Value.EndsWith(suffix.AsText(), System.StringComparison.Ordinal);
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {

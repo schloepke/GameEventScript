@@ -175,9 +175,13 @@ public static class GameEventScriptBinaryExtensions
             builder
                 .AddStringPoolElement(handler.Message, out var messageIndex)
                 .AddStringPoolElements(handler.SignatureLabels, out var argumentIndexes)
+                .AddStringPoolElements(handler.RequiredTags, out var requiredTagIndexes)
+                .AddStringPoolElements(handler.ExcludedTags, out var excludedTagIndexes)
                 .AddBind(new GameEventScriptBinaryBindEntry(handlerKind, messageIndex, argumentIndexes,
                     handler.EntryAddress < 0 ? throw new InvalidOperationException("GameEventScriptBinary exports require non-negative entry addresses.") : checked((ushort)handler.EntryAddress),
-                    checked((ushort)handlerId++)));
+                    checked((ushort)handlerId++),
+                    requiredTagIndexes,
+                    excludedTagIndexes));
         }
 
         var callableId = 0;

@@ -40,7 +40,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
             let signature = GameEventScriptMessageSignature.Create(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve))
             let matchArguments = bind.Kind == MessageHandler
             select new GameEventScriptMessageHandlerDescriptor(signature,
-                (msg, session) => Invoke(msg, matchArguments, bind.EntryAddress, session), [], [], matchArguments)).ToList();
+                (msg, session) => Invoke(msg, matchArguments, bind.EntryAddress, session),
+                bind.RequiredTags.Select(binary.TextConstantTable.Resolve).ToArray(),
+                bind.ExcludedTags.Select(binary.TextConstantTable.Resolve).ToArray(),
+                matchArguments)).ToList();
     }
 
     private IGameEventScriptMessageInvocation Invoke(GameEventScriptMessage message, bool matchArguments, ushort entryAddress, GameEventScriptSession session)

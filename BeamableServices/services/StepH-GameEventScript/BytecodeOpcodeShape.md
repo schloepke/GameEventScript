@@ -328,9 +328,9 @@ operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0x90 | `Length` | - | result slot | `XSlot`=operand | - | - | Length operation. |
-| 0x91 | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text operation. |
-| 0x92 | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text operation. |
+| 0x90 | `Length` | - | result slot | `XSlot`=operand | - | - | Length operation. Text and tags use raw text length. |
+| 0x91 | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag boundary operation. |
+| 0x92 | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag boundary operation. |
 | 0x93 | `Contains` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection/text membership operation. |
 | 0x94 | `ContainsValue` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection value membership operation. |
 | 0x95 | `Union` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |

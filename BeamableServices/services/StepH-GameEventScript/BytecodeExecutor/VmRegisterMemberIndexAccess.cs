@@ -40,6 +40,11 @@ internal static class VmRegisterMemberIndexAccess
                         }
                         dst.SetMap(dst.OwningState.CreateMap(entries));
                         return;
+                    case "tags":
+                        var tagList = dst.OwningState.CreateList(message.Tags.Count);
+                        for(var i = 0; i < tagList.Length; i++) tagList.Items[i].SetTag(message.Tags[i]);
+                        dst.SetList(tagList);
+                        return;
                     case "signatureId":
                         dst.SetText(message.SignatureId);
                         return;

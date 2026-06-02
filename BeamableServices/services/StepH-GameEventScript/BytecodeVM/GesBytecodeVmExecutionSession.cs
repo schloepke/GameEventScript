@@ -5162,7 +5162,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return operand.Kind switch
         {
-            GameEventScriptValueKind.Text => GesInteger(operand.AsText().Length),
+            GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag => GesInteger(operand.AsText().Length),
             GameEventScriptValueKind.Range => EvaluateRangeLength(operand),
             GameEventScriptValueKind.List => GesInteger(operand.AsList().Count),
             GameEventScriptValueKind.Map => GesInteger(operand.AsMap().Count),

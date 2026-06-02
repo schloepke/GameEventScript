@@ -43,7 +43,8 @@
                   "value": "2"
                 },
                 "tagValue": {
-                  "type": ":nothing"
+                  "type": ":integer",
+                  "value": "2"
                 },
                 "vectorValue": {
                   "type": ":nothing"
@@ -586,7 +587,7 @@
                 },
                 "tagValue": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "vectorValue": {
                   "type": ":boolean",
@@ -662,7 +663,7 @@
                 },
                 "tagValue": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "vectorValue": {
                   "type": ":boolean",
@@ -738,7 +739,7 @@
                 },
                 "tagValue": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "vectorValue": {
                   "type": ":boolean",

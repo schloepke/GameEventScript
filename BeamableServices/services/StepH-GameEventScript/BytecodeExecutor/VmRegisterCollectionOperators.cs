@@ -13,10 +13,10 @@ internal static class VmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Text when a.IsStoragePointer:
+            case Text or Tag when a.IsStoragePointer:
                 dst.SetInteger(textTable.Resolve((ushort)a.IntegerValue).Length);
                 break;
-            case Text when a is { IsStorageObject: true, ObjectValue: string text }:
+            case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
                 dst.SetInteger(text.Length);
                 break;
             case List or Map or Dice or GameEventScriptBytecodeTypeKind.Range:
@@ -36,20 +36,17 @@ internal static class VmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Text when a.IsStoragePointer && b.Kind is Text && b.IsStoragePointer:
-                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).StartsWith(textTable.Resolve((ushort)b.IntegerValue)));
+            case Text or Tag when b.Kind is Text or Tag:
+                dst.SetBoolean(a.ReadTextOrTag().StartsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
                 break;
-            case Text when a.IsStoragePointer && b.Kind is Text && b is { IsStorageObject: true, ObjectValue: string startsWith }:
-                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).StartsWith(startsWith));
-                break;
-            case Text when a is { IsStorageObject: true, ObjectValue: string text } && b.Kind is Text && b.IsStoragePointer:
-                dst.SetBoolean(text.StartsWith(textTable.Resolve((ushort)b.IntegerValue)));
-                break;
-            case Text when a is { IsStorageObject: true, ObjectValue: string text } && b.Kind is Text && b is { IsStorageObject: true, ObjectValue: string startsWith }:
-                dst.SetBoolean(text.StartsWith(startsWith));
-                break;
-            case List or Dice or GameEventScriptBytecodeTypeKind.Range:
+            case List or Dice:
                 dst.SetBoolean(false);
+                break;
+            case GameEventScriptBytecodeTypeKind.Range:
+                dst.SetNothing();
+                break;
+            case Nothing:
+                dst.SetNothing();
                 break;
             default:
                 dst.SetBoolean(false);
@@ -62,17 +59,8 @@ internal static class VmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Text when a.IsStoragePointer && b.Kind is Text && b.IsStoragePointer:
-                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).EndsWith(textTable.Resolve((ushort)b.IntegerValue)));
-                break;
-            case Text when a.IsStoragePointer && b.Kind is Text && b is { IsStorageObject: true, ObjectValue: string startsWith }:
-                dst.SetBoolean(textTable.Resolve((ushort)a.IntegerValue).EndsWith(startsWith));
-                break;
-            case Text when a is { IsStorageObject: true, ObjectValue: string text } && b.Kind is Text && b.IsStoragePointer:
-                dst.SetBoolean(text.EndsWith(textTable.Resolve((ushort)b.IntegerValue)));
-                break;
-            case Text when a is { IsStorageObject: true, ObjectValue: string text } && b.Kind is Text && b is { IsStorageObject: true, ObjectValue: string startsWith }:
-                dst.SetBoolean(text.EndsWith(startsWith));
+            case Text or Tag when b.Kind is Text or Tag:
+                dst.SetBoolean(a.ReadTextOrTag().EndsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
                 break;
             case List or Dice or GameEventScriptBytecodeTypeKind.Range:
                 dst.SetBoolean(false);
@@ -86,6 +74,11 @@ internal static class VmRegisterCollectionOperators
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContains(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
+        if (a.Kind is Text or Tag && b.Kind is Text or Tag)
+        {
+            dst.SetBoolean(b.ReadTextOrTag().Contains(a.ReadTextOrTag(), StringComparison.Ordinal));
+            return;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

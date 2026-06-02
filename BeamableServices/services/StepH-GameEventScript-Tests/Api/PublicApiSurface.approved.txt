@@ -20,9 +20,11 @@ struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry> Entries { get }
   property System.UInt16 EntryCount { get }
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry
-  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id)
+  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id, System.Collections.Generic.IReadOnlyList<System.UInt16> requiredTags, System.Collections.Generic.IReadOnlyList<System.UInt16> excludedTags)
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
   property System.Collections.Generic.IReadOnlyList<System.UInt16> ArgumentNames { get }
+  property System.Collections.Generic.IReadOnlyList<System.UInt16> ExcludedTags { get }
+  property System.Collections.Generic.IReadOnlyList<System.UInt16> RequiredTags { get }
   property System.UInt16 EntryAddress { get }
   property System.UInt16 Id { get }
   property System.UInt16 Name { get }
@@ -122,12 +124,12 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.Int64 I64
   field System.UInt16 AU
   field System.UInt16 BU
+  field System.UInt16 BindId
   field System.UInt16 CU
   field System.UInt16 ConditionSlot
   field System.UInt16 DU
   field System.UInt16 DestinationSlot
   field System.UInt16 EntryAddress
-  field System.UInt16 ExternalReferenceIndex
   field System.UInt16 Index
   field System.UInt16 ListIndex
   field System.UInt16 MessageDestination

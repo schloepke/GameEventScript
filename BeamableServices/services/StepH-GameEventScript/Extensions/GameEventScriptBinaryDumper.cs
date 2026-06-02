@@ -151,6 +151,22 @@ public static class GameEventScriptBinaryDumper
                 builder.Append(" entry=").Append(context.CodeLabel(entry.EntryAddress));
             }
 
+            if (entry.RequiredTags.Count > 0)
+            {
+                builder
+                    .Append(" requiredTags=[")
+                    .Append(string.Join(", ", entry.RequiredTags.Select(value => context.TextLabel(value))))
+                    .Append(']');
+            }
+
+            if (entry.ExcludedTags.Count > 0)
+            {
+                builder
+                    .Append(" excludedTags=[")
+                    .Append(string.Join(", ", entry.ExcludedTags.Select(value => context.TextLabel(value))))
+                    .Append(']');
+            }
+
             builder
                 .Append(" // ")
                 .AppendLine(FormatBindSignatureComment(context, entry));
@@ -451,9 +467,28 @@ public static class GameEventScriptBinaryDumper
     private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
     {
         var name = Escape(context.ResolveText(entry.Name));
-        return entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler
+        var signature = entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler
             ? "\"" + name + " as message\""
             : "\"" + name + "(" + Escape(string.Join(", ", entry.ArgumentNames.Select(context.ResolveText))) + ")\"";
+        if (entry.RequiredTags.Count == 0 && entry.ExcludedTags.Count == 0)
+        {
+            return signature;
+        }
+
+        var builder = new StringBuilder(signature[..^1]);
+        if (entry.RequiredTags.Count > 0)
+        {
+            builder.Append(" matching ")
+                .Append(string.Join(", ", entry.RequiredTags.Select(tag => ":" + Escape(context.ResolveText(tag)))));
+        }
+
+        if (entry.ExcludedTags.Count > 0)
+        {
+            builder.Append(" without ")
+                .Append(string.Join(", ", entry.ExcludedTags.Select(tag => ":" + Escape(context.ResolveText(tag)))));
+        }
+
+        return builder.Append('"').ToString();
     }
 
     private static void AddCodeEntryComment(List<string> comments, DisassemblyContext context, ushort address)

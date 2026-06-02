@@ -634,6 +634,11 @@ Required operations:
   `Abs`, and `LogN`
 - `Clamp`
 
+Text and tag values are text-compatible for `Length`, `Contains`, `StartsWith`,
+and `EndsWith`: comparisons use raw text without the `:` tag prefix, using
+ordinal comparison, and `Length` counts raw text characters. Other operand
+shapes follow their collection or invalid-operation semantics.
+
 `Add` is primarily numeric, but has a collection fallback for single-value
 insertion. `List + any` appends exactly one value and `any + List` prepends
 exactly one value, so `List + List` nests the right list as one item. Dice values

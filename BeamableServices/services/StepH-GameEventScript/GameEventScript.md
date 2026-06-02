@@ -336,6 +336,8 @@ value has value
 :max of a and b and c
 ```
 
+`:len` counts text and tag characters by raw text, so `:len :active` is `6`.
+
 `:keys`, `:values`, and `:entries` are defined only for maps and
 map-backed custom type values. `:keys` returns a list of tag keys, `:values`
 returns the corresponding values, and `:entries` returns maps with `key` and
@@ -527,8 +529,10 @@ let name be 'Scout'
 let state be :active
 ```
 
-Tags are not empty. Tags and text can be used as map keys and member lookup
-selectors.
+Tags are not empty. Tags are text-like symbolic values: they use the same raw
+text as quoted text values, but are written without quotes and must follow the
+tag naming rules. Text and tags can be used interchangeably for map keys, member
+lookup selectors, text containment, and text boundary operations.
 
 ### Vector and Point
 
@@ -733,6 +737,8 @@ items[:contains all required]
 
 text starts with 'A'
 text ends with 'Z'
+:active starts with 'act'
+'active' ends with :ive
 ```
 
 ### Slice, Shuffle, Draw, and Choose

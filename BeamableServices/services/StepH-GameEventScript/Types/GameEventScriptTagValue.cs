@@ -96,6 +96,17 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
 
     public override IEnumerable<GameEventScriptValue> AsEnumerable() => AsList();
 
+    public override bool Contains(GameEventScriptValue needle)
+        => Value.Contains(ToComparableText(needle), StringComparison.Ordinal);
+
+    public override bool StartsWith(GameEventScriptValue prefix)
+        => prefix.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+           Value.StartsWith(prefix.AsText(), StringComparison.Ordinal);
+
+    public override bool EndsWith(GameEventScriptValue suffix)
+        => suffix.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+           Value.EndsWith(suffix.AsText(), StringComparison.Ordinal);
+
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
         if (string.Equals(Value, "infinity", StringComparison.Ordinal))

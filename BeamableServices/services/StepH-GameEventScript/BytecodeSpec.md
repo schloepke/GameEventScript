@@ -622,7 +622,7 @@ Required operations:
 
 - `Add`, `Subtract`, `Multiply`, `Divide`
 - `Power`, `IntegerDivide`, `Modulo`, `Remainder`
-- `Equal`, `NotEqual`, `ApproxEqual`
+- `Equal`, `NotEqual`
 - `Less`, `Greater`, `LessOrEqual`, `GreaterOrEqual`
 - `And`, `Or`, `Xor`, `Implies`
 - `Default`
@@ -705,7 +705,7 @@ There are no `Combine` or `Except` opcodes in portable bytecode. Source tags
 `:combine`, `:merge`, `:except`, and `:intersect` are ordinary tags, not
 collection operators.
 
-`Equal`, `NotEqual`, and `ApproxEqual` preserve the same absent-value rule as
+`Equal` and `NotEqual` preserve the same absent-value rule as
 other Group 2 operations: if either direct operand is `Nothing`, or an internal
 numeric `NaN` observed as `Nothing`, the result register receives `Nothing`.
 For present operands, `Equal` first tries numeric comparison. Integers, floats,
@@ -714,6 +714,9 @@ value when both operands have a numeric view. Quantity units must both be absent
 or exactly equal; integer fast paths must obey the same unit equality rule, so
 `10 = 10m` is `false` and `10 <> 10m` is `true`. Numeric infinities compare
 equal only when they have the same sign; numeric `NaN` values are never equal.
+When either numeric side is represented as a double precision value, finite
+values compare equal when their IEEE 754 values are within two ULPs. There is no
+separate approximate-equality opcode or source operator.
 `NotEqual` is the boolean negation of `Equal` after this `Nothing` propagation.
 
 When numeric comparison does not apply, exact equality requires the same value
@@ -736,10 +739,6 @@ kind and uses kind-specific value equality:
 | `Handler` | Same handler signature id. |
 | `List` | Same length and ordered recursively equal items. |
 | `Map`/record/custom map-like | Same visible key set and recursively equal values; hidden fields do not participate. |
-
-`ApproxEqual` uses the numeric view for numeric-capable operands and
-component-wise approximate comparison for vectors and points with the same kind
-and unit. Other present operand combinations write boolean `false`.
 
 Numeric operations must preserve the language distinction between absent input
 and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and

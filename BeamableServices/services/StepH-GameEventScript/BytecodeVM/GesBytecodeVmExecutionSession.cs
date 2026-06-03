@@ -1089,7 +1089,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Implies:
             case GameEventScriptBytecodeOpCode.Equal:
             case GameEventScriptBytecodeOpCode.NotEqual:
-            case GameEventScriptBytecodeOpCode.ApproxEqual:
             case GameEventScriptBytecodeOpCode.Less:
             case GameEventScriptBytecodeOpCode.Greater:
             case GameEventScriptBytecodeOpCode.LessOrEqual:
@@ -4464,8 +4463,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return BytecodeVmValue.Boolean(BytecodeVmValue.AreEqual(left, right));
             case GameEventScriptBytecodeOpCode.NotEqual:
                 return BytecodeVmValue.Boolean(!BytecodeVmValue.AreEqual(left, right));
-            case GameEventScriptBytecodeOpCode.ApproxEqual:
-                return BytecodeVmValue.Boolean(BytecodeVmValue.AreApproximatelyEqual(left, right));
             case GameEventScriptBytecodeOpCode.Less:
                 return BytecodeVmValue.Boolean(BytecodeVmValue.TryCompareNumeric(left, right, out var lessComparison) && lessComparison < 0);
             case GameEventScriptBytecodeOpCode.Greater:
@@ -4517,7 +4514,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Power or
             GameEventScriptBytecodeOpCode.Equal or
             GameEventScriptBytecodeOpCode.NotEqual or
-            GameEventScriptBytecodeOpCode.ApproxEqual or
             GameEventScriptBytecodeOpCode.Less or
             GameEventScriptBytecodeOpCode.Greater or
             GameEventScriptBytecodeOpCode.LessOrEqual or
@@ -4928,7 +4924,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             "=" or "==" => BytecodeVmValue.Boolean(GesValueOperations.AreEqual(left, right)),
             "<>" => BytecodeVmValue.Boolean(!GesValueOperations.AreEqual(left, right)),
-            "=~" => BytecodeVmValue.Boolean(GesValueOperations.AreApproximatelyEqual(left, right)),
             "in" => BytecodeVmValue.Boolean(right.Contains(left)),
             "value in" => BytecodeVmValue.Boolean(right.ContainsValue(left)),
             "starts with" => BytecodeVmValue.Boolean(left.StartsWith(right)),
@@ -4964,7 +4959,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Power => "^",
             GameEventScriptBytecodeOpCode.Equal => "=",
             GameEventScriptBytecodeOpCode.NotEqual => "<>",
-            GameEventScriptBytecodeOpCode.ApproxEqual => "=~",
             GameEventScriptBytecodeOpCode.Less => "<",
             GameEventScriptBytecodeOpCode.Greater => ">",
             GameEventScriptBytecodeOpCode.LessOrEqual => "<=",
@@ -7270,14 +7264,21 @@ internal readonly record struct BytecodeVmValue(
                 return leftNumber.Kind == rightNumber.Kind;
             }
 
-            return leftNumber.Value == rightNumber.Value;
+            return AreEqualWithinTwoUlps(leftNumber.Value, rightNumber.Value);
         }
 
         return left.ToGameEventScriptValue().Equals(right.ToGameEventScriptValue());
     }
 
-    public static bool AreApproximatelyEqual(in BytecodeVmValue left, in BytecodeVmValue right)
-        => GesValueOperations.AreApproximatelyEqual(left.ToGameEventScriptValue(), right.ToGameEventScriptValue());
+    private static bool AreEqualWithinTwoUlps(double left, double right)
+    {
+        var leftBits = BitConverter.DoubleToInt64Bits(left);
+        var rightBits = BitConverter.DoubleToInt64Bits(right);
+        if (leftBits == rightBits) return true;
+        if (leftBits < 0) leftBits = long.MinValue - leftBits;
+        if (rightBits < 0) rightBits = long.MinValue - rightBits;
+        return (leftBits > rightBits ? (ulong)(leftBits - rightBits) : (ulong)(rightBits - leftBits)) <= 2;
+    }
 
     public static int CompareNumeric(in BytecodeVmValue left, in BytecodeVmValue right)
     {

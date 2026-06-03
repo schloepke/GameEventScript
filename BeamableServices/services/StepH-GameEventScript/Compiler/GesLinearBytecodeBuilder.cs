@@ -2979,7 +2979,6 @@ internal sealed class GesLinearBytecodeBuilder
             GameEventScriptBytecodeOpCode.Power or
             GameEventScriptBytecodeOpCode.Equal or
             GameEventScriptBytecodeOpCode.NotEqual or
-            GameEventScriptBytecodeOpCode.ApproxEqual or
             GameEventScriptBytecodeOpCode.Less or
             GameEventScriptBytecodeOpCode.Greater or
             GameEventScriptBytecodeOpCode.LessOrEqual or
@@ -3085,7 +3084,6 @@ internal sealed class GesLinearBytecodeBuilder
             GesBinaryOperator.Implies => GameEventScriptBytecodeOpCode.Implies,
             GesBinaryOperator.Equal => GameEventScriptBytecodeOpCode.Equal,
             GesBinaryOperator.NotEqual => GameEventScriptBytecodeOpCode.NotEqual,
-            GesBinaryOperator.ApproxEqual => GameEventScriptBytecodeOpCode.ApproxEqual,
             GesBinaryOperator.Less => GameEventScriptBytecodeOpCode.Less,
             GesBinaryOperator.Greater => GameEventScriptBytecodeOpCode.Greater,
             GesBinaryOperator.LessOrEqual => GameEventScriptBytecodeOpCode.LessOrEqual,

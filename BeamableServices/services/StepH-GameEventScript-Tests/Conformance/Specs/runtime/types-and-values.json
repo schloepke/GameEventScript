@@ -2792,8 +2792,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "approximate equality operators",
-      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, approxAscii: near =~ target, approxAlmost: near ≈ target, approxCongruent: near ≅ target, far: 0.1 =~ 0.2, tagExact: :nan = :nan, tagApprox: :nan =~ :nan, unitApprox: 1.0000000001m =~ 1m, unitMismatch: 1m =~ 1s)\n}",
+      "name": "floating point equality uses ulp tolerance",
+      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, far: 0.1 = 0.2, tagExact: :nan = :nan, unitNear: 0.1m + 0.2m = 0.3m, unitMismatch: 1m = 1s)\n}",
       "steps": [
         {
           "input": {
@@ -2806,25 +2806,13 @@
               "args": {
                 "exact": {
                   "type": ":boolean",
-                  "value": false
-                },
-                "approxAscii": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "approxAlmost": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "approxCongruent": {
-                  "type": ":boolean",
                   "value": true
                 },
                 "far": {
                   "type": ":boolean",
                   "value": false
                 },
-                "unitApprox": {
+                "unitNear": {
                   "type": ":boolean",
                   "value": true
                 },
@@ -2835,10 +2823,6 @@
                 "tagExact": {
                   "type": ":boolean",
                   "value": true
-                },
-                "tagApprox": {
-                  "type": ":boolean",
-                  "value": false
                 }
               }
             }

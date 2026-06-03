@@ -914,13 +914,12 @@ internal sealed class GesParser
     {
         var expression = ParseMembershipExpression();
 
-        while (Match(OperatorEqual, OperatorNotEqual, OperatorApproxEqual))
+        while (Match(OperatorEqual, OperatorNotEqual))
         {
             var op = Previous.Kind switch
             {
                 OperatorEqual => GesBinaryOperator.Equal,
-                OperatorNotEqual => GesBinaryOperator.NotEqual,
-                _ => GesBinaryOperator.ApproxEqual
+                _ => GesBinaryOperator.NotEqual
             };
             SkipNewLines();
             var right = ParseMembershipExpression();

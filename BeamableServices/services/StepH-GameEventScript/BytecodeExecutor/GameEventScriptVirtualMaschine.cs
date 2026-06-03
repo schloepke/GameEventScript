@@ -332,9 +332,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case NotEqual:
                             vmState.Register(instruction.DestinationSlot).VmNotEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
-                        case ApproxEqual:
-                            vmState.Register(instruction.DestinationSlot).VmApproxEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
-                            break;
                         case Less:
                             vmState.Register(instruction.DestinationSlot).VmLess(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;

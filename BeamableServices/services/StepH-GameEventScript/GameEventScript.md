@@ -248,7 +248,7 @@ From high to low precedence:
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
 7. Type and predicate operations: `is`, `is not`, `as`
 8. Membership and text boundaries: `in`, `∈`, `∉`, `value in`, `starts with`, `ends with`
-9. Equality: `=`, `<>`, `≠`, `=~`, `≈`, `≅`
+9. Equality: `=`, `<>`, `≠`
 10. `and`, `xor`, `or`
 11. `:default`
 12. Implication: `->`, `→`, `⇒`
@@ -422,8 +422,9 @@ record :unit as {
 
 `:number` is the source-level numeric type. Runtime values are represented as
 integer when a finite result is exactly integral and fits signed 64-bit;
-otherwise they are represented as IEEE 754 double precision. Equality uses
-normal IEEE equality; approximate equality uses `=~`, `≈`, or `≅`.
+otherwise they are represented as IEEE 754 double precision. Equality uses a
+strict numeric comparison for integer-only values and a two-ULP tolerant
+comparison wherever double precision values participate.
 
 Numeric operations distinguish absence from invalid mathematics. If any operand
 of a numeric operation is `nothing`, the result is `nothing`. When all operands
@@ -476,8 +477,7 @@ using the dice sum.
 
 ### Equality
 
-Equality operators are `=` and `<>`/`≠`. Approximate equality is `=~`, `≈`, or
-`≅`. If either operand is `nothing`, or an invalid numeric result that is
+Equality operators are `=` and `<>`/`≠`. If either operand is `nothing`, or an invalid numeric result that is
 observed as `nothing`, the equality result is `nothing`; `nothing = nothing`
 therefore produces `nothing`, not `true`.
 
@@ -488,6 +488,11 @@ numeric operators. Numeric values, percentages, booleans (`false` = `0`,
 operands have a numeric view. Quantity units must match exactly; unitless and
 unit-bearing values are not equal, including integer fast paths such as
 `10 = 10m`, which is `false`. Internal `NaN` numeric values are never equal.
+When either numeric side is represented as double precision, finite values
+compare equal when their IEEE 754 values are within two ULPs. This handles
+binary floating-point artifacts such as `0.1 + 0.2 = 0.3` without adding a
+separate approximate-equality operator. Infinities compare equal only when they
+have the same sign.
 Text is not numeric for equality, so `'10.3' = 10.3` is false while
 `('10.3' as :number) = 10.3` is true.
 
@@ -499,10 +504,6 @@ compare signature id, lists compare ordered items, dice compare ordered rolls,
 and maps/records/custom map-like values compare their visible key/value pairs.
 Hidden map fields such as record type markers do not participate in map
 equality.
-
-Approximate equality uses the numeric view for numeric-capable operands and
-component-wise approximate comparison for vectors and points with the same kind
-and unit. Other present operand combinations are not approximately equal.
 
 `:abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their

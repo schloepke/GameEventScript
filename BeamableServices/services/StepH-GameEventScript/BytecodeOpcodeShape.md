@@ -285,15 +285,15 @@ as integer values when they fit signed 64-bit.
 Percentage multiplication with a non-percentage scalar or quantity treats the
 percentage as its stored ratio and writes a numeric result in the other
 operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
-`Equal`, `NotEqual`, and `ApproxEqual` propagate `Nothing` when either operand
+`Equal` and `NotEqual` propagate `Nothing` when either operand
 is absent. Exact equality first compares the numeric view for numeric-capable
 operands (numbers, percentages, booleans, dice sums, and numeric tag
 constants), requiring identical quantity units or no unit on both operands; this
 also applies to integer fast paths. If numeric comparison does not apply, exact
 equality requires the same value kind and kind-specific structural equality.
-Approximate equality is defined for numeric-capable operands and for
-component-wise vector/point comparison with the same kind and unit; other
-present operand shapes write boolean `false`.
+When either numeric side is represented as double precision, finite values
+compare equal when their IEEE 754 values are within two ULPs. There is no
+separate approximate-equality opcode.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -304,34 +304,33 @@ present operand shapes write boolean `false`.
 | 0x54 | `Not` | - | result slot | `XSlot`=operand | - | - | Logical negation. |
 | 0x55 | `Equal` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
 | 0x56 | `NotEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x57 | `ApproxEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Approximate equality. |
-| 0x58 | `Less` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x59 | `Greater` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5A | `LessOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5B | `GreaterOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
-| 0x5C | `Add` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x5D | `Subtract` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x5E | `Multiply` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x5F | `Divide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x60 | `Power` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
-| 0x61 | `IntegerDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Floor-like integer division operation. |
-| 0x62 | `Modulo` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric modulo operation. |
-| 0x63 | `Remainder` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric remainder operation. |
-| 0x64 | `Min` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
-| 0x65 | `Max` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
-| 0x66 | `Negate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |
-| 0x67 | `Abs` | - | result slot | `XSlot`=operand | - | - | Absolute value. |
-| 0x68 | `LogN` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
-| 0x69 | `Chance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
-| 0x6A | `Clamp` | - | result slot | `XSlot`=value | `YSlot`=minimum | `AU`=maximum slot | The only opcode with three direct source slots. |
-| 0x6B | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a random value from the requested range using the current random scope. |
-| 0x6C | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
-| 0x6D | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
-| 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
-| 0x6F | `SeriesTerm` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a mathematical series term. |
-| 0x70 | `SeriesTake` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a mathematical series or list-like source. |
-| 0x71 | `SeriesDrop` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a mathematical series or list-like source. |
-| 0x72..0x8F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
+| 0x57 | `Less` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x58 | `Greater` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x59 | `LessOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x5A | `GreaterOrEqual` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary comparison. |
+| 0x5B | `Add` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5C | `Subtract` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5D | `Multiply` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5E | `Divide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x5F | `Power` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary numeric operation. |
+| 0x60 | `IntegerDivide` | - | result slot | `XSlot`=left | `YSlot`=right | - | Floor-like integer division operation. |
+| 0x61 | `Modulo` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric modulo operation. |
+| 0x62 | `Remainder` | - | result slot | `XSlot`=left | `YSlot`=right | - | Numeric remainder operation. |
+| 0x63 | `Min` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
+| 0x64 | `Max` | - | result slot | `XSlot`=left | `YSlot`=right | - | Binary extrema reduce step. |
+| 0x65 | `Negate` | - | result slot | `XSlot`=operand | - | - | Numeric negation. |
+| 0x66 | `Abs` | - | result slot | `XSlot`=operand | - | - | Absolute value. |
+| 0x67 | `LogN` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
+| 0x68 | `Chance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
+| 0x69 | `Clamp` | - | result slot | `XSlot`=value | `YSlot`=minimum | `AU`=maximum slot | The only opcode with three direct source slots. |
+| 0x6A | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a random value from the requested range using the current random scope. |
+| 0x6B | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
+| 0x6C | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
+| 0x6D | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
+| 0x6E | `SeriesTerm` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a mathematical series term. |
+| 0x6F | `SeriesTake` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a mathematical series or list-like source. |
+| 0x70 | `SeriesDrop` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a mathematical series or list-like source. |
+| 0x71..0x8F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
 
 ### Group 3 - Text, Collections, Streams
 

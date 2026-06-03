@@ -172,7 +172,6 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.Not => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.Equal => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.NotEqual => [TargetRegister, LeftRegister, RightRegister],
-            GameEventScriptBytecodeOpCode.ApproxEqual => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.Less => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.Greater => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.LessOrEqual => [TargetRegister, LeftRegister, RightRegister],

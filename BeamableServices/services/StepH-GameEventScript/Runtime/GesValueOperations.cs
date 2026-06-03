@@ -9,8 +9,6 @@ namespace StepH.GameEventScript.Runtime;
 
 internal static class GesValueOperations
 {
-    private const double ApproximateEqualityTolerance = 1e-9d;
-
     internal enum NumericKind
     {
         Finite,
@@ -472,73 +470,20 @@ internal static class GesValueOperations
                 return leftNumeric.Kind == rightNumeric.Kind;
             }
 
-            return leftNumeric.Value == rightNumeric.Value;
+            return AreEqualWithinTwoUlps(leftNumeric.Value, rightNumeric.Value);
         }
 
         return left.Equals(right);
     }
 
-    public static bool AreApproximatelyEqual(GameEventScriptValue left, GameEventScriptValue right)
+    private static bool AreEqualWithinTwoUlps(double left, double right)
     {
-        if (!HaveCompatibleNumericUnits(left, right))
-        {
-            return false;
-        }
-
-        if (TryCoerceNumericForOperation(left, out var leftNumeric) &&
-            TryCoerceNumericForOperation(right, out var rightNumeric))
-        {
-            return AreApproximatelyEqual(leftNumeric, rightNumeric);
-        }
-
-        if (left is GameEventScriptVectorValue leftVector && right is GameEventScriptVectorValue rightVector)
-        {
-            return leftVector.Unit == rightVector.Unit &&
-                   AreApproximatelyEqual(leftVector.X, rightVector.X) &&
-                   AreApproximatelyEqual(leftVector.Y, rightVector.Y) &&
-                   AreApproximatelyEqual(leftVector.Z, rightVector.Z);
-        }
-
-        if (left is GameEventScriptPointValue leftPoint && right is GameEventScriptPointValue rightPoint)
-        {
-            return leftPoint.Unit == rightPoint.Unit &&
-                   AreApproximatelyEqual(leftPoint.X, rightPoint.X) &&
-                   AreApproximatelyEqual(leftPoint.Y, rightPoint.Y) &&
-                   AreApproximatelyEqual(leftPoint.Z, rightPoint.Z);
-        }
-
-        return false;
-    }
-
-    public static bool AreApproximatelyEqual(NumericValue left, NumericValue right)
-    {
-        if (left.IsNaN || right.IsNaN)
-        {
-            return false;
-        }
-
-        if (left.IsInfinity || right.IsInfinity)
-        {
-            return left.Kind == right.Kind;
-        }
-
-        return AreApproximatelyEqual(left.Value, right.Value);
-    }
-
-    private static bool AreApproximatelyEqual(double left, double right)
-    {
-        if (double.IsNaN(left) || double.IsNaN(right))
-        {
-            return false;
-        }
-
-        if (double.IsInfinity(left) || double.IsInfinity(right))
-        {
-            return left.Equals(right);
-        }
-
-        var scale = Math.Max(1d, Math.Max(Math.Abs(left), Math.Abs(right)));
-        return Math.Abs(left - right) <= ApproximateEqualityTolerance * scale;
+        var leftBits = BitConverter.DoubleToInt64Bits(left);
+        var rightBits = BitConverter.DoubleToInt64Bits(right);
+        if (leftBits == rightBits) return true;
+        if (leftBits < 0) leftBits = long.MinValue - leftBits;
+        if (rightBits < 0) rightBits = long.MinValue - rightBits;
+        return (leftBits > rightBits ? (ulong)(leftBits - rightBits) : (ulong)(rightBits - leftBits)) <= 2;
     }
 
     public static bool TryCoerceNumericForOperation(GameEventScriptValue value, out NumericValue number)

@@ -752,7 +752,6 @@ internal static class GesValidator
         {
             GesBinaryOperator.Equal or
                 GesBinaryOperator.NotEqual or
-                GesBinaryOperator.ApproxEqual or
                 GesBinaryOperator.Less or
                 GesBinaryOperator.Greater or
                 GesBinaryOperator.LessOrEqual or

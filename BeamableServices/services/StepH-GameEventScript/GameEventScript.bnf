@@ -63,7 +63,7 @@ CollectionZipExpression ::= OrExpression { ":zip" OrExpression }
 OrExpression ::= XorExpression { ( "∨" | "or" ) XorExpression }
 XorExpression ::= AndExpression { ( "xor" | "⊕" ) AndExpression }
 AndExpression ::= EqualityExpression { ( "∧" | "and" ) EqualityExpression }
-EqualityExpression ::= MembershipExpression { ( "=" | "<>" | "≠" | "=~" | "≈" | "≅" ) MembershipExpression }
+EqualityExpression ::= MembershipExpression { ( "=" | "<>" | "≠" ) MembershipExpression }
 
 MembershipExpression ::= TypeOperationExpression { MembershipOperator TypeOperationExpression }
 MembershipOperator ::= "in"

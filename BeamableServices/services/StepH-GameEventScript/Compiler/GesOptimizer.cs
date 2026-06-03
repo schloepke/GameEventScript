@@ -836,9 +836,6 @@ internal static class GesOptimizer
             case GesBinaryOperator.NotEqual:
                 value = GameEventScriptValueFactory.GesBoolean(!GesValueOperations.AreEqual(left, right));
                 return true;
-            case GesBinaryOperator.ApproxEqual:
-                value = GameEventScriptValueFactory.GesBoolean(GesValueOperations.AreApproximatelyEqual(left, right));
-                return true;
             case GesBinaryOperator.Less:
                 value = EvaluateNumericComparison(left, right, comparison => comparison < 0);
                 return true;

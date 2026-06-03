@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -39,7 +40,7 @@ internal static class VmRegisterCompare
             case Dice when b.IsNumeric && a.ObjectValue is int[] al:
                 return !b.HasUnit && DoubleEqualsUlp(Sum(al), b.AsNumeric);
             case not Dice when a.IsNumeric && b.Kind is Dice && b.ObjectValue is int[] bl:
-                return DoubleEqualsUlp(Sum(bl), a.AsNumeric);
+                return !a.HasUnit && DoubleEqualsUlp(Sum(bl), a.AsNumeric);
             case Handler when b.Kind is Handler && a.ObjectValue is GameEventScriptMessageSignature asig && b.ObjectValue is GameEventScriptMessageSignature bsig:
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
@@ -53,7 +54,13 @@ internal static class VmRegisterCompare
                 }
 
                 return true;
-            case Map when b.Kind is Map && a.ObjectValue is VmMapObject am && b.ObjectValue is VmMapObject bm:
+            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is VmRange ar && b.ObjectValue is VmRange br:
+                return ar.from == br.from && ar.to == br.to && ar.step == br.step;
+            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is VmFloatRange ar && b.ObjectValue is VmFloatRange br:
+                return DoubleEqualsUlp(ar.from, br.from) && DoubleEqualsUlp(ar.to, br.to) && DoubleEqualsUlp(ar.step, br.step);
+            case Series when b.Kind is Series && a.ObjectValue is GameEventScriptSeriesValue aseries && b.ObjectValue is GameEventScriptSeriesValue bseries:
+                return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
+            case Map or Custom when b.Kind is Map or Custom && a.ObjectValue is VmMapObject am && b.ObjectValue is VmMapObject bm:
                 if (am.Length != bm.Length) return false;
                 var aKeys = am.KeyList;
                 var bKeys = bm.KeyList;
@@ -91,29 +98,6 @@ internal static class VmRegisterCompare
     {
         if (a.Kind is Nothing || b.Kind is Nothing) dst.SetNothing();
         else dst.SetBoolean(!a.Equ(ref b));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmApproxEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
-    {
-        if (a.Kind is Nothing || b.Kind is Nothing)
-        {
-            dst.SetNothing();
-        }
-        else if (a.Unit != b.Unit)
-        {
-            dst.SetBoolean(false);
-        }
-        else if (a.Kind is Float or Integer || b.Kind is Float or Integer)
-        {
-            var aFloat = a.AsNumeric;
-            var bFloat = b.AsNumeric;
-            dst.SetBoolean(aFloat == bFloat || Math.Abs(aFloat - bFloat) <= Math.Max(Math.Abs(aFloat), Math.Abs(bFloat)) * 1e-12);
-        }
-        else
-        {
-            dst.VmEqual(ref a, ref b);
-        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

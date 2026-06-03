@@ -85,7 +85,6 @@ internal enum GesTokenKind
     OperatorCollectionIntersect,
     OperatorEqual,
     OperatorNotEqual,
-    OperatorApproxEqual,
     OperatorLess,
     OperatorGreater,
     OperatorLessOrEqual,
@@ -503,9 +502,6 @@ internal sealed class GesLexer
             case '<' when next == '>':
                 Advance();
                 return CreateToken(GesTokenKind.OperatorNotEqual, "<>", line, column);
-            case '=' when next == '~':
-                Advance();
-                return CreateToken(GesTokenKind.OperatorApproxEqual, "=~", line, column);
             case '<' when next == '=':
                 Advance();
                 return CreateToken(GesTokenKind.OperatorLessOrEqual, "<=", line, column);
@@ -564,8 +560,8 @@ internal sealed class GesLexer
                     '\u2265' => CreateToken(GesTokenKind.OperatorGreaterOrEqual, ">=", line, column),
                     '\u00AC' => CreateToken(GesTokenKind.OperatorNot, "!", line, column),
                     '\u2260' => CreateToken(GesTokenKind.OperatorNotEqual, "<>", line, column),
-                    '\u2248' => CreateToken(GesTokenKind.OperatorApproxEqual, "=~", line, column),
-                    '\u2245' => CreateToken(GesTokenKind.OperatorApproxEqual, "=~", line, column),
+                    '\u2248' => CreateToken(GesTokenKind.Illegal, "\u2248", line, column),
+                    '\u2245' => CreateToken(GesTokenKind.Illegal, "\u2245", line, column),
                     '\u2192' => CreateToken(GesTokenKind.OperatorImplication, "->", line, column),
                     '\u21D2' => CreateToken(GesTokenKind.OperatorImplication, "->", line, column),
                     '\u21A6' => CreateToken(GesTokenKind.ProjectionArrow, "=>", line, column),

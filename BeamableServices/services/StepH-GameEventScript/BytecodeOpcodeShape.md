@@ -285,6 +285,15 @@ as integer values when they fit signed 64-bit.
 Percentage multiplication with a non-percentage scalar or quantity treats the
 percentage as its stored ratio and writes a numeric result in the other
 operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
+`Equal`, `NotEqual`, and `ApproxEqual` propagate `Nothing` when either operand
+is absent. Exact equality first compares the numeric view for numeric-capable
+operands (numbers, percentages, booleans, dice sums, and numeric tag
+constants), requiring identical quantity units or no unit on both operands; this
+also applies to integer fast paths. If numeric comparison does not apply, exact
+equality requires the same value kind and kind-specific structural equality.
+Approximate equality is defined for numeric-capable operands and for
+component-wise vector/point comparison with the same kind and unit; other
+present operand shapes write boolean `false`.
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |

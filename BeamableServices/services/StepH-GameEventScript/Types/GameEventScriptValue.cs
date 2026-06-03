@@ -284,9 +284,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Range => ((GameEventScriptRangeValue)this).FromNumber == ((GameEventScriptRangeValue)other).FromNumber &&
                                               ((GameEventScriptRangeValue)this).ToNumber == ((GameEventScriptRangeValue)other).ToNumber &&
                                               ((GameEventScriptRangeValue)this).StepNumber == ((GameEventScriptRangeValue)other).StepNumber,
-            GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.SignatureId == ((GameEventScriptMessageValue)other).Value.SignatureId &&
-                                                EqualsDictionary(((GameEventScriptMessageValue)this).Value.Arguments, ((GameEventScriptMessageValue)other).Value.Arguments) &&
-                                                ((GameEventScriptMessageValue)this).Value.Tags.SequenceEqual(((GameEventScriptMessageValue)other).Value.Tags, StringComparer.Ordinal),
+            GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.Equals(((GameEventScriptMessageValue)other).Value),
             GameEventScriptValueKind.Handler => ((GameEventScriptHandlerValue)this).Signature.SignatureId == ((GameEventScriptHandlerValue)other).Signature.SignatureId,
             GameEventScriptValueKind.List => AsList().SequenceEqual(other.AsList()),
             GameEventScriptValueKind.Map => EqualsDictionary(AsMap(), other.AsMap()),
@@ -360,18 +358,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 break;
             }
             case GameEventScriptValueKind.Message:
-                hash.Add(((GameEventScriptMessageValue)this).Value.SignatureId, StringComparer.Ordinal);
-                foreach (var pair in ((GameEventScriptMessageValue)this).Value.Arguments.OrderBy(x => x.Key, StringComparer.Ordinal))
-                {
-                    hash.Add(pair.Key, StringComparer.Ordinal);
-                    hash.Add(pair.Value);
-                }
-
-                foreach (var tag in ((GameEventScriptMessageValue)this).Value.Tags)
-                {
-                    hash.Add(tag, StringComparer.Ordinal);
-                }
-
+                hash.Add(((GameEventScriptMessageValue)this).Value);
                 break;
             case GameEventScriptValueKind.Handler:
                 hash.Add(((GameEventScriptHandlerValue)this).Signature.SignatureId, StringComparer.Ordinal);

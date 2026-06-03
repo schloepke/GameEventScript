@@ -34,6 +34,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicEqualityCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicEquality(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -133,6 +138,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMathMatrixCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMathMatrix(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicEqualityCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicEquality(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
@@ -340,6 +350,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicMathMatrixCases()
         => Cases("runtime/atomic/math-matrix.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicEqualityCases()
+        => Cases("runtime/atomic/equality.json");
+
     public static IEnumerable<object[]> RuntimeAtomicMessagesHandlersCases()
         => Cases("runtime/atomic/messages-handlers.json");
 
@@ -396,6 +409,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMathMatrixCases()
         => NewVirtualMachineCases("runtime/atomic/math-matrix.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicEqualityCases()
+        => NewVirtualMachineCases("runtime/atomic/equality.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMessagesHandlersCases()
         => NewVirtualMachineCases("runtime/atomic/messages-handlers.json");
@@ -465,7 +481,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
         if (!outcome.Passed)
         {
-            TestContext.WriteLine(DumpBinaryAndScriptForFailure(testCase));
+            TestContext.WriteLine(outcome.DebugDump);
         }
 
         if (!softRun && !outcome.Passed)
@@ -490,9 +506,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         try
         {
-            return RunNewVirtualMachineCase(testCase, binary, includeMessageDiff, out var mismatch)
+            return RunNewVirtualMachineCase(testCase, binary, includeMessageDiff, out var mismatch, out var debugDump)
                 ? NewVmConformanceOutcome.Pass()
-                : NewVmConformanceOutcome.Mismatch(mismatch);
+                : NewVmConformanceOutcome.Mismatch(mismatch, debugDump);
         }
         catch (Exception exception)
         {
@@ -521,27 +537,6 @@ public abstract class GameEventScriptJsonConformanceTestBase
         }
 
         samples.Add($"{kind}: {testCase}: {detail}");
-    }
-
-    private static string DumpBinaryAndScriptForFailure(GameEventScriptConformanceCase testCase)
-    {
-        var builder = new StringBuilder();
-        try
-        {
-            builder.Append(GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test)
-                .ToGameEventScriptBinary()
-                .Dump(includeInstructionAddresses: true, scriptSource: GetScriptSourceForDump(testCase)));
-        }
-        catch (Exception exception)
-        {
-            builder.AppendLine($"//\t<binary dump unavailable: {exception.Message}>");
-        }
-
-        if (builder.Length > 0 && builder[^1] != '\n')
-        {
-            builder.AppendLine();
-        }
-        return builder.ToString();
     }
 
     private static string? GetScriptSourceForDump(GameEventScriptConformanceCase testCase)
@@ -591,9 +586,11 @@ public abstract class GameEventScriptJsonConformanceTestBase
         GameEventScriptConformanceCase testCase,
         GameEventScriptBinary binary,
         bool includeMessageDiff,
-        out string mismatch)
+        out string mismatch,
+        out string debugDump)
     {
         mismatch = string.Empty;
+        debugDump = string.Empty;
         var test = testCase.Test;
         if (test.Steps is null || test.Steps.Count == 0)
         {
@@ -606,19 +603,28 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var diagnostics = new GameEventScriptDiagnosticTraceCollector();
         var emitted = new List<GameEventScriptMessage>();
         var published = new List<GameEventScriptMessage>();
+        var scriptSource = GetScriptSourceForDump(testCase);
+        var vmModule = (GameEventScriptVirtualMaschine)GameEventScriptManager.CreateModuleNewVm(binary, 4096, 256);
+        vmModule.DebugScriptSource = scriptSource;
+        var lastCapturedVmDump = string.Empty;
         var host = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(random)
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
             .WithRuntimeLimits(runtimeLimits)
             .WithDiagnosticCollector(diagnostics)
-            .WithPublishedMessageObserver(emitted.Add)
+            .WithPublishedMessageObserver(message =>
+            {
+                emitted.Add(message);
+                lastCapturedVmDump = vmModule.DumpState(scriptSource);
+            })
             .WithPublishHook(message =>
             {
                 published.Add(message);
+                lastCapturedVmDump = vmModule.DumpState(scriptSource);
                 return true;
             })
             .Build()
-            .Load(GameEventScriptManager.CreateModuleNewVm(binary, 4096, 256));
+            .Load(vmModule);
 
         for (var stepIndex = 0; stepIndex < test.Steps.Count; stepIndex++)
         {
@@ -629,30 +635,39 @@ public abstract class GameEventScriptJsonConformanceTestBase
             if (!handled)
             {
                 mismatch = $"step {stepIndex + 1}: handler was not found or could not start.";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
 
             if (HasDiagnosticExpectations(step))
             {
                 mismatch = $"step {stepIndex + 1}: diagnostic expectations are not implemented by the new VM soft runner yet.";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
 
             if (!TryMatchMessages(testCase, stepIndex, "emitted messages", step.ExpectedPublished, emitted, includeMessageDiff, out var emittedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: emitted messages differ.{Environment.NewLine}{emittedDiff}";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
 
             if (!TryMatchMessages(testCase, stepIndex, "published messages", step.ExpectedOutboundPublished, published, includeMessageDiff, out var publishedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: published messages differ.{Environment.NewLine}{publishedDiff}";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
         }
 
         return true;
     }
+
+    private static string CaptureVmDump(string lastCapturedVmDump)
+        => !string.IsNullOrWhiteSpace(lastCapturedVmDump)
+            ? lastCapturedVmDump
+            : "//\t<vm state dump unavailable: no message was emitted or published before the assertion failed>";
 
     private static bool TryMatchMessages(
         GameEventScriptConformanceCase testCase,
@@ -803,15 +818,16 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     protected sealed record NewVmConformanceOutcome(
         NewVmConformanceStatus Status,
-        string Detail)
+        string Detail,
+        string DebugDump = "")
     {
         public bool Passed => Status == NewVmConformanceStatus.Passed;
 
         public static NewVmConformanceOutcome Pass()
             => new(NewVmConformanceStatus.Passed, "passed");
 
-        public static NewVmConformanceOutcome Mismatch(string detail)
-            => new(NewVmConformanceStatus.Mismatch, detail);
+        public static NewVmConformanceOutcome Mismatch(string detail, string debugDump)
+            => new(NewVmConformanceStatus.Mismatch, detail, debugDump);
 
         public static NewVmConformanceOutcome CompileFailure(string detail)
             => new(NewVmConformanceStatus.CompileFailure, detail);

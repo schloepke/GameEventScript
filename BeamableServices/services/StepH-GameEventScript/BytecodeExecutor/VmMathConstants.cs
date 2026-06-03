@@ -12,6 +12,8 @@ internal static class VmMathConstants
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static double ResolveNumericTagValue(string? tag) => tag switch
     {
+        "true" => 1,
+        "false" => 0,
         "infinity" => double.PositiveInfinity,
         "negativeinfinity" => double.NegativeInfinity,
         "pi" => GesPi,
@@ -22,5 +24,5 @@ internal static class VmMathConstants
     };
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static bool IsNumericTag(string? tag) => tag is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
+    internal static bool IsNumericTag(string? tag) => tag is "true" or "false" or "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
 }

@@ -433,7 +433,10 @@ enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
 sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.Collections.Generic.IEnumerable<System.String> tags)
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.String[] tags)
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptMessage other)
+  method System.Boolean Equals(System.Object obj)
   method System.Boolean HasTag(System.String tag)
+  method System.Int32 GetHashCode()
   method System.String ToString()
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments)
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
@@ -455,8 +458,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   field static StepH.GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
   method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Types.GameEventScriptValue[] arguments)
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptMessageSignature other)
+  method System.Boolean Equals(System.Object obj)
   method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
+  method System.Int32 GetHashCode()
   method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
   method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
   method static System.String NormalizeMessageName(System.String name)
@@ -604,9 +610,11 @@ interface StepH.GameEventScript.Api.IGameEventScriptSeries
   property System.String SignatureId { get }
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
+  method System.String DumpState(System.String scriptSource, System.Boolean includeInstructionAddresses)
   method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
   method static StepH.GameEventScript.BytecodeExecutor.GameEventScriptVirtualMaschine Create(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
+  property System.String DebugScriptSource { get set }
   property System.String ModuleName { get }
 class StepH.GameEventScript.BytecodeExecutor.GameEventScriptVmException
   ctor GameEventScriptVmException(System.String message)

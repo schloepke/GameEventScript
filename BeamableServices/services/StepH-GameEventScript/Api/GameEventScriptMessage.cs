@@ -15,7 +15,7 @@ namespace StepH.GameEventScript.Api;
 /// of named arguments. Additionally, it generates a unique signature ID for
 /// efficient message identification and dispatch during runtime.
 /// </remarks>
-public sealed class GameEventScriptMessage
+public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
 {
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptMessage"/> using the specified name and arguments.
@@ -105,6 +105,48 @@ public sealed class GameEventScriptMessage
     {
         var normalized = NormalizeTagName(tag);
         return !string.IsNullOrEmpty(normalized) && Tags.Contains(normalized, StringComparer.Ordinal);
+    }
+
+    /// <inheritdoc />
+    public bool Equals(GameEventScriptMessage? other)
+    {
+        if (other is null) return false;
+        if (ReferenceEquals(this, other)) return true;
+        if (!string.Equals(SignatureId, other.SignatureId, StringComparison.Ordinal)) return false;
+        if (!Tags.SequenceEqual(other.Tags, StringComparer.Ordinal)) return false;
+        if (Arguments.Count != other.Arguments.Count) return false;
+
+        for (var index = 0; index < Arguments.Count; index++)
+        {
+            if (!Arguments[index].Equals(other.Arguments[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+        => obj is GameEventScriptMessage other && Equals(other);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(SignatureId, StringComparer.Ordinal);
+        foreach (var value in Arguments.Values)
+        {
+            hash.Add(value);
+        }
+
+        foreach (var tag in Tags)
+        {
+            hash.Add(tag, StringComparer.Ordinal);
+        }
+
+        return hash.ToHashCode();
     }
 
     /// <summary>

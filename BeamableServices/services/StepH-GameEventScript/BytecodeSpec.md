@@ -705,6 +705,42 @@ There are no `Combine` or `Except` opcodes in portable bytecode. Source tags
 `:combine`, `:merge`, `:except`, and `:intersect` are ordinary tags, not
 collection operators.
 
+`Equal`, `NotEqual`, and `ApproxEqual` preserve the same absent-value rule as
+other Group 2 operations: if either direct operand is `Nothing`, or an internal
+numeric `NaN` observed as `Nothing`, the result register receives `Nothing`.
+For present operands, `Equal` first tries numeric comparison. Integers, floats,
+percentages, booleans, dice sums, and numeric tag constants compare by numeric
+value when both operands have a numeric view. Quantity units must both be absent
+or exactly equal; integer fast paths must obey the same unit equality rule, so
+`10 = 10m` is `false` and `10 <> 10m` is `true`. Numeric infinities compare
+equal only when they have the same sign; numeric `NaN` values are never equal.
+`NotEqual` is the boolean negation of `Equal` after this `Nothing` propagation.
+
+When numeric comparison does not apply, exact equality requires the same value
+kind and uses kind-specific value equality:
+
+| Kind | Exact equality rule |
+| --- | --- |
+| `Nothing` | Not reached by the opcode because `Nothing` propagates. |
+| `Tag` | Ordinal raw tag text. Numeric tag constants use numeric comparison when the other operand is also numeric-capable. |
+| `Text` | Ordinal text. Text is not implicitly numeric. |
+| `Percentage` | Numeric ratio, including comparison with other numeric-capable operands. |
+| `Number` | Numeric value and matching quantity unit, including integer/float cross-representation. |
+| `Boolean` | Numeric value `0` or `1` in top-level equality. |
+| `Dice` | Numeric sum in top-level equality. Dice roll sequence equality applies only inside structural value equality, such as dice values nested in lists or maps. |
+| `Vector` | Same kind, same unit, and exact `x`, `y`, `z` components. |
+| `Point` | Same kind, same unit, and exact `x`, `y`, `z` components. |
+| `Range` | Exact `from`, `to`, and `step`. |
+| `Series` | Same series signature id and offset. |
+| `Message` | Same signature id, recursively equal arguments, and same tag sequence. |
+| `Handler` | Same handler signature id. |
+| `List` | Same length and ordered recursively equal items. |
+| `Map`/record/custom map-like | Same visible key set and recursively equal values; hidden fields do not participate. |
+
+`ApproxEqual` uses the numeric view for numeric-capable operands and
+component-wise approximate comparison for vectors and points with the same kind
+and unit. Other present operand combinations write boolean `false`.
+
 Numeric operations must preserve the language distinction between absent input
 and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and
 numeric random-range evaluation, any source operand that is `nothing` produces

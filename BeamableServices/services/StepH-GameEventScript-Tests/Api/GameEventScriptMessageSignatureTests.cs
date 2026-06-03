@@ -1,11 +1,65 @@
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH_GameEventScript_Tests.Api;
 
 [TestClass]
 public sealed class GameEventScriptMessageSignatureTests
 {
+    [TestMethod]
+    public void MessageSignaturesCompareBySignatureId()
+    {
+        var left = GameEventScriptMessageSignature.Create(" Ping ", [" amount "]);
+        var right = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
+        var differentParameter = GameEventScriptMessageSignature.Create("Ping", ["value"]);
+        var differentShape = GameEventScriptMessageSignature.Create("Ping", ["amount", "kind"]);
+
+        Assert.AreEqual(left, right);
+        Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
+        Assert.AreNotEqual(left, differentParameter);
+        Assert.AreNotEqual(left, differentShape);
+    }
+
+    [TestMethod]
+    public void MessagesCompareBySignatureArgumentsAndTags()
+    {
+        var left = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GesInteger(7) }, ["radio"]);
+        var right = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GesInteger(7) }, [":radio"]);
+        var differentArgument = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GesInteger(8) }, ["radio"]);
+        var differentTags = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GesInteger(7) }, ["silent"]);
+
+        Assert.AreEqual(left, right);
+        Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
+        Assert.AreNotEqual(left, differentArgument);
+        Assert.AreNotEqual(left, differentTags);
+    }
+
+    [TestMethod]
+    public void MessagesCompareUnlabeledArgumentsByOrderedValue()
+    {
+        var signature = GameEventScriptMessageSignature.Create("Ping", ["_"]);
+        var left = signature.WithArguments(GesInteger(7));
+        var right = GameEventScriptMessageSignature.Create("Ping", ["_"]).WithArguments(GesInteger(7));
+        var differentValue = signature.WithArguments(GesInteger(8));
+
+        Assert.AreEqual(left, right);
+        Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
+        Assert.AreNotEqual(left, differentValue);
+    }
+
+    [TestMethod]
+    public void HandlerValuesCompareBySignature()
+    {
+        var left = GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
+        var right = GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
+        var different = GesHandler(GameEventScriptMessageSignature.Create("Ping", ["value"]));
+
+        Assert.AreEqual(left, right);
+        Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
+        Assert.AreNotEqual(left, different);
+    }
+
     [TestMethod]
     public void HandlerDescriptorCanMatchByMessageName()
     {

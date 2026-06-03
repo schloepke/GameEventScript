@@ -21,6 +21,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
     public string ModuleName { get; }
     public IEnumerable<GameEventScriptMessageHandlerDescriptor> Handlers { get; }
+    public string? DebugScriptSource { get; set; }
+
+    public string DumpState(string? scriptSource = null, bool includeInstructionAddresses = true)
+        => _vmState.Dump(includeInstructionAddresses, scriptSource ?? DebugScriptSource);
 
     public void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
@@ -89,13 +93,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfTrue:
-                            if (vmState.Register(instruction.ConditionSlot).IsTrue) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.ConditionalRegister(instruction.ConditionSlot).IsTrue) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfFalse:
-                            if (vmState.Register(instruction.ConditionSlot).IsFalse) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.ConditionalRegister(instruction.ConditionSlot).IsFalse) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfNotTrue:
-                            if (vmState.Register(instruction.ConditionSlot).IsNotTrue) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.ConditionalRegister(instruction.ConditionSlot).IsNotTrue) vmState.JumpAddress(instruction.TargetAddress);
                             break;
 
                         case Call:
@@ -276,10 +280,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmCreateRange(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIterator:
-                            vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, 1));
+                            vmState.Register(instruction.DestinationSlot).VmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
                         case CreateRangeIteratorWithStep:
-                            vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.XSlot, instruction.YSlot, instruction.AU));
+                            vmState.Register(instruction.DestinationSlot).VmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIteratorShort:
                             vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
@@ -621,10 +625,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
             if (vmState.State == Processing) return opcodesExecuted;
             IsCompleted = true;
-            if (vmState.State == Error)
-            {
-                Console.WriteLine(vmState.Dump());
-            }
 
             vmState.Reset();
             return opcodesExecuted;

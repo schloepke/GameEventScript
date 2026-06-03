@@ -7249,7 +7249,7 @@ internal readonly record struct BytecodeVmValue(
     {
         if (left.Kind == BytecodeVmValueKind.Integer && right.Kind == BytecodeVmValueKind.Integer)
         {
-            return left.IntegerValue == right.IntegerValue;
+            return left.Unit == right.Unit && left.IntegerValue == right.IntegerValue;
         }
 
         if (left.TryGetNumeric(out var leftNumber, out var leftUnit, out _) &&

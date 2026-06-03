@@ -11,14 +11,8 @@ internal static class VmStreams
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamCreate(ref this VmValue dst, ref VmValue x)
     {
-        if (x.TryCreateStream(out var stream))
-        {
-            dst.SetStream(stream);
-        }
-        else
-        {
-            dst.SetNothing();
-        }
+        if (x.TryCreateStream(out var stream)) dst.SetStream(stream);
+        else dst.SetNothing();
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -30,7 +24,9 @@ internal static class VmStreams
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamClose(ref this VmValue iterator)
     {
-        if (iterator is { Kind: Stream, ObjectValue: IDisposable it }) it.Dispose();
+        if (iterator is not { Kind: Stream, ObjectValue: IDisposable it }) return;
+        it.Dispose();
+        iterator.SetNothing();
     }
     
 }

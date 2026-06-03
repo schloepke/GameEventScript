@@ -110,6 +110,13 @@ internal class VmState
     internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal ref VmValue ConditionalRegister(ushort index)
+    {
+        RegisterSlots[index + RegisterFrameStart].UpdatedTextTruthinessCache();
+        return ref RegisterSlots[index + RegisterFrameStart];
+    } 
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref VmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

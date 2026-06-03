@@ -70,7 +70,7 @@ internal struct VmValue
 
     internal void UpdatedTextTruthinessCache()
     {
-        if (!IsTruthIndeterminate) return;
+        if (!IsTruthIndeterminate);
         switch (Kind)
         {
             case Text:
@@ -158,6 +158,11 @@ internal struct VmValue
 
     internal void SetPercentage(double ratio)
     {
+        if (double.IsNaN(ratio))
+        {
+            SetNothing();
+            return;
+        }
         if (double.IsFinite(ratio))
         {
             Kind = Percentage;
@@ -166,7 +171,7 @@ internal struct VmValue
         else
         {
             Kind = Float;
-            Flags = IsNumericFlag | (double.IsNaN(ratio) ? None : IsTrueFlag | HasValueFlag);
+            Flags = IsNumericFlag | IsTrueFlag | HasValueFlag;
         }
 
         Unit = UnitNone;

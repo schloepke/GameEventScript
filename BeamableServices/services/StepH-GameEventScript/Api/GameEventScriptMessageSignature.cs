@@ -13,7 +13,7 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "UnusedMember.Global")]
-public sealed class GameEventScriptMessageSignature
+public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScriptMessageSignature>
 {
     /// <summary>
     /// Represents the default name assigned to a parameter when no explicit label or name
@@ -104,6 +104,18 @@ public sealed class GameEventScriptMessageSignature
     /// The message must contain a name and a signature ID for comparison.</param>
     /// <returns>True if the name and signature ID of the provided message match those of the current signature; otherwise, false.</returns>
     public bool Matches(GameEventScriptMessage message) => string.Equals(Name, message.Name, StringComparison.Ordinal) && string.Equals(SignatureId, message.SignatureId, StringComparison.Ordinal);
+
+    /// <inheritdoc />
+    public bool Equals(GameEventScriptMessageSignature? other)
+        => other is not null && string.Equals(SignatureId, other.SignatureId, StringComparison.Ordinal);
+
+    /// <inheritdoc />
+    public override bool Equals(object? obj)
+        => obj is GameEventScriptMessageSignature other && Equals(other);
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+        => StringComparer.Ordinal.GetHashCode(SignatureId);
 
     /// <summary>
     /// Creates a message by binding the provided values to this signature's parameters in declaration order.

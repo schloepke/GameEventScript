@@ -9,6 +9,12 @@ namespace StepH.GameEventScript.Extensions;
 internal static class GameEventScriptVmStateDumper
 {
     internal static string Dump(this VmState state)
+        => Dump(state, includeInstructionAddresses: true, scriptSource: null);
+
+    internal static string Dump(this VmState state, string? scriptSource)
+        => Dump(state, includeInstructionAddresses: true, scriptSource: scriptSource);
+
+    internal static string Dump(this VmState state, bool includeInstructionAddresses, string? scriptSource)
     {
         var builder = new StringBuilder();
         builder
@@ -36,7 +42,7 @@ internal static class GameEventScriptVmStateDumper
             .AppendLine()
             .AppendLine("Binary")
             .AppendLine("------")
-            .Append(state.Binary.Dump(includeInstructionAddresses: true));
+            .Append(state.Binary.Dump(includeInstructionAddresses, scriptSource));
 
         return builder.ToString();
     }

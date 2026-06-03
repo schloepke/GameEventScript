@@ -474,6 +474,36 @@ sum of the rolls. Dice-specific collection operations keep priority, so
 `dice + integer` adds a roll and `dice - integer` removes a roll instead of
 using the dice sum.
 
+### Equality
+
+Equality operators are `=` and `<>`/`≠`. Approximate equality is `=~`, `≈`, or
+`≅`. If either operand is `nothing`, or an invalid numeric result that is
+observed as `nothing`, the equality result is `nothing`; `nothing = nothing`
+therefore produces `nothing`, not `true`.
+
+For present operands, exact equality first tries the same numeric view used by
+numeric operators. Numeric values, percentages, booleans (`false` = `0`,
+`true` = `1`), dice sums, and numeric tag constants such as `:pi`,
+`:infinity`, and `:negativeinfinity` compare by numeric value when both
+operands have a numeric view. Quantity units must match exactly; unitless and
+unit-bearing values are not equal, including integer fast paths such as
+`10 = 10m`, which is `false`. Internal `NaN` numeric values are never equal.
+Text is not numeric for equality, so `'10.3' = 10.3` is false while
+`('10.3' as :number) = 10.3` is true.
+
+If the numeric view does not apply, exact equality requires the same value kind:
+tags and text compare ordinal text, vectors and points compare `x`, `y`, `z`,
+and unit, ranges compare `from`, `to`, and `step`, series compare signature and
+offset, messages compare signature id, arguments, and tag sequence, handlers
+compare signature id, lists compare ordered items, dice compare ordered rolls,
+and maps/records/custom map-like values compare their visible key/value pairs.
+Hidden map fields such as record type markers do not participate in map
+equality.
+
+Approximate equality uses the numeric view for numeric-capable operands and
+component-wise approximate comparison for vectors and points with the same kind
+and unit. Other present operand combinations are not approximately equal.
+
 `:abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their
 unit. Finite numeric results that are exactly integral are represented as

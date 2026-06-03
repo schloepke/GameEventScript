@@ -53,6 +53,7 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetNothing();
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:
+                xSlot.UpdatedTextTruthinessCache();
                 dst.SetBoolean(xSlot.IsTrue);
                 return;
             case Integer:
@@ -64,6 +65,12 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
                 return;
             case Percentage:
+                if (xSlot.HasUnit)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
                 var percentageNumber = xSlot.AsNumeric;
                 if (double.IsFinite(percentageNumber)) dst.SetPercentage(xSlot.Kind is Integer || percentageNumber is > 1d or < -1d ? percentageNumber / 100d : percentageNumber);
                 else dst.SetNothing();
@@ -75,31 +82,11 @@ internal static class VmRegisterTypeCastCheck
                 CastTag(ref dst, ref xSlot);
                 return;
             case Vector:
-                switch (xSlot.Kind)
-                {
-                    case Vector:
-                        dst = xSlot;
-                        return;
-                    case Point when xSlot.ObjectValue is VmFloatTriplet point:
-                        dst.SetVector(point, xSlot.Unit);
-                        return;
-                    default:
-                        dst.SetNothing();
-                        return;
-                }
+                CastVectorOrPoint(ref dst, ref xSlot, asPoint: false);
+                return;
             case Point:
-                switch (xSlot.Kind)
-                {
-                    case Point:
-                        dst = xSlot;
-                        return;
-                    case Vector when xSlot.ObjectValue is VmFloatTriplet vector:
-                        dst.SetPoint(vector, xSlot.Unit);
-                        return;
-                    default:
-                        dst.SetNothing();
-                        return;
-                }
+                CastVectorOrPoint(ref dst, ref xSlot, asPoint: true);
+                return;
             case Dice:
                 switch (xSlot.Kind)
                 {
@@ -124,7 +111,7 @@ internal static class VmRegisterTypeCastCheck
                         dst.SetDice(dice);
                         return;
                     }
-                    case Nothing:
+                    case not List:
                         dst.SetDice([]);
                         return;
                     default:
@@ -132,51 +119,10 @@ internal static class VmRegisterTypeCastCheck
                         return;
                 }
             case List:
-                switch (xSlot.Kind)
-                {
-                    case List:
-                        dst = xSlot;
-                        return;
-                    case Map:
-                    case Custom:
-                        dst.SetList(dst.OwningState.EmptyList);
-                        return;
-                    default:
-                        dst.SetNothing();
-                        return;
-                }
+                CastList(ref dst, ref xSlot);
+                return;
             case Map:
-                if (xSlot.Kind is not (Map or Custom))
-                {
-                    dst.SetNothing();
-                    return;
-                }
-
-                if (xSlot.ObjectValue is VmMapObject map)
-                {
-                    var visibleCount = 0;
-                    foreach (var key in map.Entries.Keys)
-                    {
-                        if (!key.StartsWith("_", StringComparison.Ordinal)) visibleCount++;
-                    }
-
-                    if (visibleCount == map.Entries.Count)
-                    {
-                        dst = xSlot;
-                        return;
-                    }
-
-                    var visibleEntries = new Dictionary<string, VmValue>(visibleCount, StringComparer.Ordinal);
-                    foreach (var (key, value) in map.Entries)
-                    {
-                        if (!key.StartsWith("_", StringComparison.Ordinal)) visibleEntries[key] = value;
-                    }
-
-                    dst.SetMap(new VmMapObject(dst.OwningState, visibleEntries));
-                    return;
-                }
-
-                dst.SetNothing();
+                CastMap(ref dst, ref xSlot);
                 return;
 
             case Custom:
@@ -284,33 +230,289 @@ internal static class VmRegisterTypeCastCheck
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CastText(ref VmValue dst, ref VmValue xSlot)
     {
+        if (xSlot.Kind is Text)
+        {
+            dst = xSlot;
+            return;
+        }
+
+        dst.SetText(xSlot.ConvertToText());
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CastList(ref VmValue dst, ref VmValue xSlot)
+    {
         switch (xSlot.Kind)
         {
-            case Text:
+            case List:
                 dst = xSlot;
                 return;
-            case Tag when xSlot.IsStoragePointer:
-                dst.SetTextPointer((ushort)xSlot.IntegerValue);
+            case Text or Tag:
+            {
+                var text = xSlot.ReadTextOrTag();
+                if (text.Length == 0)
+                {
+                    dst.SetList(dst.OwningState.EmptyList);
+                    return;
+                }
+
+                var list = new VmListObject(dst.OwningState, text.Length);
+                for (var i = 0; i < text.Length; i++) list.Items[i].SetText(text[i].ToString());
+                dst.SetList(list);
                 return;
-            case Tag when xSlot.ObjectValue is string tag:
-                dst.SetText(tag);
+            }
+            case Vector or Point when xSlot.ObjectValue is VmFloatTriplet triplet:
+            {
+                var list = new VmListObject(dst.OwningState, 3);
+                list.Items[0].SetFloat(triplet.X, xSlot.Unit);
+                list.Items[1].SetFloat(triplet.Y, xSlot.Unit);
+                list.Items[2].SetFloat(triplet.Z, xSlot.Unit);
+                dst.SetList(list);
                 return;
-            case Integer:
-                dst.SetText(xSlot.IntegerValue.ToString(CultureInfo.InvariantCulture));
+            }
+            case Dice when xSlot.ObjectValue is int[] dice:
+            {
+                var list = new VmListObject(dst.OwningState, dice.Length);
+                for (var i = 0; i < dice.Length; i++) list.Items[i].SetInteger(dice[i]);
+                dst.SetList(list);
                 return;
-            case Float:
-                dst.SetText(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+            }
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is VmRange range:
+            {
+                if (xSlot.IntegerValue > int.MaxValue)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var list = new VmListObject(dst.OwningState, (int)xSlot.IntegerValue);
+                var current = range.from;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    list.Items[i].SetInteger(current);
+                    current += range.step;
+                }
+
+                dst.SetList(list);
                 return;
-            case Percentage:
-                dst.SetText(xSlot.FloatValue.ToString("R", CultureInfo.InvariantCulture));
+            }
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is VmFloatRange range:
+            {
+                if (xSlot.IntegerValue > int.MaxValue)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var list = new VmListObject(dst.OwningState, (int)xSlot.IntegerValue);
+                var current = range.from;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    list.Items[i].SetFloat(current);
+                    current += range.step;
+                }
+
+                dst.SetList(list);
                 return;
-            case GameEventScriptBytecodeTypeKind.Boolean:
-                dst.SetText(xSlot.IsTrue ? "true" : "false");
+            }
+            default:
+                dst.SetList(dst.OwningState.EmptyList);
                 return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CastMap(ref VmValue dst, ref VmValue xSlot)
+    {
+        switch (xSlot.Kind)
+        {
+            case Map or Custom when xSlot.ObjectValue is VmMapObject map:
+            {
+                var visibleCount = 0;
+                foreach (var key in map.Entries.Keys)
+                {
+                    if (!key.StartsWith("_", StringComparison.Ordinal)) visibleCount++;
+                }
+
+                if (visibleCount == map.Entries.Count)
+                {
+                    dst = xSlot;
+                    return;
+                }
+
+                var visibleEntries = new Dictionary<string, VmValue>(visibleCount, StringComparer.Ordinal);
+                foreach (var (key, value) in map.Entries)
+                {
+                    if (!key.StartsWith("_", StringComparison.Ordinal)) visibleEntries[key] = value;
+                }
+
+                dst.SetMap(new VmMapObject(dst.OwningState, visibleEntries));
+                return;
+            }
+            case Vector or Point when xSlot.ObjectValue is VmFloatTriplet triplet:
+            {
+                var x = dst.OwningState.CreateNothing();
+                x.SetFloat(triplet.X, xSlot.Unit);
+                var y = dst.OwningState.CreateNothing();
+                y.SetFloat(triplet.Y, xSlot.Unit);
+                var z = dst.OwningState.CreateNothing();
+                z.SetFloat(triplet.Z, xSlot.Unit);
+                dst.SetMap(new VmMapObject(dst.OwningState, new Dictionary<string, VmValue>(StringComparer.Ordinal)
+                {
+                    ["x"] = x,
+                    ["y"] = y,
+                    ["z"] = z
+                }));
+                return;
+            }
+            default:
+                dst.SetMap(new VmMapObject(dst.OwningState, new Dictionary<string, VmValue>(StringComparer.Ordinal)));
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void CastVectorOrPoint(ref VmValue dst, ref VmValue xSlot, bool asPoint)
+    {
+        var unit = UnitNone;
+        double x = 0;
+        double y = 0;
+        double z = 0;
+
+        switch (xSlot.Kind)
+        {
+            case Vector when xSlot.ObjectValue is VmFloatTriplet vector:
+                if (asPoint) dst.SetPoint(vector, xSlot.Unit);
+                else dst = xSlot;
+                return;
+            case Point when xSlot.ObjectValue is VmFloatTriplet point:
+                if (asPoint) dst = xSlot;
+                else dst.SetVector(point, xSlot.Unit);
+                return;
+            case Integer or Float or Percentage or Tag or Dice or GameEventScriptBytecodeTypeKind.Boolean:
+                if (xSlot.Kind is Dice)
+                {
+                    if (xSlot.ObjectValue is not int[] dice)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    if (dice.Length > 0) x = dice[0];
+                    if (dice.Length > 1) y = dice[1];
+                    if (dice.Length > 2) z = dice[2];
+                    break;
+                }
+
+                var number = xSlot.AsNumeric;
+                if (!double.IsFinite(number))
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                x = number;
+                unit = xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone;
+                break;
+            case List when xSlot.ObjectValue is VmListObject list:
+                for (var i = 0; i < list.Length && i < 3; i++)
+                {
+                    var item = list.Items[i];
+                    if (!item.IsNumeric && item.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    var value = item.AsNumeric;
+                    if (!double.IsFinite(value))
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    if (i == 0) x = value;
+                    else if (i == 1) y = value;
+                    else z = value;
+                }
+
+                break;
+            case Map or Custom when xSlot.ObjectValue is VmMapObject map:
+            {
+                if (map.TryGet("x", out var xValue))
+                {
+                    if (!xValue.IsNumeric && xValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    x = xValue.AsNumeric;
+                }
+
+                if (map.TryGet("y", out var yValue))
+                {
+                    if (!yValue.IsNumeric && yValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    y = yValue.AsNumeric;
+                }
+
+                if (map.TryGet("z", out var zValue))
+                {
+                    if (!zValue.IsNumeric && zValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    z = zValue.AsNumeric;
+                }
+
+                if (!(double.IsFinite(x) && double.IsFinite(y) && double.IsFinite(z)))
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                break;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is VmRange range:
+            {
+                var current = range.from;
+                for (var i = 0; i < xSlot.IntegerValue && i < 3; i++)
+                {
+                    if (i == 0) x = current;
+                    else if (i == 1) y = current;
+                    else z = current;
+                    current += range.step;
+                }
+
+                break;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is VmFloatRange range:
+            {
+                var current = range.from;
+                for (var i = 0; i < xSlot.IntegerValue && i < 3; i++)
+                {
+                    if (i == 0) x = current;
+                    else if (i == 1) y = current;
+                    else z = current;
+                    current += range.step;
+                }
+
+                break;
+            }
             default:
                 dst.SetNothing();
                 return;
         }
+
+        if (asPoint) dst.SetPoint(x, y, z, unit);
+        else dst.SetVector(x, y, z, unit);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

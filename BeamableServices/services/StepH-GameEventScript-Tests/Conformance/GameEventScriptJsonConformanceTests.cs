@@ -193,7 +193,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeDiagnosticsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -213,7 +213,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeMessagesHandlers(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimePredicatesFunctionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]

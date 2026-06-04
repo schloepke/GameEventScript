@@ -1004,8 +1004,9 @@ operations are `:term`, `:take`, and `:drop`; unsupported lookup/selector
 operations evaluate to `nothing`.
 
 Message values are map-backed runtime values. The bytecode model exposes the
-message name, signature id, argument map, and tags through normal member/index
-access.
+read-only members `name`, `signature`, `arguments`, and `tags` through normal
+member/index access. The `signature` member contains the stable signature
+string, for example `Damage(amount,kind)`.
 
 ### Emit, Publish, and Tags
 

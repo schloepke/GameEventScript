@@ -78,7 +78,7 @@
     {
       "kind": "scriptApi",
       "name": "undeliverable endpoint receives unknown tagged messages",
-      "script": "on Start {\n  emit Unknown(value: 7) with :radio, :encrypted\n  emit Silent(value: 1) with :silent\n}\n\non undeliverable as message matching :radio {\n  emit Heard(name: message.name, signature: message.signatureid, value: message.arguments.value, tagCount: :len message.tags, firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)\n}",
+      "script": "on Start {\n  emit Unknown(value: 7) with :radio, :encrypted\n  emit Silent(value: 1) with :silent\n}\n\non undeliverable as message matching :radio {\n  emit Heard(name: message.name, signature: message.signature, value: message.arguments.value, tagCount: :len message.tags, firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -141,7 +141,7 @@
     {
       "kind": "scriptApi",
       "name": "message-name handler receives matching names with original message",
-      "script": "on Start {\n  emit Damage(amount: 3) with :radio, :enemy\n  emit Damage(amount: 5, kind: 'fire') with :radio\n  emit Damage(amount: 7) with :silent\n}\n\non Damage as message matching :radio {\n  emit Heard(signature: message.signatureid, amount: message.arguments.amount, tagCount: :len message.tags, firstTag: message.tags[1], isMessage: message is :message)\n}\n\non undeliverable as message matching :silent {\n  emit Missed(signature: message.signatureid, amount: message.arguments.amount, tag: message.tags[1])\n}",
+      "script": "on Start {\n  emit Damage(amount: 3) with :radio, :enemy\n  emit Damage(amount: 5, kind: 'fire') with :radio\n  emit Damage(amount: 7) with :silent\n}\n\non Damage as message matching :radio {\n  emit Heard(signature: message.signature, amount: message.arguments.amount, tagCount: :len message.tags, firstTag: message.tags[1], isMessage: message is :message)\n}\n\non undeliverable as message matching :silent {\n  emit Missed(signature: message.signature, amount: message.arguments.amount, tag: message.tags[1])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -203,7 +203,7 @@
     {
       "kind": "scriptApi",
       "name": "exact and message-name handlers share dispatch order",
-      "script": "on Start {\n  emit Damage(amount: 9) with :radio\n}\n\non Damage(amount) matching :radio {\n  emit Exact(amount: amount)\n}\n\non Damage as message matching :radio {\n  emit Any(signature: message.signatureid)\n}",
+      "script": "on Start {\n  emit Damage(amount: 9) with :radio\n}\n\non Damage(amount) matching :radio {\n  emit Exact(amount: amount)\n}\n\non Damage as message matching :radio {\n  emit Any(signature: message.signature)\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

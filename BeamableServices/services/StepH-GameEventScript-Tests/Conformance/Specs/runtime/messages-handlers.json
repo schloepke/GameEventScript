@@ -81,7 +81,7 @@
     {
       "kind": "scriptApi",
       "name": "direct message literal creates first class message value",
-      "script": "module DirectMessageLiteral\non Start(value) {\n  let scaled be value * 2\n  let myMessageDirect be Success(message: 'world', value: scaled)\n  emit Done(isMessage: myMessageDirect is :message, name: myMessageDirect.name, signature: myMessageDirect.signatureid, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)\n}",
+      "script": "module DirectMessageLiteral\non Start(value) {\n  let scaled be value * 2\n  let myMessageDirect be Success(message: 'world', value: scaled)\n  emit Done(isMessage: myMessageDirect is :message, name: myMessageDirect.name, signature: myMessageDirect.signature, text: myMessageDirect.arguments.message, value: myMessageDirect.arguments.value)\n}",
       "steps": [
         {
           "input": {
@@ -154,7 +154,7 @@
     {
       "kind": "scriptApi",
       "name": "untyped handler literal and bind create first class values",
-      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  emit Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signatureid, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signatureid, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is :nothing)\n}",
+      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  emit Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signature, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signature, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is :nothing)\n}",
       "steps": [
         {
           "input": {
@@ -256,7 +256,7 @@
     {
       "kind": "scriptApi",
       "name": "message and handler values expose members without becoming dictionaries",
-      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: shoot is :handler, handlerIsMap: shoot is :map, msgName: msg.name, msgSignature: msg[:signatureid], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
+      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: shoot is :handler, handlerIsMap: shoot is :map, msgName: msg.name, msgSignature: msg[:signature], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
       "steps": [
         {
           "input": {

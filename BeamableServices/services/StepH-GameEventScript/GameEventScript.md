@@ -123,7 +123,8 @@ on Hit as message matching :enemy {
 }
 ```
 
-The message value contains its name, signature id, argument map, and tags.
+The message value contains its name, signature string, argument map, and tags.
+It exposes the read-only members `name`, `signature`, `arguments`, and `tags`.
 
 `undeliverable` is a system endpoint. It receives messages that were not
 otherwise dispatched, and it must use message binding:

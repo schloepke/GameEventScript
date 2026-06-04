@@ -22,7 +22,7 @@ public sealed class GameEventScriptMessageValue : GameEventScriptValue
         {
             ["name"] = GesText(message.Name),
             ["arguments"] = GesMap(message.Arguments),
-            ["signatureid"] = GesText(message.SignatureId),
+            ["signature"] = GesText(message.SignatureId),
             ["tags"] = GesList(message.Tags.Select(GesTag))
         };
 

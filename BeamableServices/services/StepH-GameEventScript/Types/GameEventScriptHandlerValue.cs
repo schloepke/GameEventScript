@@ -23,7 +23,7 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
         {
             ["name"] = GesText(signature.Name),
             ["parameters"] = GesList(signature.Parameters.Select(parameter => GameEventScriptValueFactory.GesText(parameter))),
-            ["signatureid"] = GesText(signature.SignatureId)
+            ["signature"] = GesText(signature.SignatureId)
         };
 
         _members = new ReadOnlyDictionary<string, GameEventScriptValue>(map);

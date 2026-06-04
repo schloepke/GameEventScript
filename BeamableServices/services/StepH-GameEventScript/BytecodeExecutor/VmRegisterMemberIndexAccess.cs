@@ -45,7 +45,7 @@ internal static class VmRegisterMemberIndexAccess
                         for(var i = 0; i < tagList.Length; i++) tagList.Items[i].SetTag(message.Tags[i]);
                         dst.SetList(tagList);
                         return;
-                    case "signatureId":
+                    case "signature":
                         dst.SetText(message.SignatureId);
                         return;
                     default:
@@ -63,7 +63,7 @@ internal static class VmRegisterMemberIndexAccess
                         for (var i = 0; i < list.Length; i++) list.Items[i].SetText(signature.Parameters[i]);
                         dst.SetList(list);
                         return;
-                    case "signatureId":
+                    case "signature":
                         dst.SetText(signature.SignatureId);
                         return;
                     default:

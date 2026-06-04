@@ -116,11 +116,11 @@ public sealed class BytecodeVmPerformanceReportTests
             {
                 MaxProcessedEventsPerRun = 128
             })
-            .WithPublishedMessageObserver(message =>
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message =>
             {
                 publishedCount++;
                 lastMessage = message;
-            });
+            }));
         if (diagnosticCollector != null) builder.WithDiagnosticCollector(diagnosticCollector);
         var host = builder.Build().Load(compiled);
         ForceFullCollection();

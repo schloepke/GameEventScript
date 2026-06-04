@@ -159,11 +159,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
     }
 
     public void ReportLimit(string limitName, string detail, int limit)
-        => context.RecordDiagnostic(
-            GameEventScriptDiagnosticEventKind.RuntimeLimitReached,
-            limitName,
-            GameEventScriptNamedArguments.Empty,
-            $"{detail} Limit: {limit}.");
+        => context.RecordRuntimeLimitReached(limitName, detail, limit);
 
     private void MarkExhausted(string limitName, string detail, int limit)
     {

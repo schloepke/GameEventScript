@@ -91,16 +91,18 @@ internal static class GameEventScriptConformanceRunner
     {
         var test = testCase.Test;
         var compiled = (compileScripts ?? CompileScripts)(test);
-        var collector = new GameEventScriptDiagnosticTraceCollector();
         var published = new List<GameEventScriptMessage>();
         var outboundPublished = new List<GameEventScriptMessage>();
+        var runtimeLimitEvents = new List<TestRuntimeLimitEvent>();
         var builder = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(CreateRandom(test.RandomSequence))
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
             .WithExternalTypes(ExternalTypeRegistry)
             .WithRuntimeLimits(CreateRuntimeLimits(test.RuntimeLimits))
-            .WithDiagnosticCollector(collector)
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
+                messageEmitted: published.Add,
+                messagePublished: published.Add,
+                runtimeLimitReached: (name, detail, limit) => runtimeLimitEvents.Add(new TestRuntimeLimitEvent(name, detail, limit))))
             .WithPublishHook(message =>
             {
                 outboundPublished.Add(message);
@@ -117,15 +119,15 @@ internal static class GameEventScriptConformanceRunner
         for (var stepIndex = 0; stepIndex < test.Steps.Count; stepIndex++)
         {
             var step = test.Steps[stepIndex];
-            var diagnosticsStart = collector.Events.Count;
             published.Clear();
             outboundPublished.Clear();
+            runtimeLimitEvents.Clear();
 
             host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(step.Input, "step input", testCase)));
 
             AssertPublishedMessages(testCase, stepIndex, "published messages", step.ExpectedPublished, published);
             AssertPublishedMessages(testCase, stepIndex, "outbound published messages", step.ExpectedOutboundPublished, outboundPublished);
-            AssertDiagnostics(testCase, stepIndex, step, collector.Events.Skip(diagnosticsStart).ToArray());
+            AssertRuntimeLimits(testCase, stepIndex, step, runtimeLimitEvents);
         }
     }
 
@@ -340,33 +342,26 @@ internal static class GameEventScriptConformanceRunner
             $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}");
     }
 
-    private static void AssertDiagnostics(
+    private static void AssertRuntimeLimits(
         GameEventScriptConformanceCase testCase,
         int stepIndex,
         GameEventScriptApiStepSpec step,
-        IReadOnlyList<GameEventScriptDiagnosticEvent> actual)
+        IReadOnlyList<TestRuntimeLimitEvent> actual)
     {
-        var expectedDiagnostics = step.ExpectedDiagnostics;
-        if (expectedDiagnostics is null || expectedDiagnostics.Count == 0)
+        var expectedRuntimeLimits = step.ExpectedRuntimeLimits;
+        if (expectedRuntimeLimits is null || expectedRuntimeLimits.Count == 0)
         {
-            AssertUnexpectedDiagnostics(testCase, stepIndex, step.UnexpectedDiagnostics, actual);
-            return;
-        }
-
-        if (string.Equals(step.ExpectedDiagnosticsMode, "exact", StringComparison.OrdinalIgnoreCase))
-        {
-            AssertExactDiagnostics(testCase, stepIndex, expectedDiagnostics, actual);
-            AssertUnexpectedDiagnostics(testCase, stepIndex, step.UnexpectedDiagnostics, actual);
+            AssertUnexpectedRuntimeLimits(testCase, stepIndex, step.UnexpectedRuntimeLimits, actual);
             return;
         }
 
         var nextStart = 0;
-        foreach (var expected in expectedDiagnostics)
+        foreach (var expected in expectedRuntimeLimits)
         {
             var foundIndex = -1;
             for (var i = nextStart; i < actual.Count; i++)
             {
-                if (DiagnosticMatches(expected, actual[i]))
+                if (RuntimeLimitMatches(expected, actual[i]))
                 {
                     foundIndex = i;
                     break;
@@ -376,80 +371,54 @@ internal static class GameEventScriptConformanceRunner
             if (foundIndex < 0)
             {
                 Assert.Fail(
-                    $"{testCase} step {stepIndex + 1}: expected diagnostic was not found in order: {DescribeDiagnosticExpectation(expected)}.{Environment.NewLine}" +
-                    $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
+                    $"{testCase} step {stepIndex + 1}: expected runtime limit was not found in order: {DescribeRuntimeLimitExpectation(expected)}.{Environment.NewLine}" +
+                    $"Actual runtime limits:{Environment.NewLine}{DescribeRuntimeLimits(actual)}");
             }
 
             nextStart = foundIndex + 1;
         }
 
-        AssertUnexpectedDiagnostics(testCase, stepIndex, step.UnexpectedDiagnostics, actual);
+        AssertUnexpectedRuntimeLimits(testCase, stepIndex, step.UnexpectedRuntimeLimits, actual);
     }
 
-    private static void AssertExactDiagnostics(
+    private static void AssertUnexpectedRuntimeLimits(
         GameEventScriptConformanceCase testCase,
         int stepIndex,
-        IReadOnlyList<GameEventScriptDiagnosticExpectationSpec> expectedDiagnostics,
-        IReadOnlyList<GameEventScriptDiagnosticEvent> actual)
+        IReadOnlyList<GameEventScriptRuntimeLimitExpectationSpec>? unexpectedRuntimeLimits,
+        IReadOnlyList<TestRuntimeLimitEvent> actual)
     {
-        if (expectedDiagnostics.Count != actual.Count)
-        {
-            Assert.Fail(
-                $"{testCase} step {stepIndex + 1}: expected {expectedDiagnostics.Count} diagnostics but got {actual.Count}.{Environment.NewLine}" +
-                $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
-        }
-
-        for (var i = 0; i < expectedDiagnostics.Count; i++)
-        {
-            if (!DiagnosticMatches(expectedDiagnostics[i], actual[i]))
-            {
-                Assert.Fail(
-                    $"{testCase} step {stepIndex + 1}: diagnostic #{i + 1} did not match {DescribeDiagnosticExpectation(expectedDiagnostics[i])}.{Environment.NewLine}" +
-                    $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
-            }
-        }
-    }
-
-    private static void AssertUnexpectedDiagnostics(
-        GameEventScriptConformanceCase testCase,
-        int stepIndex,
-        IReadOnlyList<GameEventScriptDiagnosticExpectationSpec>? unexpectedDiagnostics,
-        IReadOnlyList<GameEventScriptDiagnosticEvent> actual)
-    {
-        if (unexpectedDiagnostics is null || unexpectedDiagnostics.Count == 0)
+        if (unexpectedRuntimeLimits is null || unexpectedRuntimeLimits.Count == 0)
         {
             return;
         }
 
-        foreach (var unexpected in unexpectedDiagnostics)
+        foreach (var unexpected in unexpectedRuntimeLimits)
         {
-            var found = actual.FirstOrDefault(diagnostic => DiagnosticMatches(unexpected, diagnostic));
+            var found = actual.FirstOrDefault(runtimeLimit => RuntimeLimitMatches(unexpected, runtimeLimit));
             if (found is not null)
             {
                 Assert.Fail(
-                    $"{testCase} step {stepIndex + 1}: unexpected diagnostic was found: {DescribeDiagnosticExpectation(unexpected)}.{Environment.NewLine}" +
-                    $"Actual diagnostics:{Environment.NewLine}{DescribeDiagnostics(actual)}");
+                    $"{testCase} step {stepIndex + 1}: unexpected runtime limit was found: {DescribeRuntimeLimitExpectation(unexpected)}.{Environment.NewLine}" +
+                    $"Actual runtime limits:{Environment.NewLine}{DescribeRuntimeLimits(actual)}");
             }
         }
     }
 
-    private static bool DiagnosticMatches(GameEventScriptDiagnosticExpectationSpec expected, GameEventScriptDiagnosticEvent actual)
+    private static bool RuntimeLimitMatches(GameEventScriptRuntimeLimitExpectationSpec expected, TestRuntimeLimitEvent actual)
     {
-        if (!string.IsNullOrWhiteSpace(expected.Kind) &&
-            !string.Equals(expected.Kind, actual.Kind.ToString(), StringComparison.OrdinalIgnoreCase))
-        {
-            return false;
-        }
-
         if (!string.IsNullOrWhiteSpace(expected.Name) &&
             !string.Equals(expected.Name, actual.Name, StringComparison.Ordinal))
         {
             return false;
         }
 
-        var detailContains = expected.DetailContains ?? expected.MessageContains;
-        return string.IsNullOrEmpty(detailContains) ||
-               (actual.Detail?.Contains(detailContains, StringComparison.Ordinal) ?? false);
+        if (expected.Limit is not null && expected.Limit.Value != actual.Limit)
+        {
+            return false;
+        }
+
+        return string.IsNullOrEmpty(expected.DetailContains) ||
+               actual.Detail.Contains(expected.DetailContains, StringComparison.Ordinal);
     }
 
     private static void AssertCompileError(
@@ -513,7 +482,6 @@ internal static class GameEventScriptConformanceRunner
         => new()
         {
             Optimize = test.CompileOptions?.Optimize ?? true,
-            EnableDiagnostics = test.CompileOptions?.EnableDiagnostics ?? false,
             EnableDebugInfo = test.CompileOptions?.EnableDebugInfo ?? false
         };
 
@@ -678,11 +646,11 @@ internal static class GameEventScriptConformanceRunner
         Assert.AreEqual(expected, actual, $"{testCase}: {description} differs.");
     }
 
-    private static string DescribeDiagnosticExpectation(GameEventScriptDiagnosticExpectationSpec expected)
-        => $"kind={expected.Kind ?? "*"}, name={expected.Name ?? "*"}, detailContains={expected.DetailContains ?? expected.MessageContains ?? "*"}";
+    private static string DescribeRuntimeLimitExpectation(GameEventScriptRuntimeLimitExpectationSpec expected)
+        => $"name={expected.Name ?? "*"}, limit={expected.Limit?.ToString(CultureInfo.InvariantCulture) ?? "*"}, detailContains={expected.DetailContains ?? "*"}";
 
-    private static string DescribeDiagnostics(IEnumerable<GameEventScriptDiagnosticEvent> diagnostics)
-        => string.Join(Environment.NewLine, diagnostics.Select(diagnostic => $"{diagnostic.Kind} {diagnostic.Name}: {diagnostic.Detail}"));
+    private static string DescribeRuntimeLimits(IEnumerable<TestRuntimeLimitEvent> runtimeLimits)
+        => string.Join(Environment.NewLine, runtimeLimits.Select(runtimeLimit => $"{runtimeLimit.Name} ({runtimeLimit.Limit}): {runtimeLimit.Detail}"));
 
     private static void ValidateRequired(string? value, string description, string file, string? suite, string? test)
     {

@@ -370,7 +370,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxExecutionSteps = 200 })
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GameEventScriptManager.CompileModule(script));
 
@@ -403,7 +403,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var published = new List<GameEventScriptMessage>();
         var module = GameEventScriptManager.CompileModule(script);
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(module);
 
@@ -723,7 +723,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -769,7 +769,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -808,7 +808,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -848,7 +848,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -887,7 +887,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -924,7 +924,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -962,7 +962,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -999,7 +999,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1027,7 +1027,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRangeItems = 1 })
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GameEventScriptManager.CompileModule(script));
 
@@ -1063,7 +1063,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1100,7 +1100,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1138,7 +1138,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1175,7 +1175,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1213,7 +1213,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1250,7 +1250,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1295,7 +1295,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1339,7 +1339,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1367,7 +1367,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRangeItems = 1 })
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GameEventScriptManager.CompileModule(script));
 
@@ -1404,7 +1404,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1442,7 +1442,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1484,7 +1484,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1525,7 +1525,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1565,7 +1565,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1604,7 +1604,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1645,7 +1645,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1686,7 +1686,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1729,7 +1729,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1770,7 +1770,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1813,7 +1813,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1855,7 +1855,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1900,7 +1900,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1944,7 +1944,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -1985,7 +1985,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2026,7 +2026,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2072,7 +2072,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2119,7 +2119,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2171,7 +2171,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2221,7 +2221,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2268,7 +2268,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2313,7 +2313,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2356,7 +2356,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2398,7 +2398,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rewritten));
 
@@ -2528,7 +2528,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(rebuiltBytecode));
 
@@ -2758,7 +2758,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
 
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(compiled));
 
@@ -2798,7 +2798,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRegistry(TestExtensionRegistry.Instance)
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GesBytecodeVmExecutableBuilder.Build(compiled));
 
@@ -2878,7 +2878,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRegistry(StandardOverrideRegistry.Instance)
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(GameEventScriptManager.CompileModule(script));
 

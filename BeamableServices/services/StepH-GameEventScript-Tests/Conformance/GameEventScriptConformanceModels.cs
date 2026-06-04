@@ -85,18 +85,14 @@ public sealed class GameEventScriptApiStepSpec
 
     public List<JsonElement>? ExpectedOutboundPublished { get; set; }
 
-    public string? ExpectedDiagnosticsMode { get; set; }
+    public List<GameEventScriptRuntimeLimitExpectationSpec>? ExpectedRuntimeLimits { get; set; }
 
-    public List<GameEventScriptDiagnosticExpectationSpec>? ExpectedDiagnostics { get; set; }
-
-    public List<GameEventScriptDiagnosticExpectationSpec>? UnexpectedDiagnostics { get; set; }
+    public List<GameEventScriptRuntimeLimitExpectationSpec>? UnexpectedRuntimeLimits { get; set; }
 }
 
 public sealed class GameEventScriptCompileOptionsSpec
 {
     public bool? Optimize { get; set; }
-
-    public bool? EnableDiagnostics { get; set; }
 
     public bool? EnableDebugInfo { get; set; }
 }
@@ -144,15 +140,13 @@ public sealed class GameEventScriptRuntimeLimitsSpec
     public int? MaxDiceSides { get; set; }
 }
 
-public sealed class GameEventScriptDiagnosticExpectationSpec
+public sealed class GameEventScriptRuntimeLimitExpectationSpec
 {
-    public string? Kind { get; set; }
-
     public string? Name { get; set; }
 
     public string? DetailContains { get; set; }
 
-    public string? MessageContains { get; set; }
+    public int? Limit { get; set; }
 }
 
 public sealed class GameEventScriptExpectedCompileErrorSpec

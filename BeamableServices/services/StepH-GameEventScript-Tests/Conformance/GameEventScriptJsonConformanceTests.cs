@@ -5,8 +5,6 @@ using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
-using StepH.GameEventScript.Extensions;
-using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 
@@ -86,11 +84,6 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(RuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
-        => RunJsonConformanceCase(testCase);
-
-    [TestMethod]
-    [DynamicData(nameof(RuntimeDiagnosticsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
-    public void RuntimeDiagnostics(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
@@ -194,11 +187,6 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [DynamicData(nameof(NewVirtualMachineRuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
-
-    [TestMethod]
-    [DynamicData(nameof(NewVirtualMachineRuntimeDiagnosticsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
-    public void RuntimeDiagnostics(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeExtensionsSequencesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -333,7 +321,7 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
 
 public abstract class GameEventScriptJsonConformanceTestBase
 {
-    protected const bool NewVirtualMachineConformanceSoftAssertions = true;
+    protected const bool NewVirtualMachineConformanceSoftAssertions = false;
     protected static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
 
     public TestContext TestContext { get; set; } = null!;
@@ -382,9 +370,6 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> RuntimeControlFlowCases()
         => Cases("runtime/control-flow.json");
-
-    public static IEnumerable<object[]> RuntimeDiagnosticsCases()
-        => Cases("runtime/diagnostics.json");
 
     public static IEnumerable<object[]> RuntimeExtensionsSequencesCases()
         => Cases("runtime/extensions-sequences.json");
@@ -442,9 +427,6 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeControlFlowCases()
         => NewVirtualMachineCases("runtime/control-flow.json");
-
-    public static IEnumerable<object[]> NewVirtualMachineRuntimeDiagnosticsCases()
-        => NewVirtualMachineCases("runtime/diagnostics.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeExtensionsSequencesCases()
         => NewVirtualMachineCases("runtime/extensions-sequences.json");
@@ -600,9 +582,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         var random = GameEventScriptConformanceRunner.CreateRandomForTest(test.RandomSequence);
         var runtimeLimits = GameEventScriptConformanceRunner.CreateRuntimeLimitsForTest(test.RuntimeLimits);
-        var diagnostics = new GameEventScriptDiagnosticTraceCollector();
         var emitted = new List<GameEventScriptMessage>();
         var published = new List<GameEventScriptMessage>();
+        var observedRuntimeLimits = new List<TestRuntimeLimitEvent>();
         var scriptSource = GetScriptSourceForDump(testCase);
         var vmModule = (GameEventScriptVirtualMaschine)GameEventScriptManager.CreateModuleNewVm(binary, 4096, 256);
         vmModule.DebugScriptSource = scriptSource;
@@ -612,12 +594,18 @@ public abstract class GameEventScriptJsonConformanceTestBase
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
             .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
             .WithRuntimeLimits(runtimeLimits)
-            .WithDiagnosticCollector(diagnostics)
-            .WithPublishedMessageObserver(message =>
-            {
-                emitted.Add(message);
-                lastCapturedVmDump = vmModule.DumpState(scriptSource);
-            })
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
+                messageEmitted: message =>
+                {
+                    emitted.Add(message);
+                    lastCapturedVmDump = vmModule.DumpState(scriptSource);
+                },
+                messagePublished: message =>
+                {
+                    emitted.Add(message);
+                    lastCapturedVmDump = vmModule.DumpState(scriptSource);
+                },
+                runtimeLimitReached: (name, detail, limit) => observedRuntimeLimits.Add(new TestRuntimeLimitEvent(name, detail, limit))))
             .WithPublishHook(message =>
             {
                 published.Add(message);
@@ -632,17 +620,11 @@ public abstract class GameEventScriptJsonConformanceTestBase
             var step = test.Steps[stepIndex];
             emitted.Clear();
             published.Clear();
+            observedRuntimeLimits.Clear();
             var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
             if (!handled)
             {
                 mismatch = $"step {stepIndex + 1}: handler was not found or could not start.";
-                debugDump = CaptureVmDump(lastCapturedVmDump);
-                return false;
-            }
-
-            if (HasDiagnosticExpectations(step))
-            {
-                mismatch = $"step {stepIndex + 1}: diagnostic expectations are not implemented by the new VM soft runner yet.";
                 debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
@@ -657,6 +639,13 @@ public abstract class GameEventScriptJsonConformanceTestBase
             if (!TryMatchMessages(testCase, stepIndex, "published messages", step.ExpectedOutboundPublished, published, includeMessageDiff, out var publishedDiff))
             {
                 mismatch = $"step {stepIndex + 1}: published messages differ.{Environment.NewLine}{publishedDiff}";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
+                return false;
+            }
+
+            if (!TryMatchRuntimeLimits(testCase, stepIndex, step, observedRuntimeLimits, out var runtimeLimitDiff))
+            {
+                mismatch = $"step {stepIndex + 1}: runtime limits differ.{Environment.NewLine}{runtimeLimitDiff}";
                 debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
@@ -693,6 +682,98 @@ public abstract class GameEventScriptJsonConformanceTestBase
             : $"expectedMessages={expected.Length}, actualMessages={actual.Count}";
         return false;
     }
+
+    private static bool TryMatchRuntimeLimits(
+        GameEventScriptConformanceCase testCase,
+        int stepIndex,
+        GameEventScriptApiStepSpec step,
+        IReadOnlyList<TestRuntimeLimitEvent> actual,
+        out string diff)
+    {
+        diff = string.Empty;
+        if (!RuntimeLimitsMatch(step.ExpectedRuntimeLimits, step.UnexpectedRuntimeLimits, actual, out var details))
+        {
+            var builder = new StringBuilder();
+            builder.AppendLine($"Test: {testCase.Test.Name ?? testCase.ToString()}");
+            builder.AppendLine($"Step: {stepIndex + 1}");
+            builder.AppendLine("Channel: runtime limits");
+            builder.Append(details);
+            diff = builder.ToString();
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool RuntimeLimitsMatch(
+        IReadOnlyList<GameEventScriptRuntimeLimitExpectationSpec>? expectedRuntimeLimits,
+        IReadOnlyList<GameEventScriptRuntimeLimitExpectationSpec>? unexpectedRuntimeLimits,
+        IReadOnlyList<TestRuntimeLimitEvent> actual,
+        out string diff)
+    {
+        diff = string.Empty;
+        var builder = new StringBuilder();
+        var nextStart = 0;
+        foreach (var expected in expectedRuntimeLimits ?? [])
+        {
+            var foundIndex = -1;
+            for (var i = nextStart; i < actual.Count; i++)
+            {
+                if (RuntimeLimitMatches(expected, actual[i]))
+                {
+                    foundIndex = i;
+                    break;
+                }
+            }
+
+            if (foundIndex < 0)
+            {
+                AppendDiff(builder, "expectedRuntimeLimit", DescribeRuntimeLimitExpectation(expected), DescribeRuntimeLimits(actual));
+            }
+            else
+            {
+                nextStart = foundIndex + 1;
+            }
+        }
+
+        foreach (var unexpected in unexpectedRuntimeLimits ?? [])
+        {
+            var found = actual.FirstOrDefault(runtimeLimit => RuntimeLimitMatches(unexpected, runtimeLimit));
+            if (found is not null)
+            {
+                AppendDiff(builder, "unexpectedRuntimeLimit", DescribeRuntimeLimitExpectation(unexpected), DescribeRuntimeLimit(found));
+            }
+        }
+
+        diff = builder.ToString();
+        return diff.Length == 0;
+    }
+
+    private static bool RuntimeLimitMatches(GameEventScriptRuntimeLimitExpectationSpec expected, TestRuntimeLimitEvent actual)
+    {
+        if (!string.IsNullOrWhiteSpace(expected.Name) &&
+            !string.Equals(expected.Name, actual.Name, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (expected.Limit is not null && expected.Limit.Value != actual.Limit)
+        {
+            return false;
+        }
+
+        return string.IsNullOrEmpty(expected.DetailContains) ||
+               actual.Detail.Contains(expected.DetailContains, StringComparison.Ordinal);
+    }
+
+    private static string DescribeRuntimeLimitExpectation(GameEventScriptRuntimeLimitExpectationSpec expected)
+        => $"name={expected.Name ?? "*"}, limit={expected.Limit?.ToString() ?? "*"}, detailContains={expected.DetailContains ?? "*"}";
+
+    private static string DescribeRuntimeLimits(IEnumerable<TestRuntimeLimitEvent> runtimeLimits)
+        => string.Join("; ", runtimeLimits.Select(DescribeRuntimeLimit));
+
+    private static string DescribeRuntimeLimit(TestRuntimeLimitEvent runtimeLimit)
+        => $"{runtimeLimit.Name} ({runtimeLimit.Limit}): {runtimeLimit.Detail}";
 
     private static string BuildMessageDiff(
         GameEventScriptConformanceCase testCase,
@@ -780,10 +861,6 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     private static string Quote(string value)
         => JsonSerializer.Serialize(value);
-
-    private static bool HasDiagnosticExpectations(GameEventScriptApiStepSpec step)
-        => step.ExpectedDiagnostics is { Count: > 0 } ||
-           step.UnexpectedDiagnostics is { Count: > 0 };
 
     protected sealed class NewVmConformanceResult(int totalCases, int targetedCases, int skippedNonRuntimeCases)
     {

@@ -179,7 +179,7 @@ public sealed class GameEventScriptHostSteppingTests
         var seen = new List<long>();
         var messages = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(messages.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(messages.Add))
             .Build()
             .Load(bytecode);
         host.Subscribe("Seen", ["value"], (message, _) => seen.Add(message.Arguments["value"].AsInteger()));
@@ -254,7 +254,7 @@ public sealed class GameEventScriptHostSteppingTests
         var outbound = new List<GameEventScriptMessage>();
         var observed = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(message => observed.Add(message.Name))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => observed.Add(message.Name)))
             .WithPublishHook(message =>
             {
                 outbound.Add(message);
@@ -285,7 +285,7 @@ public sealed class GameEventScriptHostSteppingTests
             .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(message => published.Add(message.Name))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
             .Build()
             .Load(bytecode);
 
@@ -320,7 +320,7 @@ public sealed class GameEventScriptHostSteppingTests
             .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(message => published.Add(message.Name))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
             .Build()
             .Load(bytecode);
 
@@ -350,13 +350,13 @@ public sealed class GameEventScriptHostSteppingTests
         var completed = new ManualResetEventSlim(false);
         var host = GameEventScriptHost.CreateBuilder()
             .WithAutomaticDispatch()
-            .WithPublishedMessageObserver(message =>
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveOutputs(message =>
             {
                 if (message.Name == "Done")
                 {
                     completed.Set();
                 }
-            })
+            }))
             .Build()
             .Load(bytecode);
 
@@ -381,24 +381,24 @@ public sealed class GameEventScriptHostSteppingTests
         var completed = new CountdownEvent(2);
         var first = GameEventScriptHost.CreateBuilder()
             .WithAutomaticDispatch(dispatcher)
-            .WithPublishedMessageObserver(message =>
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveOutputs(message =>
             {
                 if (message.Name == "Done")
                 {
                     completed.Signal();
                 }
-            })
+            }))
             .Build()
             .Load(bytecode);
         var second = GameEventScriptHost.CreateBuilder()
             .WithAutomaticDispatch(dispatcher)
-            .WithPublishedMessageObserver(message =>
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveOutputs(message =>
             {
                 if (message.Name == "Done")
                 {
                     completed.Signal();
                 }
-            })
+            }))
             .Build()
             .Load(bytecode);
 
@@ -448,7 +448,7 @@ public sealed class GameEventScriptHostSteppingTests
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = 1 })
-            .WithPublishedMessageObserver(message => published.Add(message.Name))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
             .Build()
             .Load(bytecode);
 
@@ -479,7 +479,7 @@ public sealed class GameEventScriptHostSteppingTests
             .CompileModule();
         var published = new List<long>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(message => published.Add(message.Arguments["value"].AsInteger()))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Arguments["value"].AsInteger())))
             .Build()
             .Load(bytecode);
 
@@ -510,7 +510,7 @@ public sealed class GameEventScriptHostSteppingTests
             .CompileModule();
         var published = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(published.Add)
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
             .Load(bytecode);
 
@@ -562,7 +562,7 @@ public sealed class GameEventScriptHostSteppingTests
             .CompileModule();
         var published = new List<string>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishedMessageObserver(message => published.Add(message.Name))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
             .Build()
             .Load(bytecode);
 

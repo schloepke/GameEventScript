@@ -751,9 +751,8 @@
               }
             }
           ],
-          "unexpectedDiagnostics": [
+          "unexpectedRuntimeLimits": [
             {
-              "kind": "RuntimeLimitReached"
             }
           ]
         }
@@ -761,7 +760,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "range limit diagnostics",
+      "name": "range limit observer event",
       "script": "on Start {\n  for item from 1 to 10 emit Tick(value: item)\n  let values as :list be from 1 to 10\n  emit Done(count: :len values)\n}",
       "runtimeLimits": {
         "maxRangeItems": 5
@@ -783,9 +782,8 @@
               }
             }
           ],
-          "expectedDiagnostics": [
+          "expectedRuntimeLimits": [
             {
-              "kind": "RuntimeLimitReached",
               "name": "MaxRangeItems"
             }
           ]
@@ -834,9 +832,8 @@
               }
             }
           ],
-          "expectedDiagnostics": [
+          "expectedRuntimeLimits": [
             {
-              "kind": "RuntimeLimitReached",
               "name": "MaxLoopIterations"
             }
           ]
@@ -845,7 +842,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "dice limit diagnostics",
+      "name": "dice limit observer event",
       "script": "on Start {\n  let roll be :dice 6d6\n  emit Done(count: :len roll)\n}",
       "runtimeLimits": {
         "maxDiceCount": 4
@@ -867,9 +864,8 @@
               }
             }
           ],
-          "expectedDiagnostics": [
+          "expectedRuntimeLimits": [
             {
-              "kind": "RuntimeLimitReached",
               "name": "MaxDiceCount"
             }
           ]

@@ -15,7 +15,7 @@ public sealed class GameEventScriptHost
 
     private readonly GameEventScriptRandomGenerator _random;
     private readonly IGameEventScriptDiagnosticCollector? _diagnosticCollector;
-    private readonly Action<GameEventScriptMessage>? _publishedMessageObserver;
+    private readonly IGameEventScriptRuntimeObserver? _runtimeObserver;
     private readonly IGameEventScriptExtensionRegistry _extensionRegistry;
     private readonly IGameEventScriptExternalTypeRegistry _externalTypeRegistry;
     private readonly GameEventScriptRuntimeLimits _runtimeLimits;
@@ -32,7 +32,7 @@ public sealed class GameEventScriptHost
     private bool _automaticDispatchScheduled;
     private long _nextRegistrationOrder;
 
-    internal GameEventScriptHost(GameEventScriptRandomGenerator random, IGameEventScriptDiagnosticCollector? diagnosticCollector, Action<GameEventScriptMessage>? publishedMessageObserver,
+    internal GameEventScriptHost(GameEventScriptRandomGenerator random, IGameEventScriptDiagnosticCollector? diagnosticCollector, IGameEventScriptRuntimeObserver? runtimeObserver,
         IGameEventScriptExtensionRegistry? extensionRegistry,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? runtimeLimits,
@@ -42,7 +42,7 @@ public sealed class GameEventScriptHost
     {
         _random = random;
         _diagnosticCollector = diagnosticCollector;
-        _publishedMessageObserver = publishedMessageObserver;
+        _runtimeObserver = runtimeObserver;
         _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
@@ -187,7 +187,7 @@ public sealed class GameEventScriptHost
             return false;
         }
 
-        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         EnqueueInitializationInvocations(state);
         if (!TryEnqueueInvocations(state, message))
         {
@@ -221,7 +221,7 @@ public sealed class GameEventScriptHost
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
-        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _diagnosticCollector, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         EnqueueInitializationInvocations(state);
         var accepted = TryEnqueueInvocations(state, message);
         return new GameEventScriptRun(DrainSlice, state, accepted);
@@ -232,7 +232,7 @@ public sealed class GameEventScriptHost
     #region Internals
 
     private GameEventScriptHostRunState CreateLiveState(GameEventScriptDispatchMode dispatchMode)
-        => new(this, dispatchMode, _dispatcher, _random, _diagnosticCollector, _publishedMessageObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        => new(this, dispatchMode, _dispatcher, _random, _diagnosticCollector, _runtimeObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
 
     internal bool TryEnqueueSessionInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
         => TryEnqueueInvocations(state, message);
@@ -466,6 +466,7 @@ public sealed class GameEventScriptHost
     {
         var queuedEvent = queuedInvocation.Message;
         state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchStarted, queuedEvent.Name, queuedEvent.Arguments, $"Deliver '{queuedEvent.Name}' to {queuedInvocation.Subscription.DispatchSignatureId}");
+        state.RecordDispatchStarted(queuedEvent, queuedInvocation.Subscription.DispatchSignatureId);
         state.StartDispatch(queuedInvocation);
     }
 
@@ -483,6 +484,7 @@ public sealed class GameEventScriptHost
 
             state.ClearActiveInvocation();
             state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchCompleted, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Delivery '{state.ActiveMessage.Name}' completed");
+            state.RecordDispatchCompleted(state.ActiveMessage, state.ActiveSubscription!.DispatchSignatureId);
             state.CompleteDispatch();
             return;
         }
@@ -516,6 +518,7 @@ public sealed class GameEventScriptHost
         }
 
         state.RecordDiagnostic(GameEventScriptDiagnosticEventKind.DispatchCompleted, state.ActiveMessage!.Name, state.ActiveMessage.Arguments, $"Delivery '{state.ActiveMessage.Name}' completed");
+        state.RecordDispatchCompleted(state.ActiveMessage, state.ActiveSubscription!.DispatchSignatureId);
         state.CompleteDispatch();
     }
 
@@ -783,7 +786,7 @@ internal sealed class GameEventScriptHostRunState
         GameEventScriptDispatcher dispatcher,
         GameEventScriptRandomGenerator random,
         IGameEventScriptDiagnosticCollector? diagnosticCollector,
-        Action<GameEventScriptMessage>? publishedMessageObserver,
+        IGameEventScriptRuntimeObserver? runtimeObserver,
         IGameEventScriptExtensionRegistry extensionRegistry,
         GameEventScriptRuntimeLimits runtimeLimits,
         bool enforceProcessedEventsLimit = true,
@@ -795,8 +798,8 @@ internal sealed class GameEventScriptHostRunState
         _maxQueuedMessagesPerRun = runtimeLimits.MaxQueuedMessagesPerRun;
         _queuePublisher = queuePublisher ?? ((_, _) => false);
         _publishHook = publishHook;
-        PublishedMessageObserver = publishedMessageObserver;
-        Session = new GameEventScriptSession(host, this, dispatchMode, dispatcher, random, EmitInternal, diagnosticCollector, runtimeLimits, extensionRegistry, PublishInternal);
+        RuntimeObserver = runtimeObserver;
+        Session = new GameEventScriptSession(host, this, dispatchMode, dispatcher, random, EmitInternal, diagnosticCollector, runtimeLimits, extensionRegistry, PublishInternal, runtimeObserver);
     }
 
     public GameEventScriptSession Session { get; }
@@ -830,7 +833,7 @@ internal sealed class GameEventScriptHostRunState
         }
     }
 
-    private Action<GameEventScriptMessage>? PublishedMessageObserver { get; }
+    private IGameEventScriptRuntimeObserver? RuntimeObserver { get; }
 
     public void BeginStep()
     {
@@ -937,6 +940,12 @@ internal sealed class GameEventScriptHostRunState
     public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
         => Session.RecordDiagnostic(kind, name, arguments, detail);
 
+    public void RecordDispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)
+        => RuntimeObserver?.DispatchStarted(message, dispatchSignatureId);
+
+    public void RecordDispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId)
+        => RuntimeObserver?.DispatchCompleted(message, dispatchSignatureId);
+
     private bool EmitInternal(GameEventScriptMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.Name))
@@ -945,7 +954,7 @@ internal sealed class GameEventScriptHostRunState
         }
 
         var queued = _queuePublisher(this, message);
-        RecordScriptMessageOutput(message, "Emitted");
+        RecordScriptMessageOutput(message, publish: false, queued);
         return queued;
     }
 
@@ -959,14 +968,23 @@ internal sealed class GameEventScriptHostRunState
         var queued = _publishHook is null
             ? _queuePublisher(this, message)
             : _publishHook(message);
-        RecordScriptMessageOutput(message, "Published");
+        RecordScriptMessageOutput(message, publish: true, queued);
         return queued;
     }
 
-    private void RecordScriptMessageOutput(GameEventScriptMessage message, string verb)
+    private void RecordScriptMessageOutput(GameEventScriptMessage message, bool publish, bool accepted)
     {
         StepPublishedMessages++;
-        PublishedMessageObserver?.Invoke(message);
+        if (publish)
+        {
+            RuntimeObserver?.MessagePublished(message, accepted);
+        }
+        else
+        {
+            RuntimeObserver?.MessageEmitted(message, accepted);
+        }
+
+        var verb = publish ? "Published" : "Emitted";
         RecordDiagnostic(GameEventScriptDiagnosticEventKind.EventPublished, message.Name, message.Arguments, $"{verb} '{message.Name}'");
     }
 }

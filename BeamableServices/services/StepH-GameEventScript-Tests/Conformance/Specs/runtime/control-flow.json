@@ -176,9 +176,8 @@
               "args": {}
             }
           ],
-          "expectedDiagnostics": [
+          "expectedRuntimeLimits": [
             {
-              "kind": "RuntimeLimitReached",
               "name": "MaxQueuedMessagesPerRun",
               "detailContains": "Dropped 'C'"
             }

@@ -421,10 +421,10 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypes(StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypes(System.Type[] types)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishHook(System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, System.Boolean> publishHook)
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishedMessageObserver(System.Action<StepH.GameEventScript.Api.GameEventScriptMessage> publishedMessageObserver)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandom(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRegistry(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeLimits(StepH.GameEventScript.Api.GameEventScriptRuntimeLimits runtimeLimits)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeObserver(StepH.GameEventScript.Runtime.IGameEventScriptRuntimeObserver runtimeObserver)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Build()
 enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
@@ -840,6 +840,12 @@ interface StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor
 interface StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry
   method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor& constructor)
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.GameEventScriptExternalTypeDefinition> Types { get }
+interface StepH.GameEventScript.Runtime.IGameEventScriptRuntimeObserver
+  method System.Void DispatchCompleted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
+  method System.Void DispatchStarted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
+  method System.Void MessageEmitted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
+  method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
+  method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 sealed class StepH.GameEventScript.Types.GameEventScriptBooleanValue
   field static StepH.GameEventScript.Types.GameEventScriptBooleanValue False
   field static StepH.GameEventScript.Types.GameEventScriptBooleanValue True

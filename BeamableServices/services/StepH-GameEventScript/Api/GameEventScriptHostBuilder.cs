@@ -12,7 +12,7 @@ public sealed class GameEventScriptHostBuilder
 {
     private GameEventScriptRandomGenerator? _random;
     private IGameEventScriptDiagnosticCollector? _diagnosticCollector;
-    private Action<GameEventScriptMessage>? _publishedMessageObserver;
+    private IGameEventScriptRuntimeObserver? _runtimeObserver;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
@@ -60,21 +60,17 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
-    /// Configures the <see cref="GameEventScriptHostBuilder"/> to use the specified
-    /// observer for monitoring published messages during script execution.
+    /// Configures the observer used to receive host runtime events such as message output,
+    /// dispatch lifecycle events, and runtime limit notifications.
     /// </summary>
-    /// <param name="publishedMessageObserver">
-    /// An action delegate to be invoked whenever a <see cref="GameEventScriptMessage"/> is published.
-    /// </param>
-    /// <returns>
-    /// The current instance of <see cref="GameEventScriptHostBuilder"/>, enabling additional configuration chaining.
-    /// </returns>
+    /// <param name="runtimeObserver">The runtime observer to notify during host execution.</param>
+    /// <returns>The current builder instance.</returns>
     /// <exception cref="ArgumentNullException">
-    /// Thrown when the <paramref name="publishedMessageObserver"/> parameter is null.
+    /// Thrown if the <paramref name="runtimeObserver"/> parameter is null.
     /// </exception>
-    public GameEventScriptHostBuilder WithPublishedMessageObserver(Action<GameEventScriptMessage> publishedMessageObserver)
+    public GameEventScriptHostBuilder WithRuntimeObserver(IGameEventScriptRuntimeObserver runtimeObserver)
     {
-        _publishedMessageObserver = publishedMessageObserver ?? throw new ArgumentNullException(nameof(publishedMessageObserver));
+        _runtimeObserver = runtimeObserver ?? throw new ArgumentNullException(nameof(runtimeObserver));
         return this;
     }
 
@@ -195,7 +191,7 @@ public sealed class GameEventScriptHostBuilder
     public GameEventScriptHost Build() => new(
         _random ?? GameEventScriptRandomGenerator.Create(),
         _diagnosticCollector,
-        _publishedMessageObserver,
+        _runtimeObserver,
         _extensionRegistry,
         _externalTypeRegistry,
         _runtimeLimits,

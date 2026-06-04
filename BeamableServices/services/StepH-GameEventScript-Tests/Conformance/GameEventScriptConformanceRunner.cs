@@ -15,7 +15,7 @@ namespace StepH_GameEventScript_Tests.Conformance;
 internal static class GameEventScriptConformanceRunner
 {
     internal const string BytecodeVmEngine = "bytecodevm";
-    private static readonly GameEventScriptExternalTypeRegistry ExternalTypeRegistry =
+    internal static readonly GameEventScriptExternalTypeRegistry ExternalTypeRegistry =
         GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
 
     private static readonly JsonSerializerOptions JsonOptions = new()

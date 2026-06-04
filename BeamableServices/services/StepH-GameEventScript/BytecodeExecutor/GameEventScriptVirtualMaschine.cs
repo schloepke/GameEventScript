@@ -18,6 +18,7 @@ public class GameEventScriptVmException(string message) : GameEventScriptFatalRu
 public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 {
     private readonly VmState _vmState;
+    private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
 
     public string ModuleName { get; }
     public IEnumerable<GameEventScriptMessageHandlerDescriptor> Handlers { get; }
@@ -28,7 +29,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
     public void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
-        // currently nothing to implement
+        _externalTypeRegistry = typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
     }
     
     public static GameEventScriptVirtualMaschine Create(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
@@ -55,7 +56,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         if (_vmState.State is Processing) throw new GameEventScriptVmException("Virtual machine is already processing another message");
         if (_vmState.State != Ready) _vmState.Reset();
         if (!_vmState.PrepareStateForMessage(message, matchArguments, entryAddress, session)) _vmState.RaiseError("Failed to prepare state for message");
-        return new Runner(_vmState, session);
+        return new Runner(_vmState, session, _externalTypeRegistry);
     }
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession session)
@@ -67,7 +68,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         return true;
     }
 
-    private class Runner(VmState vmState, GameEventScriptSession session) : IGameEventScriptMessageInvocation
+    private class Runner(VmState vmState, GameEventScriptSession session, IGameEventScriptExternalTypeRegistry externalTypeRegistry) : IGameEventScriptMessageInvocation
     {
         public bool IsCompleted { get; private set; } = false;
 
@@ -292,7 +293,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationSlot);
                             break;
                         case CreateExternalType:
-                            vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.BindId, instruction.ListIndex);
+                            vmState.Register(instruction.DestinationSlot).VmCreateExternalType(instruction.BindId, instruction.ListIndex, externalTypeRegistry);
                             vmState.ClearStage();
                             break;
 

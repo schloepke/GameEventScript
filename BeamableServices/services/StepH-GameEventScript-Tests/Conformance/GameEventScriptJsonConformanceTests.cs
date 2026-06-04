@@ -610,6 +610,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var host = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(random)
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
+            .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
             .WithRuntimeLimits(runtimeLimits)
             .WithDiagnosticCollector(diagnostics)
             .WithPublishedMessageObserver(message =>

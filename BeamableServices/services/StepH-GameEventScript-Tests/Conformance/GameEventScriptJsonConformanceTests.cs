@@ -186,7 +186,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeExtensionsSequencesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -211,7 +211,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimePublishTagsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimePublishTags(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeRandomDiceRangesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -321,7 +321,7 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
 
 public abstract class GameEventScriptJsonConformanceTestBase
 {
-    protected const bool NewVirtualMachineConformanceSoftAssertions = false;
+    protected const bool NewVirtualMachineConformanceSoftAssertions = true;
     protected static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
 
     public TestContext TestContext { get; set; } = null!;

@@ -47,8 +47,7 @@ internal sealed class GesBytecodeVmExecutable : IGameEventScriptModule
                 handler.Definition,
                 (message, context) =>
                 {
-                    var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName &&
-                                          !GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message)
+                    var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName
                         ? GameEventScriptSystemEndpoints.CreateMessageDispatchMessage(message)
                         : message;
                     return GesBytecodeVmExecutionSession.CreateFiber(this, context, handler, dispatchMessage.Arguments);

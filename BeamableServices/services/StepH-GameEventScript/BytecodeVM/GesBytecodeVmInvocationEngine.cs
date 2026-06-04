@@ -14,8 +14,7 @@ internal static class GesBytecodeVmInvocationEngine
         {
             if (MatchesTags(handler, message))
             {
-                var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName &&
-                                      !GameEventScriptSystemEndpoints.IsUndeliverableName(handler.Message)
+                var dispatchMessage = handler.DispatchKind == GameEventScriptBytecodeHandlerDispatchKind.MessageName
                     ? GameEventScriptSystemEndpoints.CreateMessageDispatchMessage(message)
                     : message;
                 InvokeHandler(compiledScript, context, handler, dispatchMessage);

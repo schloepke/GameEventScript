@@ -30,6 +30,4 @@ internal static class GameEventScriptSystemEndpoints
     public static GameEventScriptMessage CreateMessageDispatchMessage(GameEventScriptMessage original)
         => GameEventScriptMessage.Create(original.Name, new Dictionary<string, GameEventScriptValue> { [MessageArgumentName] = GesMessage(original) }, original.Tags);
 
-    public static GameEventScriptMessage CreateUndeliverableMessage(GameEventScriptMessage original)
-        => GameEventScriptMessage.Create(UndeliverableName, new Dictionary<string, GameEventScriptValue> { [MessageArgumentName] = GesMessage(original) }, original.Tags);
 }

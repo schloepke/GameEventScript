@@ -604,7 +604,6 @@ public sealed class GameEventScriptHost
             return false;
         }
 
-        var undeliverableMessage = GameEventScriptSystemEndpoints.CreateUndeliverableMessage(message);
         var accepted = false;
         var matched = false;
         foreach (var subscription in EnumerateDispatchSubscriptions(
@@ -613,13 +612,13 @@ public sealed class GameEventScriptHost
                      nameSubscriptions,
                      hasNameSubscriptions))
         {
-            if (!subscription.MatchesTags(undeliverableMessage))
+            if (!subscription.MatchesTags(message))
             {
                 continue;
             }
 
             matched = true;
-            accepted |= state.Enqueue(new QueuedInvocation(undeliverableMessage, subscription));
+            accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
         }
 
         return matched && accepted;

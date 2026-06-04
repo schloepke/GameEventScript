@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicSeries",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "series term",
+      "script": "module AtomicSeriesTerm\non Start {\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  emit Done(naturalZero: naturals[:term 0], naturalThree: naturals[:term 3], oddFour: odd[:term 4], fibSeven: fib[:term 7], factFive: fact[:term 5], invalidText: naturals[:term 'x'])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "factFive": {
+                  "type": ":integer",
+                  "value": "120"
+                },
+                "fibSeven": {
+                  "type": ":integer",
+                  "value": "13"
+                },
+                "invalidText": {
+                  "type": ":nothing"
+                },
+                "naturalThree": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "naturalZero": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "oddFour": {
+                  "type": ":integer",
+                  "value": "9"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "series take first",
+      "script": "module AtomicSeriesTakeFirst\non Start {\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  emit Done(firstNaturals: naturals[:take first 4], firstOdd: odd[:take first 3])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "firstNaturals": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "0"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
+                  ]
+                },
+                "firstOdd": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "series drop first",
+      "script": "module AtomicSeriesDropFirst\non Start {\n  let fib be :series.fibonacci()\n  let dropped be fib[:drop first 5]\n  emit Done(droppedIsSeries: dropped is :series, droppedZero: dropped[:term 0], droppedTwo: dropped[:term 2])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "droppedIsSeries": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "droppedTwo": {
+                  "type": ":integer",
+                  "value": "13"
+                },
+                "droppedZero": {
+                  "type": ":integer",
+                  "value": "5"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -404,13 +404,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.PopRandom();
                             break;
                         case SeriesTerm:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmSeriesTerm(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
                         case SeriesTake:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmSeriesTake(ref vmState.Register(instruction.XSlot), instruction.Count);
                             break;
                         case SeriesDrop:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmSeriesDrop(ref vmState.Register(instruction.XSlot), instruction.Count);
                             break;
 
                         #endregion

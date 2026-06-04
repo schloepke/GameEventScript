@@ -2040,6 +2040,35 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeSeriesTermTakeDropDoNotEmitPipelineOpcodes()
+    {
+        const string script =
+            """
+            module SeriesAtomicShape
+
+            on Start {
+              let naturals be :series.natural()
+              let term be naturals[:term 3]
+              let firstValues be naturals[:take first 4]
+              let dropped be naturals[:drop first 2]
+              emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+        var opCodes = compiled.Code.Select(instruction => instruction.OpCode).ToArray();
+
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.SeriesTerm);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.SeriesTake);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.SeriesDrop);
+        Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineStream));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCollectList));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamReduce));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamReduceOrDefault));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamFold));
+    }
+
+    [TestMethod]
     public void BytecodeVmExecutesSeriesPipelineStatementExpressionsFromLinearPublicCodeInHandlerStatements()
     {
         const string script =

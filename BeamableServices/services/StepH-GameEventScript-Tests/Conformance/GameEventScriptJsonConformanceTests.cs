@@ -77,6 +77,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicSeriesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicSeries(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -177,6 +182,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicControlFlow(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicSeriesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicSeries(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -365,6 +375,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicControlFlowCases()
         => Cases("runtime/atomic/control-flow.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicSeriesCases()
+        => Cases("runtime/atomic/series.json");
+
     public static IEnumerable<object[]> RuntimeCollectionsCases()
         => Cases("runtime/collections.json");
 
@@ -421,6 +434,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicControlFlowCases()
         => NewVirtualMachineCases("runtime/atomic/control-flow.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicSeriesCases()
+        => NewVirtualMachineCases("runtime/atomic/series.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
         => NewVirtualMachineCases("runtime/collections.json");

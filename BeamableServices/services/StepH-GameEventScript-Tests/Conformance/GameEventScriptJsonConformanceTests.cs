@@ -37,6 +37,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicCompareCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCompare(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -141,6 +146,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicEqualityCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicEquality(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCompareCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicCompare(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
@@ -351,6 +361,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicEqualityCases()
         => Cases("runtime/atomic/equality.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicCompareCases()
+        => Cases("runtime/atomic/compare.json");
+
     public static IEnumerable<object[]> RuntimeAtomicMessagesHandlersCases()
         => Cases("runtime/atomic/messages-handlers.json");
 
@@ -410,6 +423,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicEqualityCases()
         => NewVirtualMachineCases("runtime/atomic/equality.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCompareCases()
+        => NewVirtualMachineCases("runtime/atomic/compare.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMessagesHandlersCases()
         => NewVirtualMachineCases("runtime/atomic/messages-handlers.json");

@@ -7,6 +7,11 @@ internal interface IVmStream
     public bool TryNext(ref VmValue value);
 }
 
+internal interface IVmStreamEntryEvaluator
+{
+    bool TryEvaluateStreamEntry(ushort entryAddress, ushort itemSlot, ref VmValue item, VmValue[]? captures, ref VmValue result);
+}
+
 internal class VmIntegerRangeStream(long from, long to, long step) : IVmStream, IDisposable
 {
     private long _current = from;
@@ -161,5 +166,60 @@ internal class VmIndexAccessStream(IVmIndexAccess<double> indexAccess) : IVmStre
     public void Dispose()
     {
         _values = null;
+    }
+}
+
+internal sealed class VmTransformStream(
+    VmState ownerState,
+    IVmStream source,
+    IVmStreamEntryEvaluator evaluator,
+    ushort entryAddress,
+    ushort itemSlot,
+    VmValue[] captures,
+    bool filter) : IVmStream, IDisposable
+{
+    private IVmStream? _source = source;
+    private VmValue _item = ownerState.CreateNothing();
+    private VmValue _result = ownerState.CreateNothing();
+
+    public bool TryNext(ref VmValue value)
+    {
+        var stream = _source;
+        if (stream is null)
+        {
+            value.SetNothing();
+            return false;
+        }
+
+        while (stream.TryNext(ref _item))
+        {
+            if (!evaluator.TryEvaluateStreamEntry(entryAddress, itemSlot, ref _item, captures, ref _result))
+            {
+                value.SetNothing();
+                return false;
+            }
+
+            if (filter)
+            {
+                _result.UpdatedTextTruthinessCache();
+                if (!_result.IsTrue) continue;
+                value = _item;
+                return true;
+            }
+
+            value = _result;
+            return true;
+        }
+
+        value.SetNothing();
+        return false;
+    }
+
+    public void Dispose()
+    {
+        if (_source is IDisposable disposable) disposable.Dispose();
+        _source = null;
+        _item.SetNothing();
+        _result.SetNothing();
     }
 }

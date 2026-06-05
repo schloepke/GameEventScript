@@ -348,6 +348,9 @@ internal class VmState
     internal void StageRegister(ushort index) => AddStageSlot() = RegisterSlots[index + RegisterFrameStart];
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal void StageValue(ref VmValue value) => AddStageSlot() = value;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageNothing() => AddStageSlot().SetNothing();
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

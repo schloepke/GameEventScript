@@ -68,9 +68,63 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         return true;
     }
 
-    private class Runner(VmState vmState, GameEventScriptSession session, IGameEventScriptExternalTypeRegistry externalTypeRegistry) : IGameEventScriptMessageInvocation
+    private class Runner(VmState vmState, GameEventScriptSession session, IGameEventScriptExternalTypeRegistry externalTypeRegistry) : IGameEventScriptMessageInvocation, IVmStreamEntryEvaluator
     {
         public bool IsCompleted { get; private set; } = false;
+
+        public bool TryEvaluateStreamEntry(ushort entryAddress, ushort itemSlot, ref VmValue item, VmValue[]? captures, ref VmValue result)
+        {
+            if (entryAddress >= vmState.CodeSegmentSize) return vmState.RaiseError($"Invalid stream helper entry address {entryAddress}.");
+            var parentFrameLength = vmState.RegisterFrameLength;
+            var resultSlot = parentFrameLength;
+            vmState.ModifyLocalSlots(1);
+            if (vmState.State != Processing) return false;
+
+            vmState.ClearStage();
+            if (captures is null)
+            {
+                var helperFrameLength = Math.Max(parentFrameLength, itemSlot + 1);
+                var nothing = vmState.CreateNothing();
+                for (ushort i = 0; i < helperFrameLength; i++)
+                {
+                    if (i == itemSlot) vmState.StageValue(ref item);
+                    else if (i < parentFrameLength) vmState.StageValue(ref vmState.Register(i));
+                    else vmState.StageValue(ref nothing);
+                }
+            }
+            else
+            {
+                var helperFrameLength = Math.Max(itemSlot + 1, captures.Length + 1);
+                var nothing = vmState.CreateNothing();
+                for (ushort i = 0; i < helperFrameLength; i++)
+                {
+                    if (i == itemSlot)
+                    {
+                        vmState.StageValue(ref item);
+                    }
+                    else if (i > 0 && i <= captures.Length)
+                    {
+                        vmState.StageValue(ref captures[i - 1]);
+                    }
+                    else
+                    {
+                        vmState.StageValue(ref nothing);
+                    }
+                }
+            }
+
+            var baseCallStackPointer = vmState.CallStackPointer;
+            if (!vmState.CallAddress(entryAddress, resultSlot)) return false;
+            while (vmState.State == Processing && vmState.CallStackPointer > baseCallStackPointer)
+            {
+                RunSlice(1);
+            }
+
+            if (vmState.State != Processing || vmState.CallStackPointer != baseCallStackPointer) return false;
+            result = vmState.Register(resultSlot);
+            vmState.ModifyLocalSlots(-1);
+            return vmState.State == Processing;
+        }
 
         public int RunSlice(int maxSteps)
         {
@@ -466,43 +520,43 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.XSlot).VmStreamClose();
                             break;
                         case StreamMap:
-                            vmState.Register(instruction.DestinationSlot).VmStreamMap(ref vmState.Register(instruction.XSlot), instruction.TargetAddress, ref vmState.Register(instruction.AU), ref vmState.Register(instruction.BU));
+                            vmState.Register(instruction.DestinationSlot).VmStreamMap(ref vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
                         case StreamFilter:
-                            vmState.Register(instruction.DestinationSlot).VmStreamFilter(ref vmState.Register(instruction.XSlot), instruction.TargetAddress, ref vmState.Register(instruction.AU), ref vmState.Register(instruction.BU));
+                            vmState.Register(instruction.DestinationSlot).VmStreamFilter(ref vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
                         case StreamCount:
-                            vmState.Register(instruction.XSlot).VmStreamCount();
+                            vmState.Register(instruction.DestinationSlot).VmStreamCount(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamSum:
-                            vmState.Register(instruction.XSlot).VmStreamSum();
+                            vmState.Register(instruction.DestinationSlot).VmStreamSum(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamAverage:
-                            vmState.Register(instruction.XSlot).VmStreamAverage();
+                            vmState.Register(instruction.DestinationSlot).VmStreamAverage(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamMin:
-                            vmState.Register(instruction.XSlot).VmStreamMin(ref vmState.Register(instruction.YSlot), instruction.AU);
+                            vmState.Register(instruction.DestinationSlot).VmStreamMin(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case StreamMax:
-                            vmState.Register(instruction.XSlot).VmStreamMax(ref vmState.Register(instruction.YSlot), instruction.AU);
+                            vmState.Register(instruction.DestinationSlot).VmStreamMax(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case StreamCollectList:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmStreamCollectList(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamCollectMap:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmStreamCollectMap(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case StreamCollectMapValue:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmStreamCollectMapValue(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
                             break;
                         case StreamCollectFirst:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmStreamCollectFirst(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamCollectLast:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmStreamCollectLast(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamCollectSingle:
-                            // FIXME: creating the real custom type here
+                            vmState.Register(instruction.DestinationSlot).VmStreamCollectSingle(ref vmState.Register(instruction.XSlot));
                             break;
 
                         #endregion

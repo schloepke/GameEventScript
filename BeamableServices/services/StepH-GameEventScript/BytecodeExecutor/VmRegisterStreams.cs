@@ -28,13 +28,33 @@ internal static class VmRegisterStreams
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamMap(ref this VmValue dst, ref VmValue stream, ushort mapEntryAddress, ref VmValue helperSlot, ref VmValue captureSlotList)
+    internal static void VmStreamMap(ref this VmValue dst, ref VmValue stream, ushort mapEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IVmStreamEntryEvaluator evaluator)
     {
+        if (stream is not { Kind: Stream, ObjectValue: IVmStream source })
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var captureSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captures = captureSlots.Length == 0 ? [] : new VmValue[captureSlots.Length];
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = dst.OwningState.Register(captureSlots[i]);
+        dst.SetStream(new VmTransformStream(dst.OwningState, source, evaluator, mapEntryAddress, helperSlot, captures, filter: false));
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamFilter(ref this VmValue dst, ref VmValue stream, ushort predicateEntryAddress, ref VmValue helperSlot, ref VmValue captureSlotList)
+    internal static void VmStreamFilter(ref this VmValue dst, ref VmValue stream, ushort predicateEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IVmStreamEntryEvaluator evaluator)
     {
+        if (stream is not { Kind: Stream, ObjectValue: IVmStream source })
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var captureSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captures = captureSlots.Length == 0 ? [] : new VmValue[captureSlots.Length];
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = dst.OwningState.Register(captureSlots[i]);
+        dst.SetStream(new VmTransformStream(dst.OwningState, source, evaluator, predicateEntryAddress, helperSlot, captures, filter: true));
     }
 
    

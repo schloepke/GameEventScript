@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Text.Json;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
 using StepH.GameEventScript.BytecodeVM;
@@ -12,6 +11,8 @@ namespace StepH_GameEventScript_Tests.BytecodeVM;
 [TestClass]
 public sealed class BytecodeVmPerformanceReportTests
 {
+    private const bool UseNewVm = true;
+    private const bool RunSoftMode = false;
     private const int WarmupRuns = 25;
     private const int MeasuredRuns = 1_000;
 
@@ -69,8 +70,11 @@ public sealed class BytecodeVmPerformanceReportTests
         var bytecodeVmRunDiag = MeasureRun(bytecodeVmBuildDiag.Value, input, MeasuredRuns, new GameEventScriptDiagnosticTraceCollector());
         MeasureRun(bytecodeVmBuildDiag.Value, input, 1, diagnosticCollector);
 
-        //Assert.AreEqual(MeasuredRuns * 2, bytecodeVmRun.PublishedMessages);
-        //Assert.AreEqual("Done", bytecodeVmRun.LastMessage.Name);
+        if (!RunSoftMode)
+        {
+            Assert.AreEqual(MeasuredRuns * 2, bytecodeVmRun.PublishedMessages);
+            Assert.AreEqual("Done", bytecodeVmRun.LastMessage.Name);
+        }
 
         TestContext.WriteLine("-----");
         WriteReport("Without diagnostic;", bytecodeVmCompile, bytecodeVmBuild, bytecodeVmRun);
@@ -94,8 +98,8 @@ public sealed class BytecodeVmPerformanceReportTests
     private static GameEventScriptCompiled BuildPerformanceBytecode(bool diagnostic) => GameEventScriptBuilder.Create()
         .WithEnableDiagnostic(diagnostic).WithDebugInfo().AddScript(PerformanceScript, "engine-performance.es").Compile();
 
-    private static IGameEventScriptModule BuildExecutable(GameEventScriptCompiled bytecode) => GameEventScriptVirtualMaschine.Create(bytecode.ToGameEventScriptBinary(), 128, 128);
-    //private static IGameEventScriptModule BuildExecutable(GameEventScriptCompiled bytecode) => GesBytecodeVmExecutableBuilder.Build(bytecode);
+    private static IGameEventScriptModule BuildExecutable(GameEventScriptCompiled bytecode) =>
+        UseNewVm ? GameEventScriptVirtualMaschine.Create(bytecode.ToGameEventScriptBinary(), 128, 128) : GesBytecodeVmExecutableBuilder.Build(bytecode);
 
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {
@@ -147,7 +151,7 @@ public sealed class BytecodeVmPerformanceReportTests
             run.Elapsed.TotalMilliseconds,
             FormatBytes(run.AllocatedBytes),
             run.PublishedMessages,
-            FormatBytes(run.AllocatedBytes / Math.Max(1, run.PublishedMessages/2)));
+            FormatBytes(run.AllocatedBytes / Math.Max(1, run.PublishedMessages / 2)));
     }
 
     private static string FormatBytes(long bytes)

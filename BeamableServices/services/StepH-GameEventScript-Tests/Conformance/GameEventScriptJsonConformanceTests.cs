@@ -678,6 +678,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
             })
             .Build()
             .Load(vmModule);
+        GameEventScriptConformanceRunner.RegisterExternalSubscribers(testCase, host);
 
         for (var stepIndex = 0; stepIndex < test.Steps.Count; stepIndex++)
         {

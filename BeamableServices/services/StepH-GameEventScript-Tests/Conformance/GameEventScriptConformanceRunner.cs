@@ -285,7 +285,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static void RegisterExternalSubscribers(GameEventScriptConformanceCase testCase, GameEventScriptHost host)
+    internal static void RegisterExternalSubscribers(GameEventScriptConformanceCase testCase, GameEventScriptHost host)
     {
         if (testCase.Test.ExternalSubscribers is null)
         {

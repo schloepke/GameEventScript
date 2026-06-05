@@ -114,7 +114,7 @@ internal struct VmValue
     internal void SetBoolean(bool value)
     {
         Kind = GameEventScriptBytecodeTypeKind.Boolean;
-        Flags = HasValueFlag | (value ? IsTrueFlag : IsFalseFlag);
+        Flags = IsNumericFlag | HasValueFlag | (value ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = value ? 1 : 0;
         ObjectValue = null;

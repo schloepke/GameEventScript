@@ -465,16 +465,32 @@ value is fractional
 `:integer` and `:float` are not built-in type tags. In expression positions they
 are ordinary tags.
 
+Numeric checks and implicit numeric views use the following rules. A runtime
+value has an `AsNumeric` value exactly when `is numeric` is true. The explicit
+`as :number` cast uses the same numeric view, except that it may additionally
+parse text as described below.
+
+| Runtime value | `is numeric` | `is integer` | `is fractional` | Numeric view |
+| --- | --- | --- | --- | --- |
+| `:nothing` | false | false | false | none |
+| `:boolean` | true | true | false | `false` = `0`, `true` = `1` |
+| integer number | true | true | false | integer value, including quantity unit |
+| float number | true | true when finite and exactly integral; otherwise false | true when finite and non-integral | float value, including quantity unit |
+| percentage | true | true when the stored ratio is finite and exactly integral; otherwise false | true when finite and non-integral | stored ratio |
+| numeric tag constant (`:true`, `:false`, `:pi`, `:e`, `:tau`, `:phi`, `:infinity`, `:negativeinfinity`) | true | true only for finite integral constants | true only for finite non-integral constants | constant value |
+| dice | true | true | false | sum of rolls |
+| text, list, map, range, vector, point, message, handler, series, custom values, non-numeric tags | false | false | false | none |
+
 Text values are not numeric for implicit mathematics or numeric checks:
 `'100' is numeric` is false, and `'100' + 200` is text concatenation. An
 explicit `as :number` cast parses text with invariant numeric syntax; invalid
 text casts to `nothing`.
 
-Dice have a numeric view only where an explicit numeric value is requested:
-`dice is numeric` and `dice is integer` are true, and `dice as :number` is the
-sum of the rolls. Dice-specific collection operations keep priority, so
-`dice + integer` adds a roll and `dice - integer` removes a roll instead of
-using the dice sum.
+Dice have a numeric view for numeric checks, explicit numeric casts, equality,
+and numeric comparison: `dice is numeric` and `dice is integer` are true, and
+`dice as :number` is the sum of the rolls. Dice-specific collection operations
+keep priority, so `dice + integer` adds a roll and `dice - integer` removes a
+roll instead of using the dice sum.
 
 ### Equality
 

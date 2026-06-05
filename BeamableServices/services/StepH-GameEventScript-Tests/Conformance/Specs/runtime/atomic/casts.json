@@ -276,7 +276,7 @@
                 },
                 "isInteger": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "isList": {
                   "type": ":boolean",
@@ -300,7 +300,7 @@
                 },
                 "isNumeric": {
                   "type": ":boolean",
-                  "value": false
+                  "value": true
                 },
                 "isPercentage": {
                   "type": ":boolean",

@@ -6072,7 +6072,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static bool IsValueNumeric(BytecodeVmValue value)
     {
-        if (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float or BytecodeVmValueKind.Percentage)
+        if (value.Kind is BytecodeVmValueKind.Integer or BytecodeVmValueKind.Float or BytecodeVmValueKind.Percentage or BytecodeVmValueKind.Boolean)
         {
             return true;
         }
@@ -6115,6 +6115,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
         if (value.Kind is BytecodeVmValueKind.Float or BytecodeVmValueKind.Percentage)
         {
             number = GesValueOperations.NumericValue.Finite(value.Number);
+            return true;
+        }
+
+        if (value.Kind == BytecodeVmValueKind.Boolean)
+        {
+            number = GesValueOperations.NumericValue.Finite(value.BooleanValue ? 1 : 0);
             return true;
         }
 

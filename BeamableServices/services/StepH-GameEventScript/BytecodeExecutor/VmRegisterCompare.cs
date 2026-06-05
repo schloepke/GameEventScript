@@ -103,84 +103,128 @@ internal static class VmRegisterCompare
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
+        switch (a.Kind)
         {
-            dst.SetNothing();
-        }
-        else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
-        {
-            dst.SetBoolean(a.AsNumeric < b.AsNumeric);
-        }
-        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
-        {
-            dst.SetBoolean(a.IsFalse && b.IsTrue);
-        }
-        else
-        {
-            dst.SetBoolean(false);
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Integer when b.Kind is Integer:
+                dst.SetBoolean(a.Unit == b.Unit && a.IntegerValue < b.IntegerValue);
+                return;
+            case Float when b.Kind is Float:
+                dst.SetBoolean(a.Unit == b.Unit && a.FloatValue < b.FloatValue);
+                return;
+            default:
+                if (b.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                if (a.IsNumeric && b.IsNumeric)
+                {
+                    dst.SetBoolean(a.Unit == b.Unit && a.AsNumeric < b.AsNumeric);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
+        switch (a.Kind)
         {
-            dst.SetNothing();
-        }
-        else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
-        {
-            dst.SetBoolean(a.AsNumeric > b.AsNumeric);
-        }
-        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
-        {
-            dst.SetBoolean(a.IsTrue && b.IsFalse);
-        }
-        else
-        {
-            dst.SetBoolean(false);
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Integer when b.Kind is Integer:
+                dst.SetBoolean(a.Unit == b.Unit && a.IntegerValue > b.IntegerValue);
+                return;
+            case Float when b.Kind is Float:
+                dst.SetBoolean(a.Unit == b.Unit && a.FloatValue > b.FloatValue);
+                return;
+            default:
+                if (b.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                if (a.IsNumeric && b.IsNumeric)
+                {
+                    dst.SetBoolean(a.Unit == b.Unit && a.AsNumeric > b.AsNumeric);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
+        switch (a.Kind)
         {
-            dst.SetNothing();
-        }
-        else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
-        {
-            dst.SetBoolean(a.AsNumeric <= b.AsNumeric);
-        }
-        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
-        {
-            dst.SetBoolean(a.IsFalse && b.IsTrue || a.IsTrue == b.IsTrue);
-        }
-        else
-        {
-            dst.SetBoolean(false);
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Integer when b.Kind is Integer:
+                dst.SetBoolean(a.Unit == b.Unit && a.IntegerValue <= b.IntegerValue);
+                return;
+            case Float when b.Kind is Float:
+                dst.SetBoolean(a.Unit == b.Unit && a.FloatValue <= b.FloatValue);
+                return;
+            default:
+                if (b.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                if (a.IsNumeric && b.IsNumeric)
+                {
+                    dst.SetBoolean(a.Unit == b.Unit && a.AsNumeric <= b.AsNumeric);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
         }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing || a.Unit != b.Unit)
+        switch (a.Kind)
         {
-            dst.SetNothing();
-        }
-        else if (a.Kind is Float or Integer && b.Kind is Float or Integer)
-        {
-            dst.SetBoolean(a.AsNumeric >= b.AsNumeric);
-        }
-        else if (a.Kind is GameEventScriptBytecodeTypeKind.Boolean && b.Kind is GameEventScriptBytecodeTypeKind.Boolean)
-        {
-            dst.SetBoolean(a.IsTrue && b.IsFalse || a.IsTrue == b.IsTrue);
-        }
-        else
-        {
-            dst.SetBoolean(false);
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Integer when b.Kind is Integer:
+                dst.SetBoolean(a.Unit == b.Unit && a.IntegerValue >= b.IntegerValue);
+                return;
+            case Float when b.Kind is Float:
+                dst.SetBoolean(a.Unit == b.Unit && a.FloatValue >= b.FloatValue);
+                return;
+            default:
+                if (b.Kind is Nothing)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                if (a.IsNumeric && b.IsNumeric)
+                {
+                    dst.SetBoolean(a.Unit == b.Unit && a.AsNumeric >= b.AsNumeric);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
         }
     }
 

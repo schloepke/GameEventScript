@@ -216,9 +216,9 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x17 | `CheckType` | - | result slot | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
 | 0x18 | `CheckCustomType` | - | result slot | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
 | 0x19 | `CheckUnit` | target numeric unit | result slot | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x1A | `CheckNumeric` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a numeric value through the source-level `is numeric` helper. Text is not parsed here; dice are read as their roll sum. |
-| 0x1B | `CheckInteger` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite integral numeric value. Text is not parsed here. |
-| 0x1C | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` can be read as a finite non-integral numeric value. Text is not parsed here. |
+| 0x1A | `CheckNumeric` | - | result slot | `XSlot`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), numeric tag constants, and dice sums are numeric. Text is not parsed here. |
+| 0x1B | `CheckInteger` | - | result slot | `XSlot`=source | - | - | Writes whether `X` has a finite integral numeric view. Booleans and dice are integer. Text is not parsed here. |
+| 0x1C | `CheckFractional` | - | result slot | `XSlot`=source | - | - | Writes whether `X` has a finite non-integral numeric view. Text is not parsed here. |
 | 0x1D | `MoveSlot` | - | result slot | `XSlot`=source | - | - | Copies a slot value/reference; the source slot remains unchanged. |
 | 0x1E | `MemberAccess` | - | result slot | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
 | 0x1F | `IndexAccess` | - | result slot | `Index`=1-based index | `YSlot`=object | - | Reads a statically known positional element. |

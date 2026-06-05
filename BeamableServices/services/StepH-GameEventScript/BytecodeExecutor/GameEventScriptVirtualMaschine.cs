@@ -407,10 +407,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmSeriesTerm(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
                         case SeriesTake:
-                            vmState.Register(instruction.DestinationSlot).VmSeriesTake(ref vmState.Register(instruction.XSlot), instruction.Count);
+                            vmState.Register(instruction.DestinationSlot).VmSeriesTake(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case SeriesDrop:
-                            vmState.Register(instruction.DestinationSlot).VmSeriesDrop(ref vmState.Register(instruction.XSlot), instruction.Count);
+                            vmState.Register(instruction.DestinationSlot).VmSeriesDrop(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
 
                         #endregion

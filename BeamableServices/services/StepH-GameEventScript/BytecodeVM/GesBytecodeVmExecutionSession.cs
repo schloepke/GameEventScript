@@ -1266,10 +1266,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
                 return TryExecutePipelineDicePattern(instruction);
 
-            case GameEventScriptBytecodeOpCode.SeriesTerm:
-            case GameEventScriptBytecodeOpCode.SeriesTake:
-            case GameEventScriptBytecodeOpCode.SeriesDrop:
-                return TryExecuteSeriesPipeline(instruction);
+            case GameEventScriptBytecodeOpCode.Term:
+            case GameEventScriptBytecodeOpCode.TakeFirst:
+            case GameEventScriptBytecodeOpCode.DropFirst:
+            case GameEventScriptBytecodeOpCode.TakeLast:
+            case GameEventScriptBytecodeOpCode.DropLast:
+                return TryExecuteSequenceInstruction(instruction);
         }
 
         if (IsCastInstruction(instruction.OpCode))
@@ -3474,14 +3476,14 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteSeriesPipeline(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteSequenceInstruction(GameEventScriptBytecodeInstruction instruction)
     {
         var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
         if (TryGetSeriesTarget(source, out var series))
         {
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.SeriesTerm:
+                case GameEventScriptBytecodeOpCode.Term:
                     if (!ResolveSlot(instruction.YSlot).ToGameEventScriptValue().TryConvertToInteger(out var termIndex))
                     {
                         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
@@ -3489,10 +3491,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                     return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(series.GetTerm(termIndex.AsInteger())));
 
-                case GameEventScriptBytecodeOpCode.SeriesDrop:
+                case GameEventScriptBytecodeOpCode.DropFirst:
                     return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(series.Drop(instruction.ImmediateY)));
 
-                case GameEventScriptBytecodeOpCode.SeriesTake:
+                case GameEventScriptBytecodeOpCode.TakeFirst:
+                    if (instruction.ImmediateY <= 0)
+                    {
+                        return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(Array.Empty<GameEventScriptValue>())));
+                    }
+
                     if (!_runtimeBudget.TryCheckRangeLength(instruction.ImmediateY, "Series take would materialize more items than allowed."))
                     {
                         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
@@ -3502,11 +3509,31 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
         }
 
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.Term)
+        {
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+        }
+
+        if (source is GameEventScriptRangeValue range)
+        {
+            var rangeSlice = instruction.OpCode switch
+            {
+                GameEventScriptBytecodeOpCode.TakeFirst => EvaluateRangeSliceSelector(range, "take", "first", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropFirst => EvaluateRangeSliceSelector(range, "drop", "first", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.TakeLast => EvaluateRangeSliceSelector(range, "take", "last", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropLast => EvaluateRangeSliceSelector(range, "drop", "last", instruction.ImmediateY),
+                _ => GameEventScriptNothingValue.Instance
+            };
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(rangeSlice));
+        }
+
         var items = EnumerateListLikeValue(source).ToList();
         var value = instruction.OpCode switch
         {
-            GameEventScriptBytecodeOpCode.SeriesTake => EvaluateSequenceSliceSelector(source, items, "take", "first", instruction.ImmediateY),
-            GameEventScriptBytecodeOpCode.SeriesDrop => EvaluateSequenceSliceSelector(source, items, "drop", "first", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.TakeFirst => EvaluateSequenceSliceSelector(source, items, "take", "first", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.DropFirst => EvaluateSequenceSliceSelector(source, items, "drop", "first", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.TakeLast => EvaluateSequenceSliceSelector(source, items, "take", "last", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.DropLast => EvaluateSequenceSliceSelector(source, items, "drop", "last", instruction.ImmediateY),
             _ => GameEventScriptNothingValue.Instance
         };
         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(value));
@@ -6644,6 +6671,125 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(selectedItems),
             _ => GameEventScriptNothingValue.Instance
         };
+    }
+
+    private static GameEventScriptValue EvaluateRangeSliceSelector(
+        GameEventScriptRangeValue range,
+        string operation,
+        string scope,
+        int count)
+    {
+        return range.IsIntegerRange
+            ? EvaluateIntegerRangeSliceSelector(range, operation, scope, count)
+            : EvaluateFloatRangeSliceSelector(range, operation, scope, count);
+    }
+
+    private static GameEventScriptValue EvaluateIntegerRangeSliceSelector(
+        GameEventScriptRangeValue range,
+        string operation,
+        string scope,
+        int count)
+    {
+        var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+        if (count <= 0)
+        {
+            return operation == "drop" ? range : GesRange(0, 0, 0);
+        }
+
+        if (length == 0)
+        {
+            return GesRange(0, 0, 0);
+        }
+
+        if (count >= length)
+        {
+            return operation == "take" ? range : GesRange(0, 0, 0);
+        }
+
+        if (operation == "take")
+        {
+            if (scope == "first" &&
+                GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count, out var to))
+            {
+                return GesRange(range.From, to, range.Step);
+            }
+
+            if (scope == "last" &&
+                GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length - count + 1L, out var from))
+            {
+                return GesRange(from, range.To, range.Step);
+            }
+        }
+        else if (operation == "drop")
+        {
+            if (scope == "first" &&
+                GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count + 1L, out var from))
+            {
+                return GesRange(from, range.To, range.Step);
+            }
+
+            if (scope == "last" &&
+                GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length - count, out var to))
+            {
+                return GesRange(range.From, to, range.Step);
+            }
+        }
+
+        return GameEventScriptNothingValue.Instance;
+    }
+
+    private static GameEventScriptValue EvaluateFloatRangeSliceSelector(
+        GameEventScriptRangeValue range,
+        string operation,
+        string scope,
+        int count)
+    {
+        var length = GameEventScriptRangeMath.GetLength(range.FromNumber, range.ToNumber, range.StepNumber);
+        if (count <= 0)
+        {
+            return operation == "drop" ? range : GesRange(0d, 0d, 0d);
+        }
+
+        if (length == 0)
+        {
+            return GesRange(0d, 0d, 0d);
+        }
+
+        if (count >= length)
+        {
+            return operation == "take" ? range : GesRange(0d, 0d, 0d);
+        }
+
+        if (operation == "take")
+        {
+            if (scope == "first" &&
+                GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count, out var to))
+            {
+                return GesRange(range.FromNumber, to, range.StepNumber);
+            }
+
+            if (scope == "last" &&
+                GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, length - count + 1L, out var from))
+            {
+                return GesRange(from, range.ToNumber, range.StepNumber);
+            }
+        }
+        else if (operation == "drop")
+        {
+            if (scope == "first" &&
+                GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count + 1L, out var from))
+            {
+                return GesRange(from, range.ToNumber, range.StepNumber);
+            }
+
+            if (scope == "last" &&
+                GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, length - count, out var to))
+            {
+                return GesRange(range.FromNumber, to, range.StepNumber);
+            }
+        }
+
+        return GameEventScriptNothingValue.Instance;
     }
 
     private static GameEventScriptValue MaterializeDistinctItems(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)

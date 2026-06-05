@@ -403,14 +403,20 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case RandomPop:
                             vmState.PopRandom();
                             break;
-                        case SeriesTerm:
-                            vmState.Register(instruction.DestinationSlot).VmSeriesTerm(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                        case Term:
+                            vmState.Register(instruction.DestinationSlot).VmTerm(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
-                        case SeriesTake:
-                            vmState.Register(instruction.DestinationSlot).VmSeriesTake(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                        case TakeFirst:
+                            vmState.Register(instruction.DestinationSlot).VmTakeFirst(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
-                        case SeriesDrop:
-                            vmState.Register(instruction.DestinationSlot).VmSeriesDrop(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                        case DropFirst:
+                            vmState.Register(instruction.DestinationSlot).VmDropFirst(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            break;
+                        case TakeLast:
+                            vmState.Register(instruction.DestinationSlot).VmTakeLast(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            break;
+                        case DropLast:
+                            vmState.Register(instruction.DestinationSlot).VmDropLast(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
 
                         #endregion

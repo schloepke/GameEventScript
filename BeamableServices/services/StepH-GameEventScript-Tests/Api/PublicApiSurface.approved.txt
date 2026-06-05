@@ -255,9 +255,11 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field RandomPush = 107
   enum-field RandomPushConstant = 108
   enum-field RandomPop = 109
-  enum-field SeriesTerm = 110
-  enum-field SeriesTake = 111
-  enum-field SeriesDrop = 112
+  enum-field Term = 110
+  enum-field TakeFirst = 111
+  enum-field DropFirst = 112
+  enum-field TakeLast = 113
+  enum-field DropLast = 114
   enum-field Length = 144
   enum-field StartsWith = 145
   enum-field EndsWith = 146

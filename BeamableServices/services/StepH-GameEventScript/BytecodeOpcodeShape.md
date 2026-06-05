@@ -327,10 +327,12 @@ separate approximate-equality opcode.
 | 0x6B | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
 | 0x6C | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
 | 0x6D | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
-| 0x6E | `SeriesTerm` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a mathematical series term. |
-| 0x6F | `SeriesTake` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a mathematical series or list-like source. |
-| 0x70 | `SeriesDrop` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a mathematical series or list-like source. |
-| 0x71..0x8F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
+| 0x6E | `Term` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
+| 0x6F | `TakeFirst` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a series, list, dice, or range source. |
+| 0x70 | `DropFirst` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a series, list, dice, or range source. |
+| 0x71 | `TakeLast` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the last `Y` values from a finite list, dice, or range source; series yields `nothing`. |
+| 0x72 | `DropLast` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the last `Y` values from a finite list, dice, or range source; series yields `nothing`. |
+| 0x73..0x8F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
 
 ### Group 3 - Text, Collections, Streams
 

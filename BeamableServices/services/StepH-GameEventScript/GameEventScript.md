@@ -593,8 +593,9 @@ let stepped be from 10 to 0 step -2
 
 ### Series
 
-Series are deterministic numeric series. They support `:term`, `:take`, and
-`:drop` selectors.
+Series are deterministic numeric series. They support zero-based `:term` lookup
+and forward `:take first` / `:drop first` selectors. Because series are not
+finite, `:take last` and `:drop last` evaluate to `nothing` for series.
 
 ```ges
 let fib be :series.fibonacci
@@ -602,6 +603,11 @@ let fifth be fib[:term 5]
 let later be fib[:drop first 3]
 let sample be fib[:take first 5]
 ```
+
+`:term` is a series-only selector. Lists, dice, ranges, and all other values
+return `nothing` for `[:term n]`. Direct `:take first`, `:drop first`, `:take
+last`, and `:drop last` selectors are defined for finite lists, dice, and
+ranges; range slices stay ranges instead of being materialized as lists.
 
 Standard series:
 

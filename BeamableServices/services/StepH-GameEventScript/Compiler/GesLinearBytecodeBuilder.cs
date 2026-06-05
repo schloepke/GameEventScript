@@ -1748,20 +1748,28 @@ internal sealed class GesLinearBytecodeBuilder
                 case SeriesTermSelectorNode term:
                 {
                     var indexSlot = EmitSourceExpression(term.IndexExpression, context, state);
-                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.SeriesTerm, a: sourceSlot, b: indexSlot);
+                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Term, a: sourceSlot, b: indexSlot);
                 }
 
-                case SequenceSliceSelectorNode { Scope: "first" } slice when
+                case SequenceSliceSelectorNode slice when
                     string.Equals(slice.Operation, "take", StringComparison.Ordinal) ||
                     string.Equals(slice.Operation, "drop", StringComparison.Ordinal):
                 {
-                    return EmitValueInstruction(
-                        state,
-                        string.Equals(slice.Operation, "take", StringComparison.Ordinal)
-                            ? GameEventScriptBytecodeOpCode.SeriesTake
-                            : GameEventScriptBytecodeOpCode.SeriesDrop,
-                        a: sourceSlot,
-                        b: slice.Count);
+                    var directSliceOpCode = (slice.Operation, slice.Scope) switch
+                    {
+                        ("take", "first") => GameEventScriptBytecodeOpCode.TakeFirst,
+                        ("take", "last") => GameEventScriptBytecodeOpCode.TakeLast,
+                        ("drop", "first") => GameEventScriptBytecodeOpCode.DropFirst,
+                        ("drop", "last") => GameEventScriptBytecodeOpCode.DropLast,
+                        _ => (GameEventScriptBytecodeOpCode?)null
+                    };
+
+                    if (directSliceOpCode.HasValue)
+                    {
+                        return EmitValueInstruction(state, directSliceOpCode.Value, a: sourceSlot, b: slice.Count);
+                    }
+
+                    break;
                 }
             }
         }

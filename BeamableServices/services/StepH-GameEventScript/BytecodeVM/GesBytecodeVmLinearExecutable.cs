@@ -567,14 +567,16 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateEntryAddress(module, code, instruction.AU, $"{context} face entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.SeriesTerm:
+            case GameEventScriptBytecodeOpCode.Term:
                 ValidateSlot(module, instruction.XSlot, $"{context} series slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} index slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.SeriesTake:
-            case GameEventScriptBytecodeOpCode.SeriesDrop:
-                ValidateSlot(module, instruction.XSlot, $"{context} series slot");
+            case GameEventScriptBytecodeOpCode.TakeFirst:
+            case GameEventScriptBytecodeOpCode.DropFirst:
+            case GameEventScriptBytecodeOpCode.TakeLast:
+            case GameEventScriptBytecodeOpCode.DropLast:
+                ValidateSlot(module, instruction.XSlot, $"{context} source slot");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:

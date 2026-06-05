@@ -5,8 +5,8 @@
   "tests": [
     {
       "kind": "scriptApi",
-      "name": "series term",
-      "script": "module AtomicSeriesTerm\non Start {\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  emit Done(naturalZero: naturals[:term 0], naturalThree: naturals[:term 3], oddFour: odd[:term 4], fibSeven: fib[:term 7], factFive: fact[:term 5], invalidText: naturals[:term 'x'])\n}",
+      "name": "term is series only",
+      "script": "module AtomicSeriesTerm\non Start {\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  let values be [1, 2, 3]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  emit Done(naturalZero: naturals[:term 0], naturalThree: naturals[:term 3], oddFour: odd[:term 4], fibSeven: fib[:term 7], factFive: fact[:term 5], invalidText: naturals[:term 'x'], listTerm: values[:term 0], diceTerm: dice[:term 0], rangeTerm: range[:term 0])\n}",
       "steps": [
         {
           "input": {
@@ -17,6 +17,9 @@
             {
               "name": "Done",
               "args": {
+                "diceTerm": {
+                  "type": ":nothing"
+                },
                 "factFive": {
                   "type": ":integer",
                   "value": "120"
@@ -26,6 +29,9 @@
                   "value": "13"
                 },
                 "invalidText": {
+                  "type": ":nothing"
+                },
+                "listTerm": {
                   "type": ":nothing"
                 },
                 "naturalThree": {
@@ -39,6 +45,9 @@
                 "oddFour": {
                   "type": ":integer",
                   "value": "9"
+                },
+                "rangeTerm": {
+                  "type": ":nothing"
                 }
               }
             }
@@ -48,8 +57,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "series take first",
-      "script": "module AtomicSeriesTakeFirst\non Start {\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  emit Done(firstNaturals: naturals[:take first 4], firstOdd: odd[:take first 3])\n}",
+      "name": "take first direct sequence values",
+      "script": "module AtomicSeriesTakeFirst\non Start {\n  let naturals be :series.natural()\n  let odd be :series.natural(start: 1, step: 2)\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 5, 3, 1]\n  let range as :range be from 1 to 5\n  let floatRange as :range be from 1.5 to 3.5 step 0.5\n  let integerValue be 10\n  emit Done(firstNaturals: naturals[:take first 4], firstOdd: odd[:take first 3], listFirst: values[:take first 2], diceFirst: dice[:take first 2], rangeFirst: range[:take first 3], floatRangeFirst: floatRange[:take first 2], invalid: integerValue[:take first 2])\n}",
       "steps": [
         {
           "input": {
@@ -60,6 +69,13 @@
             {
               "name": "Done",
               "args": {
+                "diceFirst": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    5
+                  ]
+                },
                 "firstNaturals": {
                   "type": ":list",
                   "items": [
@@ -97,6 +113,34 @@
                       "value": "5"
                     }
                   ]
+                },
+                "floatRangeFirst": {
+                  "type": ":range",
+                  "from": "1.5",
+                  "to": "2",
+                  "step": "0.5"
+                },
+                "invalid": {
+                  "type": ":nothing"
+                },
+                "listFirst": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                },
+                "rangeFirst": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
                 }
               }
             }
@@ -106,8 +150,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "series drop first",
-      "script": "module AtomicSeriesDropFirst\non Start {\n  let fib be :series.fibonacci()\n  let dropped be fib[:drop first 5]\n  emit Done(droppedIsSeries: dropped is :series, droppedZero: dropped[:term 0], droppedTwo: dropped[:term 2])\n}",
+      "name": "drop first direct sequence values",
+      "script": "module AtomicSeriesDropFirst\non Start {\n  let fib be :series.fibonacci()\n  let dropped be fib[:drop first 5]\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 5, 3, 1]\n  let range as :range be from 1 to 5\n  let integerValue be 10\n  emit Done(droppedIsSeries: dropped is :series, droppedZero: dropped[:term 0], droppedTwo: dropped[:term 2], listDrop: values[:drop first 2], diceDrop: dice[:drop first 2], rangeDrop: range[:drop first 2], invalid: integerValue[:drop first 2])\n}",
       "steps": [
         {
           "input": {
@@ -118,6 +162,13 @@
             {
               "name": "Done",
               "args": {
+                "diceDrop": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    1
+                  ]
+                },
                 "droppedIsSeries": {
                   "type": ":boolean",
                   "value": true
@@ -129,6 +180,138 @@
                 "droppedZero": {
                   "type": ":integer",
                   "value": "5"
+                },
+                "invalid": {
+                  "type": ":nothing"
+                },
+                "listDrop": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "rangeDrop": {
+                  "type": ":range",
+                  "from": "3",
+                  "to": "5",
+                  "step": "1"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "take last direct finite sequence values",
+      "script": "module AtomicSeriesTakeLast\non Start {\n  let naturals be :series.natural()\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 5, 3, 1]\n  let range as :range be from 1 to 5\n  let descending as :range be from 5 to 1 step (0 - 2)\n  emit Done(seriesLast: naturals[:take last 2], listLast: values[:take last 2], diceLast: dice[:take last 2], rangeLast: range[:take last 2], descendingLast: descending[:take last 2])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "descendingLast": {
+                  "type": ":range",
+                  "from": "3",
+                  "to": "1",
+                  "step": "-2"
+                },
+                "diceLast": {
+                  "type": ":dice",
+                  "rolls": [
+                    3,
+                    1
+                  ]
+                },
+                "listLast": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                },
+                "rangeLast": {
+                  "type": ":range",
+                  "from": "4",
+                  "to": "5",
+                  "step": "1"
+                },
+                "seriesLast": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "drop last direct finite sequence values",
+      "script": "module AtomicSeriesDropLast\non Start {\n  let naturals be :series.natural()\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 5, 3, 1]\n  let range as :range be from 1 to 5\n  let descending as :range be from 5 to 1 step (0 - 2)\n  emit Done(seriesDropLast: naturals[:drop last 2], listDropLast: values[:drop last 2], diceDropLast: dice[:drop last 2], rangeDropLast: range[:drop last 2], descendingDropLast: descending[:drop last 1])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "descendingDropLast": {
+                  "type": ":range",
+                  "from": "5",
+                  "to": "3",
+                  "step": "-2"
+                },
+                "diceDropLast": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    5
+                  ]
+                },
+                "listDropLast": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                },
+                "rangeDropLast": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
+                },
+                "seriesDropLast": {
+                  "type": ":nothing"
                 }
               }
             }

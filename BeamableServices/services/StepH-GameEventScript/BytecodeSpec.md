@@ -999,9 +999,16 @@ Required portable value families:
 - runtime values: `:message`, `:handler`
 - custom record and external types
 
-Series values are index-addressed, repeatable mathematical series. Supported
-operations are `:term`, `:take`, and `:drop`; unsupported lookup/selector
-operations evaluate to `nothing`.
+Series values are repeatable mathematical series. `[:term n]` reads the
+zero-based term and is valid only for series; all non-series sources evaluate to
+`nothing`. `[:take first n]` materializes the first terms as a list, and
+`[:drop first n]` returns a shifted series. Because series are not finite,
+`[:take last n]` and `[:drop last n]` evaluate to `nothing`.
+
+Finite sequence values support direct slicing without pipeline materialization:
+lists, dice, and ranges support `:take first`, `:drop first`, `:take last`, and
+`:drop last`. List slices return lists, dice slices return dice, and range
+slices return ranges.
 
 Message values are map-backed runtime values. The bytecode model exposes the
 read-only members `name`, `signature`, `arguments`, and `tags` through normal

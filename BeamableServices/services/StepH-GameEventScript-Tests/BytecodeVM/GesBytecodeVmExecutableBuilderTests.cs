@@ -2051,16 +2051,20 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let term be naturals[:term 3]
               let firstValues be naturals[:take first 4]
               let dropped be naturals[:drop first 2]
-              emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series)
+              let lastValues be naturals[:take last 2]
+              let droppedLast be naturals[:drop last 1]
+              emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast)
             }
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
         var opCodes = compiled.Code.Select(instruction => instruction.OpCode).ToArray();
 
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.SeriesTerm);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.SeriesTake);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.SeriesDrop);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.Term);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeFirst);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropFirst);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLast);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLast);
         Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineStream));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCollectList));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamReduce));

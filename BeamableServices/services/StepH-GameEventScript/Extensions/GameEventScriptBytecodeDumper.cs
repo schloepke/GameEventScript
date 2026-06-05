@@ -564,13 +564,15 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.SeriesTerm:
+            case GameEventScriptBytecodeOpCode.Term:
                 AppendSlot(builder, "series", instruction.XSlot);
                 AppendSlot(builder, "index", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.SeriesTake:
-            case GameEventScriptBytecodeOpCode.SeriesDrop:
+            case GameEventScriptBytecodeOpCode.TakeFirst:
+            case GameEventScriptBytecodeOpCode.DropFirst:
+            case GameEventScriptBytecodeOpCode.TakeLast:
+            case GameEventScriptBytecodeOpCode.DropLast:
                 AppendSlot(builder, "source", instruction.XSlot);
                 AppendIndex(builder, "count", instruction.ImmediateY);
                 break;

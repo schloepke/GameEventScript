@@ -390,9 +390,11 @@ public enum GameEventScriptBytecodeOpCode : byte
     RandomPush = 0x6B,
     RandomPushConstant = 0x6C,
     RandomPop = 0x6D,
-    SeriesTerm = 0x6E,
-    SeriesTake = 0x6F,
-    SeriesDrop = 0x70,
+    Term = 0x6E,
+    TakeFirst = 0x6F,
+    DropFirst = 0x70,
+    TakeLast = 0x71,
+    DropLast = 0x72,
 
     #endregion
 

@@ -87,6 +87,16 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicStreamCoreCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicStreamCore(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicStreamTerminalsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicStreamTerminals(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -196,6 +206,16 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicSeriesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicSeries(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicStreamCoreCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicStreamCore(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase, false);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicStreamTerminalsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicStreamTerminals(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
@@ -391,6 +411,12 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicSeriesCases()
         => Cases("runtime/atomic/series.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicStreamCoreCases()
+        => Cases("runtime/atomic/stream-core.json");
+
+    public static IEnumerable<object[]> RuntimeAtomicStreamTerminalsCases()
+        => Cases("runtime/atomic/stream-terminals.json");
+
     public static IEnumerable<object[]> RuntimeCollectionsCases()
         => Cases("runtime/collections.json");
 
@@ -453,6 +479,12 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicSeriesCases()
         => NewVirtualMachineCases("runtime/atomic/series.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicStreamCoreCases()
+        => NewVirtualMachineCases("runtime/atomic/stream-core.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicStreamTerminalsCases()
+        => NewVirtualMachineCases("runtime/atomic/stream-terminals.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
         => NewVirtualMachineCases("runtime/collections.json");

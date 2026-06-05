@@ -13,7 +13,7 @@ public sealed class BytecodeVmPerformanceReportTests
 {
     private const bool UseNewVm = true;
     private const bool RunSoftMode = false;
-    private const int WarmupRuns = 25;
+    private const int WarmupRuns = 100;
     private const int MeasuredRuns = 1_000;
 
     private const string PerformanceScript =
@@ -59,16 +59,10 @@ public sealed class BytecodeVmPerformanceReportTests
 
         WarmUp(input);
 
-        var bytecodeVmCompile = Measure("ges compile", () => BuildPerformanceBytecode(false));
+        var bytecodeVmCompile = Measure("ges compile", BuildPerformanceBytecode);
         var bytecodeVmBuild = Measure<IGameEventScriptModule>("bytecodevm build", () => BuildExecutable(bytecodeVmCompile.Value));
 
         var bytecodeVmRun = MeasureRun(bytecodeVmBuild.Value, input, MeasuredRuns);
-
-        var bytecodeVmCompileDiag = Measure("ges compile", () => BuildPerformanceBytecode(true));
-        var bytecodeVmBuildDiag = Measure<IGameEventScriptModule>("bytecodevm build", () => BuildExecutable(bytecodeVmCompileDiag.Value));
-
-        var bytecodeVmRunDiag = MeasureRun(bytecodeVmBuildDiag.Value, input, MeasuredRuns, new GameEventScriptDiagnosticTraceCollector());
-        MeasureRun(bytecodeVmBuildDiag.Value, input, 1, diagnosticCollector);
 
         if (!RunSoftMode)
         {
@@ -77,12 +71,11 @@ public sealed class BytecodeVmPerformanceReportTests
         }
 
         TestContext.WriteLine("-----");
-        WriteReport("Without diagnostic;", bytecodeVmCompile, bytecodeVmBuild, bytecodeVmRun);
-        WriteReport("With diagnostic:", bytecodeVmCompileDiag, bytecodeVmBuildDiag, bytecodeVmRunDiag);
+        WriteReport("Performance result;", bytecodeVmCompile, bytecodeVmBuild, bytecodeVmRun);
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Dump:\n" + bytecodeVmCompile.Value.DumpBytecode());
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("Binary file:\n" + bytecodeVmCompileDiag.Value.ToGameEventScriptBinary().Dump(PerformanceScript));
+        TestContext.WriteLine("Binary file:\n" + bytecodeVmCompile.Value.ToGameEventScriptBinary().Dump(PerformanceScript));
         /*
         TestContext.WriteLine("-----");
         TestContext.WriteLine("BytecodeVM Diagnostics:\n" +diagnosticCollector.ToString());
@@ -92,11 +85,11 @@ public sealed class BytecodeVmPerformanceReportTests
 
     private static void WarmUp(GameEventScriptMessage input)
     {
-        MeasureRun(BuildExecutable(BuildPerformanceBytecode(false)), input, WarmupRuns);
+        MeasureRun(BuildExecutable(BuildPerformanceBytecode()), input, WarmupRuns);
     }
 
-    private static GameEventScriptCompiled BuildPerformanceBytecode(bool diagnostic) => GameEventScriptBuilder.Create()
-        .WithEnableDiagnostic(diagnostic).WithDebugInfo().AddScript(PerformanceScript, "engine-performance.es").Compile();
+    private static GameEventScriptCompiled BuildPerformanceBytecode() => GameEventScriptBuilder.Create()
+        .WithEnableDiagnostic(false).WithDebugInfo().AddScript(PerformanceScript, "engine-performance.es").Compile();
 
     private static IGameEventScriptModule BuildExecutable(GameEventScriptCompiled bytecode) =>
         UseNewVm ? GameEventScriptVirtualMaschine.Create(bytecode.ToGameEventScriptBinary(), 128, 128) : GesBytecodeVmExecutableBuilder.Build(bytecode);

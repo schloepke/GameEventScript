@@ -107,19 +107,19 @@ internal static class VmRegisterStreamTerminals
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamMin(ref this VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator)
+    internal static void VmStreamMin(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator)
     {
-        dst.VmStreamMinMax(ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
+        VmStreamMinMax(ref dst, ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamMax(ref this VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator)
+    internal static void VmStreamMax(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator)
     {
-        dst.VmStreamMinMax(ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
+        VmStreamMinMax(ref dst, ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void VmStreamMinMax(ref this VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator, bool isMax)
+    private static void VmStreamMinMax(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator, bool isMax)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
         {

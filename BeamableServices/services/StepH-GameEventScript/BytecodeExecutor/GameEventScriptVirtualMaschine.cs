@@ -535,11 +535,19 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmStreamAverage(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamMin:
-                            vmState.Register(instruction.DestinationSlot).VmStreamMin(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                        {
+                            var dst = vmState.CreateNothing();
+                            VmRegisterStreamTerminals.VmStreamMin(ref dst, ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            vmState.Register(instruction.DestinationSlot) = dst;
                             break;
+                        }
                         case StreamMax:
-                            vmState.Register(instruction.DestinationSlot).VmStreamMax(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                        {
+                            var dst = vmState.CreateNothing();
+                            VmRegisterStreamTerminals.VmStreamMax(ref dst, ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            vmState.Register(instruction.DestinationSlot) = dst;
                             break;
+                        }
                         case StreamCollectList:
                             vmState.Register(instruction.DestinationSlot).VmStreamCollectList(ref vmState.Register(instruction.XSlot));
                             break;

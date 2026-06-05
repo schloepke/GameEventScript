@@ -287,7 +287,7 @@ public static class GameEventScriptBinaryDumper
             CallableEntry => context.CodeLabel(instruction.EntryAddress),
             PredicateEntry => context.CodeLabel(instruction.EntryAddress),
             NextEntry => context.CodeLabel(instruction.EntryAddress),
-            ReducerEntry => context.CodeLabel(instruction.OpCode is GameEventScriptBytecodeOpCode.StreamReduce ? instruction.AU : instruction.BU),
+            ProjectionEntry => context.CodeLabel(instruction.AU),
             KeyEntry => context.CodeLabel(instruction.AU),
             ValueEntry => context.CodeLabel(instruction.BU),
             FaceEntry => context.CodeLabel(instruction.AU),
@@ -376,8 +376,8 @@ public static class GameEventScriptBinaryDumper
                 case NextEntry:
                     AddCodeEntryComment(comments, context, instruction.EntryAddress);
                     break;
-                case ReducerEntry:
-                    AddCodeEntryComment(comments, context, instruction.OpCode is GameEventScriptBytecodeOpCode.StreamReduce ? instruction.AU : instruction.BU);
+                case ProjectionEntry:
+                    AddCodeEntryComment(comments, context, instruction.AU);
                     break;
                 case KeyEntry:
                 case FaceEntry:
@@ -816,14 +816,16 @@ public static class GameEventScriptBinaryDumper
             switch (part)
             {
                 case JumpTarget:
+                    AddCodeLabel(labels, binary, instruction.TargetAddress);
+                    break;
                 case EntryTarget:
                 case CallableEntry:
                 case PredicateEntry:
                 case NextEntry:
-                    AddCodeLabel(labels, binary, instruction.TargetAddress);
+                    AddCodeLabel(labels, binary, instruction.EntryAddress);
                     break;
-                case ReducerEntry:
-                    AddCodeLabel(labels, binary, instruction.OpCode is GameEventScriptBytecodeOpCode.StreamReduce ? instruction.AU : instruction.BU);
+                case ProjectionEntry:
+                    AddCodeLabel(labels, binary, instruction.AU);
                     break;
                 case KeyEntry:
                 case FaceEntry:

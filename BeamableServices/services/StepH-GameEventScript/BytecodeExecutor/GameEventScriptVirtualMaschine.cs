@@ -465,14 +465,26 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case StreamClose:
                             vmState.Register(instruction.XSlot).VmStreamClose();
                             break;
-                        case StreamReduce:
-                            // FIXME: creating the real custom type here
+                        case StreamMap:
+                            vmState.Register(instruction.DestinationSlot).VmStreamMap(ref vmState.Register(instruction.XSlot), instruction.TargetAddress, ref vmState.Register(instruction.AU), ref vmState.Register(instruction.BU));
                             break;
-                        case StreamReduceOrDefault:
-                            // FIXME: creating the real custom type here
+                        case StreamFilter:
+                            vmState.Register(instruction.DestinationSlot).VmStreamFilter(ref vmState.Register(instruction.XSlot), instruction.TargetAddress, ref vmState.Register(instruction.AU), ref vmState.Register(instruction.BU));
                             break;
-                        case StreamFold:
-                            // FIXME: creating the real custom type here
+                        case StreamCount:
+                            vmState.Register(instruction.XSlot).VmStreamCount();
+                            break;
+                        case StreamSum:
+                            vmState.Register(instruction.XSlot).VmStreamSum();
+                            break;
+                        case StreamAverage:
+                            vmState.Register(instruction.XSlot).VmStreamAverage();
+                            break;
+                        case StreamMin:
+                            vmState.Register(instruction.XSlot).VmStreamMin(ref vmState.Register(instruction.YSlot), instruction.AU);
+                            break;
+                        case StreamMax:
+                            vmState.Register(instruction.XSlot).VmStreamMax(ref vmState.Register(instruction.YSlot), instruction.AU);
                             break;
                         case StreamCollectList:
                             // FIXME: creating the real custom type here
@@ -497,9 +509,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
                         #region Group 4 - pipeline terminals and transforms
 
-                        case PipelineStream:
-                            // FIXME: creating the real custom type here
-                            break;
                         case PipelineHasAny:
                             // FIXME: creating the real custom type here
                             break;

@@ -27,13 +27,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         Single
     }
 
-    private enum IteratorReduceMode
-    {
-        Reduce,
-        ReduceOrDefault,
-        Fold
-    }
-
     private readonly GesBytecodeVmExecutable _compiledScript;
     private readonly GameEventScriptSession _context;
     private readonly GesRuntimeBudget _runtimeBudget;
@@ -94,15 +87,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         switch (instruction.OpCode)
         {
-            case GameEventScriptBytecodeOpCode.PipelineStream:
+            case GameEventScriptBytecodeOpCode.StreamMap:
+            case GameEventScriptBytecodeOpCode.StreamFilter:
                 return allowPipeline && CanExecuteLinearEntry(instruction.EntryAddress, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.StreamReduce:
+            case GameEventScriptBytecodeOpCode.StreamMin:
+            case GameEventScriptBytecodeOpCode.StreamMax:
                 return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
-
-            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
-            case GameEventScriptBytecodeOpCode.StreamFold:
-                return allowPipeline && CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:
@@ -1178,8 +1169,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
                 return DefineSlot(instruction.DestinationSlot, EvaluateMemberAccess(ResolveSlot(instruction.YSlot), member));
 
-            case GameEventScriptBytecodeOpCode.PipelineStream:
-                return TryCreatePipelineStream(instruction);
+            case GameEventScriptBytecodeOpCode.StreamMap:
+                return TryCreateStreamMap(instruction);
+
+            case GameEventScriptBytecodeOpCode.StreamFilter:
+                return TryCreateStreamFilter(instruction);
 
             case GameEventScriptBytecodeOpCode.StreamCollectList:
                 return TryExecuteStreamCollectList(instruction);
@@ -1199,14 +1193,18 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
                 return TryExecutePipelineHasAll(instruction);
 
-            case GameEventScriptBytecodeOpCode.StreamReduce:
-                return TryExecuteIteratorReduce(instruction, IteratorReduceMode.Reduce);
+            case GameEventScriptBytecodeOpCode.StreamCount:
+                return TryExecuteStreamCount(instruction);
 
-            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
-                return TryExecuteIteratorReduce(instruction, IteratorReduceMode.ReduceOrDefault);
+            case GameEventScriptBytecodeOpCode.StreamSum:
+                return TryExecuteStreamSum(instruction);
 
-            case GameEventScriptBytecodeOpCode.StreamFold:
-                return TryExecuteIteratorReduce(instruction, IteratorReduceMode.Fold);
+            case GameEventScriptBytecodeOpCode.StreamAverage:
+                return TryExecuteStreamAverage(instruction);
+
+            case GameEventScriptBytecodeOpCode.StreamMin:
+            case GameEventScriptBytecodeOpCode.StreamMax:
+                return TryExecuteStreamMinMax(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
             case GameEventScriptBytecodeOpCode.PipelineContainsAny:
@@ -2507,7 +2505,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryCreatePipelineStream(GameEventScriptBytecodeInstruction instruction)
+    private bool TryCreateStreamMap(GameEventScriptBytecodeInstruction instruction)
+        => TryCreateStreamTransform(instruction, filter: false);
+
+    private bool TryCreateStreamFilter(GameEventScriptBytecodeInstruction instruction)
+        => TryCreateStreamTransform(instruction, filter: true);
+
+    private bool TryCreateStreamTransform(GameEventScriptBytecodeInstruction instruction, bool filter)
     {
         if (!TryGetIterator(instruction.XSlot, out var sourceIterator) ||
             !TryGetUShortList(instruction.BU, out var captureSlots))
@@ -2525,12 +2529,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         return DefineSlot(
             instruction.DestinationSlot,
-            BytecodeVmValue.Iterator(new BytecodeVmPipelineStream(
+            BytecodeVmValue.Iterator(new BytecodeVmTransformStream(
                 this,
                 sourceIterator,
                 instruction.EntryAddress,
                 instruction.AU,
-                captures)));
+                captures,
+                filter)));
     }
 
     private bool TryGetIterator(int slot, out BytecodeVmIterator iterator)
@@ -2547,7 +2552,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return false;
     }
 
-    internal bool TryEvaluatePipelineStreamEntry(
+    internal bool TryEvaluateStreamTransformEntry(
         int entryAddress,
         int itemSlot,
         BytecodeVmValue item,
@@ -2572,7 +2577,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return TryEvaluateLinearIsolatedHelperEntry(entryAddress, item, captures, out yielded, out value);
     }
 
-    internal bool TryEvaluatePipelineStreamEntry(
+    internal bool TryEvaluateStreamTransformEntry(
         int entryAddress,
         int itemSlot,
         BytecodeVmValue item,
@@ -2827,7 +2832,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecuteIteratorReduce(GameEventScriptBytecodeInstruction instruction, IteratorReduceMode mode)
+    private bool TryExecuteStreamCount(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
@@ -2840,48 +2845,149 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
         }
 
-        var itemSlot = mode == IteratorReduceMode.Reduce
-            ? instruction.YSlot
-            : instruction.AU;
-        var reducerEntry = mode == IteratorReduceMode.Reduce
-            ? instruction.AU
-            : instruction.BU;
+        try
+        {
+            long count = 0;
+            while (iterator.TryMoveNext(out _))
+            {
+                count++;
+            }
+
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Integer(count));
+        }
+        finally
+        {
+            iterator.Dispose();
+        }
+    }
+
+    private bool TryExecuteStreamSum(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetIterator(instruction.XSlot, out var iterator))
+        {
+            return false;
+        }
+
+        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+        {
+            iterator.Dispose();
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+        }
 
         try
         {
-            BytecodeVmValue accumulator;
-            if (mode == IteratorReduceMode.Fold)
+            if (!iterator.TryMoveNext(out var sum))
             {
-                accumulator = ResolveSlot(instruction.YSlot);
-            }
-            else if (iterator.TryMoveNext(out var first))
-            {
-                accumulator = first;
-            }
-            else
-            {
-                accumulator = mode == IteratorReduceMode.ReduceOrDefault
-                    ? ResolveSlot(instruction.YSlot)
-                    : BytecodeVmValue.Nothing;
-                return DefineSlot(instruction.DestinationSlot, accumulator);
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Float(0d));
             }
 
             while (iterator.TryMoveNext(out var item))
             {
-                if (!DefineSlot(instruction.DestinationSlot, accumulator))
-                {
-                    return false;
-                }
-
-                if (!TryEvaluatePipelineStreamEntry(reducerEntry, itemSlot, item, out var hasValue, out var reduced))
-                {
-                    return false;
-                }
-
-                accumulator = hasValue ? reduced : BytecodeVmValue.Nothing;
+                sum = BytecodeVmValue.FromGameEventScriptValue(EvaluateAddBinary(
+                    sum.ToGameEventScriptValue(),
+                    item.ToGameEventScriptValue()));
             }
 
-            return DefineSlot(instruction.DestinationSlot, accumulator);
+            return DefineSlot(instruction.DestinationSlot, sum);
+        }
+        finally
+        {
+            iterator.Dispose();
+        }
+    }
+
+    private bool TryExecuteStreamAverage(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetIterator(instruction.XSlot, out var iterator))
+        {
+            return false;
+        }
+
+        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+        {
+            iterator.Dispose();
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+        }
+
+        try
+        {
+            long count = 0;
+            var sum = BytecodeVmValue.Float(0d);
+            while (iterator.TryMoveNext(out var item))
+            {
+                count++;
+                sum = BytecodeVmValue.FromGameEventScriptValue(EvaluateAddBinary(
+                    sum.ToGameEventScriptValue(),
+                    item.ToGameEventScriptValue()));
+            }
+
+            if (count == 0)
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var average = BytecodeVmValue.FromGameEventScriptValue(EvaluateNumericBinary(
+                sum.ToGameEventScriptValue(),
+                "/",
+                GesInteger(count)));
+            return DefineSlot(instruction.DestinationSlot, average);
+        }
+        finally
+        {
+            iterator.Dispose();
+        }
+    }
+
+    private bool TryExecuteStreamMinMax(GameEventScriptBytecodeInstruction instruction)
+    {
+        if (!TryGetIterator(instruction.XSlot, out var iterator))
+        {
+            return false;
+        }
+
+        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+        {
+            iterator.Dispose();
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+        }
+
+        try
+        {
+            var itemSlot = instruction.YSlot;
+            var projectionEntry = instruction.AU;
+            var isMax = instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMax;
+            var hasWinner = false;
+            var winner = BytecodeVmValue.Nothing;
+            var winnerProjection = BytecodeVmValue.Nothing;
+            while (iterator.TryMoveNext(out var item))
+            {
+                if (!TryEvaluateStreamTransformEntry(projectionEntry, itemSlot, item, out var hasProjection, out var projection))
+                {
+                    return false;
+                }
+
+                if (!hasProjection)
+                {
+                    projection = BytecodeVmValue.Nothing;
+                }
+
+                if (!hasWinner)
+                {
+                    winner = item;
+                    winnerProjection = projection;
+                    hasWinner = true;
+                    continue;
+                }
+
+                if (BytecodeVmValue.TryCompareNumeric(projection, winnerProjection, out var comparison) &&
+                    ((isMax && comparison > 0) || (!isMax && comparison < 0)))
+                {
+                    winner = item;
+                    winnerProjection = projection;
+                }
+            }
+
+            return DefineSlot(instruction.DestinationSlot, hasWinner ? winner : BytecodeVmValue.Nothing);
         }
         finally
         {
@@ -2920,7 +3026,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     private bool TryEvaluatePipelineEntryValue(int entryAddress, int itemSlot, BytecodeVmValue item, out BytecodeVmValue value)
     {
         value = BytecodeVmValue.Nothing;
-        if (!TryEvaluatePipelineStreamEntry(entryAddress, itemSlot, item, out var hasValue, out value))
+        if (!TryEvaluateStreamTransformEntry(entryAddress, itemSlot, item, out var hasValue, out value))
         {
             return false;
         }
@@ -8616,12 +8722,13 @@ internal sealed class BytecodeVmCollectionStream(GameEventScriptValue sourceTarg
     }
 }
 
-internal sealed class BytecodeVmPipelineStream(
+internal sealed class BytecodeVmTransformStream(
     GesBytecodeVmExecutionSession session,
     BytecodeVmIterator source,
     int entryAddress,
     int itemSlot,
-    IReadOnlyList<BytecodeVmValue> captures) : BytecodeVmIterator
+    IReadOnlyList<BytecodeVmValue> captures,
+    bool filter) : BytecodeVmIterator
 {
     private bool _disposed;
 
@@ -8639,15 +8746,27 @@ internal sealed class BytecodeVmPipelineStream(
 
         while (source.TryMoveNext(out var item))
         {
-            if (!session.TryEvaluatePipelineStreamEntry(entryAddress, itemSlot, item, captures, out var yielded, out value))
+            if (!session.TryEvaluateStreamTransformEntry(entryAddress, itemSlot, item, captures, out var yielded, out var transformed))
             {
                 Dispose();
                 value = BytecodeVmValue.Nothing;
                 return false;
             }
 
+            if (filter)
+            {
+                if (yielded && transformed.IsTrue())
+                {
+                    value = item;
+                    return true;
+                }
+
+                continue;
+            }
+
             if (yielded)
             {
+                value = transformed;
                 return true;
             }
         }

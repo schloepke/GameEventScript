@@ -451,7 +451,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         var compiled = GameEventScriptManager.Compile(script);
 
         Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream &&
+            instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap &&
             instruction.EntryAddress > 0));
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.StreamCollectList));
@@ -624,7 +624,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream);
+        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap);
         var entryAddress = selector.EntryAddress;
         Assert.IsGreaterThanOrEqualTo(0, entryAddress);
         Assert.IsTrue(compiled.Code
@@ -681,7 +681,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream);
+        var selector = compiled.Code.First(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamFilter);
         var helperEntry = selector.EntryAddress;
 
         Assert.AreEqual(GameEventScriptBytecodeOpCode.SlotLocals, compiled.Code[helperEntry].OpCode);
@@ -702,7 +702,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream);
+        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap);
         var entryAddress = selector.EntryAddress;
         Assert.IsGreaterThanOrEqualTo(0, entryAddress);
 
@@ -748,7 +748,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream);
+        var selector = compiled.Code.Single(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap);
         var entryAddress = selector.EntryAddress;
         Assert.IsGreaterThanOrEqualTo(0, entryAddress);
 
@@ -795,7 +795,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamFilter));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -835,7 +836,8 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineStream));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap));
+        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamFilter));
 
         var originalConstant = 4L;
         var replacementConstant = 6L;
@@ -2065,11 +2067,15 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropFirst);
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLast);
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLast);
-        Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineStream));
+        Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineHasAny));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMap));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamFilter));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCollectList));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamReduce));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamReduceOrDefault));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamFold));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCount));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamSum));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamAverage));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMin));
+        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMax));
     }
 
     [TestMethod]

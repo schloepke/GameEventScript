@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.BytecodeExecutor.VmMathConstants;
@@ -1896,4 +1897,75 @@ internal static class VmRegisterMath
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmTerm(ref this VmValue dst, ref VmValue source, ref VmValue termSlot)
+    {
+        long index;
+        bool ret;
+        switch (termSlot.Kind)
+        {
+            case Integer:
+                index = termSlot.IntegerValue;
+                ret = true;
+                break;
+            case Float or Percentage:
+                switch (termSlot.FloatValue)
+                {
+                    case double.NaN:
+                        index = 0;
+                        ret = false;
+                        break;
+                    case <= long.MinValue:
+                        index = long.MinValue;
+                        ret = true;
+                        break;
+                    case >= long.MaxValue:
+                        index = long.MaxValue;
+                        ret = true;
+                        break;
+                    default:
+                        index = (long)termSlot.FloatValue;
+                        ret = true;
+                        break;
+                }
+
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                index = termSlot.IsTrue ? 1 : 0;
+                ret = true;
+                break;
+            default:
+                if (termSlot.IsNumeric)
+                {
+                    switch (termSlot.AsNumeric)
+                    {
+                        case Double.NaN:
+                            index = 0;
+                            ret = false;
+                            break;
+                        case <= long.MinValue:
+                            index = long.MinValue;
+                            ret = true;
+                            break;
+                        case >= long.MaxValue:
+                            index = long.MaxValue;
+                            ret = true;
+                            break;
+                        default:
+                            index = (long)termSlot.AsNumeric;
+                            ret = true;
+                            break;
+                    }
+
+                    break;
+                }
+
+                index = 0;
+                ret = false;
+                break;
+        }
+
+        if (source.Kind is not Series || source.ObjectValue is not GameEventScriptSeriesValue series || !ret) dst.SetNothing();
+        else dst.BindArguments(series.GetTerm(index));
+    }
 }

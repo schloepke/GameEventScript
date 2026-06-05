@@ -483,7 +483,8 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.YSlot, $"{context} source slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineStream:
+            case GameEventScriptBytecodeOpCode.StreamMap:
+            case GameEventScriptBytecodeOpCode.StreamFilter:
                 ValidateSlot(module, instruction.XSlot, $"{context} source iterator slot");
                 ValidateEntryAddress(module, code, instruction.EntryAddress, $"{context} iterator entry");
                 ValidateSlot(module, instruction.AU, $"{context} item binding slot");
@@ -494,6 +495,9 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.StreamCollectFirst:
             case GameEventScriptBytecodeOpCode.StreamCollectLast:
             case GameEventScriptBytecodeOpCode.StreamCollectSingle:
+            case GameEventScriptBytecodeOpCode.StreamCount:
+            case GameEventScriptBytecodeOpCode.StreamSum:
+            case GameEventScriptBytecodeOpCode.StreamAverage:
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
             case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
@@ -524,18 +528,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.StreamReduce:
+            case GameEventScriptBytecodeOpCode.StreamMin:
+            case GameEventScriptBytecodeOpCode.StreamMax:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} item binding slot");
-                ValidateEntryAddress(module, code, instruction.AU, $"{context} reducer entry");
-                break;
-
-            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
-            case GameEventScriptBytecodeOpCode.StreamFold:
-                ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
-                ValidateSlot(module, instruction.YSlot, $"{context} seed/default slot");
-                ValidateSlot(module, instruction.AU, $"{context} item binding slot");
-                ValidateEntryAddress(module, code, instruction.BU, $"{context} reducer entry");
+                ValidateEntryAddress(module, code, instruction.AU, $"{context} projection entry");
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectMap:

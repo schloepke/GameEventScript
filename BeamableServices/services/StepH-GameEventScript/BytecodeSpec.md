@@ -1105,15 +1105,18 @@ Core streaming shape:
 
 ```text
 StreamCreate source -> iterator
-PipelineStream transformedIterator sourceIterator nextEntry itemBindingSlot captureSlotList
+StreamMap transformedIterator sourceIterator mapEntry itemBindingSlot captureSlotList
+StreamFilter filteredIterator sourceIterator predicateEntry itemBindingSlot captureSlotList
+StreamCount dst iterator
+StreamSum dst iterator
+StreamAverage dst iterator
+StreamMin dst iterator itemBindingSlot projectionEntry
+StreamMax dst iterator itemBindingSlot projectionEntry
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
 StreamCollectFirst/Last/Single dst iterator
 PipelineHasAny/HasAll dst iterator
-StreamReduce dst iterator itemBindingSlot reducerEntry
-StreamReduceOrDefault dst iterator defaultSlot itemBindingSlot reducerEntry
-StreamFold dst iterator seedSlot itemBindingSlot reducerEntry
 PipelineListCreateBuilder builder
 PipelineListBuilderAdd builder item
 PipelineListBuilderFinish dst builder
@@ -1125,31 +1128,28 @@ custom type values follow the same rules as maps. Successful projections use
 stable ordinal key order. If the operand is `nothing`, the result is
 `nothing`; any other non-map operand also yields `nothing`.
 
-`PipelineStream` is a lazy one-time adapter over another VM iterator. Its
-helper entry runs as an isolated helper frame: the current source item is bound
-to helper-local slot `AU` (normally slot `0`), and `BU` references a
-`UShortListPool` entry containing caller-frame capture slots copied when the
+`StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
+iterator. Their helper entries run as isolated helper frames: the current source
+item is bound to helper-local slot `AU` (normally slot `0`), and `BU` references
+a `UShortListPool` entry containing caller-frame capture slots copied when the
 iterator is created. Captures are exposed to the helper in order starting at
-slot `1`. `ReturnValue` yields the returned value. `ReturnVoid` means "no
-yielded item"; the adapter continues with the next source item until the source
-iterator itself is exhausted. For normal call frames, `ReturnVoid` is mapped to
-DSL `nothing`; for pipeline iterators it is control flow.
+slot `1`. `StreamMap` yields the helper `ReturnValue`. `StreamFilter` treats the
+helper `ReturnValue` as a predicate and yields the original source item only when
+that predicate is true.
 
-Reducer entries use `DestinationSlot` as the current accumulator slot and the
-instruction item binding slot as the current element. A reducer `ReturnValue`
-replaces the accumulator. A reducer `ReturnVoid` replaces the accumulator with
-DSL `nothing`.
+`StreamCount`, `StreamSum`, and `StreamAverage` are fixed finite-stream
+aggregation terminals. `StreamCount` returns `0` for an empty finite stream;
+`StreamSum` returns numeric `0` for an empty finite stream and otherwise folds
+with normal `Add` semantics starting at the first projected item; `StreamAverage`
+returns `nothing` for an empty finite stream and otherwise divides the summed
+value by the item count. All three return `nothing` for series sources because
+they would otherwise require unbounded consumption.
 
-Generic reduction contracts:
-
-- `StreamReduce`: empty iterator -> `nothing`; one item -> that item; two or
-  more items -> first item is accumulator, reducer starts with the second item.
-- `StreamReduceOrDefault`: empty iterator -> default slot; one item -> that
-  item; two or more items -> first item is accumulator, reducer starts with the
-  second item. `:sum` uses this form so empty sum returns `0`, while non-empty
-  sums preserve the first projected value's type/unit.
-- `StreamFold`: empty iterator -> seed slot; otherwise seed is accumulator
-  and the reducer runs for every item. `:count` and `:average` use this form.
+`StreamMin` and `StreamMax` are fixed extrema terminals. They bind each source
+item to `YSlot`, evaluate `AU` as a projection entry, compare projected numeric
+values using normal less/greater semantics, and return the winning source item.
+Ties keep the earlier source item. Empty finite streams and series sources
+return `nothing`.
 
 Fixed terminal opcodes cover materializers and operations that need full
 collection semantics: map, distinct, group/order/sort/reverse, random

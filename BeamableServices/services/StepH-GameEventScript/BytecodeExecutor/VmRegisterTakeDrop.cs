@@ -1,4 +1,6 @@
+using System;
 using System.Runtime.CompilerServices;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -6,17 +8,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterSeries
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmTerm(ref this VmValue dst, ref VmValue source, ref VmValue termSlot)
-    {
-        if (source.Kind is not Series || source.ObjectValue is not GameEventScriptSeriesValue series || !TryReadTermIndex(ref termSlot, out var index))
-        {
-            dst.SetNothing();
-            return;
-        }
-
-        dst.BindArguments(series.GetTerm(index));
-    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTakeFirst(ref this VmValue dst, ref VmValue source, short count)
@@ -32,10 +23,10 @@ internal static class VmRegisterSeries
             case Dice when source.ObjectValue is int[] dice:
                 TakeFirstDice(ref dst, dice, count);
                 return;
-            case Range when source.ObjectValue is VmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
                 TakeFirstRange(ref dst, range, count);
                 return;
-            case Range when source.ObjectValue is VmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 TakeFirstRange(ref dst, range, count);
                 return;
             default:
@@ -58,10 +49,10 @@ internal static class VmRegisterSeries
             case Dice when source.ObjectValue is int[] dice:
                 DropFirstDice(ref dst, dice, count);
                 return;
-            case Range when source.ObjectValue is VmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
                 DropFirstRange(ref dst, ref source, range, count);
                 return;
-            case Range when source.ObjectValue is VmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 DropFirstRange(ref dst, ref source, range, count);
                 return;
             default:
@@ -81,10 +72,10 @@ internal static class VmRegisterSeries
             case Dice when source.ObjectValue is int[] dice:
                 TakeLastDice(ref dst, dice, count);
                 return;
-            case Range when source.ObjectValue is VmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
                 TakeLastRange(ref dst, range, count);
                 return;
-            case Range when source.ObjectValue is VmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 TakeLastRange(ref dst, range, count);
                 return;
             default:
@@ -104,10 +95,10 @@ internal static class VmRegisterSeries
             case Dice when source.ObjectValue is int[] dice:
                 DropLastDice(ref dst, dice, count);
                 return;
-            case Range when source.ObjectValue is VmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
                 DropLastRange(ref dst, ref source, range, count);
                 return;
-            case Range when source.ObjectValue is VmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 DropLastRange(ref dst, ref source, range, count);
                 return;
             default:
@@ -412,50 +403,5 @@ internal static class VmRegisterSeries
 
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length - count, out var to)) dst.SetRange(range.from, to, range.step);
         else dst.SetNothing();
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool TryReadTermIndex(ref VmValue value, out long index)
-    {
-        switch (value.Kind)
-        {
-            case Integer:
-                index = value.IntegerValue;
-                return true;
-            case Float or Percentage:
-                return TryTruncateToInteger(value.FloatValue, out index);
-            case Boolean:
-                index = value.IsTrue ? 1 : 0;
-                return true;
-            default:
-                if (value.IsNumeric) return TryTruncateToInteger(value.AsNumeric, out index);
-                index = 0;
-                return false;
-        }
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool TryTruncateToInteger(double value, out long index)
-    {
-        if (double.IsNaN(value))
-        {
-            index = 0;
-            return false;
-        }
-
-        if (value <= long.MinValue)
-        {
-            index = long.MinValue;
-            return true;
-        }
-
-        if (value >= long.MaxValue)
-        {
-            index = long.MaxValue;
-            return true;
-        }
-
-        index = (long)value;
-        return true;
     }
 }

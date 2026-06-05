@@ -457,7 +457,8 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "target", instruction.EntryAddress);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineStream:
+            case GameEventScriptBytecodeOpCode.StreamMap:
+            case GameEventScriptBytecodeOpCode.StreamFilter:
                 AppendSlot(builder, "source", instruction.XSlot);
                 AppendAddress(builder, "entry", instruction.EntryAddress);
                 AppendSlot(builder, "item", instruction.AU);
@@ -468,6 +469,9 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.StreamCollectFirst:
             case GameEventScriptBytecodeOpCode.StreamCollectLast:
             case GameEventScriptBytecodeOpCode.StreamCollectSingle:
+            case GameEventScriptBytecodeOpCode.StreamCount:
+            case GameEventScriptBytecodeOpCode.StreamSum:
+            case GameEventScriptBytecodeOpCode.StreamAverage:
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
             case GameEventScriptBytecodeOpCode.PipelineDistinct:
@@ -478,24 +482,11 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.StreamReduce:
+            case GameEventScriptBytecodeOpCode.StreamMin:
+            case GameEventScriptBytecodeOpCode.StreamMax:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 AppendSlot(builder, "item", instruction.YSlot);
-                AppendAddress(builder, "reducer", instruction.AU);
-                break;
-
-            case GameEventScriptBytecodeOpCode.StreamReduceOrDefault:
-                AppendSlot(builder, "iterator", instruction.XSlot);
-                AppendSlot(builder, "default", instruction.YSlot);
-                AppendSlot(builder, "item", instruction.AU);
-                AppendAddress(builder, "reducer", instruction.BU);
-                break;
-
-            case GameEventScriptBytecodeOpCode.StreamFold:
-                AppendSlot(builder, "iterator", instruction.XSlot);
-                AppendSlot(builder, "seed", instruction.YSlot);
-                AppendSlot(builder, "item", instruction.AU);
-                AppendAddress(builder, "reducer", instruction.BU);
+                AppendAddress(builder, "projection", instruction.AU);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineContainsSingle:

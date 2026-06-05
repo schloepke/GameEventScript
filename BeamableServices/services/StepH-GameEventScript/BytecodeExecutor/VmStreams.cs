@@ -1,35 +1,6 @@
 using System;
-using System.Runtime.CompilerServices;
-using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
-
-internal static class VmStreams
-{
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamCreate(ref this VmValue dst, ref VmValue x)
-    {
-        if (x.TryCreateStream(out var stream)) dst.SetStream(stream);
-        else dst.SetNothing();
-    }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamNext(ref this VmValue dst, ref VmValue stream, ushort noMoreAddress)
-    {
-        if (stream is not { Kind: Stream, ObjectValue: IVmStream it } || !it.TryNext(ref dst)) dst.OwningState.JumpAddress(noMoreAddress);
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamClose(ref this VmValue iterator)
-    {
-        if (iterator is not { Kind: Stream, ObjectValue: IDisposable it }) return;
-        it.Dispose();
-        iterator.SetNothing();
-    }
-    
-}
 
 internal interface IVmStream
 {
@@ -43,11 +14,12 @@ internal class VmIntegerRangeStream(long from, long to, long step) : IVmStream, 
 
     public bool TryNext(ref VmValue value)
     {
-        if(_disposed)
+        if (_disposed)
         {
             value.SetNothing();
             return false;
         }
+
         if (!(step switch
             {
                 > 0 => _current <= to,
@@ -72,11 +44,12 @@ internal class VmFloatRangeStream(double from, double to, double step) : IVmStre
 
     public bool TryNext(ref VmValue value)
     {
-        if(_disposed)
+        if (_disposed)
         {
             value.SetNothing();
             return false;
         }
+
         if (!(step switch
             {
                 > 0 => _current <= to,
@@ -101,12 +74,13 @@ internal class VmListStream(VmListObject list) : IVmStream, IDisposable
 
     public bool TryNext(ref VmValue value)
     {
-        if(_list == null || _current >= _list.Length)
+        if (_list == null || _current >= _list.Length)
         {
             _list = null;
             value.SetNothing();
             return false;
         }
+
         value = _list.Items[_current++];
         return true;
     }
@@ -124,12 +98,13 @@ internal class VmIntStream(int[] values) : IVmStream, IDisposable
 
     public bool TryNext(ref VmValue value)
     {
-        if(_values == null || _current >= _values.Length)
+        if (_values == null || _current >= _values.Length)
         {
             _values = null;
             value.SetNothing();
             return false;
         }
+
         value.SetInteger(_values[_current++]);
         return true;
     }
@@ -147,12 +122,13 @@ internal class VmStringStream(string stringValue) : IVmStream, IDisposable
 
     public bool TryNext(ref VmValue value)
     {
-        if(_stringValue == null || _current >= _stringValue.Length)
+        if (_stringValue == null || _current >= _stringValue.Length)
         {
             _stringValue = null;
             value.SetNothing();
             return false;
         }
+
         value.SetText(_stringValue[_current++].ToString());
         return true;
     }
@@ -170,13 +146,13 @@ internal class VmIndexAccessStream(IVmIndexAccess<double> indexAccess) : IVmStre
 
     public bool TryNext(ref VmValue value)
     {
-        if(_values == null || _current >= _values.Length || !_values.TryGet(_current, out var x))
+        if (_values == null || _current >= _values.Length || !_values.TryGet(_current, out var x))
         {
             _values = null;
             value.SetNothing();
             return false;
         }
-        
+
         value.SetFloat(x);
         _current++;
         return true;

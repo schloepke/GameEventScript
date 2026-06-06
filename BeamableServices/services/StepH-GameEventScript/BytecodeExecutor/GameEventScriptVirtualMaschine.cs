@@ -501,6 +501,12 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case Contains:
                             vmState.Register(instruction.DestinationSlot).VmContains(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
                             break;
+                        case ContainsAny:
+                            vmState.Register(instruction.DestinationSlot).VmContainsAny(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            break;
+                        case ContainsAll:
+                            vmState.Register(instruction.DestinationSlot).VmContainsAll(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            break;
                         case ContainsValue:
                             vmState.Register(instruction.DestinationSlot).VmContainsValue(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
                             break;
@@ -586,15 +592,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineHasAll:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineContainsSingle:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineContainsAny:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineContainsAll:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineDistinct:

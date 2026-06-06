@@ -290,6 +290,24 @@ internal static class VmRegisterCollectionOperators
 
                 dst.SetBoolean(false);
                 return;
+            case Stream when b.ObjectValue is IVmStream stream:
+                var item = dst.OwningState.CreateNothing();
+                try
+                {
+                    while (stream.TryNext(ref item))
+                    {
+                        if (!item.EqualsValue(ref a)) continue;
+                        dst.SetBoolean(true);
+                        return;
+                    }
+
+                    dst.SetBoolean(false);
+                    return;
+                }
+                finally
+                {
+                    if (stream is IDisposable disposable) disposable.Dispose();
+                }
             case Dice when b.ObjectValue is int[] dice:
                 if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone)
                 {
@@ -382,6 +400,282 @@ internal static class VmRegisterCollectionOperators
             default:
                 dst.SetBoolean(false);
                 return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmContainsAny(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+        => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: false);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmContainsAll(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
+        => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void VmContainsAnyAll(ref VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
+    {
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (b.Kind is Stream && b.ObjectValue is IVmStream stream)
+        {
+            VmContainsAnyAllStream(ref dst, ref a, stream, requireAll);
+            return;
+        }
+
+        var candidate = dst.OwningState.CreateNothing();
+        var probe = dst.OwningState.CreateNothing();
+
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is VmListObject list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    candidate = list.Items[i];
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            case Dice when a.ObjectValue is int[] dice:
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    candidate.SetInteger(dice[i]);
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            case Text or Tag:
+            {
+                var text = a.ReadTextOrTag();
+                for (var i = 0; i < text.Length; i++)
+                {
+                    candidate.SetText(text[i].ToString());
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetInteger(value);
+                    value += range.step;
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetFloat(value);
+                    value += range.step;
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            default:
+                dst.SetBoolean(requireAll);
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void VmContainsAnyAllStream(ref VmValue dst, ref VmValue a, IVmStream stream, bool requireAll)
+    {
+        var candidates = new VmValue[8];
+        var candidateCount = 0;
+
+        void AddCandidate(VmValue value)
+        {
+            if (candidateCount == candidates.Length) Array.Resize(ref candidates, candidates.Length << 1);
+            candidates[candidateCount++] = value;
+        }
+
+        var candidate = dst.OwningState.CreateNothing();
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is VmListObject list:
+                for (var i = 0; i < list.Length; i++) AddCandidate(list.Items[i]);
+                break;
+            case Dice when a.ObjectValue is int[] dice:
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    candidate.SetInteger(dice[i]);
+                    AddCandidate(candidate);
+                }
+
+                break;
+            case Text or Tag:
+            {
+                var text = a.ReadTextOrTag();
+                for (var i = 0; i < text.Length; i++)
+                {
+                    candidate.SetText(text[i].ToString());
+                    AddCandidate(candidate);
+                }
+
+                break;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetInteger(value);
+                    value += range.step;
+                    AddCandidate(candidate);
+                }
+
+                break;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmFloatRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetFloat(value);
+                    value += range.step;
+                    AddCandidate(candidate);
+                }
+
+                break;
+            }
+        }
+
+        try
+        {
+            if (candidateCount == 0)
+            {
+                dst.SetBoolean(requireAll);
+                return;
+            }
+
+            var item = dst.OwningState.CreateNothing();
+            if (!requireAll)
+            {
+                while (stream.TryNext(ref item))
+                {
+                    for (var i = 0; i < candidateCount; i++)
+                    {
+                        if (!item.EqualsValue(ref candidates[i])) continue;
+                        dst.SetBoolean(true);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(false);
+                return;
+            }
+
+            var found = new bool[candidateCount];
+            var foundCount = 0;
+            while (stream.TryNext(ref item))
+            {
+                for (var i = 0; i < candidateCount; i++)
+                {
+                    if (found[i] || !item.EqualsValue(ref candidates[i])) continue;
+                    found[i] = true;
+                    foundCount++;
+                }
+
+                if (foundCount != candidateCount) continue;
+                dst.SetBoolean(true);
+                return;
+            }
+
+            dst.SetBoolean(false);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
 

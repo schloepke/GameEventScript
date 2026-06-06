@@ -1092,7 +1092,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Modulo:
             case GameEventScriptBytecodeOpCode.Remainder:
             case GameEventScriptBytecodeOpCode.Default:
-            case GameEventScriptBytecodeOpCode.Contains:
             case GameEventScriptBytecodeOpCode.ContainsValue:
             case GameEventScriptBytecodeOpCode.StartsWith:
             case GameEventScriptBytecodeOpCode.EndsWith:
@@ -1104,6 +1103,42 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return DefineSlot(
                     instruction.DestinationSlot,
                     EvaluateProgramBinary(instruction.OpCode, ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot)));
+
+            case GameEventScriptBytecodeOpCode.Contains:
+            case GameEventScriptBytecodeOpCode.ContainsAny:
+            case GameEventScriptBytecodeOpCode.ContainsAll:
+            {
+                var rightSlot = ResolveSlot(instruction.YSlot);
+                if (rightSlot.Kind != BytecodeVmValueKind.Iterator)
+                {
+                    return DefineSlot(
+                        instruction.DestinationSlot,
+                        EvaluateProgramBinary(instruction.OpCode, ResolveSlot(instruction.XSlot), rightSlot));
+                }
+
+                if (!TryMaterializeIterator(instruction.YSlot, out var iterator, out var target, out var items))
+                {
+                    return false;
+                }
+
+                iterator.Dispose();
+                if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+                {
+                    return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+                }
+
+                var container = target.IsNothing() || target.Kind == GameEventScriptValueKind.List && ReferenceEquals(target, GameEventScriptListValue.Empty)
+                    ? GameEventScriptValueFactory.GesList(items)
+                    : target;
+                var needle = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+                var contains = instruction.OpCode switch
+                {
+                    GameEventScriptBytecodeOpCode.ContainsAny => EnumerateListLikeValue(needle).Any(container.Contains),
+                    GameEventScriptBytecodeOpCode.ContainsAll => EnumerateListLikeValue(needle).All(container.Contains),
+                    _ => container.Contains(needle)
+                };
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Boolean(contains));
+            }
 
             case GameEventScriptBytecodeOpCode.Negate:
             case GameEventScriptBytecodeOpCode.Not:
@@ -1205,11 +1240,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StreamMin:
             case GameEventScriptBytecodeOpCode.StreamMax:
                 return TryExecuteStreamMinMax(instruction);
-
-            case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
-            case GameEventScriptBytecodeOpCode.PipelineContainsAny:
-            case GameEventScriptBytecodeOpCode.PipelineContainsAll:
-                return TryExecutePipelineContains(instruction);
 
             case GameEventScriptBytecodeOpCode.StreamCollectMap:
             case GameEventScriptBytecodeOpCode.StreamCollectMapValue:
@@ -3005,34 +3035,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         {
             iterator.Dispose();
         }
-    }
-
-    private bool TryExecutePipelineContains(GameEventScriptBytecodeInstruction instruction)
-    {
-        if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
-        {
-            return false;
-        }
-
-        iterator.Dispose();
-        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
-        {
-            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
-        }
-
-        if (target.IsNothing() || target.Kind == GameEventScriptValueKind.List && ReferenceEquals(target, GameEventScriptListValue.Empty))
-        {
-            target = GameEventScriptValueFactory.GesList(items);
-        }
-
-        var needle = ResolveSlot(instruction.YSlot).ToGameEventScriptValue();
-        var result = instruction.OpCode switch
-        {
-            GameEventScriptBytecodeOpCode.PipelineContainsAll => EnumerateListLikeValue(needle).All(target.Contains),
-            GameEventScriptBytecodeOpCode.PipelineContainsAny => EnumerateListLikeValue(needle).Any(target.Contains),
-            _ => target.Contains(needle)
-        };
-        return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Boolean(result));
     }
 
     private bool TryEvaluatePipelineEntryValue(int entryAddress, int itemSlot, BytecodeVmValue item, out BytecodeVmValue value)
@@ -5062,6 +5064,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             "=" or "==" => BytecodeVmValue.Boolean(GesValueOperations.AreEqual(left, right)),
             "<>" => BytecodeVmValue.Boolean(!GesValueOperations.AreEqual(left, right)),
             "in" => BytecodeVmValue.Boolean(right.Contains(left)),
+            "contains any" => BytecodeVmValue.Boolean(EnumerateListLikeValue(left).Any(right.Contains)),
+            "contains all" => BytecodeVmValue.Boolean(EnumerateListLikeValue(left).All(right.Contains)),
             "value in" => BytecodeVmValue.Boolean(right.ContainsValue(left)),
             "starts with" => BytecodeVmValue.Boolean(left.StartsWith(right)),
             "ends with" => BytecodeVmValue.Boolean(left.EndsWith(right)),
@@ -5109,6 +5113,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.Remainder => "rem",
             GameEventScriptBytecodeOpCode.Default => "default",
             GameEventScriptBytecodeOpCode.Contains => "in",
+            GameEventScriptBytecodeOpCode.ContainsAny => "contains any",
+            GameEventScriptBytecodeOpCode.ContainsAll => "contains all",
             GameEventScriptBytecodeOpCode.ContainsValue => "value in",
             GameEventScriptBytecodeOpCode.StartsWith => "starts with",
             GameEventScriptBytecodeOpCode.EndsWith => "ends with",

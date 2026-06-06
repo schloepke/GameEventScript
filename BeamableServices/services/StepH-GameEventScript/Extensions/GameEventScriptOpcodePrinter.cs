@@ -209,6 +209,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StartsWith => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.EndsWith => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.Contains => [TargetRegister, LeftRegister, RightRegister],
+            GameEventScriptBytecodeOpCode.ContainsAny => [TargetRegister, LeftRegister, RightRegister],
+            GameEventScriptBytecodeOpCode.ContainsAll => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.ContainsValue => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.Union => [TargetRegister, LeftRegister, RightRegister],
             GameEventScriptBytecodeOpCode.Intersect => [TargetRegister, LeftRegister, RightRegister],
@@ -235,9 +237,6 @@ public class GameEventScriptOpcodePrinter
 
             GameEventScriptBytecodeOpCode.PipelineHasAny => [TargetRegister, IteratorRegister],
             GameEventScriptBytecodeOpCode.PipelineHasAll => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineContainsSingle => [TargetRegister, IteratorRegister, NeedleRegister],
-            GameEventScriptBytecodeOpCode.PipelineContainsAny => [TargetRegister, IteratorRegister, NeedleRegister],
-            GameEventScriptBytecodeOpCode.PipelineContainsAll => [TargetRegister, IteratorRegister, NeedleRegister],
             GameEventScriptBytecodeOpCode.PipelineDistinct => [TargetRegister, IteratorRegister],
             GameEventScriptBytecodeOpCode.PipelineDistinctBy => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.PipelineGroupBy => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],

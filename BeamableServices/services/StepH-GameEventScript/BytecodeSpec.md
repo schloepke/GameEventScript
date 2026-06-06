@@ -374,7 +374,7 @@ future decoders. The current groups are:
 0x70 reserved after compacting math and series into Group 2
 0x80 Group 3: collection slicing, text/collection operators, map projections
 0x90 Group 3 element terminals, iterators, streams, and stream terminals
-0xA0 Group 3 stream collect terminals and reserved tail
+0xA0 Group 3 stream extrema, stream collect terminals, and reserved tail
 0xB0 reserved before pipeline operations
 0xC0 reserved before pipeline operations
 0xD0 Group 4 pipeline terminals, transforms, ordering, random terminals, and builders
@@ -655,6 +655,15 @@ numeric and equal to one range term. For `Map`/record/custom values, `left`
 must be text/tag and is checked as a visible key. For `Vector` and `Point`,
 `left` must be numeric and is compared with the three components. `right`
 `Nothing` writes `Nothing`; unsupported shapes write boolean `false`.
+
+`ContainsAny left, right` and `ContainsAll left, right` use the same container
+membership rules as `Contains`, but interpret `left` as a list-like sequence of
+needles. Lists, dice, text/tags, and ranges expand to their items; unsupported
+needle shapes behave as an empty needle sequence. `ContainsAny` over an empty
+needle sequence writes `false`; `ContainsAll` over an empty needle sequence
+writes `true`. If `right` is a stream, it is consumed until `ContainsAny` finds
+a match, until `ContainsAll` has matched every needle, or until the stream is
+exhausted. `right` `Nothing` writes `Nothing`.
 
 `ContainsValue left, right` writes value membership of map-like `right`.
 It is defined for `Map`, record/custom/external map-like values, `Vector`, and
@@ -1179,8 +1188,11 @@ Streaming/materialization contract:
 
 - `:range` and `:series` sources must not be blindly materialized
   before streamable terminal selectors.
-- Streamable/short-circuit terminal selectors include `:any`, `:all`, `:first`,
-  and direct `:contains` without prefix selectors.
+- Streamable/short-circuit terminal selectors include `:any`, `:all`, and
+  `:first`. Direct `:contains x`, `:contains any xs`, and `:contains all xs`
+  lower to the normal `Contains`, `ContainsAny`, and `ContainsAll` opcodes; when
+  their container operand is a stream, they consume the stream only as far as
+  needed.
 - Prefix selectors are applied lazily on the streaming path.
 - Selectors that require full collection semantics may materialize after runtime
   budgets such as `MaxRangeItems` are checked.

@@ -497,9 +497,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.StreamAverage:
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
             case GameEventScriptBytecodeOpCode.PipelineHasAll:
-            case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
-            case GameEventScriptBytecodeOpCode.PipelineContainsAny:
-            case GameEventScriptBytecodeOpCode.PipelineContainsAll:
             case GameEventScriptBytecodeOpCode.PipelineDistinct:
             case GameEventScriptBytecodeOpCode.PipelineReverse:
             case GameEventScriptBytecodeOpCode.PipelineSortAscending:
@@ -1277,6 +1274,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.Remainder or
             GameEventScriptBytecodeOpCode.Default or
             GameEventScriptBytecodeOpCode.Contains or
+            GameEventScriptBytecodeOpCode.ContainsAny or
+            GameEventScriptBytecodeOpCode.ContainsAll or
             GameEventScriptBytecodeOpCode.ContainsValue or
             GameEventScriptBytecodeOpCode.StartsWith or
             GameEventScriptBytecodeOpCode.EndsWith or

@@ -486,13 +486,6 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "projection", instruction.AU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineContainsSingle:
-            case GameEventScriptBytecodeOpCode.PipelineContainsAny:
-            case GameEventScriptBytecodeOpCode.PipelineContainsAll:
-                AppendSlot(builder, "iterator", instruction.XSlot);
-                AppendSlot(builder, "needle", instruction.YSlot);
-                break;
-
             case GameEventScriptBytecodeOpCode.StreamCollectMap:
             case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
             case GameEventScriptBytecodeOpCode.PipelineGroupBy:

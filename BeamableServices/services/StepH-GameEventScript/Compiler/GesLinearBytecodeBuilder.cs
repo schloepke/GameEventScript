@@ -1968,16 +1968,24 @@ internal sealed class GesLinearBytecodeBuilder
             case ContainsSelectorNode contains:
             {
                 var needleSlot = EmitSourceExpression(contains.ValueExpression, context, state);
+                if (contains.Mode is not ("all" or "any"))
+                {
+                    return EmitValueInstruction(
+                        state,
+                        GameEventScriptBytecodeOpCode.Contains,
+                        a: needleSlot,
+                        b: iteratorSlot);
+                }
+
                 return EmitValueInstruction(
                     state,
                     contains.Mode switch
                     {
-                        "all" => GameEventScriptBytecodeOpCode.PipelineContainsAll,
-                        "any" => GameEventScriptBytecodeOpCode.PipelineContainsAny,
-                        _ => GameEventScriptBytecodeOpCode.PipelineContainsSingle
+                        "all" => GameEventScriptBytecodeOpCode.ContainsAll,
+                        _ => GameEventScriptBytecodeOpCode.ContainsAny
                     },
-                    a: iteratorSlot,
-                    b: needleSlot);
+                    a: needleSlot,
+                    b: iteratorSlot);
             }
 
             case DistinctSelectorNode distinct:

@@ -120,6 +120,110 @@ internal static class VmRegisterSeries
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmTakeHighest(ref this VmValue dst, ref VmValue source, short count)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                TakeExtremeList(ref dst, list, count, true);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                TakeFirstDice(ref dst, dice, count);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                TakeExtremeRange(ref dst, range, count, true);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                TakeExtremeRange(ref dst, range, count, true);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                TakeExtremeStream(ref dst, stream, count, true);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmTakeLowest(ref this VmValue dst, ref VmValue source, short count)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                TakeExtremeList(ref dst, list, count, false);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                TakeLastDice(ref dst, dice, count);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                TakeExtremeRange(ref dst, range, count, false);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                TakeExtremeRange(ref dst, range, count, false);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                TakeExtremeStream(ref dst, stream, count, false);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmDropHighest(ref this VmValue dst, ref VmValue source, short count)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                DropExtremeList(ref dst, list, count, true);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                DropFirstDice(ref dst, dice, count);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                DropExtremeRange(ref dst, ref source, range, count, true);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                DropExtremeRange(ref dst, ref source, range, count, true);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                DropExtremeStream(ref dst, stream, count, true);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmDropLowest(ref this VmValue dst, ref VmValue source, short count)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                DropExtremeList(ref dst, list, count, false);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                DropLastDice(ref dst, dice, count);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                DropExtremeRange(ref dst, ref source, range, count, false);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                DropExtremeRange(ref dst, ref source, range, count, false);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                DropExtremeStream(ref dst, stream, count, false);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstSeries(ref VmValue dst, GameEventScriptSeriesValue series, short count)
     {
         if (count <= 0)
@@ -258,6 +362,93 @@ internal static class VmRegisterSeries
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeExtremeList(ref VmValue dst, VmListObject source, short count, bool highest)
+    {
+        if (count <= 0 || source.Length == 0)
+        {
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var length = count < source.Length ? count : source.Length;
+        var selected = new bool[source.Length];
+        var list = dst.OwningState.CreateList(length);
+        for (var i = 0; i < length; i++)
+        {
+            var best = -1;
+            for (var j = 0; j < source.Length; j++)
+            {
+                if (selected[j]) continue;
+                if (best < 0)
+                {
+                    best = j;
+                    continue;
+                }
+
+                var comparison = CompareForOrdering(ref source.Items[j], ref source.Items[best]);
+                if (highest ? comparison > 0 : comparison < 0) best = j;
+            }
+
+            selected[best] = true;
+            list.Items[i] = source.Items[best];
+        }
+
+        dst.SetList(list);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DropExtremeList(ref VmValue dst, VmListObject source, short count, bool highest)
+    {
+        if (count <= 0)
+        {
+            dst.SetList(source);
+            return;
+        }
+
+        var selectedCount = count < source.Length ? count : source.Length;
+        if (selectedCount == source.Length)
+        {
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var selected = new bool[source.Length];
+        SelectExtremeSlots(source.Items, source.Length, selected, selectedCount, highest);
+        var list = dst.OwningState.CreateList(source.Length - selectedCount);
+        var target = 0;
+        for (var i = 0; i < source.Length; i++)
+        {
+            if (selected[i]) continue;
+            list.Items[target++] = source.Items[i];
+        }
+
+        dst.SetList(list);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SelectExtremeSlots(VmValue[] items, int length, bool[] selected, int selectedCount, bool highest)
+    {
+        for (var i = 0; i < selectedCount; i++)
+        {
+            var best = -1;
+            for (var j = 0; j < length; j++)
+            {
+                if (selected[j]) continue;
+                if (best < 0)
+                {
+                    best = j;
+                    continue;
+                }
+
+                var comparison = CompareForOrdering(ref items[j], ref items[best]);
+                if (highest ? comparison > 0 : comparison < 0) best = j;
+            }
+
+            selected[best] = true;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstStream(ref VmValue dst, IVmStream stream, short count)
     {
         if (count <= 0)
@@ -370,6 +561,106 @@ internal static class VmRegisterSeries
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeExtremeStream(ref VmValue dst, IVmStream stream, short count, bool highest)
+    {
+        if (count <= 0)
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var item = dst.OwningState.CreateNothing();
+        var buffer = new VmValue[count];
+        var itemCount = 0;
+        try
+        {
+            while (stream.TryNext(ref item))
+            {
+                if (itemCount < count)
+                {
+                    InsertExtreme(buffer, ref item, ref itemCount, highest);
+                    continue;
+                }
+
+                var comparison = CompareForOrdering(ref item, ref buffer[count - 1]);
+                if (highest ? comparison > 0 : comparison < 0)
+                {
+                    itemCount--;
+                    InsertExtreme(buffer, ref item, ref itemCount, highest);
+                }
+            }
+
+            SetListFromBuffer(ref dst, buffer, itemCount);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DropExtremeStream(ref VmValue dst, IVmStream stream, short count, bool highest)
+    {
+        var item = dst.OwningState.CreateNothing();
+        var buffer = new VmValue[16];
+        var itemCount = 0;
+        try
+        {
+            while (stream.TryNext(ref item))
+            {
+                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
+                buffer[itemCount++] = item;
+            }
+
+            if (count <= 0)
+            {
+                SetListFromBuffer(ref dst, buffer, itemCount);
+                return;
+            }
+
+            var selectedCount = count < itemCount ? count : itemCount;
+            if (selectedCount == itemCount)
+            {
+                dst.SetList(dst.OwningState.EmptyList);
+                return;
+            }
+
+            var selected = new bool[itemCount];
+            SelectExtremeSlots(buffer, itemCount, selected, selectedCount, highest);
+            var list = dst.OwningState.CreateList(itemCount - selectedCount);
+            var target = 0;
+            for (var i = 0; i < itemCount; i++)
+            {
+                if (selected[i]) continue;
+                list.Items[target++] = buffer[i];
+            }
+
+            dst.SetList(list);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void InsertExtreme(VmValue[] buffer, ref VmValue item, ref int itemCount, bool highest)
+    {
+        var index = itemCount;
+        while (index > 0)
+        {
+            var comparison = CompareForOrdering(ref item, ref buffer[index - 1]);
+            if (highest ? comparison <= 0 : comparison >= 0) break;
+            buffer[index] = buffer[index - 1];
+            index--;
+        }
+
+        buffer[index] = item;
+        itemCount++;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -544,5 +835,197 @@ internal static class VmRegisterSeries
 
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length - count, out var to)) dst.SetRange(range.from, to, range.step);
         else dst.SetNothing();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeExtremeRange(ref VmValue dst, VmRange range, short count, bool highest)
+    {
+        var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+        if (count <= 0 || length <= 0 || range.step == 0)
+        {
+            dst.SetRange(0, 0, 0);
+            return;
+        }
+
+        var takeLength = count < length ? count : length;
+        if (!GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length, out var last))
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var ascending = range.step > 0;
+        if (highest)
+        {
+            if (ascending)
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(last, range.from, -range.step, takeLength, out var to)) dst.SetRange(last, to, -range.step);
+                else dst.SetNothing();
+            }
+            else
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, takeLength, out var to)) dst.SetRange(range.from, to, range.step);
+                else dst.SetNothing();
+            }
+        }
+        else
+        {
+            if (ascending)
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, takeLength, out var to)) dst.SetRange(range.from, to, range.step);
+                else dst.SetNothing();
+            }
+            else
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(last, range.from, -range.step, takeLength, out var to)) dst.SetRange(last, to, -range.step);
+                else dst.SetNothing();
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DropExtremeRange(ref VmValue dst, ref VmValue source, VmRange range, short count, bool highest)
+    {
+        if (range.step > 0)
+        {
+            if (highest) DropLastRange(ref dst, ref source, range, count);
+            else DropFirstRange(ref dst, ref source, range, count);
+            return;
+        }
+
+        if (highest) DropFirstRange(ref dst, ref source, range, count);
+        else DropLastRange(ref dst, ref source, range, count);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeExtremeRange(ref VmValue dst, VmFloatRange range, short count, bool highest)
+    {
+        var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+        if (count <= 0 || length <= 0 || range.step == 0d)
+        {
+            dst.SetRange(0, 0, 0);
+            return;
+        }
+
+        var takeLength = count < length ? count : length;
+        if (!GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length, out var last))
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var ascending = range.step > 0d;
+        if (highest)
+        {
+            if (ascending)
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(last, range.from, -range.step, takeLength, out var to)) dst.SetRange(last, to, -range.step);
+                else dst.SetNothing();
+            }
+            else
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, takeLength, out var to)) dst.SetRange(range.from, to, range.step);
+                else dst.SetNothing();
+            }
+        }
+        else
+        {
+            if (ascending)
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, takeLength, out var to)) dst.SetRange(range.from, to, range.step);
+                else dst.SetNothing();
+            }
+            else
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(last, range.from, -range.step, takeLength, out var to)) dst.SetRange(last, to, -range.step);
+                else dst.SetNothing();
+            }
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DropExtremeRange(ref VmValue dst, ref VmValue source, VmFloatRange range, short count, bool highest)
+    {
+        if (range.step > 0d)
+        {
+            if (highest) DropLastRange(ref dst, ref source, range, count);
+            else DropFirstRange(ref dst, ref source, range, count);
+            return;
+        }
+
+        if (highest) DropFirstRange(ref dst, ref source, range, count);
+        else DropLastRange(ref dst, ref source, range, count);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int CompareForOrdering(ref VmValue left, ref VmValue right)
+    {
+        if (left.IsNumeric && right.IsNumeric)
+        {
+            var unitComparison = left.Unit.CompareTo(right.Unit);
+            if (unitComparison != 0) return unitComparison;
+            return left.AsNumeric.CompareTo(right.AsNumeric);
+        }
+
+        var rankComparison = GetOrderingRank(ref left).CompareTo(GetOrderingRank(ref right));
+        if (rankComparison != 0) return rankComparison;
+
+        switch (left.Kind)
+        {
+            case Text when right.Kind is Text:
+            case Tag when right.Kind is Tag:
+                return StringComparer.Ordinal.Compare(left.ReadTextOrTag(), right.ReadTextOrTag());
+            case Vector when right.Kind is Vector:
+            case Point when right.Kind is Point:
+                if (left.Unit != right.Unit) return left.Unit.CompareTo(right.Unit);
+                if (left.ObjectValue is VmFloatTriplet leftTriplet && right.ObjectValue is VmFloatTriplet rightTriplet)
+                {
+                    var comparison = leftTriplet.X.CompareTo(rightTriplet.X);
+                    if (comparison != 0) return comparison;
+                    comparison = leftTriplet.Y.CompareTo(rightTriplet.Y);
+                    return comparison != 0 ? comparison : leftTriplet.Z.CompareTo(rightTriplet.Z);
+                }
+                return 0;
+            case GameEventScriptBytecodeTypeKind.Boolean when right.Kind is GameEventScriptBytecodeTypeKind.Boolean:
+                return left.IsTrue.CompareTo(right.IsTrue);
+            case Dice when right.Kind is Dice && left.ObjectValue is int[] leftDice && right.ObjectValue is int[] rightDice:
+            {
+                var countComparison = leftDice.Length.CompareTo(rightDice.Length);
+                if (countComparison != 0) return countComparison;
+                for (var i = 0; i < leftDice.Length; i++)
+                {
+                    var comparison = leftDice[i].CompareTo(rightDice[i]);
+                    if (comparison != 0) return comparison;
+                }
+
+                return 0;
+            }
+            default:
+                return left.Kind.CompareTo(right.Kind);
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int GetOrderingRank(ref VmValue value)
+    {
+        if (value.IsNumeric) return 1;
+        return value.Kind switch
+        {
+            Nothing => 0,
+            Tag => 1,
+            Text => 2,
+            Percentage => 3,
+            Vector => 4,
+            Point => 5,
+            GameEventScriptBytecodeTypeKind.Boolean => 6,
+            Series => 7,
+            GameEventScriptBytecodeTypeKind.Range => 8,
+            Message => 9,
+            Handler => 10,
+            List => 11,
+            Map or Custom => 12,
+            Dice => 13,
+            _ => 8
+        };
     }
 }

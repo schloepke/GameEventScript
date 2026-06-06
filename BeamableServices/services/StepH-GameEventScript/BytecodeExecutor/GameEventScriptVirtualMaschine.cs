@@ -460,6 +460,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case Term:
                             vmState.Register(instruction.DestinationSlot).VmTerm(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
+
+                        #endregion
+
+                        #region Group 3 - text, collection, streams
+
                         case TakeFirst:
                             vmState.Register(instruction.DestinationSlot).VmTakeFirst(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
@@ -472,11 +477,18 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case DropLast:
                             vmState.Register(instruction.DestinationSlot).VmDropLast(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
-
-                        #endregion
-
-                        #region Group 3 - text, collection, streams
-
+                        case TakeHighest:
+                            vmState.Register(instruction.DestinationSlot).VmTakeHighest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            break;
+                        case TakeLowest:
+                            vmState.Register(instruction.DestinationSlot).VmTakeLowest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            break;
+                        case DropHighest:
+                            vmState.Register(instruction.DestinationSlot).VmDropHighest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            break;
+                        case DropLowest:
+                            vmState.Register(instruction.DestinationSlot).VmDropLowest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            break;
                         case Length:
                             vmState.Register(instruction.DestinationSlot).VmLength(ref vmState.Register(instruction.XSlot), ref vmState.Binary.TextConstantTable);
                             break;
@@ -509,6 +521,15 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case EntriesOfMap:
                             vmState.Register(instruction.DestinationSlot).VmEntries(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case GameEventScriptBytecodeOpCode.First:
+                            vmState.Register(instruction.DestinationSlot).VmFirst(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case GameEventScriptBytecodeOpCode.Last:
+                            vmState.Register(instruction.DestinationSlot).VmLast(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case GameEventScriptBytecodeOpCode.Single:
+                            vmState.Register(instruction.DestinationSlot).VmSingle(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamCreate:
                             vmState.Register(instruction.DestinationSlot).VmStreamCreate(ref vmState.Register(instruction.XSlot));
@@ -557,16 +578,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case StreamCollectMapValue:
                             vmState.Register(instruction.DestinationSlot).VmStreamCollectMapValue(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
                             break;
-                        case StreamCollectFirst:
-                            vmState.Register(instruction.DestinationSlot).VmStreamCollectFirst(ref vmState.Register(instruction.XSlot));
-                            break;
-                        case StreamCollectLast:
-                            vmState.Register(instruction.DestinationSlot).VmStreamCollectLast(ref vmState.Register(instruction.XSlot));
-                            break;
-                        case StreamCollectSingle:
-                            vmState.Register(instruction.DestinationSlot).VmStreamCollectSingle(ref vmState.Register(instruction.XSlot));
-                            break;
-
                         #endregion
 
                         #region Group 4 - pipeline terminals and transforms
@@ -610,22 +621,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case PipelineOrderByDescending:
                             // FIXME: creating the real custom type here
                             break;
-                        case PipelineTakeHighest:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineTakeLowest:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDropHighest:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDropLowest:
-                            // FIXME: creating the real custom type here
-                            break;
                         case PipelineShuffle:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDraw:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineChoose:

@@ -133,14 +133,119 @@ internal static class VmStreamCollectorTerminals
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamCollectFirst(ref this VmValue dst, ref VmValue iterator)
+    internal static void VmFirst(ref this VmValue dst, ref VmValue source)
     {
-        if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
+        switch (source.Kind)
         {
-            dst.SetNothing();
-            return;
+            case List when source.ObjectValue is VmListObject list:
+                dst = list.Length > 0 ? list.Items[0] : dst.OwningState.CreateNothing();
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                if (dice.Length > 0) dst.SetInteger(dice[0]);
+                else dst.SetNothing();
+                return;
+            case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step) > 0) dst.SetInteger(range.from);
+                else dst.SetNothing();
+                return;
+            case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step) > 0) dst.SetFloat(range.from);
+                else dst.SetNothing();
+                return;
+            case Map or Custom when source.ObjectValue is VmMapObject map:
+                dst = map.ValueList.Length > 0 ? map.ValueList.Items[0] : dst.OwningState.CreateNothing();
+                return;
+            case Vector or Point when source.ObjectValue is VmFloatTriplet triplet:
+                dst.SetFloat(triplet.X);
+                return;
+            case Text or Tag:
+                FirstFromText(ref dst, ref source);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                FirstFromStream(ref dst, stream);
+                return;
+            default:
+                dst.SetNothing();
+                return;
         }
+    }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmLast(ref this VmValue dst, ref VmValue source)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                dst = list.Length > 0 ? list.Items[list.Length - 1] : dst.OwningState.CreateNothing();
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                if (dice.Length > 0) dst.SetInteger(dice[^1]);
+                else dst.SetNothing();
+                return;
+            case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step), out var lastInteger)) dst.SetInteger(lastInteger);
+                else dst.SetNothing();
+                return;
+            case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step), out var lastFloat)) dst.SetFloat(lastFloat);
+                else dst.SetNothing();
+                return;
+            case Map or Custom when source.ObjectValue is VmMapObject map:
+                dst = map.ValueList.Length > 0 ? map.ValueList.Items[map.ValueList.Length - 1] : dst.OwningState.CreateNothing();
+                return;
+            case Vector or Point when source.ObjectValue is VmFloatTriplet triplet:
+                dst.SetFloat(triplet.Z);
+                return;
+            case Text or Tag:
+                LastFromText(ref dst, ref source);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                LastFromStream(ref dst, stream);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmSingle(ref this VmValue dst, ref VmValue source)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                dst = list.Length == 1 ? list.Items[0] : dst.OwningState.CreateNothing();
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                if (dice.Length == 1) dst.SetInteger(dice[0]);
+                else dst.SetNothing();
+                return;
+            case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step) == 1) dst.SetInteger(range.from);
+                else dst.SetNothing();
+                return;
+            case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step) == 1) dst.SetFloat(range.from);
+                else dst.SetNothing();
+                return;
+            case Map or Custom when source.ObjectValue is VmMapObject map:
+                dst = map.ValueList.Length == 1 ? map.ValueList.Items[0] : dst.OwningState.CreateNothing();
+                return;
+            case Text or Tag:
+                SingleFromText(ref dst, ref source);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                SingleFromStream(ref dst, stream);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void FirstFromStream(ref VmValue dst, IVmStream stream)
+    {
         var item = dst.OwningState.CreateNothing();
         try
         {
@@ -154,14 +259,8 @@ internal static class VmStreamCollectorTerminals
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamCollectLast(ref this VmValue dst, ref VmValue iterator)
+    private static void LastFromStream(ref VmValue dst, IVmStream stream)
     {
-        if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
-        {
-            dst.SetNothing();
-            return;
-        }
-
         var item = dst.OwningState.CreateNothing();
         var last = dst.OwningState.CreateNothing();
         var found = false;
@@ -183,36 +282,49 @@ internal static class VmStreamCollectorTerminals
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamCollectSingle(ref this VmValue dst, ref VmValue iterator)
+    private static void SingleFromStream(ref VmValue dst, IVmStream stream)
     {
-        if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
-        {
-            dst.SetNothing();
-            return;
-        }
-
         var item = dst.OwningState.CreateNothing();
-        var single = dst.OwningState.CreateNothing();
         try
         {
-            if (!stream.TryNext(ref single))
+            if (!stream.TryNext(ref item))
             {
                 dst.SetNothing();
                 return;
             }
 
-            if (stream.TryNext(ref item))
-            {
-                dst.SetNothing();
-                return;
-            }
-
-            dst = single;
+            var second = dst.OwningState.CreateNothing();
+            if (stream.TryNext(ref second)) dst.SetNothing();
+            else dst = item;
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void FirstFromText(ref VmValue dst, ref VmValue source)
+    {
+        var text = source.ReadTextOrTag();
+        if (text.Length > 0) dst.SetText(text[0].ToString());
+        else dst.SetNothing();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void LastFromText(ref VmValue dst, ref VmValue source)
+    {
+        var text = source.ReadTextOrTag();
+        if (text.Length > 0) dst.SetText(text[^1].ToString());
+        else dst.SetNothing();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SingleFromText(ref VmValue dst, ref VmValue source)
+    {
+        var text = source.ReadTextOrTag();
+        if (text.Length == 1) dst.SetText(text);
+        else dst.SetNothing();
     }
 
 }

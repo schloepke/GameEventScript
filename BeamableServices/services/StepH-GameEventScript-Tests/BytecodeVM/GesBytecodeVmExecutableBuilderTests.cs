@@ -2055,7 +2055,11 @@ public sealed class GesBytecodeVmExecutableBuilderTests
               let dropped be naturals[:drop first 2]
               let lastValues be naturals[:take last 2]
               let droppedLast be naturals[:drop last 1]
-              emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast)
+              let highestValues be naturals[:take highest 2]
+              let lowestValues be naturals[:take lowest 2]
+              let droppedHighest be naturals[:drop highest 1]
+              let droppedLowest be naturals[:drop lowest 1]
+              emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)
             }
             """;
 
@@ -2067,6 +2071,10 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropFirst);
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLast);
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLast);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeHighest);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLowest);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropHighest);
+        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLowest);
         Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineHasAny));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMap));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamFilter));

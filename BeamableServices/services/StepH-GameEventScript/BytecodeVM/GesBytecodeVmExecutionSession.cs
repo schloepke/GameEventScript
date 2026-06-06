@@ -1178,13 +1178,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StreamCollectList:
                 return TryExecuteStreamCollectList(instruction);
 
-            case GameEventScriptBytecodeOpCode.StreamCollectFirst:
+            case GameEventScriptBytecodeOpCode.First:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.First);
 
-            case GameEventScriptBytecodeOpCode.StreamCollectLast:
+            case GameEventScriptBytecodeOpCode.Last:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.Last);
 
-            case GameEventScriptBytecodeOpCode.StreamCollectSingle:
+            case GameEventScriptBytecodeOpCode.Single:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.Single);
 
             case GameEventScriptBytecodeOpCode.PipelineHasAny:
@@ -1233,17 +1233,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
                 return TryExecutePipelineOrderBy(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
-            case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
-            case GameEventScriptBytecodeOpCode.PipelineDropHighest:
-            case GameEventScriptBytecodeOpCode.PipelineDropLowest:
-                return TryExecutePipelineSequenceSlice(instruction);
-
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
                 return TryExecutePipelineShuffle(instruction);
-
-            case GameEventScriptBytecodeOpCode.PipelineDraw:
-                return TryExecutePipelineDraw(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineChoose:
             case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
@@ -1265,6 +1256,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.DropFirst:
             case GameEventScriptBytecodeOpCode.TakeLast:
             case GameEventScriptBytecodeOpCode.DropLast:
+            case GameEventScriptBytecodeOpCode.TakeHighest:
+            case GameEventScriptBytecodeOpCode.TakeLowest:
+            case GameEventScriptBytecodeOpCode.DropHighest:
+            case GameEventScriptBytecodeOpCode.DropLowest:
                 return TryExecuteSequenceInstruction(instruction);
         }
 
@@ -2719,15 +2714,36 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecutePipelineElement(GameEventScriptBytecodeInstruction instruction, PipelineElementMode mode)
     {
-        if (!TryGetIterator(instruction.XSlot, out var iterator))
+        var sourceSlot = ResolveSlot(instruction.XSlot);
+        if (sourceSlot.Kind == BytecodeVmValueKind.Iterator)
+        {
+            if (!TryGetIterator(instruction.XSlot, out var iterator))
+            {
+                return false;
+            }
+
+            return TryExecutePipelineElement(instruction.DestinationSlot, iterator, mode);
+        }
+
+        if (sourceSlot.ToGameEventScriptValue().Kind == GameEventScriptValueKind.Series)
+        {
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+        }
+
+        if (!TryCreateStream(sourceSlot, out var createdIterator))
         {
             return false;
         }
 
+        return TryExecutePipelineElement(instruction.DestinationSlot, createdIterator, mode);
+    }
+
+    private bool TryExecutePipelineElement(int destinationSlot, BytecodeVmIterator iterator, PipelineElementMode mode)
+    {
         if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
         {
             iterator.Dispose();
-            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            return DefineSlot(destinationSlot, BytecodeVmValue.Nothing);
         }
 
         try
@@ -2751,7 +2767,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             }
 
             return DefineSlot(
-                instruction.DestinationSlot,
+                destinationSlot,
                 mode switch
                 {
                     PipelineElementMode.First => count > 0 ? first : BytecodeVmValue.Nothing,
@@ -3262,32 +3278,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineSequenceSlice(GameEventScriptBytecodeInstruction instruction)
-    {
-        if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
-        {
-            return false;
-        }
-
-        iterator.Dispose();
-        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
-        {
-            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
-        }
-
-        var (operation, scope) = instruction.OpCode switch
-        {
-            GameEventScriptBytecodeOpCode.PipelineTakeHighest => ("take", "highest"),
-            GameEventScriptBytecodeOpCode.PipelineTakeLowest => ("take", "lowest"),
-            GameEventScriptBytecodeOpCode.PipelineDropHighest => ("drop", "highest"),
-            GameEventScriptBytecodeOpCode.PipelineDropLowest => ("drop", "lowest"),
-            _ => ("take", "highest")
-        };
-        return DefineSlot(
-            instruction.DestinationSlot,
-            BytecodeVmValue.FromGameEventScriptValue(EvaluateSequenceSliceSelector(target, items, operation, scope, instruction.ImmediateY)));
-    }
-
     private bool TryExecutePipelineShuffle(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
@@ -3302,22 +3292,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(target, items)));
-    }
-
-    private bool TryExecutePipelineDraw(GameEventScriptBytecodeInstruction instruction)
-    {
-        if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
-        {
-            return false;
-        }
-
-        iterator.Dispose();
-        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
-        {
-            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
-        }
-
-        return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(EvaluateDrawSelector(target, items, instruction.ImmediateY)));
     }
 
     private bool TryExecutePipelineChoose(GameEventScriptBytecodeInstruction instruction)
@@ -3597,6 +3571,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 GameEventScriptBytecodeOpCode.DropFirst => EvaluateSequenceSliceSelector(target, streamItems, "drop", "first", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.TakeLast => EvaluateSequenceSliceSelector(target, streamItems, "take", "last", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.DropLast => EvaluateSequenceSliceSelector(target, streamItems, "drop", "last", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.TakeHighest => EvaluateSequenceSliceSelector(target, streamItems, "take", "highest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.TakeLowest => EvaluateSequenceSliceSelector(target, streamItems, "take", "lowest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropHighest => EvaluateSequenceSliceSelector(target, streamItems, "drop", "highest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropLowest => EvaluateSequenceSliceSelector(target, streamItems, "drop", "lowest", instruction.ImmediateY),
                 _ => GameEventScriptNothingValue.Instance
             };
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(streamSlice));
@@ -3646,6 +3624,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 GameEventScriptBytecodeOpCode.DropFirst => EvaluateRangeSliceSelector(range, "drop", "first", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.TakeLast => EvaluateRangeSliceSelector(range, "take", "last", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.DropLast => EvaluateRangeSliceSelector(range, "drop", "last", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.TakeHighest => EvaluateRangeSliceSelector(range, "take", "highest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.TakeLowest => EvaluateRangeSliceSelector(range, "take", "lowest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropHighest => EvaluateRangeSliceSelector(range, "drop", "highest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropLowest => EvaluateRangeSliceSelector(range, "drop", "lowest", instruction.ImmediateY),
                 _ => GameEventScriptNothingValue.Instance
             };
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(rangeSlice));
@@ -3658,6 +3640,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.DropFirst => EvaluateSequenceSliceSelector(source, items, "drop", "first", instruction.ImmediateY),
             GameEventScriptBytecodeOpCode.TakeLast => EvaluateSequenceSliceSelector(source, items, "take", "last", instruction.ImmediateY),
             GameEventScriptBytecodeOpCode.DropLast => EvaluateSequenceSliceSelector(source, items, "drop", "last", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.TakeHighest => EvaluateSequenceSliceSelector(source, items, "take", "highest", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.TakeLowest => EvaluateSequenceSliceSelector(source, items, "take", "lowest", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.DropHighest => EvaluateSequenceSliceSelector(source, items, "drop", "highest", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.DropLowest => EvaluateSequenceSliceSelector(source, items, "drop", "lowest", instruction.ImmediateY),
             _ => GameEventScriptNothingValue.Instance
         };
         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(value));
@@ -6600,22 +6586,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GameEventScriptValueFactory.GesList(items.Reverse().ToArray());
     }
 
-    private static GameEventScriptValue EvaluateDrawSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items, int count)
-    {
-        if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
-        {
-            return GameEventScriptNothingValue.Instance;
-        }
-
-        var drawn = items.Take(count).ToArray();
-        if (count == 1)
-        {
-            return drawn.Length == 0 ? GameEventScriptNothingValue.Instance : drawn[0];
-        }
-
-        return target.Kind == GameEventScriptValueKind.Dice ? GesDice(GameEventScriptDiceValue.Create(drawn.Select(item => (int)item.AsInteger()))) : GesList(drawn);
-    }
-
     private GameEventScriptValue EvaluateShuffleSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)
     {
         if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
@@ -6838,10 +6808,42 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         if (operation == "take")
         {
-            if (scope == "first" &&
-                GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count, out var to))
+            if (scope == "highest")
             {
-                return GesRange(range.From, to, range.Step);
+                if (range.Step > 0 &&
+                    GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var highestLast) &&
+                    GameEventScriptRangeMath.TryGetTerm(highestLast, range.From, -range.Step, count, out var highestTo))
+                {
+                    return GesRange(highestLast, highestTo, -range.Step);
+                }
+
+                if (range.Step < 0 &&
+                    GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count, out var highestDescendingTo))
+                {
+                    return GesRange(range.From, highestDescendingTo, range.Step);
+                }
+            }
+
+            if (scope == "lowest")
+            {
+                if (range.Step > 0 &&
+                    GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count, out var lowestTo))
+                {
+                    return GesRange(range.From, lowestTo, range.Step);
+                }
+
+                if (range.Step < 0 &&
+                    GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var lowestLast) &&
+                    GameEventScriptRangeMath.TryGetTerm(lowestLast, range.From, -range.Step, count, out var lowestAscendingTo))
+                {
+                    return GesRange(lowestLast, lowestAscendingTo, -range.Step);
+                }
+            }
+
+            if (scope == "first" &&
+                GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count, out var firstTo))
+            {
+                return GesRange(range.From, firstTo, range.Step);
             }
 
             if (scope == "last" &&
@@ -6852,6 +6854,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
         else if (operation == "drop")
         {
+            if (scope == "highest")
+            {
+                scope = range.Step > 0 ? "last" : "first";
+            }
+            else if (scope == "lowest")
+            {
+                scope = range.Step > 0 ? "first" : "last";
+            }
+
             if (scope == "first" &&
                 GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, count + 1L, out var from))
             {
@@ -6892,10 +6903,42 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         if (operation == "take")
         {
-            if (scope == "first" &&
-                GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count, out var to))
+            if (scope == "highest")
             {
-                return GesRange(range.FromNumber, to, range.StepNumber);
+                if (range.StepNumber > 0d &&
+                    GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, length, out var highestLast) &&
+                    GameEventScriptRangeMath.TryGetTerm(highestLast, range.FromNumber, -range.StepNumber, count, out var highestTo))
+                {
+                    return GesRange(highestLast, highestTo, -range.StepNumber);
+                }
+
+                if (range.StepNumber < 0d &&
+                    GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count, out var highestDescendingTo))
+                {
+                    return GesRange(range.FromNumber, highestDescendingTo, range.StepNumber);
+                }
+            }
+
+            if (scope == "lowest")
+            {
+                if (range.StepNumber > 0d &&
+                    GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count, out var lowestTo))
+                {
+                    return GesRange(range.FromNumber, lowestTo, range.StepNumber);
+                }
+
+                if (range.StepNumber < 0d &&
+                    GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, length, out var lowestLast) &&
+                    GameEventScriptRangeMath.TryGetTerm(lowestLast, range.FromNumber, -range.StepNumber, count, out var lowestAscendingTo))
+                {
+                    return GesRange(lowestLast, lowestAscendingTo, -range.StepNumber);
+                }
+            }
+
+            if (scope == "first" &&
+                GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count, out var firstTo))
+            {
+                return GesRange(range.FromNumber, firstTo, range.StepNumber);
             }
 
             if (scope == "last" &&
@@ -6906,6 +6949,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
         else if (operation == "drop")
         {
+            if (scope == "highest")
+            {
+                scope = range.StepNumber > 0d ? "last" : "first";
+            }
+            else if (scope == "lowest")
+            {
+                scope = range.StepNumber > 0d ? "first" : "last";
+            }
+
             if (scope == "first" &&
                 GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, count + 1L, out var from))
             {

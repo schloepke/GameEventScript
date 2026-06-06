@@ -371,13 +371,13 @@ future decoders. The current groups are:
 0x40 Group 1 record/external type construction, presence helpers, and reserved tail
 0x50 Group 2: boolean algebra, comparison, math
 0x60 Group 2 math/random/series continuation and reserved tail
-0x70 Group 2 mathematical series and reserved tail
-0x80 reserved after compacting math into Group 2
-0x90 Group 3: text/collection operators, iterators, streams
-0xA0 Group 3 stream next/close/reduce/fold/collect and reserved tail
-0xB0 reserved
-0xC0 Group 4: pipeline stream adapter, materializers, transforms, membership terminals
-0xD0 Group 4 pipeline ordering, slicing, random terminals
+0x70 reserved after compacting math and series into Group 2
+0x80 Group 3: collection slicing, text/collection operators, map projections
+0x90 Group 3 element terminals, iterators, streams, and stream terminals
+0xA0 Group 3 stream collect terminals and reserved tail
+0xB0 reserved before pipeline operations
+0xC0 reserved before pipeline operations
+0xD0 Group 4 pipeline terminals, transforms, ordering, random terminals, and builders
 0xE0 Group 4 pipeline dice/pattern terminals, generated-list builders, and reserved tail
 0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
@@ -1015,9 +1015,10 @@ zero-based term and is valid only for series; all non-series sources evaluate to
 
 Finite sequence values support direct slicing without pipeline materialization:
 lists, dice, ranges, and streams support `:take first`, `:drop first`,
-`:take last`, and `:drop last`. List slices return lists, dice slices return
-dice, range slices return ranges, and stream slices consume the stream and
-return materialized lists.
+`:take last`, `:drop last`, `:take highest`, `:take lowest`,
+`:drop highest`, and `:drop lowest`. List slices return lists, dice slices
+return dice, range slices return ranges, and stream slices consume the stream
+and return materialized lists.
 
 Message values are map-backed runtime values. The bytecode model exposes the
 read-only members `name`, `signature`, `arguments`, and `tags` through normal
@@ -1124,7 +1125,7 @@ StreamMax dst iterator itemBindingSlot projectionEntry
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
-StreamCollectFirst/Last/Single dst iterator
+First/Last/Single dst source
 PipelineHasAny/HasAll dst iterator
 PipelineListCreateBuilder builder
 PipelineListBuilderAdd builder item
@@ -1136,6 +1137,13 @@ projection opcodes. They are not general enumerable materializers. Map-backed
 custom type values follow the same rules as maps. Successful projections use
 stable ordinal key order. If the operand is `nothing`, the result is
 `nothing`; any other non-map operand also yields `nothing`.
+
+`First`, `Last`, and `Single` are direct collection/stream element terminals.
+They accept lists, dice, ranges, maps, custom map-backed values, text, tags, and
+VM streams. Maps and custom values use stable ordinal value order. Empty,
+invalid, or unsupported sources yield `nothing`; `Single` also yields `nothing`
+when the source has more than one element. The DSL `:draw 1` selector lowers to
+`First`; `:draw n` with `n > 1` lowers to `TakeFirst`.
 
 `StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
 iterator. Their helper entries run as isolated helper frames: the current source

@@ -784,6 +784,11 @@ units[:single unit where unit.id = targetId]
 units[:first unit where unit.hp > 0]
 ```
 
+Without a filter, `:first`, `:last`, and `:single` are direct terminals for
+lists, dice, ranges, maps, custom map-backed values, text, tags, and streams.
+Empty, unsupported, or invalid sources yield `nothing`; `:single` also yields
+`nothing` when more than one element is present.
+
 ### Sorting, Distinct, and Grouping
 
 ```ges
@@ -830,6 +835,9 @@ items[:draw 2]
 items[:choose 1 at random]
 items[:choose 3 unit where unit.hp > 0 weighted by unit => unit.priority]
 ```
+
+`:draw 1` is equivalent to `:first`; `:draw n` with `n > 1` is equivalent to
+`:take first n`.
 
 ### Dice Patterns and Object Matching
 

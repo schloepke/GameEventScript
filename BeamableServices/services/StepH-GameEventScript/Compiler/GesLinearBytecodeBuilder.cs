@@ -1759,8 +1759,12 @@ internal sealed class GesLinearBytecodeBuilder
                     {
                         ("take", "first") => GameEventScriptBytecodeOpCode.TakeFirst,
                         ("take", "last") => GameEventScriptBytecodeOpCode.TakeLast,
+                        ("take", "highest") => GameEventScriptBytecodeOpCode.TakeHighest,
+                        ("take", "lowest") => GameEventScriptBytecodeOpCode.TakeLowest,
                         ("drop", "first") => GameEventScriptBytecodeOpCode.DropFirst,
                         ("drop", "last") => GameEventScriptBytecodeOpCode.DropLast,
+                        ("drop", "highest") => GameEventScriptBytecodeOpCode.DropHighest,
+                        ("drop", "lowest") => GameEventScriptBytecodeOpCode.DropLowest,
                         _ => (GameEventScriptBytecodeOpCode?)null
                     };
 
@@ -1771,6 +1775,22 @@ internal sealed class GesLinearBytecodeBuilder
 
                     break;
                 }
+
+                case EdgeSelectorNode edge when edge.Predicate is null:
+                    return EmitValueInstruction(
+                        state,
+                        edge.Mode switch
+                        {
+                            "last" => GameEventScriptBytecodeOpCode.Last,
+                            "single" => GameEventScriptBytecodeOpCode.Single,
+                            _ => GameEventScriptBytecodeOpCode.First
+                        },
+                        a: sourceSlot);
+
+                case DrawSelectorNode draw:
+                    return draw.Count == 1
+                        ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.First, a: sourceSlot)
+                        : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeFirst, a: sourceSlot, b: draw.Count);
             }
         }
 
@@ -1887,9 +1907,9 @@ internal sealed class GesLinearBytecodeBuilder
                     state,
                     edge.Mode switch
                     {
-                        "last" => GameEventScriptBytecodeOpCode.StreamCollectLast,
-                        "single" => GameEventScriptBytecodeOpCode.StreamCollectSingle,
-                        _ => GameEventScriptBytecodeOpCode.StreamCollectFirst
+                        "last" => GameEventScriptBytecodeOpCode.Last,
+                        "single" => GameEventScriptBytecodeOpCode.Single,
+                        _ => GameEventScriptBytecodeOpCode.First
                     },
                     a: iteratorSlot);
             }
@@ -2001,7 +2021,9 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineShuffle, a: iteratorSlot);
 
             case DrawSelectorNode draw:
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineDraw, a: iteratorSlot, b: draw.Count);
+                return draw.Count == 1
+                    ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.First, a: iteratorSlot)
+                    : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeFirst, a: iteratorSlot, b: draw.Count);
 
             case ChooseSelectorNode choose:
                 return EmitPipelineChoose(iteratorSlot, choose, context, state);
@@ -2108,12 +2130,12 @@ internal sealed class GesLinearBytecodeBuilder
         {
             ("take", "first") => GameEventScriptBytecodeOpCode.TakeFirst,
             ("take", "last") => GameEventScriptBytecodeOpCode.TakeLast,
-            ("take", "highest") => GameEventScriptBytecodeOpCode.PipelineTakeHighest,
-            ("take", "lowest") => GameEventScriptBytecodeOpCode.PipelineTakeLowest,
+            ("take", "highest") => GameEventScriptBytecodeOpCode.TakeHighest,
+            ("take", "lowest") => GameEventScriptBytecodeOpCode.TakeLowest,
             ("drop", "first") => GameEventScriptBytecodeOpCode.DropFirst,
             ("drop", "last") => GameEventScriptBytecodeOpCode.DropLast,
-            ("drop", "highest") => GameEventScriptBytecodeOpCode.PipelineDropHighest,
-            ("drop", "lowest") => GameEventScriptBytecodeOpCode.PipelineDropLowest,
+            ("drop", "highest") => GameEventScriptBytecodeOpCode.DropHighest,
+            ("drop", "lowest") => GameEventScriptBytecodeOpCode.DropLowest,
             _ => GameEventScriptBytecodeOpCode.TakeFirst
         };
         return EmitValueInstruction(state, opCode, a: iteratorSlot, b: slice.Count);

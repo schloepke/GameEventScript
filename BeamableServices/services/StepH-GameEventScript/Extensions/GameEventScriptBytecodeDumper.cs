@@ -466,9 +466,6 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectList:
-            case GameEventScriptBytecodeOpCode.StreamCollectFirst:
-            case GameEventScriptBytecodeOpCode.StreamCollectLast:
-            case GameEventScriptBytecodeOpCode.StreamCollectSingle:
             case GameEventScriptBytecodeOpCode.StreamCount:
             case GameEventScriptBytecodeOpCode.StreamSum:
             case GameEventScriptBytecodeOpCode.StreamAverage:
@@ -513,11 +510,6 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "valueEntry", instruction.BU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
-            case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
-            case GameEventScriptBytecodeOpCode.PipelineDropHighest:
-            case GameEventScriptBytecodeOpCode.PipelineDropLowest:
-            case GameEventScriptBytecodeOpCode.PipelineDraw:
             case GameEventScriptBytecodeOpCode.PipelineChoose:
             case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
                 AppendSlot(builder, "iterator", instruction.XSlot);
@@ -560,8 +552,17 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.DropFirst:
             case GameEventScriptBytecodeOpCode.TakeLast:
             case GameEventScriptBytecodeOpCode.DropLast:
+            case GameEventScriptBytecodeOpCode.TakeHighest:
+            case GameEventScriptBytecodeOpCode.TakeLowest:
+            case GameEventScriptBytecodeOpCode.DropHighest:
+            case GameEventScriptBytecodeOpCode.DropLowest:
                 AppendSlot(builder, "source", instruction.XSlot);
                 AppendIndex(builder, "count", instruction.ImmediateY);
+                break;
+            case GameEventScriptBytecodeOpCode.First:
+            case GameEventScriptBytecodeOpCode.Last:
+            case GameEventScriptBytecodeOpCode.Single:
+                AppendSlot(builder, "source", instruction.XSlot);
                 break;
             default:
                 AppendSlot(builder, "a", instruction.XSlot);

@@ -129,7 +129,7 @@
     {
       "kind": "scriptApi",
       "name": "stream take and drop direct slices",
-      "script": "module AtomicStreamTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
+      "script": "module AtomicStreamTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], takeHighest: values[:filter value where value > 1][:take highest 2], takeLowest: values[:filter value where value > 1][:take lowest 2], dropHighest: values[:filter value where value > 1][:drop highest 2], dropLowest: values[:filter value where value > 1][:drop lowest 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -151,6 +151,20 @@
                     { "type": ":integer", "value": "3" }
                   ]
                 },
+                "dropHighest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
+                  ]
+                },
+                "dropLowest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "5" }
+                  ]
+                },
                 "mappedTakeFirst": {
                   "type": ":list",
                   "items": [
@@ -165,11 +179,25 @@
                     { "type": ":integer", "value": "3" }
                   ]
                 },
+                "takeHighest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "5" },
+                    { "type": ":integer", "value": "4" }
+                  ]
+                },
                 "takeLast": {
                   "type": ":list",
                   "items": [
                     { "type": ":integer", "value": "4" },
                     { "type": ":integer", "value": "5" }
+                  ]
+                },
+                "takeLowest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
                   ]
                 }
               }
@@ -205,8 +233,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream collect first last single",
-      "script": "module AtomicStreamCollectFirstLastSingle\non Start {\n  let values be [1, 2, 3, 4]\n  let emptyList be []\n  emit Done(first: values[:first], firstFiltered: values[:first value where value > 2], firstEmpty: emptyList[:first], last: values[:last], lastFiltered: values[:last value where value < 4], lastEmpty: emptyList[:last], single: values[:single value where value = 3], singleNone: values[:single value where value > 9], singleMany: values[:single value where value > 1])\n}",
+      "name": "first last single direct and streams",
+      "script": "module AtomicFirstLastSingle\non Start {\n  let values be [1, 2, 3, 4]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  emit Done(first: values[:first], firstFiltered: values[:first value where value > 2], firstEmpty: emptyList[:first], last: values[:last], lastFiltered: values[:last value where value < 4], lastEmpty: emptyList[:last], single: values[:single value where value = 3], singleNone: values[:single value where value > 9], singleMany: values[:single value where value > 1], diceFirst: dice[:first], diceLast: dice[:last], rangeFirst: range[:first], rangeLast: range[:last], textFirst: text[:first], textLast: text[:last], textSingle: 'x'[:single], mapFirst: map[:first], mapLast: map[:last], listSingle: [9][:single])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },
@@ -215,14 +243,24 @@
               "name": "Done",
               "args": {
                 "first": { "type": ":integer", "value": "1" },
+                "diceFirst": { "type": ":integer", "value": "6" },
+                "diceLast": { "type": ":integer", "value": "2" },
                 "firstEmpty": { "type": ":nothing" },
                 "firstFiltered": { "type": ":integer", "value": "3" },
                 "last": { "type": ":integer", "value": "4" },
                 "lastEmpty": { "type": ":nothing" },
                 "lastFiltered": { "type": ":integer", "value": "3" },
+                "listSingle": { "type": ":integer", "value": "9" },
+                "mapFirst": { "type": ":integer", "value": "1" },
+                "mapLast": { "type": ":integer", "value": "2" },
+                "rangeFirst": { "type": ":integer", "value": "1" },
+                "rangeLast": { "type": ":integer", "value": "3" },
                 "single": { "type": ":integer", "value": "3" },
                 "singleMany": { "type": ":nothing" },
-                "singleNone": { "type": ":nothing" }
+                "singleNone": { "type": ":nothing" },
+                "textFirst": { "type": ":text", "value": "a" },
+                "textLast": { "type": ":text", "value": "b" },
+                "textSingle": { "type": ":text", "value": "x" }
               }
             }
           ]

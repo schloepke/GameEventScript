@@ -492,9 +492,6 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectList:
-            case GameEventScriptBytecodeOpCode.StreamCollectFirst:
-            case GameEventScriptBytecodeOpCode.StreamCollectLast:
-            case GameEventScriptBytecodeOpCode.StreamCollectSingle:
             case GameEventScriptBytecodeOpCode.StreamCount:
             case GameEventScriptBytecodeOpCode.StreamSum:
             case GameEventScriptBytecodeOpCode.StreamAverage:
@@ -507,12 +504,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.PipelineReverse:
             case GameEventScriptBytecodeOpCode.PipelineSortAscending:
             case GameEventScriptBytecodeOpCode.PipelineSortDescending:
-            case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
-            case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
-            case GameEventScriptBytecodeOpCode.PipelineDropHighest:
-            case GameEventScriptBytecodeOpCode.PipelineDropLowest:
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
-            case GameEventScriptBytecodeOpCode.PipelineDraw:
             case GameEventScriptBytecodeOpCode.PipelineChoose:
             case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
@@ -569,6 +561,13 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.DropFirst:
             case GameEventScriptBytecodeOpCode.TakeLast:
             case GameEventScriptBytecodeOpCode.DropLast:
+            case GameEventScriptBytecodeOpCode.TakeHighest:
+            case GameEventScriptBytecodeOpCode.TakeLowest:
+            case GameEventScriptBytecodeOpCode.DropHighest:
+            case GameEventScriptBytecodeOpCode.DropLowest:
+            case GameEventScriptBytecodeOpCode.First:
+            case GameEventScriptBytecodeOpCode.Last:
+            case GameEventScriptBytecodeOpCode.Single:
                 ValidateSlot(module, instruction.XSlot, $"{context} source slot");
                 break;
 

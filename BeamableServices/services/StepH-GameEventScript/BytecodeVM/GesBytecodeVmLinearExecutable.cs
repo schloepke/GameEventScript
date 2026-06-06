@@ -495,8 +495,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.StreamCount:
             case GameEventScriptBytecodeOpCode.StreamSum:
             case GameEventScriptBytecodeOpCode.StreamAverage:
-            case GameEventScriptBytecodeOpCode.PipelineHasAny:
-            case GameEventScriptBytecodeOpCode.PipelineHasAll:
+            case GameEventScriptBytecodeOpCode.HasAny:
+            case GameEventScriptBytecodeOpCode.HasAll:
             case GameEventScriptBytecodeOpCode.PipelineDistinct:
             case GameEventScriptBytecodeOpCode.PipelineReverse:
             case GameEventScriptBytecodeOpCode.PipelineSortAscending:

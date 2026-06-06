@@ -2075,7 +2075,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLowest);
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropHighest);
         CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLowest);
-        Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineHasAny));
+        Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.PipelineDistinct));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMap));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamFilter));
         Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCollectList));

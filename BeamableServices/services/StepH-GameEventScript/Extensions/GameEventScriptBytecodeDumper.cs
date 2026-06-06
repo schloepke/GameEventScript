@@ -469,14 +469,17 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.StreamCount:
             case GameEventScriptBytecodeOpCode.StreamSum:
             case GameEventScriptBytecodeOpCode.StreamAverage:
-            case GameEventScriptBytecodeOpCode.PipelineHasAny:
-            case GameEventScriptBytecodeOpCode.PipelineHasAll:
             case GameEventScriptBytecodeOpCode.PipelineDistinct:
             case GameEventScriptBytecodeOpCode.PipelineReverse:
             case GameEventScriptBytecodeOpCode.PipelineSortAscending:
             case GameEventScriptBytecodeOpCode.PipelineSortDescending:
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
                 AppendSlot(builder, "iterator", instruction.XSlot);
+                break;
+
+            case GameEventScriptBytecodeOpCode.HasAny:
+            case GameEventScriptBytecodeOpCode.HasAll:
+                AppendSlot(builder, "source", instruction.XSlot);
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamMin:

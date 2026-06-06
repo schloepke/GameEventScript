@@ -1222,11 +1222,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.Single:
                 return TryExecutePipelineElement(instruction, PipelineElementMode.Single);
 
-            case GameEventScriptBytecodeOpCode.PipelineHasAny:
-                return TryExecutePipelineHasAny(instruction);
+            case GameEventScriptBytecodeOpCode.HasAny:
+                return TryExecuteHasAny(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineHasAll:
-                return TryExecutePipelineHasAll(instruction);
+            case GameEventScriptBytecodeOpCode.HasAll:
+                return TryExecuteHasAll(instruction);
 
             case GameEventScriptBytecodeOpCode.StreamCount:
                 return TryExecuteStreamCount(instruction);
@@ -2812,11 +2812,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineHasAny(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteHasAny(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot);
+            if (source.IsNothing())
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var sourceValue = source.ToGameEventScriptValue();
+            var values = sourceValue.Kind == GameEventScriptValueKind.Map
+                ? sourceValue.AsEnumerable()
+                : EnumerateListLikeValue(sourceValue);
+            return DefineSlot(
+                instruction.DestinationSlot,
+                BytecodeVmValue.Boolean(values.Any(item => BytecodeVmValue.FromGameEventScriptValue(item).IsTrue())));
         }
 
         if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
@@ -2843,11 +2855,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineHasAll(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteHasAll(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot);
+            if (source.IsNothing())
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var sourceValue = source.ToGameEventScriptValue();
+            var values = sourceValue.Kind == GameEventScriptValueKind.Map
+                ? sourceValue.AsEnumerable()
+                : EnumerateListLikeValue(sourceValue);
+            return DefineSlot(
+                instruction.DestinationSlot,
+                BytecodeVmValue.Boolean(values.All(item => BytecodeVmValue.FromGameEventScriptValue(item).IsTrue())));
         }
 
         if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)

@@ -75,6 +75,39 @@
     },
     {
       "kind": "scriptApi",
+      "name": "has any and all direct and streams",
+      "script": "module AtomicHasAnyAllDirectAndStreams\non Start {\n  let values be [true, false, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 0 to 2\n  let text be '10'\n  let map be [a: false, b: true]\n  emit Done(listAny: values[:any value where value], listAll: values[:all value where value], emptyAny: emptyList[:any value where value], emptyAll: emptyList[:all value where value], diceAny: dice[:any value where value], diceAll: dice[:all value where value], rangeAny: range[:any value where value], rangeAll: range[:all value where value], textAny: text[:any value where value], textAll: text[:all value where value], mapAny: map[:any value where value], mapAll: map[:all value where value], streamAnyHit: [1, 2, 3][:any value where value > 2], streamAnyMiss: [1, 2, 3][:any value where value > 9], streamAllHit: [1, 2, 3][:all value where value > 0], streamAllMiss: [1, 2, 3][:all value where value > 1])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "diceAll": { "type": ":boolean", "value": true },
+                "diceAny": { "type": ":boolean", "value": true },
+                "emptyAll": { "type": ":boolean", "value": true },
+                "emptyAny": { "type": ":boolean", "value": false },
+                "listAll": { "type": ":boolean", "value": false },
+                "listAny": { "type": ":boolean", "value": true },
+                "mapAll": { "type": ":boolean", "value": false },
+                "mapAny": { "type": ":boolean", "value": true },
+                "rangeAll": { "type": ":boolean", "value": false },
+                "rangeAny": { "type": ":boolean", "value": true },
+                "streamAllHit": { "type": ":boolean", "value": true },
+                "streamAllMiss": { "type": ":boolean", "value": false },
+                "streamAnyHit": { "type": ":boolean", "value": true },
+                "streamAnyMiss": { "type": ":boolean", "value": false },
+                "textAll": { "type": ":boolean", "value": false },
+                "textAny": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "stream map filter collect list chains",
       "script": "module AtomicStreamMapFilterCollectList\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let mapped be values[:select value => value * 10]\n  let filtered be values[:filter value where value mod 2 = 1]\n  let chained be values[:filter value where value >= 2][:select value => value * 2][:filter value where value > 5]\n  let capturedBase be 100\n  let captured be values[:select value => value + capturedBase]\n  emit Done(mapped: mapped, filtered: filtered, chained: chained, captured: captured)\n}",
       "steps": [

@@ -235,8 +235,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StreamCollectMap => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.StreamCollectMapValue => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry, ValueEntry],
 
-            GameEventScriptBytecodeOpCode.PipelineHasAny => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineHasAll => [TargetRegister, IteratorRegister],
+            GameEventScriptBytecodeOpCode.HasAny => [TargetRegister, SourceRegister],
+            GameEventScriptBytecodeOpCode.HasAll => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.PipelineDistinct => [TargetRegister, IteratorRegister],
             GameEventScriptBytecodeOpCode.PipelineDistinctBy => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.PipelineGroupBy => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],

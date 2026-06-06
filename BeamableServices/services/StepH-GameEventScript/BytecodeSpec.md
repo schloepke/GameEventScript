@@ -672,6 +672,14 @@ points compare their `x`, `y`, and `z` components. `right` `Nothing` writes
 `Nothing`; lists, dice, ranges, text, tags, and scalar values write boolean
 `false`.
 
+`HasAny source` and `HasAll source` evaluate boolean truthiness over sequence
+items. They are defined for list, dice, range, map/custom values, text/tag
+characters, vector/point components, and streams. `HasAny` writes `true` on the
+first truthy item and `false` for an empty sequence. `HasAll` writes `false` on
+the first non-truthy item and `true` for an empty sequence. Source `Nothing`
+writes `Nothing`; unsupported scalar sources write boolean `false`. Stream
+sources are consumed until the terminal result is known or until exhaustion.
+
 `StartsWith left, right` and `EndsWith left, right` write boundary checks.
 Text/tag operands compare raw text with ordinal rules. Sequence operands are
 limited to `List`, `Dice`, and `Range`; both operands must be one of those
@@ -1135,7 +1143,7 @@ StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
 First/Last/Single dst source
-PipelineHasAny/HasAll dst iterator
+HasAny/HasAll dst source
 PipelineListCreateBuilder builder
 PipelineListBuilderAdd builder item
 PipelineListBuilderFinish dst builder
@@ -1189,10 +1197,12 @@ Streaming/materialization contract:
 - `:range` and `:series` sources must not be blindly materialized
   before streamable terminal selectors.
 - Streamable/short-circuit terminal selectors include `:any`, `:all`, and
-  `:first`. Direct `:contains x`, `:contains any xs`, and `:contains all xs`
-  lower to the normal `Contains`, `ContainsAny`, and `ContainsAll` opcodes; when
-  their container operand is a stream, they consume the stream only as far as
-  needed.
+  `:first`. `:any` and `:all` lower to the normal `HasAny` and `HasAll`
+  opcodes over projected predicate values; when their source operand is a
+  stream, they consume the stream only as far as needed. Direct `:contains x`,
+  `:contains any xs`, and `:contains all xs` lower to the normal `Contains`,
+  `ContainsAny`, and `ContainsAll` opcodes; when their container operand is a
+  stream, they consume the stream only as far as needed.
 - Prefix selectors are applied lazily on the streaming path.
 - Selectors that require full collection semantics may materialize after runtime
   budgets such as `MaxRangeItems` are checked.

@@ -584,16 +584,16 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case StreamCollectMapValue:
                             vmState.Register(instruction.DestinationSlot).VmStreamCollectMapValue(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
                             break;
+                        case HasAny:
+                            vmState.Register(instruction.DestinationSlot).VmHasAny(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case HasAll:
+                            vmState.Register(instruction.DestinationSlot).VmHasAll(ref vmState.Register(instruction.XSlot));
+                            break;
                         #endregion
 
                         #region Group 4 - pipeline terminals and transforms
 
-                        case PipelineHasAny:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineHasAll:
-                            // FIXME: creating the real custom type here
-                            break;
                         case PipelineDistinct:
                             // FIXME: creating the real custom type here
                             break;

@@ -412,6 +412,256 @@ internal static class VmRegisterCollectionOperators
         => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmHasAny(ref this VmValue dst, ref VmValue source)
+        => VmHasAnyAll(ref dst, ref source, requireAll: false);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmHasAll(ref this VmValue dst, ref VmValue source)
+        => VmHasAnyAll(ref dst, ref source, requireAll: true);
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void VmHasAnyAll(ref VmValue dst, ref VmValue source, bool requireAll)
+    {
+        switch (source.Kind)
+        {
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+            {
+                var item = dst.OwningState.CreateNothing();
+                try
+                {
+                    while (stream.TryNext(ref item))
+                    {
+                        if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
+                        if (item.IsTrue)
+                        {
+                            if (!requireAll)
+                            {
+                                dst.SetBoolean(true);
+                                return;
+                            }
+                        }
+                        else if (requireAll)
+                        {
+                            dst.SetBoolean(false);
+                            return;
+                        }
+                    }
+
+                    dst.SetBoolean(requireAll);
+                    return;
+                }
+                finally
+                {
+                    if (stream is IDisposable disposable) disposable.Dispose();
+                }
+            }
+            case List when source.ObjectValue is VmListObject list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list.Items[i];
+                    if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                if (dice.Length == 0)
+                {
+                    dst.SetBoolean(requireAll);
+                    return;
+                }
+
+                if (!requireAll)
+                {
+                    for (var i = 0; i < dice.Length; i++)
+                    {
+                        if (dice[i] == 0) continue;
+                        dst.SetBoolean(true);
+                        return;
+                    }
+
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    if (dice[i] != 0) continue;
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                dst.SetBoolean(true);
+                return;
+            case Map or Custom when source.ObjectValue is VmMapObject map:
+            {
+                var list = map.ValueList;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list.Items[i];
+                    if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case Text or Tag:
+            {
+                var text = source.ReadTextOrTag();
+                if (text.Length == 0)
+                {
+                    dst.SetBoolean(requireAll);
+                    return;
+                }
+
+                var item = dst.OwningState.CreateNothing();
+                for (var i = 0; i < text.Length; i++)
+                {
+                    item.SetText(text[i].ToString());
+                    item.UpdatedTextTruthinessCache();
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case Vector or Point when source.ObjectValue is VmFloatTriplet triplet:
+                if (triplet.X != 0d && double.IsFinite(triplet.X))
+                {
+                    if (!requireAll)
+                    {
+                        dst.SetBoolean(true);
+                        return;
+                    }
+                }
+                else if (requireAll)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                if (triplet.Y != 0d && double.IsFinite(triplet.Y))
+                {
+                    if (!requireAll)
+                    {
+                        dst.SetBoolean(true);
+                        return;
+                    }
+                }
+                else if (requireAll)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                if (triplet.Z != 0d && double.IsFinite(triplet.Z))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    if (value != 0)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                    value += range.step;
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    if (value != 0d && double.IsFinite(value))
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                    value += range.step;
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void VmContainsAnyAll(ref VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
     {
         if (b.Kind is Nothing)

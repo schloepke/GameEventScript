@@ -1806,6 +1806,16 @@ internal sealed class GesLinearBytecodeBuilder
                         a: needleSlot,
                         b: sourceSlot);
                 }
+
+                case PredicateSelectorNode predicate when
+                    predicate.Predicate is IdentifierExpressionNode identifier &&
+                    string.Equals(identifier.Name, predicate.Identifier, StringComparison.Ordinal):
+                    return EmitValueInstruction(
+                        state,
+                        string.Equals(predicate.Operator, "all", StringComparison.Ordinal)
+                            ? GameEventScriptBytecodeOpCode.HasAll
+                            : GameEventScriptBytecodeOpCode.HasAny,
+                        a: sourceSlot);
             }
         }
 
@@ -1900,8 +1910,8 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitValueInstruction(
                     state,
                     string.Equals(predicate.Operator, "all", StringComparison.Ordinal)
-                        ? GameEventScriptBytecodeOpCode.PipelineHasAll
-                        : GameEventScriptBytecodeOpCode.PipelineHasAny,
+                        ? GameEventScriptBytecodeOpCode.HasAll
+                        : GameEventScriptBytecodeOpCode.HasAny,
                     a: predicateIterator);
             }
 
@@ -2312,7 +2322,7 @@ internal sealed class GesLinearBytecodeBuilder
             var entryAddress = EmitPipelineObjectMatchEntry(0, pattern, helperContext, helperState);
             PatchB(instructionAddress, entryAddress);
         });
-        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineHasAny, a: matchIterator);
+        return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.HasAny, a: matchIterator);
     }
 
     private int EmitPipelineObjectMatchEntry(int itemSlot, ObjectMatchPatternNode pattern, SourceContext context, ExpressionState state)

@@ -2106,14 +2106,15 @@ internal sealed class GesLinearBytecodeBuilder
     {
         var opCode = (slice.Operation, slice.Scope) switch
         {
-            ("take", "last") => GameEventScriptBytecodeOpCode.PipelineTakeLast,
+            ("take", "first") => GameEventScriptBytecodeOpCode.TakeFirst,
+            ("take", "last") => GameEventScriptBytecodeOpCode.TakeLast,
             ("take", "highest") => GameEventScriptBytecodeOpCode.PipelineTakeHighest,
             ("take", "lowest") => GameEventScriptBytecodeOpCode.PipelineTakeLowest,
-            ("drop", "first") => GameEventScriptBytecodeOpCode.PipelineDropFirst,
-            ("drop", "last") => GameEventScriptBytecodeOpCode.PipelineDropLast,
+            ("drop", "first") => GameEventScriptBytecodeOpCode.DropFirst,
+            ("drop", "last") => GameEventScriptBytecodeOpCode.DropLast,
             ("drop", "highest") => GameEventScriptBytecodeOpCode.PipelineDropHighest,
             ("drop", "lowest") => GameEventScriptBytecodeOpCode.PipelineDropLowest,
-            _ => GameEventScriptBytecodeOpCode.PipelineTakeFirst
+            _ => GameEventScriptBytecodeOpCode.TakeFirst
         };
         return EmitValueInstruction(state, opCode, a: iteratorSlot, b: slice.Count);
     }

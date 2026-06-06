@@ -1014,9 +1014,10 @@ zero-based term and is valid only for series; all non-series sources evaluate to
 `[:take last n]` and `[:drop last n]` evaluate to `nothing`.
 
 Finite sequence values support direct slicing without pipeline materialization:
-lists, dice, and ranges support `:take first`, `:drop first`, `:take last`, and
-`:drop last`. List slices return lists, dice slices return dice, and range
-slices return ranges.
+lists, dice, ranges, and streams support `:take first`, `:drop first`,
+`:take last`, and `:drop last`. List slices return lists, dice slices return
+dice, range slices return ranges, and stream slices consume the stream and
+return materialized lists.
 
 Message values are map-backed runtime values. The bytecode model exposes the
 read-only members `name`, `signature`, `arguments`, and `tags` through normal

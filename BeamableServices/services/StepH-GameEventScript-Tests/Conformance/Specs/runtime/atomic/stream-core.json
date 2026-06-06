@@ -128,6 +128,58 @@
     },
     {
       "kind": "scriptApi",
+      "name": "stream take and drop direct slices",
+      "script": "module AtomicStreamTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "dropFirst": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "5" }
+                  ]
+                },
+                "dropLast": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
+                  ]
+                },
+                "mappedTakeFirst": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "10" },
+                    { "type": ":integer", "value": "20" }
+                  ]
+                },
+                "takeFirst": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
+                  ]
+                },
+                "takeLast": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "5" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "stream collect map and map value",
       "script": "module AtomicStreamCollectMap\non Start {\n  let units be [[id: :rook, hp: 10, team: :blue], [id: :mage, hp: 6, team: :red], [id: :rook, hp: 12, team: :green], [id: '', hp: 99, team: :hidden]]\n  let byId be units[:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  emit Done(byIdCount: :len byId, rookHp: byId[:rook].hp, rookTeam: byId[:rook].team, mageHp: byId[:mage].hp, hpByIdCount: :len hpById, hpRook: hpById[:rook], hpMage: hpById[:mage], missingEmpty: byId[''])\n}",
       "steps": [

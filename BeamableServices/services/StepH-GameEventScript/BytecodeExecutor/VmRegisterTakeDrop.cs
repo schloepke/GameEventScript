@@ -29,6 +29,9 @@ internal static class VmRegisterSeries
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 TakeFirstRange(ref dst, range, count);
                 return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                TakeFirstStream(ref dst, stream, count);
+                return;
             default:
                 dst.SetNothing();
                 return;
@@ -55,6 +58,9 @@ internal static class VmRegisterSeries
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 DropFirstRange(ref dst, ref source, range, count);
                 return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                DropFirstStream(ref dst, stream, count);
+                return;
             default:
                 dst.SetNothing();
                 return;
@@ -78,6 +84,9 @@ internal static class VmRegisterSeries
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 TakeLastRange(ref dst, range, count);
                 return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                TakeLastStream(ref dst, stream, count);
+                return;
             default:
                 dst.SetNothing();
                 return;
@@ -100,6 +109,9 @@ internal static class VmRegisterSeries
                 return;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
                 DropLastRange(ref dst, ref source, range, count);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                DropLastStream(ref dst, stream, count);
                 return;
             default:
                 dst.SetNothing();
@@ -243,6 +255,135 @@ internal static class VmRegisterSeries
         var dice = new int[length];
         for (var i = 0; i < length; i++) dice[i] = source[i];
         dst.SetDice(dice);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeFirstStream(ref VmValue dst, IVmStream stream, short count)
+    {
+        if (count <= 0)
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var item = dst.OwningState.CreateNothing();
+        var buffer = new VmValue[count < 16 ? count : 16];
+        var itemCount = 0;
+        try
+        {
+            while (itemCount < count && stream.TryNext(ref item))
+            {
+                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
+                buffer[itemCount++] = item;
+            }
+
+            SetListFromBuffer(ref dst, buffer, itemCount);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DropFirstStream(ref VmValue dst, IVmStream stream, short count)
+    {
+        var item = dst.OwningState.CreateNothing();
+        var skipped = 0;
+        var buffer = new VmValue[16];
+        var itemCount = 0;
+        try
+        {
+            while (count > 0 && skipped < count && stream.TryNext(ref item)) skipped++;
+            while (stream.TryNext(ref item))
+            {
+                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
+                buffer[itemCount++] = item;
+            }
+
+            SetListFromBuffer(ref dst, buffer, itemCount);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeLastStream(ref VmValue dst, IVmStream stream, short count)
+    {
+        if (count <= 0)
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var item = dst.OwningState.CreateNothing();
+        var buffer = new VmValue[16];
+        var itemCount = 0;
+        try
+        {
+            while (stream.TryNext(ref item))
+            {
+                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
+                buffer[itemCount++] = item;
+            }
+
+            var length = count < itemCount ? count : itemCount;
+            var start = itemCount - length;
+            if (length == 0)
+            {
+                dst.SetList(dst.OwningState.EmptyList);
+                return;
+            }
+
+            var list = dst.OwningState.CreateList(length);
+            Array.Copy(buffer, start, list.Items, 0, length);
+            dst.SetList(list);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void DropLastStream(ref VmValue dst, IVmStream stream, short count)
+    {
+        var item = dst.OwningState.CreateNothing();
+        var buffer = new VmValue[16];
+        var itemCount = 0;
+        try
+        {
+            while (stream.TryNext(ref item))
+            {
+                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
+                buffer[itemCount++] = item;
+            }
+
+            var length = count <= 0 ? itemCount : count < itemCount ? itemCount - count : 0;
+            SetListFromBuffer(ref dst, buffer, length);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void SetListFromBuffer(ref VmValue dst, VmValue[] buffer, int length)
+    {
+        if (length == 0)
+        {
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var list = dst.OwningState.CreateList(length);
+        Array.Copy(buffer, list.Items, length);
+        dst.SetList(list);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

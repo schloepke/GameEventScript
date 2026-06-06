@@ -1233,12 +1233,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
                 return TryExecutePipelineOrderBy(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineTakeFirst:
-            case GameEventScriptBytecodeOpCode.PipelineTakeLast:
             case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
             case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
-            case GameEventScriptBytecodeOpCode.PipelineDropFirst:
-            case GameEventScriptBytecodeOpCode.PipelineDropLast:
             case GameEventScriptBytecodeOpCode.PipelineDropHighest:
             case GameEventScriptBytecodeOpCode.PipelineDropLowest:
                 return TryExecutePipelineSequenceSlice(instruction);
@@ -3281,14 +3277,11 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         var (operation, scope) = instruction.OpCode switch
         {
-            GameEventScriptBytecodeOpCode.PipelineTakeLast => ("take", "last"),
             GameEventScriptBytecodeOpCode.PipelineTakeHighest => ("take", "highest"),
             GameEventScriptBytecodeOpCode.PipelineTakeLowest => ("take", "lowest"),
-            GameEventScriptBytecodeOpCode.PipelineDropFirst => ("drop", "first"),
-            GameEventScriptBytecodeOpCode.PipelineDropLast => ("drop", "last"),
             GameEventScriptBytecodeOpCode.PipelineDropHighest => ("drop", "highest"),
             GameEventScriptBytecodeOpCode.PipelineDropLowest => ("drop", "lowest"),
-            _ => ("take", "first")
+            _ => ("take", "highest")
         };
         return DefineSlot(
             instruction.DestinationSlot,
@@ -3584,7 +3577,32 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecuteSequenceInstruction(GameEventScriptBytecodeInstruction instruction)
     {
-        var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+        var sourceSlot = ResolveSlot(instruction.XSlot);
+        if (sourceSlot.Kind == BytecodeVmValueKind.Iterator)
+        {
+            if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var streamItems))
+            {
+                return false;
+            }
+
+            iterator.Dispose();
+            if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var streamSlice = instruction.OpCode switch
+            {
+                GameEventScriptBytecodeOpCode.TakeFirst => EvaluateSequenceSliceSelector(target, streamItems, "take", "first", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropFirst => EvaluateSequenceSliceSelector(target, streamItems, "drop", "first", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.TakeLast => EvaluateSequenceSliceSelector(target, streamItems, "take", "last", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.DropLast => EvaluateSequenceSliceSelector(target, streamItems, "drop", "last", instruction.ImmediateY),
+                _ => GameEventScriptNothingValue.Instance
+            };
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(streamSlice));
+        }
+
+        var source = sourceSlot.ToGameEventScriptValue();
         if (TryGetSeriesTarget(source, out var series))
         {
             switch (instruction.OpCode)

@@ -328,10 +328,10 @@ separate approximate-equality opcode.
 | 0x6C | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
 | 0x6D | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
 | 0x6E | `Term` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
-| 0x6F | `TakeFirst` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a series, list, dice, or range source. |
-| 0x70 | `DropFirst` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a series, list, dice, or range source. |
-| 0x71 | `TakeLast` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the last `Y` values from a finite list, dice, or range source; series yields `nothing`. |
-| 0x72 | `DropLast` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the last `Y` values from a finite list, dice, or range source; series yields `nothing`. |
+| 0x6F | `TakeFirst` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the first `Y` values from a series, list, dice, range, or stream source. |
+| 0x70 | `DropFirst` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the first `Y` values from a series, list, dice, range, or stream source. |
+| 0x71 | `TakeLast` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the last `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
+| 0x72 | `DropLast` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the last `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
 | 0x73..0x8F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
 
 ### Group 3 - Text, Collections, Streams
@@ -384,30 +384,26 @@ separate approximate-equality opcode.
 | 0xDA | `PipelineSortDescending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items descending. |
 | 0xDB | `PipelineOrderByAscending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. |
 | 0xDC | `PipelineOrderByDescending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. |
-| 0xDD | `PipelineTakeFirst` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the first `Y` items. |
-| 0xDE | `PipelineTakeLast` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the last `Y` items. |
-| 0xDF | `PipelineTakeHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the highest `Y` items. |
-| 0xE0 | `PipelineTakeLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the lowest `Y` items. |
-| 0xE1 | `PipelineDropFirst` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the first `Y` items. |
-| 0xE2 | `PipelineDropLast` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the last `Y` items. |
-| 0xE3 | `PipelineDropHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the highest `Y` items. |
-| 0xE4 | `PipelineDropLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the lowest `Y` items. |
-| 0xE5 | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
-| 0xE6 | `PipelineDraw` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Draws `Y` source items. |
-| 0xE7 | `PipelineChoose` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Chooses up to `Y` source items. |
-| 0xE8 | `PipelineChooseRandom` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Randomly chooses up to `Y` source items. |
-| 0xE9 | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
-| 0xEA | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
-| 0xEB | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
-| 0xEC | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
-| 0xED | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
-| 0xEE | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
-| 0xEF | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
-| 0xF0 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
-| 0xF1 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
-| 0xF2 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
-| 0xF3 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xF4 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
+| 0xDD | `PipelineTakeHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the highest `Y` items. |
+| 0xDE | `PipelineTakeLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes the lowest `Y` items. |
+| 0xDF | `PipelineDropHighest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the highest `Y` items. |
+| 0xE0 | `PipelineDropLowest` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Drops the lowest `Y` items. |
+| 0xE1 | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
+| 0xE2 | `PipelineDraw` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Draws `Y` source items. |
+| 0xE3 | `PipelineChoose` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Chooses up to `Y` source items. |
+| 0xE4 | `PipelineChooseRandom` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Randomly chooses up to `Y` source items. |
+| 0xE5 | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
+| 0xE6 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
+| 0xE7 | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
+| 0xE8 | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
+| 0xE9 | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
+| 0xEA | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
+| 0xEB | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
+| 0xEC | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
+| 0xED | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xEE | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
+| 0xEF | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xF0 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
 
 ### Reserved Opcode Space
 

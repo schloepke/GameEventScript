@@ -610,22 +610,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case PipelineOrderByDescending:
                             // FIXME: creating the real custom type here
                             break;
-                        case PipelineTakeFirst:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineTakeLast:
-                            // FIXME: creating the real custom type here
-                            break;
                         case PipelineTakeHighest:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineTakeLowest:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDropFirst:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDropLast:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineDropHighest:

@@ -507,12 +507,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.PipelineReverse:
             case GameEventScriptBytecodeOpCode.PipelineSortAscending:
             case GameEventScriptBytecodeOpCode.PipelineSortDescending:
-            case GameEventScriptBytecodeOpCode.PipelineTakeFirst:
-            case GameEventScriptBytecodeOpCode.PipelineTakeLast:
             case GameEventScriptBytecodeOpCode.PipelineTakeHighest:
             case GameEventScriptBytecodeOpCode.PipelineTakeLowest:
-            case GameEventScriptBytecodeOpCode.PipelineDropFirst:
-            case GameEventScriptBytecodeOpCode.PipelineDropLast:
             case GameEventScriptBytecodeOpCode.PipelineDropHighest:
             case GameEventScriptBytecodeOpCode.PipelineDropLowest:
             case GameEventScriptBytecodeOpCode.PipelineShuffle:

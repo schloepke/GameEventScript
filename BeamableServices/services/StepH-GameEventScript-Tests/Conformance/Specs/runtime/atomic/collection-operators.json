@@ -773,6 +773,116 @@
     },
     {
       "kind": "scriptApi",
+      "name": "contains any and all operators",
+      "script": "module AtomicCollectionContainsAnyAllOperators\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice as :dice be [3, 2, 1]\n  let vRange as :range be from 1 to 3\n  emit Done(nothingAny: vNothing[:contains any [1]], nothingAll: vNothing[:contains all [1]], booleanAny: vBoolean[:contains any [1]], booleanAll: vBoolean[:contains all [1]], textAny: vText[:contains any ['xy', 'bc']], textAll: vText[:contains all ['ab', 'cd']], tagAny: vTag[:contains any [:xy, :bc]], tagAll: vTag[:contains all [:ab, :cd]], vectorAny: vVector[:contains any [9, 2]], vectorAll: vVector[:contains all [1, 3]], pointAny: vPoint[:contains any [9, 5]], pointAll: vPoint[:contains all [4, 6]], listAny: vList[:contains any [0, 2]], listAll: vList[:contains all [1, 3]], listAllMissing: vList[:contains all [1, 9]], mapAny: vMap[:contains any [:missing, :hp]], mapAll: vMap[:contains all [:name, :hp]], diceAny: vDice[:contains any [9, 2]], diceAll: vDice[:contains all [3, 2]], rangeAny: vRange[:contains any [9, 2]], rangeAll: vRange[:contains all [1, 3]], emptyAny: vList[:contains any []], emptyAll: vList[:contains all []])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingAny": {
+                  "type": ":nothing"
+                },
+                "nothingAll": {
+                  "type": ":nothing"
+                },
+                "booleanAny": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "booleanAll": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "vectorAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "vectorAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "pointAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "pointAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listAllMissing": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "emptyAny": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "emptyAll": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "contains value operator",
       "script": "module AtomicCollectionContainsValueOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 value in vNothing, booleanValue: 1 value in vBoolean, integerValue: 1 value in vInteger, floatValue: 1 value in vFloat, percentageValue: 1 value in vPercentage, textValue: 'bc' value in vText, tagValue: :bc value in vTag, vectorValue: 2 value in vVector, pointValue: 5 value in vPoint, listValue: 2 value in vList, mapValue: 10 value in vMap, diceValue: 2 value in vDice, rangeValue: 2 value in vRange)\n}",
       "randomSequence": [

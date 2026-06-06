@@ -128,6 +128,40 @@
     },
     {
       "kind": "scriptApi",
+      "name": "stream contains terminals",
+      "script": "module AtomicStreamContainsTerminals\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 5\n  let text be 'abcd'\n  let map be [alpha: 10, beta: 20]\n  emit Done(listContainsHit: values[:filter value where value > 2][:contains 4], listContainsMiss: values[:filter value where value > 2][:contains 2], listAnyHit: values[:filter value where value > 2][:contains any [1, 5]], listAnyMiss: values[:filter value where value > 2][:contains any [1, 2]], listAllHit: values[:filter value where value > 2][:contains all [3, 5]], listAllMiss: values[:filter value where value > 2][:contains all [3, 2]], diceContainsHit: dice[:select roll => roll][:contains 4], diceAnyHit: dice[:select roll => roll][:contains any [1, 6]], diceAllHit: dice[:select roll => roll][:contains all [6, 2]], rangeContainsHit: range[:select item => item][:contains 4], rangeAnyHit: range[:select item => item][:contains any [0, 5]], rangeAllHit: range[:select item => item][:contains all [1, 5]], textContainsHit: text[:select char => char][:contains 'b'], textAllHit: text[:select char => char][:contains all ['a', 'd']], mapContainsHit: map[:select value => value][:contains 10], mapAnyHit: map[:select value => value][:contains any [99, 20]], mapAllHit: map[:select value => value][:contains all [10, 20]])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "diceAllHit": { "type": ":boolean", "value": true },
+                "diceAnyHit": { "type": ":boolean", "value": true },
+                "diceContainsHit": { "type": ":boolean", "value": true },
+                "listAllHit": { "type": ":boolean", "value": true },
+                "listAllMiss": { "type": ":boolean", "value": false },
+                "listAnyHit": { "type": ":boolean", "value": true },
+                "listAnyMiss": { "type": ":boolean", "value": false },
+                "listContainsHit": { "type": ":boolean", "value": true },
+                "listContainsMiss": { "type": ":boolean", "value": false },
+                "mapAllHit": { "type": ":boolean", "value": true },
+                "mapAnyHit": { "type": ":boolean", "value": true },
+                "mapContainsHit": { "type": ":boolean", "value": true },
+                "rangeAllHit": { "type": ":boolean", "value": true },
+                "rangeAnyHit": { "type": ":boolean", "value": true },
+                "rangeContainsHit": { "type": ":boolean", "value": true },
+                "textAllHit": { "type": ":boolean", "value": true },
+                "textContainsHit": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "stream take and drop direct slices",
       "script": "module AtomicStreamTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], takeHighest: values[:filter value where value > 1][:take highest 2], takeLowest: values[:filter value where value > 1][:take lowest 2], dropHighest: values[:filter value where value > 1][:drop highest 2], dropLowest: values[:filter value where value > 1][:drop lowest 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
       "steps": [
@@ -199,6 +233,105 @@
                     { "type": ":integer", "value": "2" },
                     { "type": ":integer", "value": "3" }
                   ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "take drop highest lowest direct fast paths",
+      "script": "module AtomicTakeDropHighestLowestDirectFastPaths\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2, 1]\n  let range as :range be from 1 to 5\n  emit Done(listTakeHighest: values[:take highest 2], listTakeLowest: values[:take lowest 2], listDropHighest: values[:drop highest 2], listDropLowest: values[:drop lowest 2], diceTakeHighest: dice[:take highest 2], diceTakeLowest: dice[:take lowest 2], diceDropHighest: dice[:drop highest 2], diceDropLowest: dice[:drop lowest 2], rangeTakeHighest: range[:take highest 2], rangeTakeLowest: range[:take lowest 2], rangeDropHighest: range[:drop highest 2], rangeDropLowest: range[:drop lowest 2])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "listTakeHighest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "5" },
+                    { "type": ":integer", "value": "4" }
+                  ]
+                },
+                "listTakeLowest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" }
+                  ]
+                },
+                "listDropHighest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
+                  ]
+                },
+                "listDropLowest": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "5" }
+                  ]
+                },
+                "diceTakeHighest": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4
+                  ]
+                },
+                "diceTakeLowest": {
+                  "type": ":dice",
+                  "rolls": [
+                    2,
+                    1
+                  ]
+                },
+                "diceDropHighest": {
+                  "type": ":dice",
+                  "rolls": [
+                    2,
+                    1
+                  ]
+                },
+                "diceDropLowest": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4
+                  ]
+                },
+                "rangeTakeHighest": {
+                  "type": ":range",
+                  "from": "5",
+                  "to": "4",
+                  "step": "-1"
+                },
+                "rangeTakeLowest": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "2",
+                  "step": "1"
+                },
+                "rangeDropHighest": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
+                },
+                "rangeDropLowest": {
+                  "type": ":range",
+                  "from": "3",
+                  "to": "5",
+                  "step": "1"
                 }
               }
             }

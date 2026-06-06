@@ -1791,6 +1791,21 @@ internal sealed class GesLinearBytecodeBuilder
                     return draw.Count == 1
                         ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.First, a: sourceSlot)
                         : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeFirst, a: sourceSlot, b: draw.Count);
+
+                case ContainsSelectorNode contains:
+                {
+                    var needleSlot = EmitSourceExpression(contains.ValueExpression, context, state);
+                    return EmitValueInstruction(
+                        state,
+                        contains.Mode switch
+                        {
+                            "all" => GameEventScriptBytecodeOpCode.ContainsAll,
+                            "any" => GameEventScriptBytecodeOpCode.ContainsAny,
+                            _ => GameEventScriptBytecodeOpCode.Contains
+                        },
+                        a: needleSlot,
+                        b: sourceSlot);
+                }
             }
         }
 

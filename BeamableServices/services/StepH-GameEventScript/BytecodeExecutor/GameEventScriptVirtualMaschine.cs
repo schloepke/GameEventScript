@@ -617,7 +617,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmDistinctBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
                             break;
                         case GroupBy:
-                            vmState.Register(instruction.DestinationSlot).VmGroupBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            vmState.Register(instruction.DestinationSlot).VmGroupBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
                             break;
                         case SortAscending:
                             vmState.Register(instruction.DestinationSlot).VmSortAscending(ref vmState.Register(instruction.XSlot));

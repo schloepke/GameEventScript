@@ -196,8 +196,8 @@
             {
               "name": "Done",
               "args": {
-                "diceFiveLen": { "type": ":integer", "value": "2" },
-                "diceSixFirst": { "type": ":integer", "value": "6" },
+                "diceFiveLen": { "type": ":integer", "value": "0" },
+                "diceSixFirst": { "type": ":nothing", "value": "" },
                 "emptyLen": { "type": ":integer", "value": "0" },
                 "evenFirst": { "type": ":integer", "value": "2" },
                 "evenLen": { "type": ":integer", "value": "2" },
@@ -207,10 +207,10 @@
                 "meleeSecond": { "type": ":text", "value": "Rook" },
                 "oddFirst": { "type": ":integer", "value": "1" },
                 "oddLen": { "type": ":integer", "value": "2" },
-                "rangeEvenLen": { "type": ":integer", "value": "2" },
+                "rangeEvenLen": { "type": ":integer", "value": "0" },
                 "rangedFirst": { "type": ":text", "value": "Archer" },
                 "rangedLen": { "type": ":integer", "value": "1" },
-                "textALen": { "type": ":integer", "value": "2" }
+                "textALen": { "type": ":integer", "value": "0" }
               }
             }
           ]

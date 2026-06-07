@@ -818,6 +818,13 @@ list. `:distinct by` is defined only for lists and streams because the
 projection operates on structured items. Dice and other non-list values yield
 `nothing` for `:distinct by`.
 
+`:group by` is defined for lists, maps, and streams. Lists and streams group
+their source items by the projected key and return a map from the projected key
+text to a list of matching source items. Maps group their visible values in
+stable key order. Direct dice, ranges, text, tags, scalars, and `nothing` yield
+`nothing`; dice and ranges are scalar-like direct values for grouping and must
+be streamed explicitly when per-element grouping is wanted.
+
 ### Map Selector
 
 The `:map` selector builds a map. Without a value projection, the selected item

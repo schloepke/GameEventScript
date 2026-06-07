@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -237,9 +238,170 @@ internal static class VmRegisterSortGroupDistinct
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmGroupBy(ref this VmValue dst, ref VmValue source, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator)
+    internal static void VmGroupBy(ref this VmValue dst, ref VmValue source, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
-        dst.SetNothing();
+        var state = dst.OwningState;
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+            {
+                var groups = new Dictionary<string, VmValue[]>(StringComparer.Ordinal);
+                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                var key = state.CreateNothing();
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list.Items[i];
+                    if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
+                    {
+                        state.Register(destinationSlot).SetNothing();
+                        return;
+                    }
+
+                    var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
+                    if (!groups.TryGetValue(keyText, out var bucket))
+                    {
+                        bucket = state.CreateRegisterArray(4);
+                        groups[keyText] = bucket;
+                        counts[keyText] = 0;
+                    }
+
+                    var count = counts[keyText];
+                    if (count == bucket.Length)
+                    {
+                        var resized = state.CreateRegisterArray(bucket.Length << 1);
+                        Array.Copy(bucket, resized, bucket.Length);
+                        bucket = resized;
+                        groups[keyText] = bucket;
+                    }
+
+                    bucket[count] = item;
+                    counts[keyText] = count + 1;
+                }
+
+                var map = new Dictionary<string, VmValue>(groups.Count, StringComparer.Ordinal);
+                foreach (var pair in groups)
+                {
+                    var count = counts[pair.Key];
+                    var groupedList = state.CreateList(count);
+                    for (var i = 0; i < count; i++) groupedList.Items[i] = pair.Value[i];
+                    var groupedValue = state.CreateNothing();
+                    groupedValue.SetList(groupedList);
+                    map[pair.Key] = groupedValue;
+                }
+
+                state.Register(destinationSlot).SetMap(new VmMapObject(state, map));
+                return;
+            }
+            case Map or Custom when source.ObjectValue is VmMapObject mapSource:
+            {
+                var values = mapSource.ValueList;
+                var groups = new Dictionary<string, VmValue[]>(StringComparer.Ordinal);
+                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                var key = state.CreateNothing();
+                for (var i = 0; i < values.Length; i++)
+                {
+                    var item = values.Items[i];
+                    if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
+                    {
+                        state.Register(destinationSlot).SetNothing();
+                        return;
+                    }
+
+                    var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
+                    if (!groups.TryGetValue(keyText, out var bucket))
+                    {
+                        bucket = state.CreateRegisterArray(4);
+                        groups[keyText] = bucket;
+                        counts[keyText] = 0;
+                    }
+
+                    var count = counts[keyText];
+                    if (count == bucket.Length)
+                    {
+                        var resized = state.CreateRegisterArray(bucket.Length << 1);
+                        Array.Copy(bucket, resized, bucket.Length);
+                        bucket = resized;
+                        groups[keyText] = bucket;
+                    }
+
+                    bucket[count] = item;
+                    counts[keyText] = count + 1;
+                }
+
+                var map = new Dictionary<string, VmValue>(groups.Count, StringComparer.Ordinal);
+                foreach (var pair in groups)
+                {
+                    var count = counts[pair.Key];
+                    var groupedList = state.CreateList(count);
+                    for (var i = 0; i < count; i++) groupedList.Items[i] = pair.Value[i];
+                    var groupedValue = state.CreateNothing();
+                    groupedValue.SetList(groupedList);
+                    map[pair.Key] = groupedValue;
+                }
+
+                state.Register(destinationSlot).SetMap(new VmMapObject(state, map));
+                return;
+            }
+            case Stream when source.ObjectValue is IVmStream stream:
+            {
+                var groups = new Dictionary<string, VmValue[]>(StringComparer.Ordinal);
+                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                var item = state.CreateNothing();
+                var key = state.CreateNothing();
+                try
+                {
+                    while (stream.TryNext(ref item))
+                    {
+                        if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
+                        {
+                            state.Register(destinationSlot).SetNothing();
+                            return;
+                        }
+
+                        var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
+                        if (!groups.TryGetValue(keyText, out var bucket))
+                        {
+                            bucket = state.CreateRegisterArray(4);
+                            groups[keyText] = bucket;
+                            counts[keyText] = 0;
+                        }
+
+                        var count = counts[keyText];
+                        if (count == bucket.Length)
+                        {
+                            var resized = state.CreateRegisterArray(bucket.Length << 1);
+                            Array.Copy(bucket, resized, bucket.Length);
+                            bucket = resized;
+                            groups[keyText] = bucket;
+                        }
+
+                        bucket[count] = item;
+                        counts[keyText] = count + 1;
+                    }
+                }
+                finally
+                {
+                    if (stream is IDisposable disposable) disposable.Dispose();
+                }
+
+                var map = new Dictionary<string, VmValue>(groups.Count, StringComparer.Ordinal);
+                foreach (var pair in groups)
+                {
+                    var count = counts[pair.Key];
+                    var groupedList = state.CreateList(count);
+                    for (var i = 0; i < count; i++) groupedList.Items[i] = pair.Value[i];
+                    var groupedValue = state.CreateNothing();
+                    groupedValue.SetList(groupedList);
+                    map[pair.Key] = groupedValue;
+                }
+
+                state.Register(destinationSlot).SetMap(new VmMapObject(state, map));
+                return;
+            }
+            default:
+                state.Register(destinationSlot).SetNothing();
+                return;
+        }
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

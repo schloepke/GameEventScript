@@ -3248,7 +3248,36 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+            if (source.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Map))
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var groups = new Dictionary<string, List<GameEventScriptValue>>(StringComparer.Ordinal);
+            foreach (var item in source.AsEnumerable())
+            {
+                if (!TryEvaluatePipelineEntryValue(instruction.AU, instruction.YSlot, BytecodeVmValue.FromGameEventScriptValue(item), out var keyValue))
+                {
+                    return false;
+                }
+
+                var key = keyValue.ToGameEventScriptValue().AsText();
+                if (!groups.TryGetValue(key, out var bucket))
+                {
+                    bucket = [];
+                    groups[key] = bucket;
+                }
+
+                bucket.Add(item);
+            }
+
+            return DefineSlot(
+                instruction.DestinationSlot,
+                BytecodeVmValue.Reference(GameEventScriptValueFactory.GesMap(groups.ToDictionary(
+                    pair => pair.Key,
+                    pair => GameEventScriptValueFactory.GesList(pair.Value),
+                    StringComparer.Ordinal))));
         }
 
         if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)

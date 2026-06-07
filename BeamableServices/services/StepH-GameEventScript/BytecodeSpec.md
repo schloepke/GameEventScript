@@ -1174,6 +1174,12 @@ ranges, maps, scalars, and `nothing` sources produce `nothing`.
 streams only; direct dice, range, map, scalar, and `nothing` sources produce
 `nothing`.
 
+`GroupBy` accepts lists, maps/custom map-backed values, and streams. It returns
+a map from projected key text to lists of matching source items. Direct maps
+group visible values in stable key order. Direct dice, ranges, text, tags,
+scalars, and `nothing` sources produce `nothing`; dice and ranges may only be
+grouped after being explicitly transformed into streams.
+
 `KeysOfMap`, `ValuesOfMap`, and `EntriesOfMap` are strict map/custom-type
 projection opcodes. They are not general enumerable materializers. Map-backed
 custom type values follow the same rules as maps. Successful projections use

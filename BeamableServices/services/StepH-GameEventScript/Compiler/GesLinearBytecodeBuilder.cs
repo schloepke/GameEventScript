@@ -1847,6 +1847,15 @@ internal sealed class GesLinearBytecodeBuilder
                         orderBy.Projection,
                         context,
                         state);
+
+                case GroupBySelectorNode groupBy:
+                    return EmitPipelineEntryTerminal(
+                        GameEventScriptBytecodeOpCode.GroupBy,
+                        sourceSlot,
+                        context.RequireSlot(groupBy.Identifier),
+                        groupBy.Projection,
+                        context,
+                        state);
             }
         }
 

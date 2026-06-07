@@ -261,7 +261,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeTypesAndValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeTypesAndValues(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     public static string GetConformanceCaseDisplayName(MethodInfo methodInfo, object[] data)
         => FormatConformanceCaseDisplayName(methodInfo, data);

@@ -62,7 +62,7 @@
     {
       "kind": "scriptApi",
       "name": "create vector and point values",
-      "script": "module AtomicCreateVectorPointValues\non Start {\n  let vectorValue be :vector(1, 2.5, 3)\n  let pointValue be :point(4, 5.5, 6)\n  emit Done(vectorValue: vectorValue, pointValue: pointValue)\n}",
+      "script": "module AtomicCreateVectorPointValues\non Start {\n  let vectorValue be :vector(1, 2.5, 3)\n  let pointValue be :point(4, 5.5, 6)\n  let liftedVector be :vector(vectorValue)\n  let liftedVectorWithZ be :vector(vectorValue, 9)\n  let vectorFromPoint be :vector(pointValue)\n  let liftedPoint be :point(pointValue)\n  let liftedPointWithZ be :point(pointValue, 8)\n  let pointFromVector be :point(vectorValue)\n  let unitVector be :vector(3m, 4m)\n  let unitLiftedVector be :vector(unitVector)\n  let unitLiftedVectorWithZ be :vector(unitVector, 20m)\n  let unitPoint be :point(3m, 4m)\n  let unitLiftedPointWithZ be :point(unitPoint, 20m)\n  emit Done(vectorValue: vectorValue, pointValue: pointValue, liftedVector: liftedVector, liftedVectorWithZ: liftedVectorWithZ, vectorFromPoint: vectorFromPoint, liftedPoint: liftedPoint, liftedPointWithZ: liftedPointWithZ, pointFromVector: pointFromVector, unitVector: unitVector, unitLiftedVector: unitLiftedVector, unitLiftedVectorWithZ: unitLiftedVectorWithZ, unitPoint: unitPoint, unitLiftedPointWithZ: unitLiftedPointWithZ)\n}",
       "steps": [
         {
           "input": {
@@ -75,6 +75,77 @@
               "args": {
                 "pointValue": {
                   "type": ":point",
+                  "x": "4",
+                  "y": "5.5",
+                  "z": "6"
+                },
+                "liftedPoint": {
+                  "type": ":point",
+                  "x": "4",
+                  "y": "5.5",
+                  "z": "6"
+                },
+                "liftedPointWithZ": {
+                  "type": ":point",
+                  "x": "4",
+                  "y": "5.5",
+                  "z": "8"
+                },
+                "liftedVector": {
+                  "type": ":vector",
+                  "x": "1",
+                  "y": "2.5",
+                  "z": "3"
+                },
+                "liftedVectorWithZ": {
+                  "type": ":vector",
+                  "x": "1",
+                  "y": "2.5",
+                  "z": "9"
+                },
+                "pointFromVector": {
+                  "type": ":point",
+                  "x": "1",
+                  "y": "2.5",
+                  "z": "3"
+                },
+                "unitLiftedPointWithZ": {
+                  "type": ":point",
+                  "unit": ":meter",
+                  "x": "3",
+                  "y": "4",
+                  "z": "20"
+                },
+                "unitLiftedVector": {
+                  "type": ":vector",
+                  "unit": ":meter",
+                  "x": "3",
+                  "y": "4",
+                  "z": "0"
+                },
+                "unitLiftedVectorWithZ": {
+                  "type": ":vector",
+                  "unit": ":meter",
+                  "x": "3",
+                  "y": "4",
+                  "z": "20"
+                },
+                "unitPoint": {
+                  "type": ":point",
+                  "unit": ":meter",
+                  "x": "3",
+                  "y": "4",
+                  "z": "0"
+                },
+                "unitVector": {
+                  "type": ":vector",
+                  "unit": ":meter",
+                  "x": "3",
+                  "y": "4",
+                  "z": "0"
+                },
+                "vectorFromPoint": {
+                  "type": ":vector",
                   "x": "4",
                   "y": "5.5",
                   "z": "6"

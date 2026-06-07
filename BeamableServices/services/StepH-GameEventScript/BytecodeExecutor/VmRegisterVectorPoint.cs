@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -9,6 +10,43 @@ internal static class VmRegisterVectorPoint
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateVector(ref this VmValue dst, short start, VmState state)
     {
+        if (start == 0 && state.StageLength > 0)
+        {
+            ref var first = ref state.RegisterStaged(0);
+            switch (first.Kind)
+            {
+                case Vector:
+                case Point:
+                    if (state.StageLength > 2)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    if (first.ObjectValue is not VmFloatTriplet triplet)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    var liftedZ = triplet.Z;
+                    var liftedUnit = first.Unit;
+                    if (state.StageLength > 1)
+                    {
+                        ref var zSlot = ref state.RegisterStaged(1);
+                        liftedZ = zSlot.AsNumericWithUnit(out var liftedUnitZ);
+                        if (double.IsNaN(liftedZ) || liftedUnit != liftedUnitZ)
+                        {
+                            dst.SetNothing();
+                            return;
+                        }
+                    }
+
+                    dst.SetVector(triplet.X, triplet.Y, liftedZ, liftedUnit);
+                    return;
+            }
+        }
+
         ushort i = 0;
         var unitX = UnitNothing;
         var unitY = UnitNothing;
@@ -42,6 +80,43 @@ internal static class VmRegisterVectorPoint
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreatePoint(ref this VmValue dst, short start, VmState state)
     {
+        if (start == 0 && state.StageLength > 0)
+        {
+            ref var first = ref state.RegisterStaged(0);
+            switch (first.Kind)
+            {
+                case Vector:
+                case Point:
+                    if (state.StageLength > 2)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    if (first.ObjectValue is not VmFloatTriplet triplet)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    var liftedZ = triplet.Z;
+                    var liftedUnit = first.Unit;
+                    if (state.StageLength > 1)
+                    {
+                        ref var zSlot = ref state.RegisterStaged(1);
+                        liftedZ = zSlot.AsNumericWithUnit(out var liftedUnitZ);
+                        if (double.IsNaN(liftedZ) || liftedUnit != liftedUnitZ)
+                        {
+                            dst.SetNothing();
+                            return;
+                        }
+                    }
+
+                    dst.SetPoint(triplet.X, triplet.Y, liftedZ, liftedUnit);
+                    return;
+            }
+        }
+
         ushort i = 0;
         var unitX = UnitNothing;
         var unitY = UnitNothing;

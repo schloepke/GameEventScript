@@ -156,122 +156,122 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMathMatrixCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMathMatrix(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicEqualityCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicEquality(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCompareCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCompare(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMemberIndexAccessCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMemberIndexAccess(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicBooleanLogicCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicBooleanLogic(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCreateValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCreateValues(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCastsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCasts(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCustomTypesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCustomTypes(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicCollectionOperatorsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicCollectionOperators(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicControlFlow(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicSeriesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicSeries(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicStreamCoreCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicStreamCore(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicStreamTerminalsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicStreamTerminals(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicSortGroupDistinctCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicSortGroupDistinct(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeControlFlow(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeExtensionsSequencesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeExtensionsSequences(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeHostDispatchCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeHostDispatch(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeMessagesHandlers(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimePredicatesFunctionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimePredicatesFunctions(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimePublishTagsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimePublishTags(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeRandomDiceRangesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeRandomDiceRanges(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeTypesAndValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeTypesAndValues(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase, false);
+        => RunNewVirtualMachineConformanceCase(testCase);
 
     public static string GetConformanceCaseDisplayName(MethodInfo methodInfo, object[] data)
         => FormatConformanceCaseDisplayName(methodInfo, data);
@@ -281,7 +281,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
 public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScriptJsonConformanceTestBase
 {
     [TestMethod]
-    public void NewVirtualMachineConformanceSmokeIsSoft()
+    public void NewVirtualMachineConformanceSmoke()
     {
         var allCases = GameEventScriptConformanceRunner.AllConformanceCases(SpecDirectory);
         var testCases = allCases
@@ -334,7 +334,7 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
         }
 
         TestContext.WriteLine(
-            $"New VM conformance ({(NewVirtualMachineConformanceSoftAssertions ? "soft" : "strict")}): " +
+            "New VM conformance (strict): " +
             $"{result.PassRate:P1} reached ({result.Passed}/{result.Attempted} targeted runtime scriptApi cases passed). " +
             $"allCases={result.TotalCases}, targeted={result.TargetedCases}, skippedNonRuntime={result.SkippedNonRuntimeCases}, " +
             $"mismatches={result.Mismatches}, compileFailures={result.CompileFailures}, runtimeFailures={result.RuntimeFailures}");
@@ -360,7 +360,7 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
         }
 
         Assert.IsGreaterThan(0, result.Attempted);
-        if (!NewVirtualMachineConformanceSoftAssertions && result.Failed > 0)
+        if (result.Failed > 0)
         {
             Assert.Fail(
                 $"New VM strict conformance failed: {result.Failed}/{result.Attempted} targeted runtime case(s) failed. " +
@@ -371,7 +371,6 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
 
 public abstract class GameEventScriptJsonConformanceTestBase
 {
-    protected const bool NewVirtualMachineConformanceSoftAssertions = true;
     protected static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
 
     public TestContext TestContext { get; set; } = null!;
@@ -537,7 +536,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
     protected static void RunJsonConformanceCase(GameEventScriptConformanceCase testCase)
         => GameEventScriptConformanceRunner.RunCase(testCase);
 
-    protected void RunNewVirtualMachineConformanceCase(GameEventScriptConformanceCase testCase, bool softRun = NewVirtualMachineConformanceSoftAssertions)
+    protected void RunNewVirtualMachineConformanceCase(GameEventScriptConformanceCase testCase)
     {
         var outcome = RunNewVirtualMachineCase(testCase);
         TestContext.WriteLine($"{outcome.Status}: {testCase}: {outcome.Detail}");
@@ -546,7 +545,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
             TestContext.WriteLine(outcome.DebugDump);
         }
 
-        if (!softRun && !outcome.Passed)
+        if (!outcome.Passed)
         {
             Assert.Fail($"{outcome.Status}: {testCase}: {outcome.Detail}");
         }

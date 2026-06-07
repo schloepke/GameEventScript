@@ -291,7 +291,7 @@ public static class GameEventScriptBinaryDumper
             ProjectionEntry => context.CodeLabel(instruction.AU),
             KeyEntry => context.CodeLabel(instruction.AU),
             ValueEntry => context.CodeLabel(instruction.BU),
-            FaceEntry => context.CodeLabel(instruction.AU),
+            FaceEntry => context.CodeLabel(instruction.BU),
             WeightEntry => context.CodeLabel(instruction.BU),
 
             GameEventScriptOpcodePrinter.OperandPart.String => FormatTextReference(context, instruction.StringIndex),
@@ -299,6 +299,7 @@ public static class GameEventScriptBinaryDumper
             Tag => FormatTextReference(context, instruction.StringIndex),
             MemberName => FormatTextReference(context, instruction.StringIndex),
             TypeKind => instruction.TypeKind.ToString(),
+            PatternKind => ((GameEventScriptBytecodePatternKind)instruction.AU).ToString(),
             CustomTypeName => FormatTextReference(context, instruction.SecondaryStringIndex),
             TypeName => FormatTextReference(context, instruction.StringIndex),
 
@@ -387,7 +388,7 @@ public static class GameEventScriptBinaryDumper
                     break;
                 case KeyEntry:
                 case FaceEntry:
-                    AddCodeEntryComment(comments, context, instruction.AU);
+                    AddCodeEntryComment(comments, context, instruction.BU);
                     break;
                 case ValueEntry:
                 case WeightEntry:
@@ -835,7 +836,7 @@ public static class GameEventScriptBinaryDumper
                     break;
                 case KeyEntry:
                 case FaceEntry:
-                    AddCodeLabel(labels, binary, instruction.AU);
+                    AddCodeLabel(labels, binary, instruction.BU);
                     break;
                 case ValueEntry:
                 case WeightEntry:

@@ -311,14 +311,13 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field ListBuilderCreate = 180
   enum-field ListBuilderAdd = 181
   enum-field ListBuilderFinish = 182
-  enum-field PipelineDicePatternCountAny = 208
-  enum-field PipelineDicePatternCountFace = 209
-  enum-field PipelineDicePatternFullHouse = 210
-  enum-field PipelineDicePatternStraight = 211
-  enum-field PipelineTakePatternCountAny = 212
-  enum-field PipelineTakePatternCountFace = 213
-  enum-field PipelineTakePatternFullHouse = 214
-  enum-field PipelineTakePatternStraight = 215
+  enum-field HasPattern = 183
+  enum-field TakePattern = 184
+enum StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind
+  enum-field CountAny = 0
+  enum-field CountFace = 1
+  enum-field FullHouse = 2
+  enum-field Straight = 3
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }

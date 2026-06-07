@@ -389,26 +389,15 @@ separate approximate-equality opcode.
 | 0xB4 | `ListBuilderCreate` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated collections. |
 | 0xB5 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
 | 0xB6 | `ListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the list builder as a list. |
-
-### Group 4 - Pipeline Operations
-
-| Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xD0 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
-| 0xD1 | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
-| 0xD2 | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
-| 0xD3 | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
-| 0xD4 | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
-| 0xD5 | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
-| 0xD6 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
-| 0xD7 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xB7 | `HasPattern` | - | result slot | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
+| 0xB8 | `TakePattern` | - | result slot | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
 
 ### Reserved Opcode Space
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xB7..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
-| 0xE4..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
+| 0xB9..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
+| 0xD0..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

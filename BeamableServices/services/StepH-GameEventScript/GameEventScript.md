@@ -891,10 +891,31 @@ Dice and dice-like collections support pattern selectors:
 ```ges
 roll[:has pair]
 roll[:has three of a kind]
+roll[:has pair of 6]
+cards[:has four of 'King']
 roll[:has full house]
 roll[:has straight]
 roll[:take pair]
 ```
+
+Pattern selectors are defined for dice and lists. Other values are not pattern
+sequences: `:has ...` yields `false`, while `:take ...` yields `nothing`.
+
+Count patterns use normal value equality. `pair` means at least two equal
+values. `three/four/five/six/seven of a kind` mean at least that many equal
+values. `... of expression` checks the concrete evaluated face/value instead.
+
+`full house` is exact: the sequence must contain exactly two distinct values
+with counts `3` and `2`. For `:take full house`, the first triple in source
+order and then the first matching pair in source order are returned.
+
+`straight` is numeric/integer based. It coerces each item to its integer value,
+ignores duplicate integers, sorts the unique integers descending, and requires
+the whole unique sequence to be consecutive with no gaps. This is intended for
+dice and numeric dice-like lists today; non-numeric card names need an explicit
+future value model before they can express rank-based straights reliably.
+
+`:take ...` returns dice for dice sources and lists for list sources.
 
 Object matching checks map-like structures:
 

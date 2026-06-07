@@ -526,24 +526,18 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlotListPoolIndex(builder, "captures", module, instruction.CU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
+            case GameEventScriptBytecodeOpCode.HasPattern:
+            case GameEventScriptBytecodeOpCode.TakePattern:
                 AppendSlot(builder, "iterator", instruction.XSlot);
-                AppendIndex(builder, "count", instruction.ImmediateY);
-                break;
-
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
-                AppendSlot(builder, "iterator", instruction.XSlot);
-                AppendIndex(builder, "count", instruction.ImmediateY);
-                AppendAddress(builder, "faceEntry", instruction.AU);
-                break;
-
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
-                AppendSlot(builder, "iterator", instruction.XSlot);
+                AppendPatternKind(builder, instruction.AU);
+                if (instruction.AU is (ushort)GameEventScriptBytecodePatternKind.CountAny or (ushort)GameEventScriptBytecodePatternKind.CountFace)
+                {
+                    AppendIndex(builder, "count", instruction.ImmediateY);
+                }
+                if (instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace)
+                {
+                    AppendAddress(builder, "faceEntry", instruction.BU);
+                }
                 break;
 
             case GameEventScriptBytecodeOpCode.Term:
@@ -835,6 +829,19 @@ public static class GameEventScriptBytecodeDumper
         if (value >= 0)
         {
             builder.Append(' ').Append(name).Append("=@").Append(FormatAddress(value));
+        }
+    }
+
+    private static void AppendPatternKind(StringBuilder builder, ushort value)
+    {
+        builder.Append(" pattern=");
+        if (Enum.IsDefined(typeof(GameEventScriptBytecodePatternKind), value))
+        {
+            builder.Append((GameEventScriptBytecodePatternKind)value);
+        }
+        else
+        {
+            builder.Append('#').Append(value.ToString(CultureInfo.InvariantCulture));
         }
     }
 

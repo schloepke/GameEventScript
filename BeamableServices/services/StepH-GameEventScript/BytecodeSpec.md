@@ -375,9 +375,9 @@ future decoders. The current groups are:
 0x80 Group 3: collection slicing, text/collection operators, map projections
 0x90 Group 3 element terminals, iterators, streams, and stream terminals
 0xA0 Group 3 stream extrema, stream collect terminals, distinct/group/sort/order operators
-0xB0 Group 3 order operators and reserved tail before pipeline operations
-0xC0 reserved before pipeline operations
-0xD0 Group 4 pipeline transforms, dice/pattern terminals, and generated-list builders
+0xB0 Group 3 order operators, generated-list builders, pattern operators, and reserved tail
+0xC0 reserved for future stream or pipeline operations
+0xD0 reserved for future pipeline, extension, or VM opcodes
 0xE0 reserved for future pipeline, extension, or VM opcodes
 0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
@@ -1241,10 +1241,13 @@ return `nothing`.
 
 Fixed terminal opcodes cover materializers and operations that need full
 collection semantics: map, distinct, group/order/sort/reverse, weighted
-choose/shuffle, dice patterns, object matches, and series term/take/drop
-operations. These opcodes reference only iterator slots, helper
-entry addresses, immediate counts, and binding slots; there are no pipeline
-selector, pattern, or object-pattern pools.
+choose/shuffle, dice/card patterns, object matches, and series term/take/drop
+operations. Pattern operations use `HasPattern` or `TakePattern` with `AU`
+holding a `GameEventScriptBytecodePatternKind` value. `CountAny` and
+`CountFace` use `ImmediateY` as the required count; `CountFace` additionally
+uses `BU` as the face helper entry address. These opcodes reference only source
+or iterator slots, helper entry addresses, immediate counts, pattern ids, and
+binding slots; there are no pipeline selector, pattern, or object-pattern pools.
 
 Streaming/materialization contract:
 

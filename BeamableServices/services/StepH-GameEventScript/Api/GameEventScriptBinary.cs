@@ -177,6 +177,14 @@ public enum GameEventScriptBytecodeTypeKind : byte
     Custom = 0xFF,
 }
 
+public enum GameEventScriptBytecodePatternKind : ushort
+{
+    CountAny = 0x00,
+    CountFace = 0x01,
+    FullHouse = 0x02,
+    Straight = 0x03,
+}
+
 [JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GameEventScriptBytecodeInstruction
@@ -451,19 +459,8 @@ public enum GameEventScriptBytecodeOpCode : byte
     ListBuilderCreate = 0xB4,
     ListBuilderAdd = 0xB5,
     ListBuilderFinish = 0xB6,
-
-    #endregion
-
-    #region Group 4 - pipeline terminals and transforms
-
-    PipelineDicePatternCountAny = 0xD0,
-    PipelineDicePatternCountFace = 0xD1,
-    PipelineDicePatternFullHouse = 0xD2,
-    PipelineDicePatternStraight = 0xD3,
-    PipelineTakePatternCountAny = 0xD4,
-    PipelineTakePatternCountFace = 0xD5,
-    PipelineTakePatternFullHouse = 0xD6,
-    PipelineTakePatternStraight = 0xD7
+    HasPattern = 0xB7,
+    TakePattern = 0xB8,
 
     #endregion
 }

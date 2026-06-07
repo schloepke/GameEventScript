@@ -107,9 +107,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                        CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline) &&
                        CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
-                return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
+            case GameEventScriptBytecodeOpCode.HasPattern:
+            case GameEventScriptBytecodeOpCode.TakePattern:
+                return instruction.AU != (ushort)GameEventScriptBytecodePatternKind.CountFace ||
+                       allowPipeline && CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.StreamOneWeighted:
             case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
@@ -1271,15 +1272,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
                 return TryExecutePipelineChoose(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
-                return TryExecutePipelineDicePattern(instruction);
+            case GameEventScriptBytecodeOpCode.HasPattern:
+            case GameEventScriptBytecodeOpCode.TakePattern:
+                return TryExecutePattern(instruction);
 
             case GameEventScriptBytecodeOpCode.Term:
             case GameEventScriptBytecodeOpCode.TakeFirst:
@@ -3642,7 +3637,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return number.Value;
     }
 
-    private bool TryExecutePipelineDicePattern(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecutePattern(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
         {
@@ -3657,29 +3652,22 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         if (!IsPatternSequence(target))
         {
-            var isTakePattern = instruction.OpCode is
-                GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny or
-                GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace or
-                GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse or
-                GameEventScriptBytecodeOpCode.PipelineTakePatternStraight;
+            var isTakePattern = instruction.OpCode == GameEventScriptBytecodeOpCode.TakePattern;
             return DefineSlot(instruction.DestinationSlot, isTakePattern ? BytecodeVmValue.Nothing : BytecodeVmValue.Boolean(false));
         }
 
         var counts = items.GroupBy(item => item).ToDictionary(group => group.Key, group => group.Count());
-        var isTake = instruction.OpCode is
-            GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny or
-            GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace or
-            GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse or
-            GameEventScriptBytecodeOpCode.PipelineTakePatternStraight;
+        var isTake = instruction.OpCode == GameEventScriptBytecodeOpCode.TakePattern;
+        var patternKind = (GameEventScriptBytecodePatternKind)instruction.AU;
 
         if (!isTake)
         {
-            var matches = instruction.OpCode switch
+            var matches = patternKind switch
             {
-                GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny => counts.Values.Any(count => count >= instruction.ImmediateY),
-                GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace => TryEvaluatePatternFaceCount(counts, instruction.AU, instruction.ImmediateY, out var faceMatches) && faceMatches,
-                GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse => counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 }),
-                GameEventScriptBytecodeOpCode.PipelineDicePatternStraight => MatchStraight(items),
+                GameEventScriptBytecodePatternKind.CountAny => counts.Values.Any(count => count >= instruction.ImmediateY),
+                GameEventScriptBytecodePatternKind.CountFace => TryEvaluatePatternFaceCount(counts, instruction.BU, instruction.ImmediateY, out var faceMatches) && faceMatches,
+                GameEventScriptBytecodePatternKind.FullHouse => counts.Count == 2 && counts.Values.OrderByDescending(x => x).SequenceEqual(new[] { 3, 2 }),
+                GameEventScriptBytecodePatternKind.Straight => MatchStraight(items),
                 _ => false
             };
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Boolean(matches));
@@ -3718,10 +3706,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
         IReadOnlyDictionary<GameEventScriptValue, int> counts,
         out IReadOnlyList<GameEventScriptValue> takenItems)
     {
-        switch (instruction.OpCode)
+        switch ((GameEventScriptBytecodePatternKind)instruction.AU)
         {
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
-                if (!TryEvaluateLinearHelperExpression(instruction.AU, out var face))
+            case GameEventScriptBytecodePatternKind.CountFace:
+                if (!TryEvaluateLinearHelperExpression(instruction.BU, out var face))
                 {
                     takenItems = [];
                     return false;
@@ -3737,7 +3725,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 takenItems = [];
                 return false;
 
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
+            case GameEventScriptBytecodePatternKind.CountAny:
                 foreach (var candidate in EnumerateDistinctInSourceOrder(items))
                 {
                     if (counts.TryGetValue(candidate, out var candidateCount) && candidateCount >= instruction.ImmediateY)
@@ -3750,10 +3738,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 takenItems = [];
                 return false;
 
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
+            case GameEventScriptBytecodePatternKind.FullHouse:
                 return TryTakeFullHouse(items, counts, out takenItems);
 
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
+            case GameEventScriptBytecodePatternKind.Straight:
                 return TryTakeStraight(items, out takenItems);
 
             default:

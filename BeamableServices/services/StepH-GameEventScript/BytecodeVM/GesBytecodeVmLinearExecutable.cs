@@ -499,12 +499,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.HasAll:
             case GameEventScriptBytecodeOpCode.Reverse:
             case GameEventScriptBytecodeOpCode.Shuffle:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternStraight:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 break;
 
@@ -546,10 +540,13 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlotListIndex(module, instruction.CU, $"{context} capture slot list");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:
-            case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
+            case GameEventScriptBytecodeOpCode.HasPattern:
+            case GameEventScriptBytecodeOpCode.TakePattern:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
-                ValidateEntryAddress(module, code, instruction.AU, $"{context} face entry");
+                if (instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace)
+                {
+                    ValidateEntryAddress(module, code, instruction.BU, $"{context} face entry");
+                }
                 break;
 
             case GameEventScriptBytecodeOpCode.Term:

@@ -5,6 +5,7 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal interface IVmStream
 {
     public bool TryNext(ref VmValue value);
+    public bool IsPatternSequence => false;
 }
 
 internal interface IVmStreamEntryEvaluator
@@ -76,6 +77,7 @@ internal class VmListStream(VmListObject list) : IVmStream, IDisposable
 {
     private int _current;
     private VmListObject? _list = list;
+    public bool IsPatternSequence => true;
 
     public bool TryNext(ref VmValue value)
     {
@@ -100,6 +102,7 @@ internal class VmIntStream(int[] values) : IVmStream, IDisposable
 {
     private int _current;
     private int[]? _values = values;
+    public bool IsPatternSequence => true;
 
     public bool TryNext(ref VmValue value)
     {
@@ -181,6 +184,7 @@ internal sealed class VmTransformStream(
     private IVmStream? _source = source;
     private VmValue _item = ownerState.CreateNothing();
     private VmValue _result = ownerState.CreateNothing();
+    public bool IsPatternSequence { get; } = source.IsPatternSequence;
 
     public bool TryNext(ref VmValue value)
     {

@@ -648,31 +648,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         #endregion
 
-                        #region Group 4 - pipeline terminals and transforms
+                        #region Group 3 - pattern operations
 
-                        case PipelineDicePatternCountAny:
-                            // FIXME: creating the real custom type here
+                        case HasPattern:
+                            vmState.Register(instruction.DestinationSlot).VmHasPattern(ref vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this, instruction.DestinationSlot);
                             break;
-                        case PipelineDicePatternCountFace:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDicePatternFullHouse:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDicePatternStraight:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineTakePatternCountAny:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineTakePatternCountFace:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineTakePatternFullHouse:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineTakePatternStraight:
-                            // FIXME: creating the real custom type here
+                        case TakePattern:
+                            vmState.Register(instruction.DestinationSlot).VmTakePattern(ref vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this, instruction.DestinationSlot);
                             break;
 
                         #endregion

@@ -71,6 +71,7 @@ public class GameEventScriptOpcodePrinter
         Tag,
         MemberName,
         TypeKind,
+        PatternKind,
         CustomTypeName,
         TypeName,
 
@@ -251,17 +252,19 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.OrderByDescending => [TargetRegister, SourceRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.Reverse => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.Shuffle => [TargetRegister, SourceRegister],
-            GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny => [TargetRegister, IteratorRegister, CountImmediate],
-            GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace => [TargetRegister, IteratorRegister, CountImmediate, FaceEntry],
-            GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineDicePatternStraight => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny => [TargetRegister, IteratorRegister, CountImmediate],
-            GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace => [TargetRegister, IteratorRegister, CountImmediate, FaceEntry],
-            GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineTakePatternStraight => [TargetRegister, IteratorRegister],
             GameEventScriptBytecodeOpCode.ListBuilderCreate => [TargetRegister],
             GameEventScriptBytecodeOpCode.ListBuilderAdd => [BuilderRegister, ItemRegister],
             GameEventScriptBytecodeOpCode.ListBuilderFinish => [TargetRegister, BuilderRegister],
+            GameEventScriptBytecodeOpCode.HasPattern => instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace
+                ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceEntry]
+                : instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountAny
+                    ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate]
+                    : [TargetRegister, IteratorRegister, PatternKind],
+            GameEventScriptBytecodeOpCode.TakePattern => instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace
+                ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceEntry]
+                : instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountAny
+                    ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate]
+                    : [TargetRegister, IteratorRegister, PatternKind],
 
             _ => throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null)
         };

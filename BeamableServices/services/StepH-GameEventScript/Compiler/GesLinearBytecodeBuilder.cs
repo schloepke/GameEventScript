@@ -2114,10 +2114,10 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitPipelineChoose(iteratorSlot, choose, context, state);
 
             case PatternSelectorNode pattern:
-                return EmitPipelineDicePattern(iteratorSlot, pattern.Pattern, take: false, context, state);
+                return EmitPattern(iteratorSlot, pattern.Pattern, take: false, context, state);
 
             case TakePatternSelectorNode takePattern:
-                return EmitPipelineDicePattern(iteratorSlot, takePattern.Pattern, take: true, context, state);
+                return EmitPattern(iteratorSlot, takePattern.Pattern, take: true, context, state);
 
             case ObjectMatchSelectorNode objectMatch:
                 return EmitPipelineObjectMatch(iteratorSlot, objectMatch.Pattern, context, state);
@@ -2311,7 +2311,7 @@ internal sealed class GesLinearBytecodeBuilder
         return resultSlot;
     }
 
-    private int EmitPipelineDicePattern(
+    private int EmitPattern(
         int iteratorSlot,
         DicePatternNode pattern,
         bool take,
@@ -2319,14 +2319,16 @@ internal sealed class GesLinearBytecodeBuilder
         ExpressionState state)
     {
         var resultSlot = AllocateSlot(state);
+        var opCode = take ? GameEventScriptBytecodeOpCode.TakePattern : GameEventScriptBytecodeOpCode.HasPattern;
         switch (pattern)
         {
             case DiceCountPatternNode count:
             {
-                var opCode = take
-                    ? count.Face is null ? GameEventScriptBytecodeOpCode.PipelineTakePatternCountAny : GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace
-                    : count.Face is null ? GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny : GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace;
-                var instructionAddress = Emit(CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot, b: count.Count));
+                var instruction = CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot, b: count.Count);
+                instruction.AU = (ushort)(count.Face is null
+                    ? GameEventScriptBytecodePatternKind.CountAny
+                    : GameEventScriptBytecodePatternKind.CountFace);
+                var instructionAddress = Emit(instruction);
                 if (count.Face is not null)
                 {
                     var helperBaseSlot = state.NextSlot;
@@ -2334,7 +2336,7 @@ internal sealed class GesLinearBytecodeBuilder
                     {
                         var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot);
                         var entryAddress = EmitSourceExpressionEntry(count.Face, context, helperState, helperState.BaseSlot);
-                        PatchC(instructionAddress, entryAddress);
+                        PatchD(instructionAddress, entryAddress);
                     });
                 }
 
@@ -2342,18 +2344,20 @@ internal sealed class GesLinearBytecodeBuilder
             }
 
             case DiceFullHousePatternNode:
-                Emit(CreateInstruction(
-                    take ? GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse : GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse,
-                    dest: resultSlot,
-                    a: iteratorSlot));
+            {
+                var instruction = CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot);
+                instruction.AU = (ushort)GameEventScriptBytecodePatternKind.FullHouse;
+                Emit(instruction);
                 return resultSlot;
+            }
 
             case DiceStraightPatternNode:
-                Emit(CreateInstruction(
-                    take ? GameEventScriptBytecodeOpCode.PipelineTakePatternStraight : GameEventScriptBytecodeOpCode.PipelineDicePatternStraight,
-                    dest: resultSlot,
-                    a: iteratorSlot));
+            {
+                var instruction = CreateInstruction(opCode, dest: resultSlot, a: iteratorSlot);
+                instruction.AU = (ushort)GameEventScriptBytecodePatternKind.Straight;
+                Emit(instruction);
                 return resultSlot;
+            }
 
             default:
                 throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support dice pattern '{pattern.GetType().Name}'.");

@@ -157,24 +157,52 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCastCustom(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer)
+    internal static void VmCastCustom(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer, ushort destinationSlot)
     {
-        var typeName = dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer);
-        if (!IsCustomType(ref xSlot, typeName, ref dst.OwningState.Binary.TextConstantTable))
+        var state = dst.OwningState;
+        var typeName = state.Binary.TextConstantTable.Resolve(typeTextPointer);
+        if (IsCustomType(ref xSlot, typeName, ref state.Binary.TextConstantTable))
         {
+            if (xSlot.ObjectValue is VmMapObject typedMap)
+            {
+                dst.SetRecord(typedMap);
+                return;
+            }
+
+            if (xSlot.Kind is Custom)
+            {
+                dst = xSlot;
+                return;
+            }
+
             dst.SetNothing();
             return;
         }
 
-        if (xSlot.ObjectValue is VmMapObject map)
+        if (xSlot.Kind is Map && xSlot.ObjectValue is VmMapObject map)
         {
-            dst.SetRecord(map);
-            return;
-        }
+            for (ushort recordId = 0; recordId < state.RecordConstructors.Length; recordId++)
+            {
+                var bind = state.RecordConstructors[recordId];
+                if (bind.Kind is not GameEventScriptBinaryBindKind.Record ||
+                    !string.Equals(state.Binary.TextConstantTable.Resolve(bind.Name), typeName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
 
-        if (xSlot.Kind is Custom)
-        {
-            dst = xSlot;
+                state.ClearStage();
+                for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
+                {
+                    var argumentName = state.Binary.TextConstantTable.Resolve(bind.ArgumentNames[argumentIndex]);
+                    if (map.TryGet(argumentName, out var argument)) state.StageValue(ref argument);
+                    else state.StageNothing();
+                }
+
+                state.CallRecordConstructor(recordId, destinationSlot);
+                return;
+            }
+
+            dst.SetNothing();
             return;
         }
 

@@ -221,7 +221,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeControlFlowCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -231,7 +231,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeExtensionsSequencesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeExtensionsSequences(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeHostDispatchCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -246,7 +246,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimePredicatesFunctionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimePredicatesFunctions(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimePublishTagsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
@@ -256,7 +256,7 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeRandomDiceRangesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeRandomDiceRanges(GameEventScriptConformanceCase testCase)
-        => RunNewVirtualMachineConformanceCase(testCase);
+        => RunNewVirtualMachineConformanceCase(testCase, false);
 
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeTypesAndValuesCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]

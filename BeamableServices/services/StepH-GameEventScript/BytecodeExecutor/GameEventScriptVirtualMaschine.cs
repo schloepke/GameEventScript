@@ -206,7 +206,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmCast(ref vmState.Register(instruction.XSlot), instruction.TypeKind);
                             break;
                         case CastCustom:
-                            vmState.Register(instruction.DestinationSlot).VmCastCustom(ref vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
+                            vmState.Register(instruction.DestinationSlot).VmCastCustom(ref vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, instruction.DestinationSlot);
                             break;
                         case CastUnit:
                             vmState.Register(instruction.DestinationSlot).VmCastUnit(ref vmState.Register(instruction.XSlot), instruction.Unit);

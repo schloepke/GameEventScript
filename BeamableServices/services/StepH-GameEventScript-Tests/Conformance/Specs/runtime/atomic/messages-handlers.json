@@ -125,6 +125,359 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "message input values roundtrip unchanged",
+      "script": "module AtomicMessageInputRoundtrip\non Echo(nothingValue, falseValue, trueValue, integerValue, floatValue, infinityValue, unitInteger, unitFloat, percentageValue, textValue, emptyText, tagValue, vectorValue, unitVector, pointValue, unitPoint, listValue, emptyList, mapValue, emptyMap, customValue, diceValue, rangeValue, floatRangeValue, nestedMessage) {\n  emit Done(nothingValue: nothingValue, falseValue: falseValue, trueValue: trueValue, integerValue: integerValue, floatValue: floatValue, infinityValue: infinityValue, unitInteger: unitInteger, unitFloat: unitFloat, percentageValue: percentageValue, textValue: textValue, emptyText: emptyText, tagValue: tagValue, vectorValue: vectorValue, unitVector: unitVector, pointValue: pointValue, unitPoint: unitPoint, listValue: listValue, emptyList: emptyList, mapValue: mapValue, emptyMap: emptyMap, customValue: customValue, diceValue: diceValue, rangeValue: rangeValue, floatRangeValue: floatRangeValue, nestedMessage: nestedMessage)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Echo",
+            "args": {
+              "nothingValue": {
+                "type": ":nothing"
+              },
+              "falseValue": {
+                "type": ":boolean",
+                "value": false
+              },
+              "trueValue": {
+                "type": ":boolean",
+                "value": true
+              },
+              "integerValue": {
+                "type": ":integer",
+                "value": "42"
+              },
+              "floatValue": {
+                "type": ":float",
+                "value": "10.75"
+              },
+              "infinityValue": {
+                "type": ":float",
+                "value": "Infinity"
+              },
+              "unitInteger": {
+                "type": ":integer",
+                "value": "7",
+                "unit": ":meter"
+              },
+              "unitFloat": {
+                "type": ":float",
+                "value": "90",
+                "unit": ":degree"
+              },
+              "percentageValue": {
+                "type": ":percentage",
+                "value": "0.25"
+              },
+              "textValue": {
+                "type": ":text",
+                "value": "Hello"
+              },
+              "emptyText": {
+                "type": ":text",
+                "value": ""
+              },
+              "tagValue": {
+                "type": ":tag",
+                "value": "ready"
+              },
+              "vectorValue": {
+                "type": ":vector",
+                "x": "1.5",
+                "y": "-2",
+                "z": "3"
+              },
+              "unitVector": {
+                "type": ":vector",
+                "x": "1",
+                "y": "2",
+                "z": "3",
+                "unit": ":meter"
+              },
+              "pointValue": {
+                "type": ":point",
+                "x": "4",
+                "y": "5",
+                "z": "6"
+              },
+              "unitPoint": {
+                "type": ":point",
+                "x": "7",
+                "y": "8",
+                "z": "9",
+                "unit": ":meter"
+              },
+              "listValue": {
+                "type": ":list",
+                "items": [
+                  {
+                    "type": ":integer",
+                    "value": "1"
+                  },
+                  {
+                    "type": ":text",
+                    "value": "two"
+                  },
+                  {
+                    "type": ":tag",
+                    "value": "three"
+                  }
+                ]
+              },
+              "emptyList": {
+                "type": ":list",
+                "items": []
+              },
+              "mapValue": {
+                "type": ":map",
+                "entries": {
+                  "alpha": {
+                    "type": ":integer",
+                    "value": "1"
+                  },
+                  "beta": {
+                    "type": ":text",
+                    "value": "two"
+                  }
+                }
+              },
+              "emptyMap": {
+                "type": ":map",
+                "entries": {}
+              },
+              "customValue": {
+                "type": ":Unit",
+                "entries": {
+                  "hp": {
+                    "type": ":integer",
+                    "value": "7"
+                  },
+                  "name": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
+                }
+              },
+              "diceValue": {
+                "type": ":dice",
+                "rolls": [
+                  6,
+                  5,
+                  2
+                ]
+              },
+              "rangeValue": {
+                "type": ":range",
+                "from": "1",
+                "to": "3",
+                "step": "1"
+              },
+              "floatRangeValue": {
+                "type": ":range",
+                "from": "1.5",
+                "to": "3.5",
+                "step": "0.5"
+              },
+              "nestedMessage": {
+                "type": ":message",
+                "message": {
+                  "name": "Nested",
+                  "tags": [
+                    "inner",
+                    "debug"
+                  ],
+                  "args": {
+                    "amount": {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    "payload": {
+                      "type": ":text",
+                      "value": "ok"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "falseValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "trueValue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "integerValue": {
+                  "type": ":integer",
+                  "value": "42"
+                },
+                "floatValue": {
+                  "type": ":float",
+                  "value": "10.75"
+                },
+                "infinityValue": {
+                  "type": ":float",
+                  "value": "Infinity"
+                },
+                "unitInteger": {
+                  "type": ":integer",
+                  "value": "7",
+                  "unit": ":meter"
+                },
+                "unitFloat": {
+                  "type": ":float",
+                  "value": "90",
+                  "unit": ":degree"
+                },
+                "percentageValue": {
+                  "type": ":percentage",
+                  "value": "0.25"
+                },
+                "textValue": {
+                  "type": ":text",
+                  "value": "Hello"
+                },
+                "emptyText": {
+                  "type": ":text",
+                  "value": ""
+                },
+                "tagValue": {
+                  "type": ":tag",
+                  "value": "ready"
+                },
+                "vectorValue": {
+                  "type": ":vector",
+                  "x": "1.5",
+                  "y": "-2",
+                  "z": "3"
+                },
+                "unitVector": {
+                  "type": ":vector",
+                  "x": "1",
+                  "y": "2",
+                  "z": "3",
+                  "unit": ":meter"
+                },
+                "pointValue": {
+                  "type": ":point",
+                  "x": "4",
+                  "y": "5",
+                  "z": "6"
+                },
+                "unitPoint": {
+                  "type": ":point",
+                  "x": "7",
+                  "y": "8",
+                  "z": "9",
+                  "unit": ":meter"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "two"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "three"
+                    }
+                  ]
+                },
+                "emptyList": {
+                  "type": ":list",
+                  "items": []
+                },
+                "mapValue": {
+                  "type": ":map",
+                  "entries": {
+                    "alpha": {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    "beta": {
+                      "type": ":text",
+                      "value": "two"
+                    }
+                  }
+                },
+                "emptyMap": {
+                  "type": ":map",
+                  "entries": {}
+                },
+                "customValue": {
+                  "type": ":Unit",
+                  "entries": {
+                    "hp": {
+                      "type": ":integer",
+                      "value": "7"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Knight"
+                    }
+                  }
+                },
+                "diceValue": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    5,
+                    2
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
+                },
+                "floatRangeValue": {
+                  "type": ":range",
+                  "from": "1.5",
+                  "to": "3.5",
+                  "step": "0.5"
+                },
+                "nestedMessage": {
+                  "type": ":message",
+                  "message": {
+                    "name": "Nested",
+                    "tags": [
+                      "inner",
+                      "debug"
+                    ],
+                    "args": {
+                      "amount": {
+                        "type": ":integer",
+                        "value": "12"
+                      },
+                      "payload": {
+                        "type": ":text",
+                        "value": "ok"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

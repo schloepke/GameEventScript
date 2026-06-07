@@ -201,6 +201,7 @@ internal static class VmRegisterCallExternal
                 break;
             case GameEventScriptValueKind.Number:
                 if (argument.IsInteger()) destination.SetInteger(argument.AsInteger(), argument.Unit);
+                else if (argument.IsInfinity()) destination.SetFloat(argument.IsNegativeInfinity() ? double.NegativeInfinity : double.PositiveInfinity, argument.Unit);
                 else destination.SetFloat(argument.AsNumber(), argument.Unit);
                 break;
             case GameEventScriptValueKind.Boolean:

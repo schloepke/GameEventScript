@@ -1160,6 +1160,10 @@ PipelineListBuilderAdd builder item
 PipelineListBuilderFinish dst builder
 ```
 
+`Distinct` accepts lists, dice, and streams. `DistinctBy` accepts lists and
+streams only; direct dice, range, map, scalar, and `nothing` sources produce
+`nothing`.
+
 `KeysOfMap`, `ValuesOfMap`, and `EntriesOfMap` are strict map/custom-type
 projection opcodes. They are not general enumerable materializers. Map-backed
 custom type values follow the same rules as maps. Successful projections use

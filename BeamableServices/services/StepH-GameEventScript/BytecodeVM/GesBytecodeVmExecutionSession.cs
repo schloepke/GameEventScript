@@ -3135,10 +3135,72 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+            if (instruction.OpCode == GameEventScriptBytecodeOpCode.DistinctBy)
+            {
+                if (source.Kind != GameEventScriptValueKind.List)
+                {
+                    return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+                }
+
+                var directDistinctByItems = new List<GameEventScriptValue>();
+                var directDistinctBySeenKeys = new HashSet<GameEventScriptValue>();
+                foreach (var item in source.AsList())
+                {
+                    if (!TryEvaluatePipelineEntryValue(
+                            instruction.AU,
+                            instruction.YSlot,
+                            BytecodeVmValue.FromGameEventScriptValue(item),
+                            out var keyValue))
+                    {
+                        return false;
+                    }
+
+                    if (directDistinctBySeenKeys.Add(keyValue.ToGameEventScriptValue()))
+                    {
+                        directDistinctByItems.Add(item);
+                    }
+                }
+
+                return DefineSlot(
+                    instruction.DestinationSlot,
+                    BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(directDistinctByItems)));
+            }
+
+            if (instruction.OpCode != GameEventScriptBytecodeOpCode.Distinct)
+            {
+                return false;
+            }
+
+            if (source.Kind == GameEventScriptValueKind.Series)
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var directItems = new List<GameEventScriptValue>();
+            var directSeenKeys = new HashSet<GameEventScriptValue>();
+            foreach (var item in source.AsEnumerable())
+            {
+                if (directSeenKeys.Add(item))
+                {
+                    directItems.Add(item);
+                }
+            }
+
+            return DefineSlot(
+                instruction.DestinationSlot,
+                BytecodeVmValue.FromGameEventScriptValue(MaterializeDistinctItems(source, directItems)));
         }
 
         if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+        {
+            iterator.Dispose();
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+        }
+
+        if (instruction.OpCode == GameEventScriptBytecodeOpCode.DistinctBy &&
+            !iterator.IsTransformed &&
+            iterator.SourceTarget.Kind != GameEventScriptValueKind.List)
         {
             iterator.Dispose();
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
@@ -7057,8 +7119,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return target.Kind switch
         {
             GameEventScriptValueKind.List => GameEventScriptValueFactory.GesList(items),
-            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesList(items),
-            GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(items),
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(items.Select(item => (int)item.AsInteger()))),
             _ => GameEventScriptNothingValue.Instance
         };
     }

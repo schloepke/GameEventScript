@@ -800,6 +800,12 @@ units[:distinct by unit => unit.kind]
 units[:group by unit => unit.team]
 ```
 
+`:distinct` is defined for lists, dice, and streams. Lists keep their first
+occurrence order, dice keep their dice result type, and streams materialize a
+list. `:distinct by` is defined only for lists and streams because the
+projection operates on structured items. Dice and other non-list values yield
+`nothing` for `:distinct by`.
+
 ### Map Selector
 
 The `:map` selector builds a map. Without a value projection, the selected item

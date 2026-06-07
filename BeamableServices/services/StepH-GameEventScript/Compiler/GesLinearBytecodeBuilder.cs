@@ -1831,6 +1831,12 @@ internal sealed class GesLinearBytecodeBuilder
             }
         }
 
+        if (prefixCount == 0 &&
+            terminal is DistinctSelectorNode fastDistinct)
+        {
+            return EmitDistinct(sourceSlot, fastDistinct, context, state);
+        }
+
         var iteratorSlot = AllocateSlot(state);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StreamCreate, dest: iteratorSlot, a: sourceSlot));
         for (var index = 0; index < prefixCount; index++)

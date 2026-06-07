@@ -2026,11 +2026,11 @@ internal sealed class GesLinearBytecodeBuilder
             }
 
             case DistinctSelectorNode distinct:
-                return EmitPipelineDistinct(iteratorSlot, distinct, context, state);
+                return EmitDistinct(iteratorSlot, distinct, context, state);
 
             case GroupBySelectorNode groupBy:
                 return EmitPipelineEntryTerminal(
-                    GameEventScriptBytecodeOpCode.PipelineGroupBy,
+                    GameEventScriptBytecodeOpCode.GroupBy,
                     iteratorSlot,
                     context.RequireSlot(groupBy.Identifier),
                     groupBy.Projection,
@@ -2040,8 +2040,8 @@ internal sealed class GesLinearBytecodeBuilder
             case OrderBySelectorNode orderBy:
                 return EmitPipelineEntryTerminal(
                     string.Equals(orderBy.Direction, "descending", StringComparison.Ordinal)
-                        ? GameEventScriptBytecodeOpCode.PipelineOrderByDescending
-                        : GameEventScriptBytecodeOpCode.PipelineOrderByAscending,
+                        ? GameEventScriptBytecodeOpCode.OrderByDescending
+                        : GameEventScriptBytecodeOpCode.OrderByAscending,
                     iteratorSlot,
                     context.RequireSlot(orderBy.Identifier),
                     orderBy.Projection,
@@ -2052,8 +2052,8 @@ internal sealed class GesLinearBytecodeBuilder
                 return EmitValueInstruction(
                     state,
                     string.Equals(sort.Direction, "descending", StringComparison.Ordinal)
-                        ? GameEventScriptBytecodeOpCode.PipelineSortDescending
-                        : GameEventScriptBytecodeOpCode.PipelineSortAscending,
+                        ? GameEventScriptBytecodeOpCode.SortDescending
+                        : GameEventScriptBytecodeOpCode.SortAscending,
                     a: iteratorSlot);
 
             case ReverseSelectorNode:
@@ -2149,7 +2149,7 @@ internal sealed class GesLinearBytecodeBuilder
         return resultSlot;
     }
 
-    private int EmitPipelineDistinct(
+    private int EmitDistinct(
         int iteratorSlot,
         DistinctSelectorNode distinct,
         SourceContext context,
@@ -2157,11 +2157,11 @@ internal sealed class GesLinearBytecodeBuilder
     {
         if (distinct.Projection is null || string.IsNullOrEmpty(distinct.Identifier))
         {
-            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineDistinct, a: iteratorSlot);
+            return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Distinct, a: iteratorSlot);
         }
 
         return EmitPipelineEntryTerminal(
-            GameEventScriptBytecodeOpCode.PipelineDistinctBy,
+            GameEventScriptBytecodeOpCode.DistinctBy,
             iteratorSlot,
             context.RequireSlot(distinct.Identifier!),
             distinct.Projection,

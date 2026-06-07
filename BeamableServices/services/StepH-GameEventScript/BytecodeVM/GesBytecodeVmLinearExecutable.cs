@@ -497,10 +497,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.StreamAverage:
             case GameEventScriptBytecodeOpCode.HasAny:
             case GameEventScriptBytecodeOpCode.HasAll:
-            case GameEventScriptBytecodeOpCode.PipelineDistinct:
             case GameEventScriptBytecodeOpCode.PipelineReverse:
-            case GameEventScriptBytecodeOpCode.PipelineSortAscending:
-            case GameEventScriptBytecodeOpCode.PipelineSortDescending:
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
             case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
@@ -511,6 +508,12 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 break;
 
+            case GameEventScriptBytecodeOpCode.Distinct:
+            case GameEventScriptBytecodeOpCode.SortAscending:
+            case GameEventScriptBytecodeOpCode.SortDescending:
+                ValidateSlot(module, instruction.XSlot, $"{context} source slot");
+                break;
+
             case GameEventScriptBytecodeOpCode.StreamMin:
             case GameEventScriptBytecodeOpCode.StreamMax:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
@@ -519,11 +522,11 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectMap:
-            case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
-            case GameEventScriptBytecodeOpCode.PipelineGroupBy:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
-                ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
+            case GameEventScriptBytecodeOpCode.DistinctBy:
+            case GameEventScriptBytecodeOpCode.GroupBy:
+            case GameEventScriptBytecodeOpCode.OrderByAscending:
+            case GameEventScriptBytecodeOpCode.OrderByDescending:
+                ValidateSlot(module, instruction.XSlot, $"{context} source slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.AU, $"{context} entry");
                 break;

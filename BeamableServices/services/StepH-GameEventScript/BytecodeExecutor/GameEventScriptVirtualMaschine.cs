@@ -610,32 +610,32 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case HasAll:
                             vmState.Register(instruction.DestinationSlot).VmHasAll(ref vmState.Register(instruction.XSlot));
                             break;
+                        case Distinct:
+                            vmState.Register(instruction.DestinationSlot).VmDistinct(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case DistinctBy:
+                            vmState.Register(instruction.DestinationSlot).VmDistinctBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            break;
+                        case GroupBy:
+                            vmState.Register(instruction.DestinationSlot).VmGroupBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            break;
+                        case SortAscending:
+                            vmState.Register(instruction.DestinationSlot).VmSortAscending(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case SortDescending:
+                            vmState.Register(instruction.DestinationSlot).VmSortDescending(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case OrderByAscending:
+                            vmState.Register(instruction.DestinationSlot).VmOrderByAscending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            break;
+                        case OrderByDescending:
+                            vmState.Register(instruction.DestinationSlot).VmOrderByDescending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            break;
                         #endregion
 
                         #region Group 4 - pipeline terminals and transforms
 
-                        case PipelineDistinct:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineDistinctBy:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineGroupBy:
-                            // FIXME: creating the real custom type here
-                            break;
                         case PipelineReverse:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineSortAscending:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineSortDescending:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineOrderByAscending:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineOrderByDescending:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineShuffle:

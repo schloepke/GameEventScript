@@ -377,37 +377,37 @@ separate approximate-equality opcode.
 | 0xA8 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
 | 0xA9 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
 | 0xAA | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
+| 0xAB | `Distinct` | - | result slot | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
+| 0xAC | `DistinctBy` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
+| 0xAD | `GroupBy` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct collection fast paths and streams. |
+| 0xAE | `SortAscending` | - | result slot | `XSlot`=source | - | - | Sorts source items ascending. Supports direct collection fast paths and streams. |
+| 0xAF | `SortDescending` | - | result slot | `XSlot`=source | - | - | Sorts source items descending. Supports direct collection fast paths and streams. |
+| 0xB0 | `OrderByAscending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct collection fast paths and streams. |
+| 0xB1 | `OrderByDescending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct collection fast paths and streams. |
 
 ### Group 4 - Pipeline Operations
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xD0 | `PipelineDistinct` | - | result slot | `XSlot`=iterator | - | - | Materializes distinct source items in source order. |
-| 0xD1 | `PipelineDistinctBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. |
-| 0xD2 | `PipelineGroupBy` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. |
-| 0xD3 | `PipelineReverse` | - | result slot | `XSlot`=iterator | - | - | Materializes source items in reverse order. |
-| 0xD4 | `PipelineSortAscending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items ascending. |
-| 0xD5 | `PipelineSortDescending` | - | result slot | `XSlot`=iterator | - | - | Sorts source items descending. |
-| 0xD6 | `PipelineOrderByAscending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. |
-| 0xD7 | `PipelineOrderByDescending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. |
-| 0xD8 | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
-| 0xD9 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
-| 0xDA | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
-| 0xDB | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
-| 0xDC | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
-| 0xDD | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
-| 0xDE | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
-| 0xDF | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
-| 0xE0 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
-| 0xE1 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
-| 0xE2 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xE3 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
+| 0xD0 | `PipelineReverse` | - | result slot | `XSlot`=iterator | - | - | Materializes source items in reverse order. |
+| 0xD1 | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
+| 0xD2 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
+| 0xD3 | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
+| 0xD4 | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
+| 0xD5 | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
+| 0xD6 | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
+| 0xD7 | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
+| 0xD8 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
+| 0xD9 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xDA | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
+| 0xDB | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xDC | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
 
 ### Reserved Opcode Space
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xAB..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
+| 0xB2..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
 | 0xE4..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary

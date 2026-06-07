@@ -299,26 +299,26 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field StreamCollectList = 168
   enum-field StreamCollectMap = 169
   enum-field StreamCollectMapValue = 170
-  enum-field PipelineDistinct = 208
-  enum-field PipelineDistinctBy = 209
-  enum-field PipelineGroupBy = 210
-  enum-field PipelineReverse = 211
-  enum-field PipelineSortAscending = 212
-  enum-field PipelineSortDescending = 213
-  enum-field PipelineOrderByAscending = 214
-  enum-field PipelineOrderByDescending = 215
-  enum-field PipelineShuffle = 216
-  enum-field PipelineDicePatternCountAny = 217
-  enum-field PipelineDicePatternCountFace = 218
-  enum-field PipelineDicePatternFullHouse = 219
-  enum-field PipelineDicePatternStraight = 220
-  enum-field PipelineTakePatternCountAny = 221
-  enum-field PipelineTakePatternCountFace = 222
-  enum-field PipelineTakePatternFullHouse = 223
-  enum-field PipelineTakePatternStraight = 224
-  enum-field PipelineListCreateBuilder = 225
-  enum-field PipelineListBuilderAdd = 226
-  enum-field PipelineListBuilderFinish = 227
+  enum-field Distinct = 171
+  enum-field DistinctBy = 172
+  enum-field GroupBy = 173
+  enum-field SortAscending = 174
+  enum-field SortDescending = 175
+  enum-field OrderByAscending = 176
+  enum-field OrderByDescending = 177
+  enum-field PipelineReverse = 208
+  enum-field PipelineShuffle = 209
+  enum-field PipelineDicePatternCountAny = 210
+  enum-field PipelineDicePatternCountFace = 211
+  enum-field PipelineDicePatternFullHouse = 212
+  enum-field PipelineDicePatternStraight = 213
+  enum-field PipelineTakePatternCountAny = 214
+  enum-field PipelineTakePatternCountFace = 215
+  enum-field PipelineTakePatternFullHouse = 216
+  enum-field PipelineTakePatternStraight = 217
+  enum-field PipelineListCreateBuilder = 218
+  enum-field PipelineListBuilderAdd = 219
+  enum-field PipelineListBuilderFinish = 220
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }

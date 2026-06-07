@@ -95,10 +95,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StreamMax:
                 return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
-            case GameEventScriptBytecodeOpCode.PipelineGroupBy:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
+            case GameEventScriptBytecodeOpCode.DistinctBy:
+            case GameEventScriptBytecodeOpCode.GroupBy:
+            case GameEventScriptBytecodeOpCode.OrderByAscending:
+            case GameEventScriptBytecodeOpCode.OrderByDescending:
             case GameEventScriptBytecodeOpCode.StreamCollectMap:
                 return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
 
@@ -1246,23 +1246,23 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.StreamCollectMapValue:
                 return TryExecuteStreamCollectMap(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineDistinct:
-            case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
-                return TryExecutePipelineDistinct(instruction);
+            case GameEventScriptBytecodeOpCode.Distinct:
+            case GameEventScriptBytecodeOpCode.DistinctBy:
+                return TryExecuteDistinct(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineGroupBy:
-                return TryExecutePipelineGroupBy(instruction);
+            case GameEventScriptBytecodeOpCode.GroupBy:
+                return TryExecuteGroupBy(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineReverse:
                 return TryExecutePipelineReverse(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineSortAscending:
-            case GameEventScriptBytecodeOpCode.PipelineSortDescending:
-                return TryExecutePipelineSort(instruction);
+            case GameEventScriptBytecodeOpCode.SortAscending:
+            case GameEventScriptBytecodeOpCode.SortDescending:
+                return TryExecuteSort(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
-                return TryExecutePipelineOrderBy(instruction);
+            case GameEventScriptBytecodeOpCode.OrderByAscending:
+            case GameEventScriptBytecodeOpCode.OrderByDescending:
+                return TryExecuteOrderBy(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
                 return TryExecutePipelineShuffle(instruction);
@@ -3131,7 +3131,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineDistinct(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteDistinct(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
@@ -3152,7 +3152,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
             while (iterator.TryMoveNext(out var item))
             {
                 GameEventScriptValue key;
-                if (instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineDistinctBy)
+                if (instruction.OpCode == GameEventScriptBytecodeOpCode.DistinctBy)
                 {
                     if (!TryEvaluatePipelineEntryValue(instruction.AU, instruction.YSlot, item, out var keyValue))
                     {
@@ -3182,7 +3182,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineGroupBy(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteGroupBy(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
@@ -3244,7 +3244,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(EvaluateReverseSelector(target, items)));
     }
 
-    private bool TryExecutePipelineSort(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteSort(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
         {
@@ -3262,10 +3262,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
             BytecodeVmValue.FromGameEventScriptValue(GesCollectionOperations.Sort(
                 target,
                 items,
-                instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineSortDescending ? "descending" : "ascending")));
+                instruction.OpCode == GameEventScriptBytecodeOpCode.SortDescending ? "descending" : "ascending")));
     }
 
-    private bool TryExecutePipelineOrderBy(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteOrderBy(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
@@ -3292,7 +3292,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pairs.Add((item.ToGameEventScriptValue(), key.ToGameEventScriptValue()));
             }
 
-            var comparer = instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineOrderByDescending
+            var comparer = instruction.OpCode == GameEventScriptBytecodeOpCode.OrderByDescending
                 ? Comparer<GameEventScriptValue>.Create((left, right) => GameEventScriptValue.StableComparer.Compare(right, left))
                 : GameEventScriptValue.StableComparer;
             var ordered = pairs.OrderBy(pair => pair.Key, comparer).Select(pair => pair.Item).ToArray();

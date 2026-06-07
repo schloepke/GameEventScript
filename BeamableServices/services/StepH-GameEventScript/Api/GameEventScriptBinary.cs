@@ -439,31 +439,31 @@ public enum GameEventScriptBytecodeOpCode : byte
     StreamCollectList = 0xA8,
     StreamCollectMap = 0xA9,
     StreamCollectMapValue = 0xAA,
+    Distinct = 0xAB,
+    DistinctBy = 0xAC,
+    GroupBy = 0xAD,
+    SortAscending = 0xAE,
+    SortDescending = 0xAF,
+    OrderByAscending = 0xB0,
+    OrderByDescending = 0xB1,
 
     #endregion
 
     #region Group 4 - pipeline terminals and transforms
 
-    PipelineDistinct = 0xD0,
-    PipelineDistinctBy = 0xD1,
-    PipelineGroupBy = 0xD2,
-    PipelineReverse = 0xD3,
-    PipelineSortAscending = 0xD4,
-    PipelineSortDescending = 0xD5,
-    PipelineOrderByAscending = 0xD6,
-    PipelineOrderByDescending = 0xD7,
-    PipelineShuffle = 0xD8,
-    PipelineDicePatternCountAny = 0xD9,
-    PipelineDicePatternCountFace = 0xDA,
-    PipelineDicePatternFullHouse = 0xDB,
-    PipelineDicePatternStraight = 0xDC,
-    PipelineTakePatternCountAny = 0xDD,
-    PipelineTakePatternCountFace = 0xDE,
-    PipelineTakePatternFullHouse = 0xDF,
-    PipelineTakePatternStraight = 0xE0,
-    PipelineListCreateBuilder = 0xE1,
-    PipelineListBuilderAdd = 0xE2,
-    PipelineListBuilderFinish = 0xE3
+    PipelineReverse = 0xD0,
+    PipelineShuffle = 0xD1,
+    PipelineDicePatternCountAny = 0xD2,
+    PipelineDicePatternCountFace = 0xD3,
+    PipelineDicePatternFullHouse = 0xD4,
+    PipelineDicePatternStraight = 0xD5,
+    PipelineTakePatternCountAny = 0xD6,
+    PipelineTakePatternCountFace = 0xD7,
+    PipelineTakePatternFullHouse = 0xD8,
+    PipelineTakePatternStraight = 0xD9,
+    PipelineListCreateBuilder = 0xDA,
+    PipelineListBuilderAdd = 0xDB,
+    PipelineListBuilderFinish = 0xDC
 
     #endregion
 }

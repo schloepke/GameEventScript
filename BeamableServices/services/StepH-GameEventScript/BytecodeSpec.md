@@ -374,11 +374,11 @@ future decoders. The current groups are:
 0x70 reserved after compacting math and series into Group 2
 0x80 Group 3: collection slicing, text/collection operators, map projections
 0x90 Group 3 element terminals, iterators, streams, and stream terminals
-0xA0 Group 3 stream extrema, stream collect terminals, and reserved tail
-0xB0 reserved before pipeline operations
+0xA0 Group 3 stream extrema, stream collect terminals, distinct/group/sort/order operators
+0xB0 Group 3 order operators and reserved tail before pipeline operations
 0xC0 reserved before pipeline operations
-0xD0 Group 4 pipeline terminals, transforms, ordering, random terminals, and builders
-0xE0 Group 4 pipeline dice/pattern terminals, generated-list builders, and reserved tail
+0xD0 Group 4 pipeline transforms, dice/pattern terminals, and generated-list builders
+0xE0 reserved for future pipeline, extension, or VM opcodes
 0xF0 reserved for future pipeline, extension, or VM opcodes
 ```
 
@@ -1144,6 +1144,13 @@ StreamTakeWeighted dst iterator count itemBindingSlot weightEntry captureSlotLis
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
+Distinct dst source
+DistinctBy dst source itemBindingSlot keyEntry
+GroupBy dst source itemBindingSlot keyEntry
+SortAscending dst source
+SortDescending dst source
+OrderByAscending dst source itemBindingSlot keyEntry
+OrderByDescending dst source itemBindingSlot keyEntry
 OneRandom dst source
 TakeRandom dst source count
 First/Last/Single dst source

@@ -469,10 +469,16 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.StreamCount:
             case GameEventScriptBytecodeOpCode.StreamSum:
             case GameEventScriptBytecodeOpCode.StreamAverage:
-            case GameEventScriptBytecodeOpCode.PipelineDistinct:
+                AppendSlot(builder, "iterator", instruction.XSlot);
+                break;
+
+            case GameEventScriptBytecodeOpCode.Distinct:
+            case GameEventScriptBytecodeOpCode.SortAscending:
+            case GameEventScriptBytecodeOpCode.SortDescending:
+                AppendSlot(builder, "source", instruction.XSlot);
+                break;
+
             case GameEventScriptBytecodeOpCode.PipelineReverse:
-            case GameEventScriptBytecodeOpCode.PipelineSortAscending:
-            case GameEventScriptBytecodeOpCode.PipelineSortDescending:
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
@@ -490,11 +496,11 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectMap:
-            case GameEventScriptBytecodeOpCode.PipelineDistinctBy:
-            case GameEventScriptBytecodeOpCode.PipelineGroupBy:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByAscending:
-            case GameEventScriptBytecodeOpCode.PipelineOrderByDescending:
-                AppendSlot(builder, "iterator", instruction.XSlot);
+            case GameEventScriptBytecodeOpCode.DistinctBy:
+            case GameEventScriptBytecodeOpCode.GroupBy:
+            case GameEventScriptBytecodeOpCode.OrderByAscending:
+            case GameEventScriptBytecodeOpCode.OrderByDescending:
+                AppendSlot(builder, "source", instruction.XSlot);
                 AppendSlot(builder, "item", instruction.YSlot);
                 AppendAddress(builder, "entry", instruction.AU);
                 break;

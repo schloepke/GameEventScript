@@ -535,7 +535,8 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateEntryAddress(module, code, instruction.BU, $"{context} value entry");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+            case GameEventScriptBytecodeOpCode.StreamOneWeighted:
+            case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateSlot(module, instruction.AU, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.BU, $"{context} weight entry");

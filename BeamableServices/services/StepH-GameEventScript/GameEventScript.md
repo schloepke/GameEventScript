@@ -842,8 +842,9 @@ items[:choose 3 unit where unit.hp > 0 weighted by unit => unit.priority]
 equivalent to `:take first n`. Random choice uses random selection without
 replacement: `:choose 1 at random` returns one item or `nothing`, while
 `:choose n at random` returns up to `n` randomly selected items. Weighted
-choice evaluates the `weighted by` expression per candidate and chooses
-randomly from positive finite weights.
+choice evaluates the `weighted by` expression per candidate and chooses without
+replacement from positive finite weights. `:choose 1 weighted by ...` returns
+one item or `nothing`; `:choose n weighted by ...` returns a list.
 
 ### Dice Patterns and Object Matching
 

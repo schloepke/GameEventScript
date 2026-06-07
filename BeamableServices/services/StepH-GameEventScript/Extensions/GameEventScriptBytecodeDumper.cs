@@ -511,9 +511,13 @@ public static class GameEventScriptBytecodeDumper
                 AppendIndex(builder, "count", instruction.ImmediateY);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+            case GameEventScriptBytecodeOpCode.StreamOneWeighted:
+            case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
                 AppendSlot(builder, "iterator", instruction.XSlot);
-                AppendIndex(builder, "count", instruction.ImmediateY);
+                if (instruction.OpCode == GameEventScriptBytecodeOpCode.StreamTakeWeighted)
+                {
+                    AppendIndex(builder, "count", instruction.ImmediateY);
+                }
                 AppendSlot(builder, "item", instruction.AU);
                 AppendAddress(builder, "weightEntry", instruction.BU);
                 break;

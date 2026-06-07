@@ -275,6 +275,33 @@
     },
     {
       "kind": "scriptApi",
+      "name": "weighted choose lowers to stream weighted terminals",
+      "randomSequence": [
+        "9",
+        "0",
+        "8.99999",
+        "0"
+      ],
+      "script": "module AtomicWeightedChooseLowering\non Start {\n  let units be [[name: 'A', weight: 1], [name: 'B', weight: 3], [name: 'C', weight: 6], [name: 'Ignored', weight: 0]]\n  let liveUnits be units[:filter unit where unit.weight > 0]\n  let weightedOne be liveUnits[:choose 1 weighted by unit => unit.weight]\n  let weightedTwo be liveUnits[:choose 2 weighted by unit => unit.weight]\n  let weightedFilteredOne be units[:choose 1 unit where unit.name <> 'Ignored' weighted by unit => unit.weight]\n  emit Done(weightedOne: weightedOne.name, weighted_1: weightedTwo[1].name, weighted_2: weightedTwo[2].name, weightedFilteredOne: weightedFilteredOne.name)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "weightedOne": { "type": ":text", "value": "C" },
+                "weighted_1": { "type": ":text", "value": "A" },
+                "weighted_2": { "type": ":text", "value": "C" },
+                "weightedFilteredOne": { "type": ":text", "value": "A" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "choose lowers to first take first and random take",
       "randomSequence": [
         "2",

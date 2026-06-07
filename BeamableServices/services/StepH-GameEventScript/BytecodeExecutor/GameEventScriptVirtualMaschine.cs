@@ -581,6 +581,20 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot) = dst;
                             break;
                         }
+                        case StreamOneWeighted:
+                        {
+                            var dst = vmState.CreateNothing();
+                            VmRegisterStreamTerminals.VmStreamOneWeighted(ref dst, ref vmState.Register(instruction.XSlot), instruction.AU, instruction.BU, this, vmState.RandomGenerator);
+                            vmState.Register(instruction.DestinationSlot) = dst;
+                            break;
+                        }
+                        case StreamTakeWeighted:
+                        {
+                            var dst = vmState.CreateNothing();
+                            VmRegisterStreamTerminals.VmStreamTakeWeighted(ref dst, ref vmState.Register(instruction.XSlot), instruction.ImmediateY, instruction.AU, instruction.BU, this, vmState.RandomGenerator);
+                            vmState.Register(instruction.DestinationSlot) = dst;
+                            break;
+                        }
                         case StreamCollectList:
                             vmState.Register(instruction.DestinationSlot).VmStreamCollectList(ref vmState.Register(instruction.XSlot));
                             break;
@@ -625,9 +639,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineShuffle:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineChooseWeighted:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineDicePatternCountAny:

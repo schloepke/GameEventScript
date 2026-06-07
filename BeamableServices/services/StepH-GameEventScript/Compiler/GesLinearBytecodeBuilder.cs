@@ -2220,7 +2220,7 @@ internal sealed class GesLinearBytecodeBuilder
         var resultSlot = AllocateSlot(state);
         var itemSlot = context.RequireSlot(choose.WeightIdentifier!);
         var instructionAddress = Emit(CreateInstruction(
-            GameEventScriptBytecodeOpCode.PipelineChooseWeighted,
+            choose.Count == 1 ? GameEventScriptBytecodeOpCode.StreamOneWeighted : GameEventScriptBytecodeOpCode.StreamTakeWeighted,
             dest: resultSlot,
             a: iteratorSlot,
             b: choose.Count,

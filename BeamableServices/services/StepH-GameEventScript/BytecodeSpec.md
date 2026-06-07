@@ -1139,6 +1139,8 @@ StreamSum dst iterator
 StreamAverage dst iterator
 StreamMin dst iterator itemBindingSlot projectionEntry
 StreamMax dst iterator itemBindingSlot projectionEntry
+StreamOneWeighted dst iterator itemBindingSlot weightEntry
+StreamTakeWeighted dst iterator count itemBindingSlot weightEntry
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
@@ -1167,8 +1169,11 @@ when the source has more than one element. The DSL `:draw 1` selector lowers to
 `n > 1` lowers to `TakeFirst`. Random choice uses `OneRandom` for
 `:choose 1 at random` and `TakeRandom` for `:choose n at random`.
 `TakeRandom` chooses without replacement. Lists stay lists, dice stay dice,
-and ranges or streams materialize as lists. Weighted choice remains a pipeline
-terminal because it must evaluate a helper expression for every candidate.
+and ranges or streams materialize as lists. Weighted choice uses stream
+terminals because it must evaluate a helper expression for every candidate:
+`:choose 1 weighted by ...` lowers to `StreamOneWeighted` and returns one item
+or `nothing`; `:choose n weighted by ...` lowers to `StreamTakeWeighted` and
+returns a list with up to `n` items. Only positive finite weights participate.
 
 `StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
 iterator. Their helper entries run as isolated helper frames: the current source

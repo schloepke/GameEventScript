@@ -434,9 +434,11 @@ public enum GameEventScriptBytecodeOpCode : byte
     StreamAverage = 0xA3,
     StreamMin = 0xA4,
     StreamMax = 0xA5,
-    StreamCollectList = 0xA6,
-    StreamCollectMap = 0xA7,
-    StreamCollectMapValue = 0xA8,
+    StreamOneWeighted = 0xA6,
+    StreamTakeWeighted = 0xA7,
+    StreamCollectList = 0xA8,
+    StreamCollectMap = 0xA9,
+    StreamCollectMapValue = 0xAA,
 
     #endregion
 
@@ -451,18 +453,17 @@ public enum GameEventScriptBytecodeOpCode : byte
     PipelineOrderByAscending = 0xD6,
     PipelineOrderByDescending = 0xD7,
     PipelineShuffle = 0xD8,
-    PipelineChooseWeighted = 0xD9,
-    PipelineDicePatternCountAny = 0xDA,
-    PipelineDicePatternCountFace = 0xDB,
-    PipelineDicePatternFullHouse = 0xDC,
-    PipelineDicePatternStraight = 0xDD,
-    PipelineTakePatternCountAny = 0xDE,
-    PipelineTakePatternCountFace = 0xDF,
-    PipelineTakePatternFullHouse = 0xE0,
-    PipelineTakePatternStraight = 0xE1,
-    PipelineListCreateBuilder = 0xE2,
-    PipelineListBuilderAdd = 0xE3,
-    PipelineListBuilderFinish = 0xE4
+    PipelineDicePatternCountAny = 0xD9,
+    PipelineDicePatternCountFace = 0xDA,
+    PipelineDicePatternFullHouse = 0xDB,
+    PipelineDicePatternStraight = 0xDC,
+    PipelineTakePatternCountAny = 0xDD,
+    PipelineTakePatternCountFace = 0xDE,
+    PipelineTakePatternFullHouse = 0xDF,
+    PipelineTakePatternStraight = 0xE0,
+    PipelineListCreateBuilder = 0xE1,
+    PipelineListBuilderAdd = 0xE2,
+    PipelineListBuilderFinish = 0xE3
 
     #endregion
 }

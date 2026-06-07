@@ -372,9 +372,11 @@ separate approximate-equality opcode.
 | 0xA3 | `StreamAverage` | - | result slot | `XSlot`=iterator | - | - | Averages finite stream elements. Empty/series -> `nothing`. |
 | 0xA4 | `StreamMin` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
 | 0xA5 | `StreamMax` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
-| 0xA6 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xA7 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
-| 0xA8 | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
+| 0xA6 | `StreamOneWeighted` | - | result slot | `XSlot`=iterator | - | `AU`=item binding slot, `BU`=weight entry address | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
+| 0xA7 | `StreamTakeWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
+| 0xA8 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xA9 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
+| 0xAA | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
 
 ### Group 4 - Pipeline Operations
 
@@ -389,25 +391,24 @@ separate approximate-equality opcode.
 | 0xD6 | `PipelineOrderByAscending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. |
 | 0xD7 | `PipelineOrderByDescending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. |
 | 0xD8 | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
-| 0xD9 | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
-| 0xDA | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
-| 0xDB | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
-| 0xDC | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
-| 0xDD | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
-| 0xDE | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
-| 0xDF | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
-| 0xE0 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
-| 0xE1 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
-| 0xE2 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
-| 0xE3 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xE4 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
+| 0xD9 | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
+| 0xDA | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
+| 0xDB | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
+| 0xDC | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
+| 0xDD | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
+| 0xDE | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
+| 0xDF | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
+| 0xE0 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xE1 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
+| 0xE2 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xE3 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
 
 ### Reserved Opcode Space
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xA9..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
-| 0xE5..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
+| 0xAB..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
+| 0xE4..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

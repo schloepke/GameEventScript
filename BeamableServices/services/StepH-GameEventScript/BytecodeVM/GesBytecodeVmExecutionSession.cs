@@ -111,7 +111,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace:
                 return allowPipeline && CanExecuteLinearEntry(instruction.AU, visitingCallables, allowPipeline);
 
-            case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+            case GameEventScriptBytecodeOpCode.StreamOneWeighted:
+            case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
                 return allowPipeline && CanExecuteLinearEntry(instruction.BU, visitingCallables, allowPipeline);
 
             case GameEventScriptBytecodeOpCode.Call:
@@ -1266,7 +1267,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
                 return TryExecutePipelineShuffle(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
+            case GameEventScriptBytecodeOpCode.StreamOneWeighted:
+            case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
                 return TryExecutePipelineChoose(instruction);
 
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
@@ -3333,9 +3335,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
         }
 
-        var count = instruction.ImmediateY;
+        var count = instruction.OpCode == GameEventScriptBytecodeOpCode.StreamOneWeighted ? 1 : instruction.ImmediateY;
         IReadOnlyList<GameEventScriptValue> chosen;
-        if (instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineChooseWeighted)
+        if (instruction.OpCode is GameEventScriptBytecodeOpCode.StreamOneWeighted or GameEventScriptBytecodeOpCode.StreamTakeWeighted)
         {
             if (!TryChooseWeightedPipelineItems(items, count, instruction.AU, instruction.BU, out chosen))
             {

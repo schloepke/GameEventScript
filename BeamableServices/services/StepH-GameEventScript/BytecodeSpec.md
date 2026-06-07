@@ -1139,8 +1139,8 @@ StreamSum dst iterator
 StreamAverage dst iterator
 StreamMin dst iterator itemBindingSlot projectionEntry
 StreamMax dst iterator itemBindingSlot projectionEntry
-StreamOneWeighted dst iterator itemBindingSlot weightEntry
-StreamTakeWeighted dst iterator count itemBindingSlot weightEntry
+StreamOneWeighted dst iterator itemBindingSlot weightEntry captureSlotList
+StreamTakeWeighted dst iterator count itemBindingSlot weightEntry captureSlotList
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
@@ -1173,7 +1173,9 @@ and ranges or streams materialize as lists. Weighted choice uses stream
 terminals because it must evaluate a helper expression for every candidate:
 `:choose 1 weighted by ...` lowers to `StreamOneWeighted` and returns one item
 or `nothing`; `:choose n weighted by ...` lowers to `StreamTakeWeighted` and
-returns a list with up to `n` items. Only positive finite weights participate.
+returns a list with up to `n` items. The current source item is bound to the
+helper-local item slot, and the capture slot list is copied into helper-local
+slots starting at `1`. Only positive finite weights participate.
 
 `StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
 iterator. Their helper entries run as isolated helper frames: the current source

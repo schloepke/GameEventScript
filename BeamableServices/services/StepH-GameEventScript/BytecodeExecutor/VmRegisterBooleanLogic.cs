@@ -83,6 +83,14 @@ internal static class VmRegisterBooleanLogic
         {
             dst.SetNothing();
         }
+        else if (ratio <= 0d)
+        {
+            dst.SetBoolean(false);
+        }
+        else if (ratio >= 1d)
+        {
+            dst.SetBoolean(true);
+        }
         else
         {
             dst.SetBoolean(dst.OwningState.RandomGenerator.NextInclusiveFloat(0, 1.0) < ratio);

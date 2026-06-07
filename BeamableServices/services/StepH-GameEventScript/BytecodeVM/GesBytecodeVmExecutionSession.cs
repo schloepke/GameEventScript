@@ -3339,7 +3339,20 @@ internal sealed partial class GesBytecodeVmExecutionSession
         IReadOnlyList<GameEventScriptValue> chosen;
         if (instruction.OpCode is GameEventScriptBytecodeOpCode.StreamOneWeighted or GameEventScriptBytecodeOpCode.StreamTakeWeighted)
         {
-            if (!TryChooseWeightedPipelineItems(items, count, instruction.AU, instruction.BU, out chosen))
+            if (!TryGetUShortList(instruction.CU, out var captureSlots))
+            {
+                return false;
+            }
+
+            var captures = captureSlots.Count == 0
+                ? Array.Empty<BytecodeVmValue>()
+                : new BytecodeVmValue[captureSlots.Count];
+            for (var index = 0; index < captureSlots.Count; index++)
+            {
+                captures[index] = ResolveSlot(captureSlots[index]);
+            }
+
+            if (!TryChooseWeightedPipelineItems(items, count, instruction.AU, instruction.BU, captures, out chosen))
             {
                 return false;
             }
@@ -3362,6 +3375,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         int count,
         int itemSlot,
         int weightEntryAddress,
+        IReadOnlyList<BytecodeVmValue> captures,
         out IReadOnlyList<GameEventScriptValue> chosen)
     {
         var remaining = candidates.ToList();
@@ -3372,10 +3386,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
             double totalWeight = 0d;
             foreach (var candidate in remaining)
             {
-                if (!TryEvaluatePipelineEntryValue(weightEntryAddress, itemSlot, BytecodeVmValue.FromGameEventScriptValue(candidate), out var weightValue))
+                if (!TryEvaluateStreamTransformEntry(weightEntryAddress, itemSlot, BytecodeVmValue.FromGameEventScriptValue(candidate), captures, out var hasWeight, out var weightValue))
                 {
                     chosen = [];
                     return false;
+                }
+
+                if (!hasWeight)
+                {
+                    weightValue = BytecodeVmValue.Nothing;
                 }
 
                 var weight = EvaluatePositiveWeight(weightValue.ToGameEventScriptValue());

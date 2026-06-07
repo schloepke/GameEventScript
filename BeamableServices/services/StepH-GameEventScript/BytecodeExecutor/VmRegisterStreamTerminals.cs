@@ -120,7 +120,7 @@ internal static class VmRegisterStreamTerminals
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamOneWeighted(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort weightEntryAddress, IVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
+    internal static void VmStreamOneWeighted(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
         {
@@ -134,11 +134,14 @@ internal static class VmRegisterStreamTerminals
         var weights = new double[16];
         var itemCount = 0;
         double totalWeight = 0d;
+        var captureSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captures = captureSlots.Length == 0 ? [] : new VmValue[captureSlots.Length];
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = dst.OwningState.Register(captureSlots[i]);
         try
         {
             while (stream.TryNext(ref item))
             {
-                if (!evaluator.TryEvaluateStreamEntry(weightEntryAddress, itemSlot, ref item, null, ref weightValue))
+                if (!evaluator.TryEvaluateStreamEntry(weightEntryAddress, itemSlot, ref item, captures, ref weightValue))
                 {
                     dst.SetNothing();
                     return;
@@ -186,7 +189,7 @@ internal static class VmRegisterStreamTerminals
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamTakeWeighted(ref VmValue dst, ref VmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, IVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
+    internal static void VmStreamTakeWeighted(ref VmValue dst, ref VmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
         {
@@ -207,11 +210,14 @@ internal static class VmRegisterStreamTerminals
         var weights = new double[16];
         var itemCount = 0;
         double totalWeight = 0d;
+        var captureSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captures = captureSlots.Length == 0 ? [] : new VmValue[captureSlots.Length];
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = dst.OwningState.Register(captureSlots[i]);
         try
         {
             while (stream.TryNext(ref item))
             {
-                if (!evaluator.TryEvaluateStreamEntry(weightEntryAddress, itemSlot, ref item, null, ref weightValue))
+                if (!evaluator.TryEvaluateStreamEntry(weightEntryAddress, itemSlot, ref item, captures, ref weightValue))
                 {
                     dst.SetNothing();
                     return;

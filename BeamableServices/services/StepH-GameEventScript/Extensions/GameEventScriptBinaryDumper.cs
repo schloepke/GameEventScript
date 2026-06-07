@@ -265,6 +265,7 @@ public static class GameEventScriptBinaryDumper
             ToRegister => Register(instruction.YSlot),
 
             ItemBindingRegister => Register(operandIndex >= 3 ? instruction.AU : instruction.YSlot),
+            AuxItemBindingRegister => Register(instruction.AU),
             StepRegister => Register(instruction.AU),
             MinimumRegister => Register(instruction.YSlot),
             MaximumRegister => Register(instruction.AU),
@@ -308,7 +309,7 @@ public static class GameEventScriptBinaryDumper
             ItemRegisterList => context.ListLabel(instruction.ListIndex),
             KeyNameList => context.ListLabel(instruction.SecondaryListIndex),
             ValueRegisterList => context.ListLabel(instruction.ListIndex),
-            CaptureRegisterList => context.ListLabel(instruction.BU),
+            CaptureRegisterList => context.ListLabel(CaptureRegisterListIndex(instruction)),
             TagRegisterList => context.ListLabel(instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
                 ? instruction.SecondaryListIndex
                 : instruction.ListIndex),
@@ -317,6 +318,11 @@ public static class GameEventScriptBinaryDumper
 
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
         };
+
+    private static ushort CaptureRegisterListIndex(GameEventScriptBytecodeInstruction instruction)
+        => instruction.OpCode is GameEventScriptBytecodeOpCode.StreamOneWeighted or GameEventScriptBytecodeOpCode.StreamTakeWeighted
+            ? instruction.CU
+            : instruction.BU;
 
     private static void AppendInstructionFlags(StringBuilder builder, GameEventScriptBytecodeInstruction instruction)
     {
@@ -1065,7 +1071,7 @@ public static class GameEventScriptBinaryDumper
                     role = ListRole.Registers;
                     return true;
                 case CaptureRegisterList:
-                    index = instruction.BU;
+                    index = CaptureRegisterListIndex(instruction);
                     prefix = "Captures";
                     role = ListRole.Registers;
                     return true;

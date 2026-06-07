@@ -520,6 +520,7 @@ public static class GameEventScriptBytecodeDumper
                 }
                 AppendSlot(builder, "item", instruction.AU);
                 AppendAddress(builder, "weightEntry", instruction.BU);
+                AppendSlotListPoolIndex(builder, "captures", module, instruction.CU);
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:

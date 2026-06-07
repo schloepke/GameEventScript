@@ -540,6 +540,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} iterator slot");
                 ValidateSlot(module, instruction.AU, $"{context} item binding slot");
                 ValidateEntryAddress(module, code, instruction.BU, $"{context} weight entry");
+                ValidateSlotListIndex(module, instruction.CU, $"{context} capture slot list");
                 break;
 
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace:

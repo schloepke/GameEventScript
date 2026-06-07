@@ -372,8 +372,8 @@ separate approximate-equality opcode.
 | 0xA3 | `StreamAverage` | - | result slot | `XSlot`=iterator | - | - | Averages finite stream elements. Empty/series -> `nothing`. |
 | 0xA4 | `StreamMin` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
 | 0xA5 | `StreamMax` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
-| 0xA6 | `StreamOneWeighted` | - | result slot | `XSlot`=iterator | - | `AU`=item binding slot, `BU`=weight entry address | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
-| 0xA7 | `StreamTakeWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
+| 0xA6 | `StreamOneWeighted` | - | result slot | `XSlot`=iterator | - | `AU`=item binding slot, `BU`=weight entry address, `CU`=capture slot-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
+| 0xA7 | `StreamTakeWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address, `CU`=capture slot-list index | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
 | 0xA8 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
 | 0xA9 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
 | 0xAA | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |

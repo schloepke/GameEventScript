@@ -2218,18 +2218,21 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var resultSlot = AllocateSlot(state);
-        var itemSlot = context.RequireSlot(choose.WeightIdentifier!);
-        var instructionAddress = Emit(CreateInstruction(
+        var captures = ResolvePipelineCaptures(choose.WeightExpression, choose.WeightIdentifier!, context);
+        var captureSlotListIndex = ResolveSlotListIndex(captures.Select(capture => capture.SourceSlot).ToArray());
+        var instruction = CreateInstruction(
             choose.Count == 1 ? GameEventScriptBytecodeOpCode.StreamOneWeighted : GameEventScriptBytecodeOpCode.StreamTakeWeighted,
             dest: resultSlot,
             a: iteratorSlot,
             b: choose.Count,
-            c: itemSlot));
-        var helperBaseSlot = state.NextSlot;
+            c: 0);
+        instruction.CU = ToUShortOperand(captureSlotListIndex, "capture slot list index");
+        var instructionAddress = Emit(instruction);
         _deferredHelperEmitters.Add(() =>
         {
-            var helperState = CreateHelperState(helperBaseSlot, iteratorSlot, resultSlot, itemSlot);
-            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, context, helperState, helperState.BaseSlot);
+            var helperContext = CreatePipelineHelperContext(choose.WeightIdentifier!, captures);
+            var helperState = new ExpressionState(helperContext.SlotCount);
+            var entryAddress = EmitSourceExpressionEntry(choose.WeightExpression, helperContext, helperState);
             PatchD(instructionAddress, entryAddress);
         });
         return resultSlot;

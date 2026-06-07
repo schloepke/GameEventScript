@@ -187,6 +187,7 @@ internal static class VmRegisterTypeCastCheck
         dst.SetBoolean(type switch
         {
             Nothing => xSlot.IsNothing,
+            Map => xSlot.Kind is Map or Custom,
             Invalid or Custom => false,
             _ => xSlot.IsNotNothing && xSlot.Kind == type
         });

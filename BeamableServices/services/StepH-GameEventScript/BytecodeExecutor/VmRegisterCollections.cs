@@ -43,13 +43,13 @@ internal static class VmRegisterCollections
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmListBuilderAdd(ref this VmValue listBuilder, ref VmValue value)
     {
-        if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder) builder.Add(value);
+        if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is List<VmValue> builder) builder.Add(value);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmListBuilderFinish(ref this VmValue dst, ref VmValue listBuilder)
     {
-        if (listBuilder.Kind is not ListBuilder && listBuilder.ObjectValue is List<VmValue> builder)
+        if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is List<VmValue> builder)
         {
             var list = new VmListObject(dst.OwningState, builder.Count);
             for (var i = 0; i < builder.Count; i++)

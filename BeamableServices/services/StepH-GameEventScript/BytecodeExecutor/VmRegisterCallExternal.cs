@@ -224,7 +224,13 @@ internal static class VmRegisterCallExternal
                 break;
             case GameEventScriptValueKind.Map:
                 var sourceEntries = argument.AsMap();
-                var entries = new Dictionary<string, VmValue>(sourceEntries.Count, StringComparer.Ordinal);
+                var isCustomType = argument.TryGetCustomTypeName(out var customTypeName);
+                var entries = new Dictionary<string, VmValue>(sourceEntries.Count + (isCustomType ? 1 : 0), StringComparer.Ordinal);
+                if (isCustomType)
+                {
+                    entries[GameEventScriptValue.HiddenTypeKey] = destination.OwningState.CreateTag(customTypeName);
+                }
+
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     var value = destination.OwningState.CreateNothing();
@@ -232,7 +238,8 @@ internal static class VmRegisterCallExternal
                     entries[key] = value;
                 }
 
-                destination.SetMap(new VmMapObject(destination.OwningState, entries));
+                if (isCustomType) destination.SetRecord(new VmMapObject(destination.OwningState, entries));
+                else destination.SetMap(new VmMapObject(destination.OwningState, entries));
                 break;
             case GameEventScriptValueKind.Dice:
                 var sourceDice = argument.AsDice().Rolls;

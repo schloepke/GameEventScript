@@ -70,7 +70,7 @@ internal struct VmValue
 
     internal void UpdatedTextTruthinessCache()
     {
-        if (!IsTruthIndeterminate);
+        if (IsTruthDeterminate) return;
         switch (Kind)
         {
             case Text:

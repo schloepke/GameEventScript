@@ -475,12 +475,9 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.Distinct:
             case GameEventScriptBytecodeOpCode.SortAscending:
             case GameEventScriptBytecodeOpCode.SortDescending:
+            case GameEventScriptBytecodeOpCode.Reverse:
+            case GameEventScriptBytecodeOpCode.Shuffle:
                 AppendSlot(builder, "source", instruction.XSlot);
-                break;
-
-            case GameEventScriptBytecodeOpCode.PipelineReverse:
-            case GameEventScriptBytecodeOpCode.PipelineShuffle:
-                AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
             case GameEventScriptBytecodeOpCode.HasAny:

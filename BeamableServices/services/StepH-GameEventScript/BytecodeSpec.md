@@ -1151,6 +1151,8 @@ SortAscending dst source
 SortDescending dst source
 OrderByAscending dst source itemBindingSlot keyEntry
 OrderByDescending dst source itemBindingSlot keyEntry
+Reverse dst source
+Shuffle dst source
 OneRandom dst source
 TakeRandom dst source count
 First/Last/Single dst source
@@ -1169,6 +1171,14 @@ or reversing their bounds and step. Direct maps, scalars, and `nothing` produce
 `OrderByAscending` and `OrderByDescending` accept lists and streams only. They
 materialize the original items ordered by the projected key. Direct dice,
 ranges, maps, scalars, and `nothing` sources produce `nothing`.
+
+`Reverse` accepts lists, dice, ranges, and streams. Lists materialize reversed
+lists, dice materialize lists so dice ordering is not normalized, ranges stay
+ranges by swapping bounds and negating the step, and streams materialize lists.
+Maps, scalars, and `nothing` sources produce `nothing`.
+
+`Shuffle` accepts lists, dice, ranges, and streams. It always materializes a
+list. Direct maps, scalars, and `nothing` sources produce `nothing`.
 
 `Distinct` accepts lists, dice, and streams. `DistinctBy` accepts lists and
 streams only; direct dice, range, map, scalar, and `nothing` sources produce

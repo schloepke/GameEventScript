@@ -871,6 +871,17 @@ choice evaluates the `weighted by` expression per candidate and chooses without
 replacement from positive finite weights. `:choose 1 weighted by ...` returns
 one item or `nothing`; `:choose n weighted by ...` returns a list.
 
+`:reverse` is defined for lists, dice, ranges, and streams. Lists reverse into
+lists. Dice reverse into lists so the requested order is preserved instead of
+being normalized back into dice order. Ranges reverse into ranges by swapping
+the effective bounds and negating the step. Streams materialize reversed lists.
+Maps, scalars, and `nothing` yield `nothing`.
+
+`:shuffle` is defined for lists, dice, ranges, and streams and always
+materializes a list. This allows game-oriented cases such as shuffling a card
+range with `from 1 to 32[:shuffle]`. Maps, scalars, and `nothing` yield
+`nothing`.
+
 ### Dice Patterns and Object Matching
 
 Dice and dice-like collections support pattern selectors:

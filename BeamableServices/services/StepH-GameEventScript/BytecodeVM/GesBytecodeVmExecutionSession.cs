@@ -1253,8 +1253,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.GroupBy:
                 return TryExecuteGroupBy(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineReverse:
-                return TryExecutePipelineReverse(instruction);
+            case GameEventScriptBytecodeOpCode.Reverse:
+                return TryExecuteReverse(instruction);
 
             case GameEventScriptBytecodeOpCode.SortAscending:
             case GameEventScriptBytecodeOpCode.SortDescending:
@@ -1264,8 +1264,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.OrderByDescending:
                 return TryExecuteOrderBy(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineShuffle:
-                return TryExecutePipelineShuffle(instruction);
+            case GameEventScriptBytecodeOpCode.Shuffle:
+                return TryExecuteShuffle(instruction);
 
             case GameEventScriptBytecodeOpCode.StreamOneWeighted:
             case GameEventScriptBytecodeOpCode.StreamTakeWeighted:
@@ -3319,11 +3319,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineReverse(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteReverse(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(EvaluateReverseSelector(source)));
         }
 
         iterator.Dispose();
@@ -3474,11 +3475,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
     }
 
-    private bool TryExecutePipelineShuffle(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteShuffle(GameEventScriptBytecodeInstruction instruction)
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+            return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(EvaluateShuffleSelector(source)));
         }
 
         iterator.Dispose();
@@ -6803,7 +6805,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private static GameEventScriptValue EvaluateReverseSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)
     {
-        if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
+        if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice or GameEventScriptValueKind.Range))
         {
             return GameEventScriptNothingValue.Instance;
         }
@@ -6811,14 +6813,95 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return GameEventScriptValueFactory.GesList(items.Reverse().ToArray());
     }
 
+    private static GameEventScriptValue EvaluateReverseSelector(GameEventScriptValue target)
+    {
+        switch (target.Kind)
+        {
+            case GameEventScriptValueKind.List:
+            case GameEventScriptValueKind.Dice:
+                return GameEventScriptValueFactory.GesList(target.AsEnumerable().Reverse().ToArray());
+            case GameEventScriptValueKind.Range when target is GameEventScriptRangeValue range:
+            {
+                if (range.IsIntegerRange)
+                {
+                    var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                    if (length <= 0)
+                    {
+                        return GameEventScriptValueFactory.GesRange(0, 0, 0);
+                    }
+
+                    return GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)
+                        ? GameEventScriptValueFactory.GesRange(last, range.From, -range.Step)
+                        : GameEventScriptNothingValue.Instance;
+                }
+
+                var floatLength = GameEventScriptRangeMath.GetLength(range.FromNumber, range.ToNumber, range.StepNumber);
+                if (floatLength <= 0)
+                {
+                    return GameEventScriptValueFactory.GesRange(0d, 0d, 0d);
+                }
+
+                return GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, floatLength, out var lastFloat)
+                    ? GameEventScriptValueFactory.GesRange(lastFloat, range.FromNumber, -range.StepNumber)
+                    : GameEventScriptNothingValue.Instance;
+            }
+            default:
+                return GameEventScriptNothingValue.Instance;
+        }
+    }
+
     private GameEventScriptValue EvaluateShuffleSelector(GameEventScriptValue target, IReadOnlyList<GameEventScriptValue> items)
     {
-        if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice))
+        if (target.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice or GameEventScriptValueKind.Range))
         {
             return GameEventScriptNothingValue.Instance;
         }
 
         var shuffled = items.ToArray();
+        for (var i = shuffled.Length - 1; i > 0; i--)
+        {
+            if (!TryNextInclusiveInt(0, i, out var swapIndex))
+            {
+                return GameEventScriptValueFactory.GesList(shuffled);
+            }
+
+            (shuffled[i], shuffled[swapIndex]) = (shuffled[swapIndex], shuffled[i]);
+        }
+
+        return GameEventScriptValueFactory.GesList(shuffled);
+    }
+
+    private GameEventScriptValue EvaluateShuffleSelector(GameEventScriptValue target)
+    {
+        switch (target.Kind)
+        {
+            case GameEventScriptValueKind.List:
+            case GameEventScriptValueKind.Dice:
+                return ShuffleItems(target.AsEnumerable().ToArray());
+            case GameEventScriptValueKind.Range when target is GameEventScriptRangeValue range:
+            {
+                var length = range.IsIntegerRange
+                    ? GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)
+                    : GameEventScriptRangeMath.GetLength(range.FromNumber, range.ToNumber, range.StepNumber);
+                if (length <= 0)
+                {
+                    return GameEventScriptValueFactory.GesList([]);
+                }
+
+                if (length > int.MaxValue)
+                {
+                    return GameEventScriptNothingValue.Instance;
+                }
+
+                return ShuffleItems(target.AsEnumerable().ToArray());
+            }
+            default:
+                return GameEventScriptNothingValue.Instance;
+        }
+    }
+
+    private GameEventScriptValue ShuffleItems(GameEventScriptValue[] shuffled)
+    {
         for (var i = shuffled.Length - 1; i > 0; i--)
         {
             if (!TryNextInclusiveInt(0, i, out var swapIndex))

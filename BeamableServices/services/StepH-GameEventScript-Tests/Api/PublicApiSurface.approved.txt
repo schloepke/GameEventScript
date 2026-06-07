@@ -306,19 +306,19 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field SortDescending = 175
   enum-field OrderByAscending = 176
   enum-field OrderByDescending = 177
-  enum-field PipelineReverse = 208
-  enum-field PipelineShuffle = 209
-  enum-field PipelineDicePatternCountAny = 210
-  enum-field PipelineDicePatternCountFace = 211
-  enum-field PipelineDicePatternFullHouse = 212
-  enum-field PipelineDicePatternStraight = 213
-  enum-field PipelineTakePatternCountAny = 214
-  enum-field PipelineTakePatternCountFace = 215
-  enum-field PipelineTakePatternFullHouse = 216
-  enum-field PipelineTakePatternStraight = 217
-  enum-field PipelineListCreateBuilder = 218
-  enum-field PipelineListBuilderAdd = 219
-  enum-field PipelineListBuilderFinish = 220
+  enum-field Reverse = 178
+  enum-field Shuffle = 179
+  enum-field PipelineDicePatternCountAny = 208
+  enum-field PipelineDicePatternCountFace = 209
+  enum-field PipelineDicePatternFullHouse = 210
+  enum-field PipelineDicePatternStraight = 211
+  enum-field PipelineTakePatternCountAny = 212
+  enum-field PipelineTakePatternCountFace = 213
+  enum-field PipelineTakePatternFullHouse = 214
+  enum-field PipelineTakePatternStraight = 215
+  enum-field PipelineListCreateBuilder = 216
+  enum-field PipelineListBuilderAdd = 217
+  enum-field PipelineListBuilderFinish = 218
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
   ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }

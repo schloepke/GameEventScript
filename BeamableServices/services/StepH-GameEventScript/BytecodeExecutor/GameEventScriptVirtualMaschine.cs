@@ -631,16 +631,16 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case OrderByDescending:
                             vmState.Register(instruction.DestinationSlot).VmOrderByDescending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
                             break;
+                        case Reverse:
+                            vmState.Register(instruction.DestinationSlot).VmReverse(ref vmState.Register(instruction.XSlot));
+                            break;
+                        case Shuffle:
+                            vmState.Register(instruction.DestinationSlot).VmShuffle(ref vmState.Register(instruction.XSlot), vmState.RandomGenerator);
+                            break;
                         #endregion
 
                         #region Group 4 - pipeline terminals and transforms
 
-                        case PipelineReverse:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineShuffle:
-                            // FIXME: creating the real custom type here
-                            break;
                         case PipelineDicePatternCountAny:
                             // FIXME: creating the real custom type here
                             break;

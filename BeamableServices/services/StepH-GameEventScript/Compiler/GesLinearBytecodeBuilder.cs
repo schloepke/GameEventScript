@@ -1837,6 +1837,12 @@ internal sealed class GesLinearBytecodeBuilder
                             : GameEventScriptBytecodeOpCode.SortAscending,
                         a: sourceSlot);
 
+                case ReverseSelectorNode:
+                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Reverse, a: sourceSlot);
+
+                case ShuffleSelectorNode:
+                    return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Shuffle, a: sourceSlot);
+
                 case OrderBySelectorNode orderBy:
                     return EmitPipelineEntryTerminal(
                         string.Equals(orderBy.Direction, "descending", StringComparison.Ordinal)
@@ -2091,13 +2097,13 @@ internal sealed class GesLinearBytecodeBuilder
                     a: iteratorSlot);
 
             case ReverseSelectorNode:
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineReverse, a: iteratorSlot);
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Reverse, a: iteratorSlot);
 
             case SequenceSliceSelectorNode slice:
                 return EmitPipelineSequenceSlice(iteratorSlot, slice, state);
 
             case ShuffleSelectorNode:
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.PipelineShuffle, a: iteratorSlot);
+                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Shuffle, a: iteratorSlot);
 
             case DrawSelectorNode draw:
                 return draw.Count == 1

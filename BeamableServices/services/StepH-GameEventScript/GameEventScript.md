@@ -800,6 +800,18 @@ units[:distinct by unit => unit.kind]
 units[:group by unit => unit.team]
 ```
 
+`:sort ascending` and `:sort descending` are defined for lists, dice, ranges,
+and streams. Lists and streams materialize sorted lists. Dice also materialize a
+list so the requested order is preserved instead of being normalized back into
+dice order. Ranges stay ranges when the requested direction can be represented
+by swapping the range bounds and negating the step. Maps are already
+key-canonical and are not sort targets; sorting a map yields `nothing`.
+
+`:order by` is defined for lists and streams only. It orders the original items
+by the projected key and materializes a list. Dice, ranges, maps, scalars, and
+`nothing` yield `nothing` for `:order by` because projecting a sort key over
+those direct values is not a meaningful collection operation.
+
 `:distinct` is defined for lists, dice, and streams. Lists keep their first
 occurrence order, dice keep their dice result type, and streams materialize a
 list. `:distinct by` is defined only for lists and streams because the

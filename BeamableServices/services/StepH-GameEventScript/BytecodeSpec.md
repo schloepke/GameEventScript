@@ -1160,6 +1160,16 @@ PipelineListBuilderAdd builder item
 PipelineListBuilderFinish dst builder
 ```
 
+`SortAscending` and `SortDescending` accept lists, dice, ranges, and streams.
+Lists and streams materialize sorted lists. Dice materialize lists even when
+descending order matches dice's natural order. Ranges stay ranges by preserving
+or reversing their bounds and step. Direct maps, scalars, and `nothing` produce
+`nothing`.
+
+`OrderByAscending` and `OrderByDescending` accept lists and streams only. They
+materialize the original items ordered by the projected key. Direct dice,
+ranges, maps, scalars, and `nothing` sources produce `nothing`.
+
 `Distinct` accepts lists, dice, and streams. `DistinctBy` accepts lists and
 streams only; direct dice, range, map, scalar, and `nothing` sources produce
 `nothing`.

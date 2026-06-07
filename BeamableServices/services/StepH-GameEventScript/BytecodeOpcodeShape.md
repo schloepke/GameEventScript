@@ -380,10 +380,10 @@ separate approximate-equality opcode.
 | 0xAB | `Distinct` | - | result slot | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
 | 0xAC | `DistinctBy` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
 | 0xAD | `GroupBy` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct collection fast paths and streams. |
-| 0xAE | `SortAscending` | - | result slot | `XSlot`=source | - | - | Sorts source items ascending. Supports direct collection fast paths and streams. |
-| 0xAF | `SortDescending` | - | result slot | `XSlot`=source | - | - | Sorts source items descending. Supports direct collection fast paths and streams. |
-| 0xB0 | `OrderByAscending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct collection fast paths and streams. |
-| 0xB1 | `OrderByDescending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct collection fast paths and streams. |
+| 0xAE | `SortAscending` | - | result slot | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
+| 0xAF | `SortDescending` | - | result slot | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
+| 0xB0 | `OrderByAscending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
+| 0xB1 | `OrderByDescending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
 
 ### Group 4 - Pipeline Operations
 

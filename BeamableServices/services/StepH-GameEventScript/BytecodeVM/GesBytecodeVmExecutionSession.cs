@@ -3310,7 +3310,55 @@ internal sealed partial class GesBytecodeVmExecutionSession
     {
         if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
         {
-            return false;
+            var source = ResolveSlot(instruction.XSlot).ToGameEventScriptValue();
+            if (source.Kind is not (GameEventScriptValueKind.List or GameEventScriptValueKind.Dice or GameEventScriptValueKind.Range))
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            if (source is GameEventScriptRangeValue range)
+            {
+                var descending = instruction.OpCode == GameEventScriptBytecodeOpCode.SortDescending;
+                if (range.IsIntegerRange)
+                {
+                    var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                    if (length == 0)
+                    {
+                        return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(GesRange(0, 0, 0)));
+                    }
+
+                    if ((range.Step < 0) == descending)
+                    {
+                        return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(range));
+                    }
+
+                    return GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)
+                        ? DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(GesRange(last, range.From, -range.Step)))
+                        : DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+                }
+
+                var floatLength = GameEventScriptRangeMath.GetLength(range.FromNumber, range.ToNumber, range.StepNumber);
+                if (floatLength == 0)
+                {
+                    return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(GesRange(0d, 0d, 0d)));
+                }
+
+                if ((range.StepNumber < 0d) == descending)
+                {
+                    return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(range));
+                }
+
+                return GameEventScriptRangeMath.TryGetTerm(range.FromNumber, range.ToNumber, range.StepNumber, floatLength, out var lastFloat)
+                    ? DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(GesRange(lastFloat, range.FromNumber, -range.StepNumber)))
+                    : DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            return DefineSlot(
+                instruction.DestinationSlot,
+                BytecodeVmValue.FromGameEventScriptValue(GesCollectionOperations.Sort(
+                    source,
+                    source.AsEnumerable(),
+                    instruction.OpCode == GameEventScriptBytecodeOpCode.SortDescending ? "descending" : "ascending")));
         }
 
         iterator.Dispose();
@@ -3329,6 +3377,35 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecuteOrderBy(GameEventScriptBytecodeInstruction instruction)
     {
+        var sourceSlot = ResolveSlot(instruction.XSlot);
+        if (sourceSlot.Kind != BytecodeVmValueKind.Iterator)
+        {
+            var source = sourceSlot.ToGameEventScriptValue();
+            if (source.Kind != GameEventScriptValueKind.List)
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            var pairs = new List<(GameEventScriptValue Item, GameEventScriptValue Key)>();
+            foreach (var item in source.AsList())
+            {
+                if (!TryEvaluatePipelineEntryValue(instruction.AU, instruction.YSlot, BytecodeVmValue.FromGameEventScriptValue(item), out var key))
+                {
+                    return false;
+                }
+
+                pairs.Add((item, key.ToGameEventScriptValue()));
+            }
+
+            var directComparer = instruction.OpCode == GameEventScriptBytecodeOpCode.OrderByDescending
+                ? Comparer<GameEventScriptValue>.Create((left, right) => GameEventScriptValue.StableComparer.Compare(right, left))
+                : GameEventScriptValue.StableComparer;
+            var directOrdered = pairs.OrderBy(pair => pair.Key, directComparer).Select(pair => pair.Item).ToArray();
+            return DefineSlot(
+                instruction.DestinationSlot,
+                BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(directOrdered)));
+        }
+
         if (!TryGetIterator(instruction.XSlot, out var iterator))
         {
             return false;

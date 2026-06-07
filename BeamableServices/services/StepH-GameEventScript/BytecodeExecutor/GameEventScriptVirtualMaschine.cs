@@ -626,10 +626,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmSortDescending(ref vmState.Register(instruction.XSlot));
                             break;
                         case OrderByAscending:
-                            vmState.Register(instruction.DestinationSlot).VmOrderByAscending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            vmState.Register(instruction.DestinationSlot).VmOrderByAscending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
                             break;
                         case OrderByDescending:
-                            vmState.Register(instruction.DestinationSlot).VmOrderByDescending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            vmState.Register(instruction.DestinationSlot).VmOrderByDescending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
                             break;
                         #endregion
 

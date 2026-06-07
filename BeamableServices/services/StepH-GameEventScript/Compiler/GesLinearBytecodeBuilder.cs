@@ -1828,6 +1828,25 @@ internal sealed class GesLinearBytecodeBuilder
                             ? GameEventScriptBytecodeOpCode.HasAll
                             : GameEventScriptBytecodeOpCode.HasAny,
                         a: sourceSlot);
+
+                case SortSelectorNode sort:
+                    return EmitValueInstruction(
+                        state,
+                        string.Equals(sort.Direction, "descending", StringComparison.Ordinal)
+                            ? GameEventScriptBytecodeOpCode.SortDescending
+                            : GameEventScriptBytecodeOpCode.SortAscending,
+                        a: sourceSlot);
+
+                case OrderBySelectorNode orderBy:
+                    return EmitPipelineEntryTerminal(
+                        string.Equals(orderBy.Direction, "descending", StringComparison.Ordinal)
+                            ? GameEventScriptBytecodeOpCode.OrderByDescending
+                            : GameEventScriptBytecodeOpCode.OrderByAscending,
+                        sourceSlot,
+                        context.RequireSlot(orderBy.Identifier),
+                        orderBy.Projection,
+                        context,
+                        state);
             }
         }
 

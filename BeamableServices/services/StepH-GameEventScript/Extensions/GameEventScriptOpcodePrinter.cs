@@ -259,9 +259,9 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.PipelineTakePatternCountFace => [TargetRegister, IteratorRegister, CountImmediate, FaceEntry],
             GameEventScriptBytecodeOpCode.PipelineTakePatternFullHouse => [TargetRegister, IteratorRegister],
             GameEventScriptBytecodeOpCode.PipelineTakePatternStraight => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineListCreateBuilder => [TargetRegister],
-            GameEventScriptBytecodeOpCode.PipelineListBuilderAdd => [BuilderRegister, ItemRegister],
-            GameEventScriptBytecodeOpCode.PipelineListBuilderFinish => [TargetRegister, BuilderRegister],
+            GameEventScriptBytecodeOpCode.ListBuilderCreate => [TargetRegister],
+            GameEventScriptBytecodeOpCode.ListBuilderAdd => [BuilderRegister, ItemRegister],
+            GameEventScriptBytecodeOpCode.ListBuilderFinish => [TargetRegister, BuilderRegister],
 
             _ => throw new ArgumentOutOfRangeException(nameof(instruction.OpCode), instruction.OpCode, null)
         };

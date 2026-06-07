@@ -637,6 +637,15 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case Shuffle:
                             vmState.Register(instruction.DestinationSlot).VmShuffle(ref vmState.Register(instruction.XSlot), vmState.RandomGenerator);
                             break;
+                        case ListBuilderCreate:
+                            vmState.Register(instruction.DestinationSlot).VmCreateListBuilder();
+                            break;
+                        case ListBuilderAdd:
+                            vmState.Register(instruction.XSlot).VmListBuilderAdd(ref vmState.Register(instruction.YSlot));
+                            break;
+                        case ListBuilderFinish:
+                            vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref vmState.Register(instruction.XSlot));
+                            break;
                         #endregion
 
                         #region Group 4 - pipeline terminals and transforms
@@ -664,15 +673,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case PipelineTakePatternStraight:
                             // FIXME: creating the real custom type here
-                            break;
-                        case PipelineListCreateBuilder:
-                            vmState.Register(instruction.DestinationSlot).VmCreateListBuilder();
-                            break;
-                        case PipelineListBuilderAdd:
-                            vmState.Register(instruction.XSlot).VmListBuilderAdd(ref vmState.Register(instruction.YSlot));
-                            break;
-                        case PipelineListBuilderFinish:
-                            vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref vmState.Register(instruction.XSlot));
                             break;
 
                         #endregion

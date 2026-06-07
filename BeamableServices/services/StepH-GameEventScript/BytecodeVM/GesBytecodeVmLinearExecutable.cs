@@ -573,15 +573,15 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateSlot(module, instruction.XSlot, $"{context} source slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:
+            case GameEventScriptBytecodeOpCode.ListBuilderCreate:
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineListBuilderAdd:
+            case GameEventScriptBytecodeOpCode.ListBuilderAdd:
                 ValidateSlot(module, instruction.XSlot, $"{context} collection builder slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} collection item slot");
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineListBuilderFinish:
+            case GameEventScriptBytecodeOpCode.ListBuilderFinish:
                 ValidateSlot(module, instruction.XSlot, $"{context} collection builder slot");
                 break;
 
@@ -1218,7 +1218,7 @@ internal sealed class GesBytecodeVmLinearExecutable
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-            GameEventScriptBytecodeOpCode.PipelineListBuilderAdd or
+            GameEventScriptBytecodeOpCode.ListBuilderAdd or
             GameEventScriptBytecodeOpCode.StreamClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or

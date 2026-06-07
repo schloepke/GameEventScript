@@ -1159,9 +1159,9 @@ OneRandom dst source
 TakeRandom dst source count
 First/Last/Single dst source
 HasAny/HasAll dst source
-PipelineListCreateBuilder builder
-PipelineListBuilderAdd builder item
-PipelineListBuilderFinish dst builder
+ListBuilderCreate builder
+ListBuilderAdd builder item
+ListBuilderFinish dst builder
 ```
 
 `SortAscending` and `SortDescending` accept lists, dice, ranges, and streams.
@@ -1268,7 +1268,7 @@ Streaming/materialization contract:
 Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
-PipelineListCreateBuilder builder
+ListBuilderCreate builder
 SlotLocals locals+=collectionLocalCount
 CreateRangeIterator* / StreamCreate iterator
 loop:
@@ -1277,20 +1277,20 @@ loop:
   MoveSlot identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
-  PipelineListBuilderAdd builder projected
+  ListBuilderAdd builder projected
   SlotLocals locals-=iterationLocalCount
   Jump loop
 noMore:
 StreamClose iterator
 SlotLocals locals-=collectionLocalCount
-PipelineListBuilderFinish dst builder
+ListBuilderFinish dst builder
 ```
 
 Direct ranges after `in` remain invalid at source level. Range iteration should
 use explicit range-source syntax.
 
 At runtime, collection builders are VM-internal values and are not visible as DSL
-values. `PipelineListBuilderAdd` applies `MaxGeneratedCollectionItems` while
+values. `ListBuilderAdd` applies `MaxGeneratedCollectionItems` while
 materializing the result.
 
 ### Diagnostics

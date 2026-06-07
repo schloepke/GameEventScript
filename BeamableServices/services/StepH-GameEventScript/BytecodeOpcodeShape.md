@@ -386,6 +386,9 @@ separate approximate-equality opcode.
 | 0xB1 | `OrderByDescending` | - | result slot | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
 | 0xB2 | `Reverse` | - | result slot | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
 | 0xB3 | `Shuffle` | - | result slot | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
+| 0xB4 | `ListBuilderCreate` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated collections. |
+| 0xB5 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xB6 | `ListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the list builder as a list. |
 
 ### Group 4 - Pipeline Operations
 
@@ -399,15 +402,12 @@ separate approximate-equality opcode.
 | 0xD5 | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
 | 0xD6 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
 | 0xD7 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
-| 0xD8 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
-| 0xD9 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xDA | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
 
 ### Reserved Opcode Space
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xB4..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
+| 0xB7..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
 | 0xE4..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary

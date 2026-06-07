@@ -648,7 +648,7 @@ internal sealed class GesLinearBytecodeBuilder
     private int EmitSourceGeneratedCollection(GeneratedCollectionExpressionNode generatedCollection, SourceContext context, ExpressionState state)
     {
         var builderOpCode = generatedCollection.CollectionType == "list"
-            ? GameEventScriptBytecodeOpCode.PipelineListCreateBuilder
+            ? GameEventScriptBytecodeOpCode.ListBuilderCreate
             : throw new GameEventScriptCompileException($"GameEventScript bytecode lowerer does not support generated collection type '{generatedCollection.CollectionType}'.");
 
         var builderSlot = AllocateSlot(state);
@@ -678,7 +678,7 @@ internal sealed class GesLinearBytecodeBuilder
         }
 
         var projectionSlot = EmitSourceExpression(generatedCollection.Projection, iterationContext, state);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.PipelineListBuilderAdd, a: builderSlot, b: projectionSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ListBuilderAdd, a: builderSlot, b: projectionSlot));
         if (skipProjectionJump >= 0)
         {
             PatchTarget(skipProjectionJump, _code.Count);
@@ -693,7 +693,7 @@ internal sealed class GesLinearBytecodeBuilder
         EndScope(outerScopeAddress);
 
         var resultSlot = AllocateSlot(state);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.PipelineListBuilderFinish, dest: resultSlot, a: builderSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.ListBuilderFinish, dest: resultSlot, a: builderSlot));
         return resultSlot;
     }
 

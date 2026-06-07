@@ -321,15 +321,15 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "iterator", instruction.XSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:
+            case GameEventScriptBytecodeOpCode.ListBuilderCreate:
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineListBuilderAdd:
+            case GameEventScriptBytecodeOpCode.ListBuilderAdd:
                 AppendSlot(builder, "builder", instruction.XSlot);
                 AppendSlot(builder, "item", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineListBuilderFinish:
+            case GameEventScriptBytecodeOpCode.ListBuilderFinish:
                 AppendSlot(builder, "builder", instruction.XSlot);
                 break;
 
@@ -646,7 +646,7 @@ public static class GameEventScriptBytecodeDumper
             GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
             GameEventScriptBytecodeOpCode.PublishMessageValue or
             GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
-            GameEventScriptBytecodeOpCode.PipelineListBuilderAdd or
+            GameEventScriptBytecodeOpCode.ListBuilderAdd or
             GameEventScriptBytecodeOpCode.StreamClose or
             GameEventScriptBytecodeOpCode.RandomPush or
             GameEventScriptBytecodeOpCode.RandomPushConstant or

@@ -448,6 +448,9 @@ public enum GameEventScriptBytecodeOpCode : byte
     OrderByDescending = 0xB1,
     Reverse = 0xB2,
     Shuffle = 0xB3,
+    ListBuilderCreate = 0xB4,
+    ListBuilderAdd = 0xB5,
+    ListBuilderFinish = 0xB6,
 
     #endregion
 
@@ -460,10 +463,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     PipelineTakePatternCountAny = 0xD4,
     PipelineTakePatternCountFace = 0xD5,
     PipelineTakePatternFullHouse = 0xD6,
-    PipelineTakePatternStraight = 0xD7,
-    PipelineListCreateBuilder = 0xD8,
-    PipelineListBuilderAdd = 0xD9,
-    PipelineListBuilderFinish = 0xDA
+    PipelineTakePatternStraight = 0xD7
 
     #endregion
 }

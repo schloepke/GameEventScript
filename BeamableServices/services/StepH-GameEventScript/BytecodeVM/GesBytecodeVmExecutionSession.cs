@@ -686,7 +686,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.PipelineListCreateBuilder:
+            case GameEventScriptBytecodeOpCode.ListBuilderCreate:
                 if (!DefineSlot(instruction.DestinationSlot, BytecodeVmValue.CollectionBuilder(BytecodeVmCollectionBuilder.List())))
                 {
                     return false;
@@ -695,8 +695,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.PipelineListBuilderAdd:
-                if (!TryExecutePipelineListBuilderAdd(instruction))
+            case GameEventScriptBytecodeOpCode.ListBuilderAdd:
+                if (!TryExecuteListBuilderAdd(instruction))
                 {
                     return false;
                 }
@@ -704,8 +704,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.PipelineListBuilderFinish:
-                if (!TryExecutePipelineListBuilderFinish(instruction))
+            case GameEventScriptBytecodeOpCode.ListBuilderFinish:
+                if (!TryExecuteListBuilderFinish(instruction))
                 {
                     return false;
                 }
@@ -2666,7 +2666,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecutePipelineListBuilderAdd(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteListBuilderAdd(GameEventScriptBytecodeInstruction instruction)
     {
         var builderValue = ResolveSlot(instruction.XSlot);
         if (builderValue.Kind != BytecodeVmValueKind.CollectionBuilder ||
@@ -2686,7 +2686,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
         return true;
     }
 
-    private bool TryExecutePipelineListBuilderFinish(GameEventScriptBytecodeInstruction instruction)
+    private bool TryExecuteListBuilderFinish(GameEventScriptBytecodeInstruction instruction)
     {
         var builderValue = ResolveSlot(instruction.XSlot);
         if (builderValue.Kind != BytecodeVmValueKind.CollectionBuilder ||

@@ -8,20 +8,21 @@ internal static class VmRegisterStreamTerminals
 {
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmStreamCount(ref this VmValue dst, ref VmValue iterator)
+    internal static void VmStreamCount(ref this VmValue dst, ref VmValue iterator, ushort destinationSlot)
     {
+        var state = dst.OwningState;
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
         {
-            dst.SetNothing();
+            state.Register(destinationSlot).SetNothing();
             return;
         }
 
         long count = 0;
-        var item = dst.OwningState.CreateNothing();
+        var item = state.CreateNothing();
         try
         {
             while (stream.TryNext(ref item)) count++;
-            dst.SetInteger(count);
+            state.Register(destinationSlot).SetInteger(count);
         }
         finally
         {

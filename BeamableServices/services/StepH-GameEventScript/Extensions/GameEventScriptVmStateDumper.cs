@@ -2,7 +2,9 @@
 
 using System.Globalization;
 using System.Text;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
+using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Extensions;
 
@@ -34,6 +36,7 @@ internal static class GameEventScriptVmStateDumper
             .Append("CurrentRandomStackSize: ").AppendLine(state.RandomGeneratorsPointer.ToString(CultureInfo.InvariantCulture))
             .AppendLine();
 
+        AppendProcessingMessage(builder, state.ProcessingMessage);
         AppendCallStack(builder, state);
         AppendStageArea(builder, state);
         AppendCurrentExecutionFrame(builder, state);
@@ -45,6 +48,69 @@ internal static class GameEventScriptVmStateDumper
             .Append(state.Binary.Dump(includeInstructionAddresses, scriptSource));
 
         return builder.ToString();
+    }
+
+    private static void AppendProcessingMessage(StringBuilder builder, GameEventScriptMessage? message)
+    {
+        builder
+            .AppendLine("ProcessingMessage")
+            .AppendLine("-----------------");
+
+        if (message is null)
+        {
+            builder.AppendLine("<none>").AppendLine();
+            return;
+        }
+
+        builder
+            .Append("Name: ").AppendLine(message.Name)
+            .Append("SignatureId: ").AppendLine(message.SignatureId)
+            .Append("Tags: ");
+
+        if (message.Tags.Count == 0)
+        {
+            builder.AppendLine("[]");
+        }
+        else
+        {
+            builder.Append('[');
+            for (var i = 0; i < message.Tags.Count; i++)
+            {
+                if (i > 0) builder.Append(", ");
+                builder.Append(':').Append(message.Tags[i]);
+            }
+
+            builder.AppendLine("]");
+        }
+
+        builder
+            .Append("ArgumentCount: ")
+            .AppendLine(message.Arguments.Count.ToString(CultureInfo.InvariantCulture))
+            .AppendLine("Arguments:");
+
+        if (message.Arguments.Count == 0)
+        {
+            builder.AppendLine("  <empty>").AppendLine();
+            return;
+        }
+
+        var index = 0;
+        foreach (var argument in message.Arguments)
+        {
+            var value = argument.Value ?? GameEventScriptNothingValue.Instance;
+            builder
+                .Append("  #").Append(index.ToString(CultureInfo.InvariantCulture))
+                .Append(' ')
+                .Append(argument.Key)
+                .Append(": kind=")
+                .Append(value.Kind)
+                .Append(" value=\"")
+                .Append(Escape(value.ToString()))
+                .AppendLine("\"");
+            index++;
+        }
+
+        builder.AppendLine();
     }
 
     private static void AppendCallStack(StringBuilder builder, VmState state)

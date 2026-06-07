@@ -60,6 +60,8 @@ internal class VmState
 
     internal readonly ushort CodeSegmentSize;
     internal readonly int MaxRegisterSlots;
+    
+    internal GameEventScriptMessage? ProcessingMessage { get; private set; }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
@@ -103,6 +105,7 @@ internal class VmState
             RegisterSlots[0].SetMessage(message);
         }
         State = Processing;
+        ProcessingMessage = message;
         return true;
     }
 
@@ -212,6 +215,7 @@ internal class VmState
         StageLength = 0;
         RandomGeneratorsPointer = 0;
         for (var i = 0; i < RegisterSlots.Length; i++) RegisterSlots[i].SetNothing();
+        ProcessingMessage = null;
         State = Ready;
     }
 

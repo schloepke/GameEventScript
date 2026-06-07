@@ -559,7 +559,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmStreamFilter(ref vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
                         case StreamCount:
-                            vmState.Register(instruction.DestinationSlot).VmStreamCount(ref vmState.Register(instruction.XSlot));
+                            vmState.Register(instruction.DestinationSlot).VmStreamCount(ref vmState.Register(instruction.XSlot), instruction.DestinationSlot);
                             break;
                         case StreamSum:
                             vmState.Register(instruction.DestinationSlot).VmStreamSum(ref vmState.Register(instruction.XSlot));

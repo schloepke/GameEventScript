@@ -570,20 +570,22 @@ Units are not declared type kinds: unit casts and checks use
 `:number` lowers to `CastNumeric`; numeric casts keep integral values as
 integers and use floats only when the value does not fit the integer
 representation. `CastNumeric` is the only numeric path that parses text; invalid
-text writes `nothing`. `is numeric`, `is integer`, and `is fractional` are
-source-level check constructs that lower to `CheckNumeric`, `CheckInteger`, and
-`CheckFractional`; they do not parse text. `CheckNumeric` is true exactly for
-values with a runtime numeric view: integer and float numbers, percentages,
-booleans (`false` = `0`, `true` = `1`), numeric tag constants, and dice through
-the sum of their rolls. `CheckInteger` is true when that numeric view is finite
-and exactly integral; booleans and dice are therefore integer. `CheckFractional`
-is true when the numeric view is finite and non-integral. `Nothing`, text, list,
-map, range, vector, point, message, handler, series, custom values, and
-non-numeric tags have no numeric view for these checks. `CheckType :number`
-still checks the actual runtime kind. `numeric`, `integer`, and `fractional` are
-not declared type kinds or `:` tags. VM-level `AsNumeric` is valid exactly for
-values where `CheckNumeric` would be true; `CastNumeric` is broader only in that
-it may explicitly parse text before producing a numeric value or `nothing`.
+text writes `nothing`. `CastNumeric` also accepts series by casting the first
+term. `is numeric`, `is integer`, and `is fractional` are source-level check
+constructs that lower to `CheckNumeric`, `CheckInteger`, and `CheckFractional`;
+they do not parse text and do not treat series as numeric. `CheckNumeric` is
+true exactly for values with a runtime numeric view: integer and float numbers,
+percentages, booleans (`false` = `0`, `true` = `1`), numeric tag constants, and
+dice through the sum of their rolls. `CheckInteger` is true when that numeric
+view is finite and exactly integral; booleans and dice are therefore integer.
+`CheckFractional` is true when the numeric view is finite and non-integral.
+`Nothing`, text, list, map, range, vector, point, message, handler, series,
+custom values, and non-numeric tags have no numeric view for these checks.
+`CheckType :number` still checks the actual runtime kind. `numeric`, `integer`,
+and `fractional` are not declared type kinds or `:` tags. VM-level `AsNumeric`
+is valid exactly for values where `CheckNumeric` would be true; `CastNumeric` is
+broader only in that it may explicitly parse text or first-term-cast series
+before producing a numeric value or `nothing`.
 
 `Cast :tag` is a validating cast. The target tag name must match source tag
 syntax: first character lowercase letter, remaining characters letters only.

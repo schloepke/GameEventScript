@@ -153,6 +153,13 @@ internal static class VmRegisterTypeCastCheck
             return;
         }
 
+        if (xSlot.Kind is Series && xSlot.ObjectValue is GameEventScriptSeriesValue series)
+        {
+            dst.BindArguments(series.FirstTerm);
+            dst.VmCastNumeric(ref dst);
+            return;
+        }
+
         dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
     }
 

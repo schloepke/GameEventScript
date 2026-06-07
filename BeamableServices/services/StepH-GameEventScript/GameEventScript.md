@@ -484,7 +484,9 @@ parse text as described below.
 Text values are not numeric for implicit mathematics or numeric checks:
 `'100' is numeric` is false, and `'100' + 200` is text concatenation. An
 explicit `as :number` cast parses text with invariant numeric syntax; invalid
-text casts to `nothing`.
+text casts to `nothing`. Series are also not numeric for implicit mathematics
+or numeric checks, but an explicit `as :number` cast reads the first term and
+casts that term to a number.
 
 Dice have a numeric view for numeric checks, explicit numeric casts, equality,
 and numeric comparison: `dice is numeric` and `dice is integer` are true, and

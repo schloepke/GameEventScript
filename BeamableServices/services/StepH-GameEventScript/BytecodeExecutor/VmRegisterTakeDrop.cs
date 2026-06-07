@@ -39,6 +39,60 @@ internal static class VmRegisterSeries
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmOneRandom(ref this VmValue dst, ref VmValue source, GameEventScriptRandomGenerator randomGenerator)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                if (list.Length > 0) dst = list.Items[randomGenerator.NextInclusiveInt(0, list.Length - 1)];
+                else dst.SetNothing();
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                if (dice.Length > 0) dst.SetInteger(dice[randomGenerator.NextInclusiveInt(0, dice.Length - 1)]);
+                else dst.SetNothing();
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                OneRandomRange(ref dst, range, randomGenerator);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                OneRandomRange(ref dst, range, randomGenerator);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                OneRandomStream(ref dst, stream, randomGenerator);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmTakeRandom(ref this VmValue dst, ref VmValue source, short count, GameEventScriptRandomGenerator randomGenerator)
+    {
+        switch (source.Kind)
+        {
+            case List when source.ObjectValue is VmListObject list:
+                TakeRandomList(ref dst, list, count, randomGenerator);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                TakeRandomDice(ref dst, dice, count, randomGenerator);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmRange range:
+                TakeRandomRange(ref dst, range, count, randomGenerator);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is VmFloatRange range:
+                TakeRandomRange(ref dst, range, count, randomGenerator);
+                return;
+            case Stream when source.ObjectValue is IVmStream stream:
+                TakeRandomStream(ref dst, stream, count, randomGenerator);
+                return;
+            default:
+                dst.SetNothing();
+                return;
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDropFirst(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -645,6 +699,257 @@ internal static class VmRegisterSeries
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void OneRandomRange(ref VmValue dst, VmRange range, GameEventScriptRandomGenerator randomGenerator)
+    {
+        var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+        if (length <= 0)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var index = randomGenerator.NextInclusiveInteger(0, length - 1L);
+        if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) dst.SetInteger(value);
+        else dst.SetNothing();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void OneRandomRange(ref VmValue dst, VmFloatRange range, GameEventScriptRandomGenerator randomGenerator)
+    {
+        var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+        if (length <= 0)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var index = randomGenerator.NextInclusiveInteger(0, length - 1L);
+        if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) dst.SetFloat(value);
+        else dst.SetNothing();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void OneRandomStream(ref VmValue dst, IVmStream stream, GameEventScriptRandomGenerator randomGenerator)
+    {
+        var item = dst.OwningState.CreateNothing();
+        var chosen = dst.OwningState.CreateNothing();
+        var count = 0;
+        try
+        {
+            while (stream.TryNext(ref item))
+            {
+                count++;
+                if (randomGenerator.NextInclusiveInt(1, count) == 1) chosen = item;
+            }
+
+            if (count > 0) dst = chosen;
+            else dst.SetNothing();
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeRandomList(ref VmValue dst, VmListObject source, short count, GameEventScriptRandomGenerator randomGenerator)
+    {
+        if (count <= 0 || source.Length == 0)
+        {
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var length = count < source.Length ? count : source.Length;
+        var indices = CreateShuffledPrefix(source.Length, length, randomGenerator);
+        var list = dst.OwningState.CreateList(length);
+        for (var i = 0; i < length; i++) list.Items[i] = source.Items[indices[i]];
+        dst.SetList(list);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeRandomDice(ref VmValue dst, int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    {
+        if (count <= 0 || source.Length == 0)
+        {
+            dst.SetDice([]);
+            return;
+        }
+
+        var length = count < source.Length ? count : source.Length;
+        var indices = CreateShuffledPrefix(source.Length, length, randomGenerator);
+        var dice = new int[length];
+        for (var i = 0; i < length; i++) dice[i] = source[indices[i]];
+        dst.SetDice(dice);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeRandomRange(ref VmValue dst, VmRange range, short count, GameEventScriptRandomGenerator randomGenerator)
+    {
+        var sourceLength = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+        if (count <= 0 || sourceLength <= 0)
+        {
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var length = count < sourceLength ? count : checked((int)sourceLength);
+        var list = dst.OwningState.CreateList(length);
+        if (sourceLength <= int.MaxValue)
+        {
+            var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
+            for (var i = 0; i < length; i++)
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, indices[i] + 1L, out var value)) list.Items[i].SetInteger(value);
+                else list.Items[i].SetNothing();
+            }
+
+            dst.SetList(list);
+            return;
+        }
+
+        var terms = new long[length];
+        for (var i = 0; i < length; i++)
+        {
+            long index;
+            var duplicate = false;
+            do
+            {
+                duplicate = false;
+                index = randomGenerator.NextInclusiveInteger(0, sourceLength - 1L);
+                for (var j = 0; j < i; j++)
+                {
+                    if (terms[j] == index)
+                    {
+                        duplicate = true;
+                        break;
+                    }
+                }
+            } while (duplicate);
+
+            terms[i] = index;
+            if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) list.Items[i].SetInteger(value);
+            else list.Items[i].SetNothing();
+        }
+
+        dst.SetList(list);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeRandomRange(ref VmValue dst, VmFloatRange range, short count, GameEventScriptRandomGenerator randomGenerator)
+    {
+        var sourceLength = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+        if (count <= 0 || sourceLength <= 0)
+        {
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var length = count < sourceLength ? count : checked((int)sourceLength);
+        var list = dst.OwningState.CreateList(length);
+        if (sourceLength <= int.MaxValue)
+        {
+            var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
+            for (var i = 0; i < length; i++)
+            {
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, indices[i] + 1L, out var value)) list.Items[i].SetFloat(value);
+                else list.Items[i].SetNothing();
+            }
+
+            dst.SetList(list);
+            return;
+        }
+
+        var terms = new long[length];
+        for (var i = 0; i < length; i++)
+        {
+            long index;
+            var duplicate = false;
+            do
+            {
+                duplicate = false;
+                index = randomGenerator.NextInclusiveInteger(0, sourceLength - 1L);
+                for (var j = 0; j < i; j++)
+                {
+                    if (terms[j] == index)
+                    {
+                        duplicate = true;
+                        break;
+                    }
+                }
+            } while (duplicate);
+
+            terms[i] = index;
+            if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) list.Items[i].SetFloat(value);
+            else list.Items[i].SetNothing();
+        }
+
+        dst.SetList(list);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static void TakeRandomStream(ref VmValue dst, IVmStream stream, short count, GameEventScriptRandomGenerator randomGenerator)
+    {
+        if (count <= 0)
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+            dst.SetList(dst.OwningState.EmptyList);
+            return;
+        }
+
+        var item = dst.OwningState.CreateNothing();
+        var buffer = new VmValue[16];
+        var itemCount = 0;
+        try
+        {
+            while (stream.TryNext(ref item))
+            {
+                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
+                buffer[itemCount++] = item;
+            }
+
+            if (itemCount == 0)
+            {
+                dst.SetList(dst.OwningState.EmptyList);
+                return;
+            }
+
+            var length = count < itemCount ? count : itemCount;
+            var indices = CreateShuffledPrefix(itemCount, length, randomGenerator);
+            var list = dst.OwningState.CreateList(length);
+            for (var i = 0; i < length; i++) list.Items[i] = buffer[indices[i]];
+            dst.SetList(list);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GameEventScriptRandomGenerator randomGenerator)
+    {
+        var indices = new int[sourceLength];
+        for (var i = 0; i < sourceLength; i++) indices[i] = i;
+        var selectedIndices = new int[prefixLength];
+        var remainingLength = sourceLength;
+        for (var i = 0; i < prefixLength; i++)
+        {
+            var selected = randomGenerator.NextInclusiveInt(0, remainingLength - 1);
+            var value = indices[selected];
+            if (selected < remainingLength - 1)
+            {
+                Array.Copy(indices, selected + 1, indices, selected, remainingLength - selected - 1);
+            }
+
+            selectedIndices[i] = value;
+            remainingLength--;
+        }
+
+        return selectedIndices;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

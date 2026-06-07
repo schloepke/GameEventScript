@@ -275,6 +275,79 @@
     },
     {
       "kind": "scriptApi",
+      "name": "choose lowers to first take first and random take",
+      "randomSequence": [
+        "2",
+        "4",
+        "3",
+        "1",
+        "2",
+        "0",
+        "1",
+        "2",
+        "4"
+      ],
+      "script": "module AtomicChooseLowering\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 5, 4, 3]\n  let range as :range be from 10 to 14\n  emit Done(chooseOne: values[:choose 1], chooseTwo: values[:choose 2], chooseFilteredOne: values[:choose 1 value where value > 2], chooseFilteredTwo: values[:choose 2 value where value > 2], randomOne: values[:choose 1 at random], randomTwo: values[:choose 2 at random], randomFilteredTwo: values[:choose 2 at random value where value > 2], diceRandomTwo: dice[:choose 2 at random], rangeRandomTwo: range[:choose 2 at random])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "chooseFilteredOne": { "type": ":integer", "value": "3" },
+                "chooseFilteredTwo": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "4" }
+                  ]
+                },
+                "chooseOne": { "type": ":integer", "value": "1" },
+                "chooseTwo": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" }
+                  ]
+                },
+                "diceRandomTwo": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4
+                  ]
+                },
+                "randomFilteredTwo": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "5" }
+                  ]
+                },
+                "randomOne": { "type": ":integer", "value": "3" },
+                "randomTwo": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "5" },
+                    { "type": ":integer", "value": "4" }
+                  ]
+                },
+                "rangeRandomTwo": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "12" },
+                    { "type": ":integer", "value": "14" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "take drop highest lowest direct fast paths",
       "script": "module AtomicTakeDropHighestLowestDirectFastPaths\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2, 1]\n  let range as :range be from 1 to 5\n  emit Done(listTakeHighest: values[:take highest 2], listTakeLowest: values[:take lowest 2], listDropHighest: values[:drop highest 2], listDropLowest: values[:drop lowest 2], diceTakeHighest: dice[:take highest 2], diceTakeLowest: dice[:take lowest 2], diceDropHighest: dice[:drop highest 2], diceDropLowest: dice[:drop lowest 2], rangeTakeHighest: range[:take highest 2], rangeTakeLowest: range[:take lowest 2], rangeDropHighest: range[:drop highest 2], rangeDropLowest: range[:drop lowest 2])\n}",
       "steps": [

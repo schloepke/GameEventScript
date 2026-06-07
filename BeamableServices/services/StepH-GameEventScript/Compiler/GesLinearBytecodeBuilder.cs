@@ -1792,6 +1792,18 @@ internal sealed class GesLinearBytecodeBuilder
                         ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.First, a: sourceSlot)
                         : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeFirst, a: sourceSlot, b: draw.Count);
 
+                case ChooseSelectorNode choose when choose.Predicate is null && choose.WeightExpression is null:
+                    if (choose.AtRandom)
+                    {
+                        return choose.Count == 1
+                            ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.OneRandom, a: sourceSlot)
+                            : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeRandom, a: sourceSlot, b: choose.Count);
+                    }
+
+                    return choose.Count == 1
+                        ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.First, a: sourceSlot)
+                        : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeFirst, a: sourceSlot, b: choose.Count);
+
                 case ContainsSelectorNode contains:
                 {
                     var needleSlot = EmitSourceExpression(contains.ValueExpression, context, state);
@@ -2193,11 +2205,16 @@ internal sealed class GesLinearBytecodeBuilder
 
         if (choose.WeightExpression is null || string.IsNullOrEmpty(choose.WeightIdentifier))
         {
-            return EmitValueInstruction(
-                state,
-                choose.AtRandom ? GameEventScriptBytecodeOpCode.PipelineChooseRandom : GameEventScriptBytecodeOpCode.PipelineChoose,
-                a: iteratorSlot,
-                b: choose.Count);
+            if (choose.AtRandom)
+            {
+                return choose.Count == 1
+                    ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.OneRandom, a: iteratorSlot)
+                    : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeRandom, a: iteratorSlot, b: choose.Count);
+            }
+
+            return choose.Count == 1
+                ? EmitValueInstruction(state, GameEventScriptBytecodeOpCode.First, a: iteratorSlot)
+                : EmitValueInstruction(state, GameEventScriptBytecodeOpCode.TakeFirst, a: iteratorSlot, b: choose.Count);
         }
 
         var resultSlot = AllocateSlot(state);

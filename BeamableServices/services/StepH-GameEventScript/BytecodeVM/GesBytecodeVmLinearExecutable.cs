@@ -502,8 +502,6 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.PipelineSortAscending:
             case GameEventScriptBytecodeOpCode.PipelineSortDescending:
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
-            case GameEventScriptBytecodeOpCode.PipelineChoose:
-            case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
             case GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny:
             case GameEventScriptBytecodeOpCode.PipelineDicePatternFullHouse:
             case GameEventScriptBytecodeOpCode.PipelineDicePatternStraight:
@@ -562,6 +560,8 @@ internal sealed class GesBytecodeVmLinearExecutable
             case GameEventScriptBytecodeOpCode.TakeLowest:
             case GameEventScriptBytecodeOpCode.DropHighest:
             case GameEventScriptBytecodeOpCode.DropLowest:
+            case GameEventScriptBytecodeOpCode.OneRandom:
+            case GameEventScriptBytecodeOpCode.TakeRandom:
             case GameEventScriptBytecodeOpCode.First:
             case GameEventScriptBytecodeOpCode.Last:
             case GameEventScriptBytecodeOpCode.Single:

@@ -1266,8 +1266,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.PipelineShuffle:
                 return TryExecutePipelineShuffle(instruction);
 
-            case GameEventScriptBytecodeOpCode.PipelineChoose:
-            case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
             case GameEventScriptBytecodeOpCode.PipelineChooseWeighted:
                 return TryExecutePipelineChoose(instruction);
 
@@ -1290,6 +1288,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.TakeLowest:
             case GameEventScriptBytecodeOpCode.DropHighest:
             case GameEventScriptBytecodeOpCode.DropLowest:
+            case GameEventScriptBytecodeOpCode.OneRandom:
+            case GameEventScriptBytecodeOpCode.TakeRandom:
                 return TryExecuteSequenceInstruction(instruction);
         }
 
@@ -3342,13 +3342,9 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 return false;
             }
         }
-        else if (instruction.OpCode == GameEventScriptBytecodeOpCode.PipelineChooseRandom)
-        {
-            chosen = ChooseRandomItems(items, count);
-        }
         else
         {
-            chosen = items.Take(count).ToArray();
+            chosen = [];
         }
 
         var value = count == 1
@@ -3601,6 +3597,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 GameEventScriptBytecodeOpCode.TakeLowest => EvaluateSequenceSliceSelector(target, streamItems, "take", "lowest", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.DropHighest => EvaluateSequenceSliceSelector(target, streamItems, "drop", "highest", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.DropLowest => EvaluateSequenceSliceSelector(target, streamItems, "drop", "lowest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.OneRandom => EvaluateRandomSelector(target, streamItems, 1, single: true),
+                GameEventScriptBytecodeOpCode.TakeRandom => EvaluateRandomSelector(target, streamItems, instruction.ImmediateY, single: false),
                 _ => GameEventScriptNothingValue.Instance
             };
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(streamSlice));
@@ -3634,6 +3632,10 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     }
 
                     return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Reference(GameEventScriptValueFactory.GesList(series.Take(instruction.ImmediateY))));
+
+                case GameEventScriptBytecodeOpCode.OneRandom:
+                case GameEventScriptBytecodeOpCode.TakeRandom:
+                    return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
             }
         }
 
@@ -3654,6 +3656,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 GameEventScriptBytecodeOpCode.TakeLowest => EvaluateRangeSliceSelector(range, "take", "lowest", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.DropHighest => EvaluateRangeSliceSelector(range, "drop", "highest", instruction.ImmediateY),
                 GameEventScriptBytecodeOpCode.DropLowest => EvaluateRangeSliceSelector(range, "drop", "lowest", instruction.ImmediateY),
+                GameEventScriptBytecodeOpCode.OneRandom => EvaluateRandomSelector(range, range.AsEnumerable().ToArray(), 1, single: true),
+                GameEventScriptBytecodeOpCode.TakeRandom => EvaluateRandomSelector(range, range.AsEnumerable().ToArray(), instruction.ImmediateY, single: false),
                 _ => GameEventScriptNothingValue.Instance
             };
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(rangeSlice));
@@ -3670,6 +3674,8 @@ internal sealed partial class GesBytecodeVmExecutionSession
             GameEventScriptBytecodeOpCode.TakeLowest => EvaluateSequenceSliceSelector(source, items, "take", "lowest", instruction.ImmediateY),
             GameEventScriptBytecodeOpCode.DropHighest => EvaluateSequenceSliceSelector(source, items, "drop", "highest", instruction.ImmediateY),
             GameEventScriptBytecodeOpCode.DropLowest => EvaluateSequenceSliceSelector(source, items, "drop", "lowest", instruction.ImmediateY),
+            GameEventScriptBytecodeOpCode.OneRandom => EvaluateRandomSelector(source, items, 1, single: true),
+            GameEventScriptBytecodeOpCode.TakeRandom => EvaluateRandomSelector(source, items, instruction.ImmediateY, single: false),
             _ => GameEventScriptNothingValue.Instance
         };
         return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.FromGameEventScriptValue(value));
@@ -6635,6 +6641,27 @@ internal sealed partial class GesBytecodeVmExecutionSession
         }
 
         return GameEventScriptValueFactory.GesList(shuffled);
+    }
+
+    private GameEventScriptValue EvaluateRandomSelector(
+        GameEventScriptValue target,
+        IReadOnlyList<GameEventScriptValue> items,
+        int count,
+        bool single)
+    {
+        if (single)
+        {
+            var chosen = ChooseRandomItems(items, 1);
+            return chosen.Count == 0 ? GameEventScriptNothingValue.Instance : chosen[0];
+        }
+
+        var selectedItems = ChooseRandomItems(items, count);
+        return target.Kind switch
+        {
+            GameEventScriptValueKind.Dice => GameEventScriptValueFactory.GesDice(GameEventScriptDiceValue.Create(selectedItems.Select(item => (int)item.AsInteger()))),
+            GameEventScriptValueKind.List or GameEventScriptValueKind.Range => GameEventScriptValueFactory.GesList(selectedItems),
+            _ => GameEventScriptNothingValue.Instance
+        };
     }
 
     private static bool MatchStraight(IReadOnlyList<GameEventScriptValue> items)

@@ -506,9 +506,8 @@ public static class GameEventScriptBytecodeDumper
                 AppendAddress(builder, "valueEntry", instruction.BU);
                 break;
 
-            case GameEventScriptBytecodeOpCode.PipelineChoose:
-            case GameEventScriptBytecodeOpCode.PipelineChooseRandom:
-                AppendSlot(builder, "iterator", instruction.XSlot);
+            case GameEventScriptBytecodeOpCode.TakeRandom:
+                AppendSlot(builder, "source", instruction.XSlot);
                 AppendIndex(builder, "count", instruction.ImmediateY);
                 break;
 
@@ -554,6 +553,9 @@ public static class GameEventScriptBytecodeDumper
             case GameEventScriptBytecodeOpCode.DropLowest:
                 AppendSlot(builder, "source", instruction.XSlot);
                 AppendIndex(builder, "count", instruction.ImmediateY);
+                break;
+            case GameEventScriptBytecodeOpCode.OneRandom:
+                AppendSlot(builder, "source", instruction.XSlot);
                 break;
             case GameEventScriptBytecodeOpCode.First:
             case GameEventScriptBytecodeOpCode.Last:

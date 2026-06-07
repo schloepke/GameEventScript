@@ -342,37 +342,39 @@ separate approximate-equality opcode.
 | 0x85 | `TakeLowest` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Takes the lowest `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
 | 0x86 | `DropHighest` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the highest `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
 | 0x87 | `DropLowest` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Drops the lowest `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
-| 0x88 | `Length` | - | result slot | `XSlot`=operand | - | - | Length operation. Text and tags use raw text length. |
-| 0x89 | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text prefix check or list/dice/range sequence prefix check. |
-| 0x8A | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text suffix check or list/dice/range sequence suffix check. |
-| 0x8B | `Contains` | - | result slot | `XSlot`=needle | `YSlot`=container | - | Text/tag substring, map key, list/dice/range membership, or vector/point component membership. |
-| 0x8C | `ContainsAny` | - | result slot | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains any value from the needle sequence. Streams are consumed until the first match or exhaustion. |
-| 0x8D | `ContainsAll` | - | result slot | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains every value from the needle sequence. Streams are consumed until all needles match or exhaustion. |
-| 0x8E | `HasAny` | - | result slot | `XSlot`=source | - | - | Truthiness `any` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `false`; `nothing` -> `nothing`. |
-| 0x8F | `HasAll` | - | result slot | `XSlot`=source | - | - | Truthiness `all` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `true`; `nothing` -> `nothing`. |
-| 0x90 | `ContainsValue` | - | result slot | `XSlot`=needle | `YSlot`=container | - | Value membership for map-like containers, vectors, and points. |
-| 0x91 | `Union` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |
-| 0x92 | `Intersect` | - | result slot | `XSlot`=left | `YSlot`=right | - | Map key intersection or list/dice multiset intersection; invalid shapes -> `nothing`. |
-| 0x93 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | List zip into `{ left, right }` maps up to the shorter length; invalid shapes -> `nothing`. |
-| 0x94 | `KeysOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
-| 0x95 | `ValuesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
-| 0x96 | `EntriesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
-| 0x97 | `First` | - | result slot | `XSlot`=source | - | - | Returns the first element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
-| 0x98 | `Last` | - | result slot | `XSlot`=source | - | - | Returns the last element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
-| 0x99 | `Single` | - | result slot | `XSlot`=source | - | - | Returns the only element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty/multiple-element sources -> `nothing`. |
-| 0x9A | `StreamCreate` | - | iterator slot | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
-| 0x9B | `StreamNext` | - | item slot | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
-| 0x9C | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
-| 0x9D | `StreamMap` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
-| 0x9E | `StreamFilter` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
-| 0x9F | `StreamCount` | - | result slot | `XSlot`=iterator | - | - | Counts finite stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xA0 | `StreamSum` | - | result slot | `XSlot`=iterator | - | - | Sums finite stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xA1 | `StreamAverage` | - | result slot | `XSlot`=iterator | - | - | Averages finite stream elements. Empty/series -> `nothing`. |
-| 0xA2 | `StreamMin` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
-| 0xA3 | `StreamMax` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
-| 0xA4 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xA5 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
-| 0xA6 | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
+| 0x88 | `OneRandom` | - | result slot | `XSlot`=source | - | - | Chooses one random element from a finite list, dice, range, or stream source; empty/invalid/series sources yield `nothing`. |
+| 0x89 | `TakeRandom` | - | result slot | `XSlot`=source | `ImmediateY`=count | - | Chooses up to `Y` random elements without replacement. Lists stay lists, dice stay dice, ranges and streams materialize as lists. |
+| 0x8A | `Length` | - | result slot | `XSlot`=operand | - | - | Length operation. Text and tags use raw text length. |
+| 0x8B | `StartsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text prefix check or list/dice/range sequence prefix check. |
+| 0x8C | `EndsWith` | - | result slot | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text suffix check or list/dice/range sequence suffix check. |
+| 0x8D | `Contains` | - | result slot | `XSlot`=needle | `YSlot`=container | - | Text/tag substring, map key, list/dice/range membership, or vector/point component membership. |
+| 0x8E | `ContainsAny` | - | result slot | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains any value from the needle sequence. Streams are consumed until the first match or exhaustion. |
+| 0x8F | `ContainsAll` | - | result slot | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains every value from the needle sequence. Streams are consumed until all needles match or exhaustion. |
+| 0x90 | `HasAny` | - | result slot | `XSlot`=source | - | - | Truthiness `any` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `false`; `nothing` -> `nothing`. |
+| 0x91 | `HasAll` | - | result slot | `XSlot`=source | - | - | Truthiness `all` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `true`; `nothing` -> `nothing`. |
+| 0x92 | `ContainsValue` | - | result slot | `XSlot`=needle | `YSlot`=container | - | Value membership for map-like containers, vectors, and points. |
+| 0x93 | `Union` | - | result slot | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |
+| 0x94 | `Intersect` | - | result slot | `XSlot`=left | `YSlot`=right | - | Map key intersection or list/dice multiset intersection; invalid shapes -> `nothing`. |
+| 0x95 | `Zip` | - | result slot | `XSlot`=left | `YSlot`=right | - | List zip into `{ left, right }` maps up to the shorter length; invalid shapes -> `nothing`. |
+| 0x96 | `KeysOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
+| 0x97 | `ValuesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
+| 0x98 | `EntriesOfMap` | - | result slot | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
+| 0x99 | `First` | - | result slot | `XSlot`=source | - | - | Returns the first element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
+| 0x9A | `Last` | - | result slot | `XSlot`=source | - | - | Returns the last element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
+| 0x9B | `Single` | - | result slot | `XSlot`=source | - | - | Returns the only element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty/multiple-element sources -> `nothing`. |
+| 0x9C | `StreamCreate` | - | iterator slot | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
+| 0x9D | `StreamNext` | - | item slot | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
+| 0x9E | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
+| 0x9F | `StreamMap` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
+| 0xA0 | `StreamFilter` | - | iterator slot | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item slot, `BU`=capture slot-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
+| 0xA1 | `StreamCount` | - | result slot | `XSlot`=iterator | - | - | Counts finite stream elements. Empty -> `0`; series -> `nothing`. |
+| 0xA2 | `StreamSum` | - | result slot | `XSlot`=iterator | - | - | Sums finite stream elements. Empty -> `0`; series -> `nothing`. |
+| 0xA3 | `StreamAverage` | - | result slot | `XSlot`=iterator | - | - | Averages finite stream elements. Empty/series -> `nothing`. |
+| 0xA4 | `StreamMin` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
+| 0xA5 | `StreamMax` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
+| 0xA6 | `StreamCollectList` | - | result slot | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xA7 | `StreamCollectMap` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
+| 0xA8 | `StreamCollectMapValue` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
 
 ### Group 4 - Pipeline Operations
 
@@ -387,27 +389,25 @@ separate approximate-equality opcode.
 | 0xD6 | `PipelineOrderByAscending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. |
 | 0xD7 | `PipelineOrderByDescending` | - | result slot | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. |
 | 0xD8 | `PipelineShuffle` | - | result slot | `XSlot`=iterator | - | - | Shuffles source items. |
-| 0xD9 | `PipelineChoose` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Chooses up to `Y` source items. |
-| 0xDA | `PipelineChooseRandom` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Randomly chooses up to `Y` source items. |
-| 0xDB | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
-| 0xDC | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
-| 0xDD | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
-| 0xDE | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
-| 0xDF | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
-| 0xE0 | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
-| 0xE1 | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
-| 0xE2 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
-| 0xE3 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
-| 0xE4 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
-| 0xE5 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xE6 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
+| 0xD9 | `PipelineChooseWeighted` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding slot, `BU`=weight entry address | Randomly chooses using projected positive weights. |
+| 0xDA | `PipelineDicePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Tests whether any dice face count reaches `Y`. |
+| 0xDB | `PipelineDicePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Tests whether a projected face count reaches `Y`. |
+| 0xDC | `PipelineDicePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Tests the full-house dice pattern. |
+| 0xDD | `PipelineDicePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Tests the straight dice pattern. |
+| 0xDE | `PipelineTakePatternCountAny` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | - | Takes dice matching any-face count pattern. |
+| 0xDF | `PipelineTakePatternCountFace` | - | result slot | `XSlot`=iterator | `ImmediateY`=count | `AU`=face entry address | Takes dice matching projected-face count pattern. |
+| 0xE0 | `PipelineTakePatternFullHouse` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching full-house pattern. |
+| 0xE1 | `PipelineTakePatternStraight` | - | result slot | `XSlot`=iterator | - | - | Takes dice matching straight pattern. |
+| 0xE2 | `PipelineListCreateBuilder` | - | builder slot | - | - | - | Creates a VM-internal list builder for generated pipeline collections. |
+| 0xE3 | `PipelineListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xE4 | `PipelineListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the pipeline list builder as a list. |
 
 ### Reserved Opcode Space
 
 | Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xA7..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
-| 0xE7..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
+| 0xA9..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
+| 0xE5..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

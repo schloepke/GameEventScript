@@ -489,6 +489,12 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case DropLowest:
                             vmState.Register(instruction.DestinationSlot).VmDropLowest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
+                        case OneRandom:
+                            vmState.Register(instruction.DestinationSlot).VmOneRandom(ref vmState.Register(instruction.XSlot), vmState.RandomGenerator);
+                            break;
+                        case TakeRandom:
+                            vmState.Register(instruction.DestinationSlot).VmTakeRandom(ref vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
+                            break;
                         case Length:
                             vmState.Register(instruction.DestinationSlot).VmLength(ref vmState.Register(instruction.XSlot), ref vmState.Binary.TextConstantTable);
                             break;
@@ -619,12 +625,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineShuffle:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineChoose:
-                            // FIXME: creating the real custom type here
-                            break;
-                        case PipelineChooseRandom:
                             // FIXME: creating the real custom type here
                             break;
                         case PipelineChooseWeighted:

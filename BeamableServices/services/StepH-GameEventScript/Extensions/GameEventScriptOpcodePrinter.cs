@@ -204,6 +204,8 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.TakeLowest => [TargetRegister, SourceRegister, CountImmediate],
             GameEventScriptBytecodeOpCode.DropHighest => [TargetRegister, SourceRegister, CountImmediate],
             GameEventScriptBytecodeOpCode.DropLowest => [TargetRegister, SourceRegister, CountImmediate],
+            GameEventScriptBytecodeOpCode.OneRandom => [TargetRegister, SourceRegister],
+            GameEventScriptBytecodeOpCode.TakeRandom => [TargetRegister, SourceRegister, CountImmediate],
 
             GameEventScriptBytecodeOpCode.Length => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.StartsWith => [TargetRegister, LeftRegister, RightRegister],
@@ -246,8 +248,6 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.PipelineOrderByAscending => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.PipelineOrderByDescending => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.PipelineShuffle => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.PipelineChoose => [TargetRegister, IteratorRegister, CountImmediate],
-            GameEventScriptBytecodeOpCode.PipelineChooseRandom => [TargetRegister, IteratorRegister, CountImmediate],
             GameEventScriptBytecodeOpCode.PipelineChooseWeighted => [TargetRegister, IteratorRegister, CountImmediate, ItemBindingRegister, WeightEntry],
             GameEventScriptBytecodeOpCode.PipelineDicePatternCountAny => [TargetRegister, IteratorRegister, CountImmediate],
             GameEventScriptBytecodeOpCode.PipelineDicePatternCountFace => [TargetRegister, IteratorRegister, CountImmediate, FaceEntry],

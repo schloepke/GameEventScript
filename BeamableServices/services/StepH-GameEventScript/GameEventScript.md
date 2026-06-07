@@ -837,7 +837,13 @@ items[:choose 3 unit where unit.hp > 0 weighted by unit => unit.priority]
 ```
 
 `:draw 1` is equivalent to `:first`; `:draw n` with `n > 1` is equivalent to
-`:take first n`.
+`:take first n`. Deterministic `:choose` follows the same rule:
+`:choose 1` is equivalent to `:first`, and `:choose n` with `n > 1` is
+equivalent to `:take first n`. Random choice uses random selection without
+replacement: `:choose 1 at random` returns one item or `nothing`, while
+`:choose n at random` returns up to `n` randomly selected items. Weighted
+choice evaluates the `weighted by` expression per candidate and chooses
+randomly from positive finite weights.
 
 ### Dice Patterns and Object Matching
 

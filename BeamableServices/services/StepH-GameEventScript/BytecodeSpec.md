@@ -1142,6 +1142,8 @@ StreamMax dst iterator itemBindingSlot projectionEntry
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingSlot keyEntry
 StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
+OneRandom dst source
+TakeRandom dst source count
 First/Last/Single dst source
 HasAny/HasAll dst source
 PipelineListCreateBuilder builder
@@ -1160,7 +1162,13 @@ They accept lists, dice, ranges, maps, custom map-backed values, text, tags, and
 VM streams. Maps and custom values use stable ordinal value order. Empty,
 invalid, or unsupported sources yield `nothing`; `Single` also yields `nothing`
 when the source has more than one element. The DSL `:draw 1` selector lowers to
-`First`; `:draw n` with `n > 1` lowers to `TakeFirst`.
+`First`; `:draw n` with `n > 1` lowers to `TakeFirst`. Deterministic
+`:choose 1` also lowers to `First`, and deterministic `:choose n` with
+`n > 1` lowers to `TakeFirst`. Random choice uses `OneRandom` for
+`:choose 1 at random` and `TakeRandom` for `:choose n at random`.
+`TakeRandom` chooses without replacement. Lists stay lists, dice stay dice,
+and ranges or streams materialize as lists. Weighted choice remains a pipeline
+terminal because it must evaluate a helper expression for every candidate.
 
 `StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
 iterator. Their helper entries run as isolated helper frames: the current source
@@ -1186,8 +1194,8 @@ Ties keep the earlier source item. Empty finite streams and series sources
 return `nothing`.
 
 Fixed terminal opcodes cover materializers and operations that need full
-collection semantics: map, distinct, group/order/sort/reverse, random
-choose/draw/shuffle, dice patterns, object matches, and series term/take/drop
+collection semantics: map, distinct, group/order/sort/reverse, weighted
+choose/shuffle, dice patterns, object matches, and series term/take/drop
 operations. These opcodes reference only iterator slots, helper
 entry addresses, immediate counts, and binding slots; there are no pipeline
 selector, pattern, or object-pattern pools.

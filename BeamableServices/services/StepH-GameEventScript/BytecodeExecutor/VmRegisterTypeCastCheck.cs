@@ -45,7 +45,7 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VmCast(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type)
+    internal static void VmCast(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
     {
         switch (type)
         {
@@ -119,7 +119,7 @@ internal static class VmRegisterTypeCastCheck
                         return;
                 }
             case List:
-                CastList(ref dst, ref xSlot);
+                CastList(ref dst, ref xSlot, session);
                 return;
             case Map:
                 CastMap(ref dst, ref xSlot);
@@ -276,7 +276,7 @@ internal static class VmRegisterTypeCastCheck
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void CastList(ref VmValue dst, ref VmValue xSlot)
+    private static void CastList(ref VmValue dst, ref VmValue xSlot, GameEventScriptSession? session)
     {
         switch (xSlot.Kind)
         {
@@ -321,6 +321,12 @@ internal static class VmRegisterTypeCastCheck
                     return;
                 }
 
+                if (session is not null && !session.RuntimeBudget.TryCheckRangeLength(xSlot.IntegerValue, "Range length exceeds the configured limit."))
+                {
+                    dst.SetList(dst.OwningState.EmptyList);
+                    return;
+                }
+
                 var list = new VmListObject(dst.OwningState, (int)xSlot.IntegerValue);
                 var current = range.from;
                 for (var i = 0; i < list.Length; i++)
@@ -337,6 +343,12 @@ internal static class VmRegisterTypeCastCheck
                 if (xSlot.IntegerValue > int.MaxValue)
                 {
                     dst.SetNothing();
+                    return;
+                }
+
+                if (session is not null && !session.RuntimeBudget.TryCheckRangeLength(xSlot.IntegerValue, "Range length exceeds the configured limit."))
+                {
+                    dst.SetList(dst.OwningState.EmptyList);
                     return;
                 }
 

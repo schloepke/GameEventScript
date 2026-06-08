@@ -6,6 +6,7 @@ using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -132,7 +133,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
             var opcodesExecuted = 0;
             try
             {
-                while (!IsCompleted && vmState.State == Processing && opcodesExecuted < maxSteps)
+                while (!IsCompleted && vmState.State == Processing && !session.RuntimeBudget.IsExhausted && opcodesExecuted < maxSteps)
                 {
                     var instruction = vmState.FetchInstructionAndIncrementInstructionPointer();
                     switch (instruction.OpCode)
@@ -203,7 +204,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
 
                         case Cast:
-                            vmState.Register(instruction.DestinationSlot).VmCast(ref vmState.Register(instruction.XSlot), instruction.TypeKind);
+                            vmState.Register(instruction.DestinationSlot).VmCast(ref vmState.Register(instruction.XSlot), instruction.TypeKind, session);
                             break;
                         case CastCustom:
                             vmState.Register(instruction.DestinationSlot).VmCastCustom(ref vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, instruction.DestinationSlot);
@@ -263,7 +264,8 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).SetInteger(instruction.I64, instruction.Unit);
                             break;
                         case LoadFloat:
-                            vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, instruction.Unit);
+                            if (instruction.HasInstructionFlag(GameEventScriptInstructionFlag.PreserveFloat)) vmState.Register(instruction.DestinationSlot).SetFloatExact(instruction.F64, instruction.Unit);
+                            else vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, instruction.Unit);
                             break;
                         case LoadPercentage:
                             vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
@@ -335,12 +337,18 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmCreateRange(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIterator:
-                            vmState.Register(instruction.DestinationSlot).VmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.Register(instruction.DestinationSlot).VmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), session);
                             break;
                         case CreateRangeIteratorWithStep:
-                            vmState.Register(instruction.DestinationSlot).VmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU));
+                            vmState.Register(instruction.DestinationSlot).VmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU), session);
                             break;
                         case CreateRangeIteratorShort:
+                            if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
+                            {
+                                vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(0, 0, 0));
+                                break;
+                            }
+
                             vmState.Register(instruction.DestinationSlot).SetStream(new VmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                             break;
                         case CreateRecord:
@@ -547,8 +555,14 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmStreamCreate(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamNext:
+                        {
                             vmState.Register(instruction.DestinationSlot).VmStreamNext(ref vmState.Register(instruction.XSlot), instruction.TargetAddress);
+                            if (vmState.Register(instruction.DestinationSlot).Kind is not Nothing)
+                            {
+                                session.RuntimeBudget.TryConsumeLoopIteration("For loop iteration exceeds the configured limit.");
+                            }
                             break;
+                        }
                         case StreamClose:
                             vmState.Register(instruction.XSlot).VmStreamClose();
                             break;

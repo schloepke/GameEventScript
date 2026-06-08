@@ -156,6 +156,21 @@ internal struct VmValue
         ObjectValue = null;
     }
 
+    internal void SetFloatExact(double value, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    {
+        if (double.IsNaN(value))
+        {
+            SetNothing();
+            return;
+        }
+
+        Kind = Float;
+        Flags = IsNumericFlag | HasValueFlag | (value != 0 && double.IsFinite(value) ? IsTrueFlag : IsFalseFlag);
+        FloatValue = value;
+        Unit = unit;
+        ObjectValue = null;
+    }
+
     internal void SetPercentage(double ratio)
     {
         if (double.IsNaN(ratio))

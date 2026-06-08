@@ -428,6 +428,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
 enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
   enum-field NormalizeResultAsPredicate = 32
+  enum-field PreserveFloat = 64
 sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.Collections.Generic.IEnumerable<System.String> tags)
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.String[] tags)

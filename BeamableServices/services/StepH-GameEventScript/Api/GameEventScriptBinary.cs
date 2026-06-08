@@ -146,7 +146,8 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
 public enum GameEventScriptInstructionFlag : byte
 {
     None = 0,
-    NormalizeResultAsPredicate = 0x20
+    NormalizeResultAsPredicate = 0x20,
+    PreserveFloat = 0x40
 }
 
 public enum GameEventScriptBytecodeTypeKind : byte

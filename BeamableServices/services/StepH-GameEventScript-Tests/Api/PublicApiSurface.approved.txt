@@ -490,6 +490,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator Create()
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromRandom(System.Random random)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int32 seed)
+  method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int64 seed)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSequence(System.Double[] values)
 sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
   ctor GameEventScriptRuntimeLimits()

@@ -166,5 +166,37 @@ public sealed class BytecodeExecutorTests
         Assert.AreEqual("Done", emitted[0].Name);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(40), emitted[0].Arguments["count"]);
     }
+
+    [TestMethod]
+    public void SeededRandomUsesFullInt64Seed()
+    {
+        const long seed = 0x1_0000_0001L;
+        const string script =
+            """
+            module BinaryExecutor
+
+            on Start {
+                let value be :random with 4294967297 (:random from 1 to 1000000000000)
+                emit Done(value: value)
+            }
+            """;
+
+        var expected = GameEventScriptRandomGenerator
+            .FromSeed(seed)
+            .NextInclusiveInteger(1, 1_000_000_000_000L);
+        var emitted = new List<GameEventScriptMessage>();
+        var host = GameEventScriptManager.CreateHostBuilder()
+            .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(emitted.Add))
+            .Build()
+            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+
+        var handled = host.PublishToCompletion(Create("Start"));
+
+        Assert.IsTrue(handled);
+        Assert.HasCount(1, emitted);
+        Assert.AreEqual("Done", emitted[0].Name);
+        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(expected), emitted[0].Arguments["value"]);
+    }
     
 }

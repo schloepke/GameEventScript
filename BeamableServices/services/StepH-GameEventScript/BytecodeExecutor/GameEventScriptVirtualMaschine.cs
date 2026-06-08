@@ -459,10 +459,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case RandomPush:
                             var seed = vmState.Register(instruction.XSlot);
-                            vmState.PushRandom(seed.Kind == Integer ? GameEventScriptRandomGenerator.FromSeed((int)seed.IntegerValue) : vmState.RandomGenerator);
+                            vmState.PushRandom(seed.Kind == Integer ? GameEventScriptRandomGenerator.FromSeed(seed.IntegerValue) : vmState.RandomGenerator);
                             break;
                         case RandomPushConstant:
-                            vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed((int)instruction.I64));
+                            vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed(instruction.I64));
                             break;
                         case RandomPop:
                             vmState.PopRandom();
@@ -662,10 +662,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case ListBuilderFinish:
                             vmState.Register(instruction.DestinationSlot).VmListBuilderFinish(ref vmState.Register(instruction.XSlot));
                             break;
-                        #endregion
-
-                        #region Group 3 - pattern operations
-
                         case HasPattern:
                             vmState.Register(instruction.DestinationSlot).VmHasPattern(ref vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this, instruction.DestinationSlot);
                             break;

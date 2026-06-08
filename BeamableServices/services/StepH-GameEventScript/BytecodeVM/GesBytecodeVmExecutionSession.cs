@@ -5759,7 +5759,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
     }
 
     private void PushRandomScope(long seed)
-        => _randomScopes.Push(GameEventScriptRandomGenerator.FromSeed(FoldRandomSeed(seed)));
+        => _randomScopes.Push(GameEventScriptRandomGenerator.FromSeed(seed));
 
     private void PopRandomScope()
     {
@@ -5802,17 +5802,6 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         seed = default;
         return false;
-    }
-
-    private static int FoldRandomSeed(long signedSeed)
-    {
-        unchecked
-        {
-            var seed = (ulong)signedSeed;
-            seed ^= seed >> 32;
-            seed ^= seed >> 16;
-            return (int)seed;
-        }
     }
 
     private static int ToIntSaturated(long value)

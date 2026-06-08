@@ -50,6 +50,22 @@ public sealed class GameEventScriptRandomGenerator
 
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
+    /// initialized with the specified deterministic 64-bit seed.
+    /// </summary>
+    /// <param name="seed">
+    /// The seed value used for deterministic random value generation.
+    /// </param>
+    /// <returns>
+    /// A new <c>GameEventScriptRandomGenerator</c> initialized with the specified seed.
+    /// </returns>
+    public static GameEventScriptRandomGenerator FromSeed(long seed)
+    {
+        if (seed is >= int.MinValue and <= int.MaxValue) return FromSeed((int)seed);
+        return new GameEventScriptRandomGenerator(seed);
+    }
+
+    /// <summary>
+    /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
     /// initialized to generate random values from a predefined sequence.
     /// </summary>
     /// <param name="values">
@@ -124,7 +140,7 @@ public sealed class GameEventScriptRandomGenerator
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
-        var sample = _random.NextDouble();
+        var sample = NextUnitFloat();
         return minInclusive + (maxInclusive - minInclusive) * sample;
     }
 
@@ -134,9 +150,16 @@ public sealed class GameEventScriptRandomGenerator
         _sequence = sequence == null ? null : new Queue<double>(sequence);
     }
 
-    private readonly Random _random;
+    private GameEventScriptRandomGenerator(long seed)
+    {
+        _random = null;
+        _seed64State = (ulong)seed;
+    }
+
+    private readonly Random? _random;
     private readonly Queue<double>? _sequence;
     private readonly byte[] _uint64Buffer = new byte[8];
+    private ulong _seed64State;
 
     private bool TryDequeueSequenceValue(out double value)
     {
@@ -170,8 +193,26 @@ public sealed class GameEventScriptRandomGenerator
 
     private ulong NextUInt64()
     {
+        if (_random == null) return NextSeededUInt64();
         _random.NextBytes(_uint64Buffer);
         return BitConverter.ToUInt64(_uint64Buffer, 0);
+    }
+
+    private double NextUnitFloat()
+    {
+        if (_random != null) return _random.NextDouble();
+        return (NextSeededUInt64() >> 11) * (1.0 / (1UL << 53));
+    }
+
+    private ulong NextSeededUInt64()
+    {
+        unchecked
+        {
+            var value = _seed64State += 0x9E3779B97F4A7C15UL;
+            value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9UL;
+            value = (value ^ (value >> 27)) * 0x94D049BB133111EBUL;
+            return value ^ (value >> 31);
+        }
     }
 
     private static long ToLongSaturated(double value) => value switch

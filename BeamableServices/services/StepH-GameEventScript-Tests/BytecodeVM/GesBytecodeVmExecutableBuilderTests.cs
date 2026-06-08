@@ -331,6 +331,28 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeStoresLargeRandomSeedAsInt64()
+    {
+        const long seed = 0x1_0000_0001L;
+        const string script =
+            """
+            module SideTables
+
+            on Start {
+              :random with 4294967297 {
+                emit Done(value: :random from 1 to 6)
+              }
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.IsTrue(compiled.Code.Any(instruction =>
+            instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant &&
+            instruction.I64 == seed));
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeUsesIteratorOpcodesForDynamicForSources()
     {
         const string script =

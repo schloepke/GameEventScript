@@ -323,12 +323,13 @@ separate approximate-equality opcode.
 | 0x67 | `LogN` | - | result slot | `XSlot`=operand | - | - | Natural logarithm. |
 | 0x68 | `Chance` | - | result slot | `XSlot`=operand | - | - | Chance evaluation. |
 | 0x69 | `Clamp` | - | result slot | `XSlot`=value | `YSlot`=minimum | `AU`=maximum slot | The only opcode with three direct source slots. |
-| 0x6A | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a random value from the requested range using the current random scope. |
-| 0x6B | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
-| 0x6C | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
-| 0x6D | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
-| 0x6E | `Term` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
-| 0x6F..0x7F | reserved | - | - | - | - | - | Reserved after compacting boolean algebra, math, random, and series into Group 2. |
+| 0x6A | `RandomTake` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes an integer random value from integer bounds using the current random scope. |
+| 0x6B | `RandomTakeFloat` | - | result slot | `XSlot`=from | `YSlot`=to | - | Takes a float random value from numeric bounds using the current random scope. |
+| 0x6C | `RandomPush` | - | - | `XSlot`=seed | - | - | Pushes a nested random scope from a dynamic unitless integer seed slot. |
+| 0x6D | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
+| 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
+| 0x6F | `Term` | - | result slot | `XSlot`=series | `YSlot`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
+| 0x70..0x7F | reserved | - | - | - | - | - | Reserved tail of Group 2 after compacting boolean algebra, math, random, and series. |
 
 ### Group 3 - Text, Collections, Streams
 
@@ -391,13 +392,7 @@ separate approximate-equality opcode.
 | 0xB6 | `ListBuilderFinish` | - | result slot | `XSlot`=builder | - | - | Materializes the list builder as a list. |
 | 0xB7 | `HasPattern` | - | result slot | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
 | 0xB8 | `TakePattern` | - | result slot | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-
-### Reserved Opcode Space
-
-| Hex | Opcode | UnitAndFlags | DestinationSlot | X | Y | Payload | Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 0xB9..0xCF | reserved | - | - | - | - | - | Reserved for future stream operators. |
-| 0xD0..0xFF | reserved | - | - | - | - | - | Reserved for future pipeline, extension, or VM opcodes. |
+| 0xB9..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

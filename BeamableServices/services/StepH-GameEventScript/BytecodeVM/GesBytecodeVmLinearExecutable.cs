@@ -619,6 +619,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 break;
 
             case GameEventScriptBytecodeOpCode.RandomTake:
+            case GameEventScriptBytecodeOpCode.RandomTakeFloat:
                 ValidateSlot(module, instruction.XSlot, $"{context} from slot");
                 ValidateSlot(module, instruction.YSlot, $"{context} to slot");
                 break;

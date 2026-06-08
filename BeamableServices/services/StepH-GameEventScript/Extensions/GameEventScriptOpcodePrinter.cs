@@ -194,6 +194,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.Chance => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.Clamp => [TargetRegister, SourceRegister, MinimumRegister, MaximumRegister],
             GameEventScriptBytecodeOpCode.RandomTake => [TargetRegister, FromRegister, ToRegister],
+            GameEventScriptBytecodeOpCode.RandomTakeFloat => [TargetRegister, FromRegister, ToRegister],
             GameEventScriptBytecodeOpCode.RandomPush => [SeedRegister],
             GameEventScriptBytecodeOpCode.RandomPushConstant => [IntegerImmediate],
             GameEventScriptBytecodeOpCode.RandomPop => [],

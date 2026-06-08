@@ -361,30 +361,27 @@ Opcode values are grouped in aligned operation-family blocks. Every family
 starts at a `0x_0` boundary, and larger families may span multiple 16-value
 pages. The VM still dispatches directly on the full opcode byte; the high nibble
 is a portable layout convention and may be used by validators, dumpers, or
-future decoders. The current groups are:
+future decoders. Each group owns exactly one reserved tail range at the end of
+the group; reserved opcode pages are not modeled as separate groups. The current
+groups are:
 
 ```text
 0x00 Group 1: no-op, frame slots, jumps, calls, returns, emit operations
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
 0x20 Group 1 type checks, loads, argument staging, value creation
 0x30 Group 1 argument staging and value creation continuation
-0x40 Group 1 record/external type construction, presence helpers, and reserved tail
+0x40 Group 1 record/external type construction, presence helpers, reserved tail 0x44..0x4F
 0x50 Group 2: boolean algebra, comparison, math
-0x60 Group 2 math/random/series continuation and reserved tail
-0x70 reserved after compacting math and series into Group 2
+0x60 Group 2 math/random/series continuation, reserved tail 0x70..0x7F
 0x80 Group 3: collection slicing, text/collection operators, map projections
 0x90 Group 3 element terminals, iterators, streams, and stream terminals
 0xA0 Group 3 stream extrema, stream collect terminals, distinct/group/sort/order operators
-0xB0 Group 3 order operators, generated-list builders, pattern operators, and reserved tail
-0xC0 reserved for future stream or pipeline operations
-0xD0 reserved for future pipeline, extension, or VM opcodes
-0xE0 reserved for future pipeline, extension, or VM opcodes
-0xF0 reserved for future pipeline, extension, or VM opcodes
+0xB0 Group 3 order operators, generated-list builders, pattern operators, reserved tail 0xB9..0xFF
 ```
 
 The exhaustive opcode field map lives in `BytecodeOpcodeShape.md`. That table
-lists every currently defined opcode as its own row. Unused address ranges are
-marked as `reserved` ranges.
+lists every currently defined opcode as its own row, and every group ends with
+one `reserved` row for its currently unused tail range.
 
 For JSON transport, instructions serialize as a normalized primary-word plus
 payload object:
@@ -983,6 +980,7 @@ selectors lower through `PropertyAccess`, so they keep the normal runtime
 selector semantics.
 - `CreateRangeWithStep dst fromSlot toSlot stepSlot`
 - `RandomTake dst fromSlot toSlot`
+- `RandomTakeFloat dst fromSlot toSlot`
 - `RandomPush seedSlot`
 - `RandomPushConstant seedI64`
 - `RandomPop`

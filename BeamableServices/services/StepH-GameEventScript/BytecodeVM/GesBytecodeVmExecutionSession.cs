@@ -1165,7 +1165,12 @@ internal sealed partial class GesBytecodeVmExecutionSession
             case GameEventScriptBytecodeOpCode.RandomTake:
                 return DefineSlot(
                     instruction.DestinationSlot,
-                    EvaluateRandomExpression(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot)));
+                    EvaluateRandomExpression(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot), forceFloat: false));
+
+            case GameEventScriptBytecodeOpCode.RandomTakeFloat:
+                return DefineSlot(
+                    instruction.DestinationSlot,
+                    EvaluateRandomExpression(ResolveSlot(instruction.XSlot), ResolveSlot(instruction.YSlot), forceFloat: true));
 
             case GameEventScriptBytecodeOpCode.RandomPush:
                 PushRandomScope(ResolveSlot(instruction.XSlot));
@@ -5085,12 +5090,13 @@ internal sealed partial class GesBytecodeVmExecutionSession
         => value.IsNothing() ||
            value.IsNaN();
 
-    private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue)
+    private BytecodeVmValue EvaluateRandomExpression(BytecodeVmValue fromValue, BytecodeVmValue toValue, bool forceFloat)
     {
         var fromRaw = fromValue.ToGameEventScriptValue();
         var toRaw = toValue.ToGameEventScriptValue();
 
-        if (fromValue.Kind == BytecodeVmValueKind.Integer &&
+        if (!forceFloat &&
+            fromValue.Kind == BytecodeVmValueKind.Integer &&
             toValue.Kind == BytecodeVmValueKind.Integer)
         {
             if (fromValue.Unit != toValue.Unit)

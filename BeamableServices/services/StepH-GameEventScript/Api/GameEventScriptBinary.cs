@@ -146,8 +146,7 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
 public enum GameEventScriptInstructionFlag : byte
 {
     None = 0,
-    NormalizeResultAsPredicate = 0x20,
-    PreserveFloat = 0x40
+    NormalizeResultAsPredicate = 0x20
 }
 
 public enum GameEventScriptBytecodeTypeKind : byte
@@ -396,10 +395,11 @@ public enum GameEventScriptBytecodeOpCode : byte
     Chance = 0x68,
     Clamp = 0x69,
     RandomTake = 0x6A,
-    RandomPush = 0x6B,
-    RandomPushConstant = 0x6C,
-    RandomPop = 0x6D,
-    Term = 0x6E,
+    RandomTakeFloat = 0x6B,
+    RandomPush = 0x6C,
+    RandomPushConstant = 0x6D,
+    RandomPop = 0x6E,
+    Term = 0x6F,
 
     #endregion
 

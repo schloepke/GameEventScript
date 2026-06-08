@@ -252,10 +252,11 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Chance = 104
   enum-field Clamp = 105
   enum-field RandomTake = 106
-  enum-field RandomPush = 107
-  enum-field RandomPushConstant = 108
-  enum-field RandomPop = 109
-  enum-field Term = 110
+  enum-field RandomTakeFloat = 107
+  enum-field RandomPush = 108
+  enum-field RandomPushConstant = 109
+  enum-field RandomPop = 110
+  enum-field Term = 111
   enum-field TakeFirst = 128
   enum-field DropFirst = 129
   enum-field TakeLast = 130
@@ -428,7 +429,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
 enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
   enum-field NormalizeResultAsPredicate = 32
-  enum-field PreserveFloat = 64
 sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.Collections.Generic.IEnumerable<System.String> tags)
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.String[] tags)

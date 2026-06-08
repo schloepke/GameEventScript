@@ -264,8 +264,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).SetInteger(instruction.I64, instruction.Unit);
                             break;
                         case LoadFloat:
-                            if (instruction.HasInstructionFlag(GameEventScriptInstructionFlag.PreserveFloat)) vmState.Register(instruction.DestinationSlot).SetFloatExact(instruction.F64, instruction.Unit);
-                            else vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, instruction.Unit);
+                            vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, instruction.Unit);
                             break;
                         case LoadPercentage:
                             vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
@@ -454,6 +453,9 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case RandomTake:
                             vmState.Register(instruction.DestinationSlot).VmRandom(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), vmState.RandomGenerator, ref vmState.Binary.TextConstantTable);
+                            break;
+                        case RandomTakeFloat:
+                            vmState.Register(instruction.DestinationSlot).VmRandomFloat(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), vmState.RandomGenerator);
                             break;
                         case RandomPush:
                             var seed = vmState.Register(instruction.XSlot);

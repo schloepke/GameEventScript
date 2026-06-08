@@ -783,9 +783,11 @@ internal sealed class GesLinearBytecodeBuilder
             {
                 var from = EmitSourceExpression(random.FromExpression, context, state);
                 var to = EmitSourceExpression(random.ToExpression, context, state);
-                PreserveRandomFloatBound(random.FromExpression, from);
-                PreserveRandomFloatBound(random.ToExpression, to);
-                return EmitValueInstruction(state, GameEventScriptBytecodeOpCode.RandomTake, from, to);
+                var opCode = random.FromExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode ||
+                             random.ToExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode
+                    ? GameEventScriptBytecodeOpCode.RandomTakeFloat
+                    : GameEventScriptBytecodeOpCode.RandomTake;
+                return EmitValueInstruction(state, opCode, from, to);
             }
 
             case RangeExpressionNode range:
@@ -2847,32 +2849,6 @@ internal sealed class GesLinearBytecodeBuilder
             F64 = value
         });
         return _code.Count - 1;
-    }
-
-    private void PreserveRandomFloatBound(ExpressionNode expression, int slot)
-    {
-        if (expression is not FloatLiteralExpressionNode and not UnitFloatLiteralExpressionNode)
-        {
-            return;
-        }
-
-        var destinationSlot = ToUShortOperand(slot, "destination operand");
-        for (var i = _code.Count - 1; i >= 0; i--)
-        {
-            var instruction = _code[i];
-            if (instruction.DestinationSlot != destinationSlot)
-            {
-                continue;
-            }
-
-            if (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadFloat)
-            {
-                instruction.AddInstructionFlag(GameEventScriptInstructionFlag.PreserveFloat);
-                _code[i] = instruction;
-            }
-
-            return;
-        }
     }
 
     private int EmitLoadPercentage(

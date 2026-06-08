@@ -1842,6 +1842,27 @@ internal static class VmRegisterMath
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    internal static void VmRandomFloat(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptRandomGenerator randomGenerator)
+    {
+        if (from.Kind is Nothing || to.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (!TrySameUnit(ref from, ref to, out var unit))
+        {
+            dst.SetFloat(double.NaN);
+            return;
+        }
+
+        var left = from.AsNumeric;
+        var right = to.AsNumeric;
+        if (double.IsFinite(left) && double.IsFinite(right)) dst.SetFloat(randomGenerator.NextInclusiveFloat(left, right), unit);
+        else dst.SetFloat(double.NaN);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool TrySameUnit(ref VmValue a, ref VmValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.Unit == b.Unit)

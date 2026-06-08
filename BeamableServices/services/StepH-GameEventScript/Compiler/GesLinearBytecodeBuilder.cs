@@ -1875,6 +1875,18 @@ internal sealed class GesLinearBytecodeBuilder
             return EmitDistinct(sourceSlot, fastDistinct, context, state);
         }
 
+        if (prefixCount == 0 &&
+            terminal is PatternSelectorNode fastPattern)
+        {
+            return EmitPattern(sourceSlot, fastPattern.Pattern, take: false, context, state);
+        }
+
+        if (prefixCount == 0 &&
+            terminal is TakePatternSelectorNode fastTakePattern)
+        {
+            return EmitPattern(sourceSlot, fastTakePattern.Pattern, take: true, context, state);
+        }
+
         var iteratorSlot = AllocateSlot(state);
         Emit(CreateInstruction(GameEventScriptBytecodeOpCode.StreamCreate, dest: iteratorSlot, a: sourceSlot));
         for (var index = 0; index < prefixCount; index++)

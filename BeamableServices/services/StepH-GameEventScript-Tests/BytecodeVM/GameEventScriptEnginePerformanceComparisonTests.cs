@@ -11,7 +11,7 @@ namespace StepH_GameEventScript_Tests.BytecodeVM;
 [TestClass]
 public sealed class BytecodeVmPerformanceReportTests
 {
-    private const bool UseNewVm = true;
+    private const bool UseNewVm = false;
     private const bool RunSoftMode = false;
     private const int WarmupRuns = 100;
     private const int MeasuredRuns = 1_000;

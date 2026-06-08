@@ -102,6 +102,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicPatternsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicPatterns(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeCollectionsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeCollections(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -226,6 +231,11 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicSortGroupDistinctCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicSortGroupDistinct(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicPatternsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicPatterns(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
@@ -429,6 +439,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicSortGroupDistinctCases()
         => Cases("runtime/atomic/sort-group-distinct.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicPatternsCases()
+        => Cases("runtime/atomic/patterns.json");
+
     public static IEnumerable<object[]> RuntimeCollectionsCases()
         => Cases("runtime/collections.json");
 
@@ -500,6 +513,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicSortGroupDistinctCases()
         => NewVirtualMachineCases("runtime/atomic/sort-group-distinct.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicPatternsCases()
+        => NewVirtualMachineCases("runtime/atomic/patterns.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
         => NewVirtualMachineCases("runtime/collections.json");

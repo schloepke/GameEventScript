@@ -3644,13 +3644,36 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
     private bool TryExecutePattern(GameEventScriptBytecodeInstruction instruction)
     {
-        if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out var target, out var items))
+        var source = ResolveSlot(instruction.XSlot);
+        GameEventScriptValue target;
+        List<GameEventScriptValue> items;
+        if (source.Kind == BytecodeVmValueKind.Iterator)
         {
-            return false;
+            if (!TryMaterializeIterator(instruction.XSlot, out var iterator, out target, out items))
+            {
+                return false;
+            }
+
+            iterator.Dispose();
+            if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+        }
+        else
+        {
+            target = source.ToGameEventScriptValue();
+            if (target.Kind == GameEventScriptValueKind.Series)
+            {
+                return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
+            }
+
+            items = IsPatternSequence(target)
+                ? target.AsEnumerable().ToList()
+                : [];
         }
 
-        iterator.Dispose();
-        if (iterator.SourceTarget.Kind == GameEventScriptValueKind.Series)
+        if (target.Kind == GameEventScriptValueKind.Series)
         {
             return DefineSlot(instruction.DestinationSlot, BytecodeVmValue.Nothing);
         }

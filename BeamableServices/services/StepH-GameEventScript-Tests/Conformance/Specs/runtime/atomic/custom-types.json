@@ -198,6 +198,235 @@
     },
     {
       "kind": "scriptApi",
+      "name": "create record with positional constructor and computed field",
+      "script": "module AtomicCreateRecordConstructor\nrecord :stat as {\n  _ base: :number clamped between 0 and cap,\n  cap: :number clamped between 1 and 99,\n  bonus: :number,\n  total: :number computed by base + bonus,\n  label: :text\n}\n\non Start {\n  let stat be :stat(15, cap: 10, bonus: 3, label: 'hp')\n  let statMap as :map be stat\n  let statList as :list be stat\n  emit Done(stat: stat, base: stat.base, cap: stat.cap, bonus: stat.bonus, total: stat.total, label: stat.label, map: statMap, mapTotal: statMap.total, listLen: :len statList, keys: :keys stat, values: :values stat, entries: :entries stat, isStat: stat is :stat, isGauge: stat is :gauge, missing: stat.missing)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "base": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "bonus": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "cap": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "entries": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "base"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "10"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "bonus"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "3"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "cap"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "10"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "label"
+                        },
+                        "value": {
+                          "type": ":text",
+                          "value": "hp"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "key": {
+                          "type": ":tag",
+                          "value": "total"
+                        },
+                        "value": {
+                          "type": ":integer",
+                          "value": "13"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "isGauge": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "isStat": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "keys": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":tag",
+                      "value": "base"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "bonus"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "cap"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "label"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "total"
+                    }
+                  ]
+                },
+                "label": {
+                  "type": ":text",
+                  "value": "hp"
+                },
+                "listLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "map": {
+                  "type": ":map",
+                  "entries": {
+                    "base": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "bonus": {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    "cap": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "label": {
+                      "type": ":text",
+                      "value": "hp"
+                    },
+                    "total": {
+                      "type": ":integer",
+                      "value": "13"
+                    }
+                  }
+                },
+                "mapTotal": {
+                  "type": ":integer",
+                  "value": "13"
+                },
+                "missing": {
+                  "type": ":nothing"
+                },
+                "stat": {
+                  "type": ":stat",
+                  "entries": {
+                    "base": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "bonus": {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    "cap": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "label": {
+                      "type": ":text",
+                      "value": "hp"
+                    },
+                    "total": {
+                      "type": ":integer",
+                      "value": "13"
+                    }
+                  }
+                },
+                "total": {
+                  "type": ":integer",
+                  "value": "13"
+                },
+                "values": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "hp"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "13"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "create external type with computed field and casts",
       "script": "module AtomicCreateExternalType\non Start {\n  let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))\n  let aimList as :list be aim\n  let aimMap as :map be aim\n  emit Done(aim: aim, bearing: aim.bearing, checksum: aim.checksum, directionZ: aim.direction.z, aimList: aimList, aimListLength: :len aimList, aimMap: aimMap, mapChecksum: aimMap.checksum, mapDirectionZ: aimMap.direction.z, aimKeys: :keys aim, aimValues: :values aim, aimEntries: :entries aim, isAim: aim is :aim, isGauge: aim is :gauge)\n}",
       "steps": [

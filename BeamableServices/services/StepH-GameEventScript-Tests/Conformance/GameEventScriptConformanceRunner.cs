@@ -442,7 +442,8 @@ internal static class GameEventScriptConformanceRunner
                 Matches(expected.Symbol, error.Symbol) &&
                 Matches(expected.SymbolKind, error.SymbolKind.ToString()) &&
                 Matches(expected.ModuleName, error.ModuleName) &&
-                MessageMatches(expected.MessageContains, error.Message, exception.Message)))
+                MessageMatches(expected.MessageContains, error.Message, exception.Message) &&
+                SourceLocationMatches(expected, error.SourceLocation)))
         {
             return;
         }
@@ -460,6 +461,15 @@ internal static class GameEventScriptConformanceRunner
             Assert.Fail($"{testCase}: generic compilation error expectation did not match.{Environment.NewLine}{exception.Message}");
         }
     }
+
+    private static bool SourceLocationMatches(
+        GameEventScriptExpectedCompileErrorSpec expected,
+        GameEventScriptSourceLocation location)
+        => Matches(expected.SourceName, location.SourceName) &&
+           Matches(expected.Line, location.Line) &&
+           Matches(expected.Column, location.Column) &&
+           Matches(expected.EndLine, location.EndLine) &&
+           Matches(expected.EndColumn, location.EndColumn);
 
     private static GameEventScriptCompiled CompileBytecode(GameEventScriptConformanceTest test)
     {
@@ -632,6 +642,9 @@ internal static class GameEventScriptConformanceRunner
         => string.IsNullOrWhiteSpace(expected) ||
            string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase);
 
+    private static bool Matches(int? expected, int? actual)
+        => expected is null || expected == actual;
+
     private static bool MessageMatches(string? expected, params string?[] actualMessages)
         => string.IsNullOrWhiteSpace(expected) ||
            actualMessages.Any(message => message?.Contains(expected, StringComparison.Ordinal) ?? false);
@@ -728,6 +741,9 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
         };
     });
 
+    private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((_, args) =>
+        args.Length == 1 ? args[0] : GameEventScriptFastValue.Nothing);
+
     private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((_, _) =>
         GameEventScriptFastValue.FromBoolean(true));
 
@@ -780,6 +796,15 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             IsUnlabeled(reference.ArgumentLabels[0]))
         {
             function = TestVectorSum;
+            return true;
+        }
+
+        if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
+            string.Equals(reference.FunctionName, "echo", StringComparison.Ordinal) &&
+            reference.ArgumentLabels.Count == 1 &&
+            IsUnlabeled(reference.ArgumentLabels[0]))
+        {
+            function = TestEcho;
             return true;
         }
 

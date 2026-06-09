@@ -218,6 +218,25 @@ internal sealed class GesLinearBytecodeBuilder
         _currentFrameSlotCount = Math.Max(_currentFrameSlotCount, sourceType.Fields.Count);
         _maxFrameSlots = Math.Max(_maxFrameSlots, sourceType.Fields.Count);
 
+        var constructorParameterIndex = constructorFieldCount - 1;
+        for (var fieldIndex = sourceType.Fields.Count - 1; fieldIndex >= 0; fieldIndex--)
+        {
+            if (!sourceType.Fields[fieldIndex].IsConstructorParameter)
+            {
+                continue;
+            }
+
+            if (fieldIndex != constructorParameterIndex)
+            {
+                Emit(CreateInstruction(
+                    GameEventScriptBytecodeOpCode.MoveSlot,
+                    dest: fieldIndex,
+                    a: constructorParameterIndex));
+            }
+
+            constructorParameterIndex--;
+        }
+
         for (var fieldIndex = 0; fieldIndex < sourceType.Fields.Count; fieldIndex++)
         {
             var field = sourceType.Fields[fieldIndex];

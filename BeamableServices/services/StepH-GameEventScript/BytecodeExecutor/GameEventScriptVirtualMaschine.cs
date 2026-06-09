@@ -615,11 +615,19 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmStreamCollectList(ref vmState.Register(instruction.XSlot));
                             break;
                         case StreamCollectMap:
-                            vmState.Register(instruction.DestinationSlot).VmStreamCollectMap(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                        {
+                            var dst = vmState.CreateNothing();
+                            dst.VmStreamCollectMap(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
+                            vmState.Register(instruction.DestinationSlot) = dst;
                             break;
+                        }
                         case StreamCollectMapValue:
-                            vmState.Register(instruction.DestinationSlot).VmStreamCollectMapValue(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
+                        {
+                            var dst = vmState.CreateNothing();
+                            dst.VmStreamCollectMapValue(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
+                            vmState.Register(instruction.DestinationSlot) = dst;
                             break;
+                        }
                         case HasAny:
                             vmState.Register(instruction.DestinationSlot).VmHasAny(ref vmState.Register(instruction.XSlot));
                             break;

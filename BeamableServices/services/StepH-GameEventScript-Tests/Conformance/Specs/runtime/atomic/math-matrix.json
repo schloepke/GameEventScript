@@ -22225,6 +22225,101 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "chance",
+      "script": "module AtomicMathMatrixLD\non Start {\n  let vNothing be missing\n  let vIntegerZero be 0\n  let vIntegerQuarter be 25\n  let vIntegerHundred be 100\n  let vFloatRatio be 0.25\n  let vFloatPercent be 25.0\n  let vPercentage be 25%\n  let vNegative be -10%\n  let vOver be 150%\n  let vMeter be 10m\n  let vTextInvalid be 'hello'\n  let vTagInvalid be :hello\n  let vTagPi be :pi\n  emit Done(nothing: :chance vNothing, integerZero: :chance vIntegerZero, integerHit: :chance vIntegerQuarter, integerMiss: :chance vIntegerQuarter, integerHundred: :chance vIntegerHundred, floatRatioHit: :chance vFloatRatio, floatRatioMiss: :chance vFloatRatio, floatPercentHit: :chance vFloatPercent, percentageHit: :chance vPercentage, percentageMiss: :chance vPercentage, negative: :chance vNegative, over: :chance vOver, meter: :chance vMeter, textInvalid: :chance vTextInvalid, tagInvalid: :chance vTagInvalid, tagPiHit: :chance vTagPi, tagPiMiss: :chance vTagPi)\n}",
+      "randomSequence": [
+        "0.20",
+        "0.80",
+        "0.20",
+        "0.80",
+        "0.20",
+        "0.20",
+        "0.80",
+        "0.02",
+        "0.04"
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "floatPercentHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "floatRatioHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "floatRatioMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "integerHundred": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "integerMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerZero": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "meter": {
+                  "type": ":nothing"
+                },
+                "negative": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "nothing": {
+                  "type": ":nothing"
+                },
+                "over": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "percentageHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "percentageMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "tagInvalid": {
+                  "type": ":nothing"
+                },
+                "tagPiHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "tagPiMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textInvalid": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

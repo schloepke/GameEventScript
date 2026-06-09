@@ -109,6 +109,26 @@
     },
     {
       "kind": "compileError",
+      "name": "module build errors preserve parser source range",
+      "scripts": [
+        {
+          "sourceName": "location.ges",
+          "text": "module Location\n\non Start {\n  let value be 1\n  let value be 2\n}"
+        }
+      ],
+      "expectedError": {
+        "phase": "build",
+        "kind": "DuplicateVariable",
+        "symbol": "value",
+        "symbolKind": "Variable",
+        "moduleName": "Location",
+        "sourceName": "location.ges",
+        "line": 5,
+        "column": 3
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "handler parameter cannot be redeclared as local variable",
       "script": "module DuplicateParameterVariable\non Start(value) {\n  let value be 10\n}",
       "expectedError": {

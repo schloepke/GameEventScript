@@ -1,0 +1,167 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicShuffleReverse",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "reverse direct source kinds",
+      "script": "module AtomicReverseDirectKinds\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abc'\n  let vTag be :abc\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vEmptyList be []\n  let vMap be [a: 1, b: 2]\n  let vDice as :dice be [6, 4, 2]\n  let vEmptyDice as :dice be []\n  let vRange as :range be from 1 to 3\n  let vFloatRange as :range be from 1.5 to 2.5 step 0.5\n  emit Done(nothingValue: vNothing[:reverse], booleanValue: vBoolean[:reverse], integerValue: vInteger[:reverse], floatValue: vFloat[:reverse], percentageValue: vPercentage[:reverse], textValue: vText[:reverse], tagValue: vTag[:reverse], vectorValue: vVector[:reverse], pointValue: vPoint[:reverse], listValue: vList[:reverse], emptyListValue: vEmptyList[:reverse], mapValue: vMap[:reverse], diceValue: vDice[:reverse], emptyDiceValue: vEmptyDice[:reverse], rangeValue: vRange[:reverse], floatRangeValue: vFloatRange[:reverse])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": { "type": ":nothing" },
+                "booleanValue": { "type": ":nothing" },
+                "integerValue": { "type": ":nothing" },
+                "floatValue": { "type": ":nothing" },
+                "percentageValue": { "type": ":nothing" },
+                "textValue": { "type": ":nothing" },
+                "tagValue": { "type": ":nothing" },
+                "vectorValue": { "type": ":nothing" },
+                "pointValue": { "type": ":nothing" },
+                "mapValue": { "type": ":nothing" },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "1" }
+                  ]
+                },
+                "emptyListValue": { "type": ":list", "items": [] },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "6" }
+                  ]
+                },
+                "emptyDiceValue": { "type": ":list", "items": [] },
+                "rangeValue": {
+                  "type": ":range",
+                  "from": "3",
+                  "to": "1",
+                  "step": "-1"
+                },
+                "floatRangeValue": {
+                  "type": ":range",
+                  "from": "2.5",
+                  "to": "1.5",
+                  "step": "-0.5"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "shuffle direct source kinds",
+      "randomSequence": [
+        "0", "0",
+        "0", "0",
+        "0", "0",
+        "0", "0"
+      ],
+      "script": "module AtomicShuffleDirectKinds\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abc'\n  let vTag be :abc\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vEmptyList be []\n  let vMap be [a: 1, b: 2]\n  let vDice as :dice be [6, 4, 2]\n  let vEmptyDice as :dice be []\n  let vRange as :range be from 1 to 3\n  let vFloatRange as :range be from 1.5 to 2.5 step 0.5\n  emit Done(nothingValue: vNothing[:shuffle], booleanValue: vBoolean[:shuffle], integerValue: vInteger[:shuffle], floatValue: vFloat[:shuffle], percentageValue: vPercentage[:shuffle], textValue: vText[:shuffle], tagValue: vTag[:shuffle], vectorValue: vVector[:shuffle], pointValue: vPoint[:shuffle], listValue: vList[:shuffle], emptyListValue: vEmptyList[:shuffle], mapValue: vMap[:shuffle], diceValue: vDice[:shuffle], emptyDiceValue: vEmptyDice[:shuffle], rangeValue: vRange[:shuffle], floatRangeValue: vFloatRange[:shuffle])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": { "type": ":nothing" },
+                "booleanValue": { "type": ":nothing" },
+                "integerValue": { "type": ":nothing" },
+                "floatValue": { "type": ":nothing" },
+                "percentageValue": { "type": ":nothing" },
+                "textValue": { "type": ":nothing" },
+                "tagValue": { "type": ":nothing" },
+                "vectorValue": { "type": ":nothing" },
+                "pointValue": { "type": ":nothing" },
+                "mapValue": { "type": ":nothing" },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "1" }
+                  ]
+                },
+                "emptyListValue": { "type": ":list", "items": [] },
+                "diceValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "6" }
+                  ]
+                },
+                "emptyDiceValue": { "type": ":list", "items": [] },
+                "rangeValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "1" }
+                  ]
+                },
+                "floatRangeValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":float", "value": "2" },
+                    { "type": ":float", "value": "2.5" },
+                    { "type": ":float", "value": "1.5" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "reverse and shuffle transformed streams",
+      "randomSequence": [
+        "0", "0"
+      ],
+      "script": "module AtomicShuffleReverseStreams\non Start {\n  let values be [1, 2, 3]\n  let reversedStream be values[:select value => value * 10][:reverse]\n  let shuffledStream be values[:select value => value * 10][:shuffle]\n  emit Done(reversedStream: reversedStream, shuffledStream: shuffledStream)\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "reversedStream": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "30" },
+                    { "type": ":integer", "value": "20" },
+                    { "type": ":integer", "value": "10" }
+                  ]
+                },
+                "shuffledStream": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "20" },
+                    { "type": ":integer", "value": "30" },
+                    { "type": ":integer", "value": "10" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

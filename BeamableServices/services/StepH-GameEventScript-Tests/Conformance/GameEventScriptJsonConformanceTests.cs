@@ -42,8 +42,8 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
-    [DynamicData(nameof(RuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
-    public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
+    [DynamicData(nameof(RuntimeAtomicExternalAccessCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicExternalAccess(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
@@ -102,8 +102,18 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicShuffleReverseCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicShuffleReverse(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicPatternsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicPatterns(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicRandomCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicRandom(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
@@ -174,8 +184,8 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
         => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
-    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicMessagesHandlersCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
-    public void RuntimeAtomicMessagesHandlers(GameEventScriptConformanceCase testCase)
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicExternalAccessCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicExternalAccess(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
@@ -234,8 +244,18 @@ public sealed class GameEventScriptNewVmJsonConformanceTests : GameEventScriptJs
         => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicShuffleReverseCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicShuffleReverse(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(NewVirtualMachineRuntimeAtomicPatternsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicPatterns(GameEventScriptConformanceCase testCase)
+        => RunNewVirtualMachineConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(NewVirtualMachineRuntimeAtomicRandomCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicRandom(GameEventScriptConformanceCase testCase)
         => RunNewVirtualMachineConformanceCase(testCase);
 
     [TestMethod]
@@ -403,8 +423,8 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicCompareCases()
         => Cases("runtime/atomic/compare.json");
 
-    public static IEnumerable<object[]> RuntimeAtomicMessagesHandlersCases()
-        => Cases("runtime/atomic/messages-handlers.json");
+    public static IEnumerable<object[]> RuntimeAtomicExternalAccessCases()
+        => Cases("runtime/atomic/external-access.json");
 
     public static IEnumerable<object[]> RuntimeAtomicMemberIndexAccessCases()
         => Cases("runtime/atomic/member-index-access.json");
@@ -439,8 +459,14 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicSortGroupDistinctCases()
         => Cases("runtime/atomic/sort-group-distinct.json");
 
+    public static IEnumerable<object[]> RuntimeAtomicShuffleReverseCases()
+        => Cases("runtime/atomic/shuffle-reverse.json");
+
     public static IEnumerable<object[]> RuntimeAtomicPatternsCases()
         => Cases("runtime/atomic/patterns.json");
+
+    public static IEnumerable<object[]> RuntimeAtomicRandomCases()
+        => Cases("runtime/atomic/random.json");
 
     public static IEnumerable<object[]> RuntimeCollectionsCases()
         => Cases("runtime/collections.json");
@@ -478,8 +504,8 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicCompareCases()
         => NewVirtualMachineCases("runtime/atomic/compare.json");
 
-    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMessagesHandlersCases()
-        => NewVirtualMachineCases("runtime/atomic/messages-handlers.json");
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicExternalAccessCases()
+        => NewVirtualMachineCases("runtime/atomic/external-access.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicMemberIndexAccessCases()
         => NewVirtualMachineCases("runtime/atomic/member-index-access.json");
@@ -514,8 +540,14 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicSortGroupDistinctCases()
         => NewVirtualMachineCases("runtime/atomic/sort-group-distinct.json");
 
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicShuffleReverseCases()
+        => NewVirtualMachineCases("runtime/atomic/shuffle-reverse.json");
+
     public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicPatternsCases()
         => NewVirtualMachineCases("runtime/atomic/patterns.json");
+
+    public static IEnumerable<object[]> NewVirtualMachineRuntimeAtomicRandomCases()
+        => NewVirtualMachineCases("runtime/atomic/random.json");
 
     public static IEnumerable<object[]> NewVirtualMachineRuntimeCollectionsCases()
         => NewVirtualMachineCases("runtime/collections.json");

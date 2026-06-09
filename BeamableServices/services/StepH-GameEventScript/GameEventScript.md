@@ -69,8 +69,10 @@ let y be 20; let z be x + y // same statement separator model
 
 Names are intentionally narrow:
 
-- Identifiers start lowercase and contain letters, with an optional final
-  numeric suffix such as `target_2`.
+- Identifiers start lowercase and contain letters. They may have one optional
+  final numeric suffix written as `_` followed by digits, such as `target_2`.
+  Underscores are otherwise not part of identifiers: `target2` and
+  `target_name` are invalid identifiers.
 - Message names start uppercase and contain letters.
 - Tags start with `:` and a lowercase tag name.
 - Type names are tags. Built-in type tags are reserved by the language.

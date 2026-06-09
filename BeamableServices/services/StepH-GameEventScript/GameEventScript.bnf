@@ -249,6 +249,8 @@ NumericCheck ::= "numeric" | "integer" | "fractional"
 
 ModuleName ::= Identifier | Message
 Message ::= UpperLetter { NameLetter }
+(* Identifiers may contain one underscore only as the separator before a final
+   numeric suffix, e.g. target_2. Underscores are otherwise invalid. *)
 Identifier ::= LowerLetter { NameLetter } [ "_" NumericSuffix ]
 IdentifierWithoutWhitespace ::= Identifier
 TagName ::= LowerLetter { NameLetter }

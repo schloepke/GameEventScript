@@ -284,6 +284,133 @@
     },
     {
       "kind": "scriptApi",
+      "name": "default operator",
+      "script": "module AtomicCollectionDefaultOperator\non Start {\n  let vNothing be missing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be :ab\n  let vTagNan be :nan\n  let vInfinity be :infinity\n  let vNegativeInfinity be 0 - :infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  let vRangeEmpty as :range be from 1 to 0\n  emit Done(nothingValue: vNothing :default 'fallback', booleanTrue: vBooleanTrue :default 'fallback', booleanFalse: vBooleanFalse :default 'fallback', integerZero: vIntegerZero :default 99, floatPositive: vFloatPositive :default 99, percentageZero: vPercentageZero :default 99%, textValue: vText :default 'fallback', textEmpty: vTextEmpty :default 'fallback', tagValue: vTag :default :fallback, tagNanValue: vTagNan :default :fallback, infinityValue: vInfinity :default 99, negativeInfinityValue: vNegativeInfinity :default 99, vectorZero: vVectorZero :default :vector(9, 9, 9), pointZero: vPointZero :default :point(9, 9, 9), listValue: vList :default [9], listEmpty: vListEmpty :default [9], mapValue: vMap :default [fallback: 1], mapEmpty: vMapEmpty :default [fallback: 1], diceValue: vDice :default [9], diceEmpty: vDiceEmpty :default [9], rangeValue: vRange :default [9], rangeEmpty: vRangeEmpty :default [9])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "nothingValue": {
+                  "type": ":text",
+                  "value": "fallback"
+                },
+                "booleanTrue": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "booleanFalse": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerZero": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "floatPositive": {
+                  "type": ":float",
+                  "value": "10.5"
+                },
+                "percentageZero": {
+                  "type": ":percentage",
+                  "value": "0"
+                },
+                "textValue": {
+                  "type": ":text",
+                  "value": "ab"
+                },
+                "textEmpty": {
+                  "type": ":text",
+                  "value": "fallback"
+                },
+                "tagValue": {
+                  "type": ":tag",
+                  "value": "ab"
+                },
+                "tagNanValue": {
+                  "type": ":tag",
+                  "value": "nan"
+                },
+                "infinityValue": {
+                  "type": ":tag",
+                  "value": "infinity"
+                },
+                "negativeInfinityValue": {
+                  "type": ":float",
+                  "value": "-Infinity"
+                },
+                "vectorZero": {
+                  "type": ":vector",
+                  "x": "0",
+                  "y": "0",
+                  "z": "0"
+                },
+                "pointZero": {
+                  "type": ":point",
+                  "x": "0",
+                  "y": "0",
+                  "z": "0"
+                },
+                "listValue": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" }
+                  ]
+                },
+                "listEmpty": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "9" }
+                  ]
+                },
+                "mapValue": {
+                  "type": ":map",
+                  "entries": {
+                    "name": { "type": ":text", "value": "Ada" }
+                  }
+                },
+                "mapEmpty": {
+                  "type": ":map",
+                  "entries": {
+                    "fallback": { "type": ":integer", "value": "1" }
+                  }
+                },
+                "diceValue": {
+                  "type": ":dice",
+                  "rolls": [6, 2]
+                },
+                "diceEmpty": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "9" }
+                  ]
+                },
+                "rangeValue": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
+                },
+                "rangeEmpty": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "9" }
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "keys operator",
       "script": "module AtomicCollectionKeysOperator\non Start {\n  let vNothing be missing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :keys vNothing, booleanValue: :keys vBoolean, integerValue: :keys vInteger, floatValue: :keys vFloat, percentageValue: :keys vPercentage, textValue: :keys vText, tagValue: :keys vTag, vectorValue: :keys vVector, pointValue: :keys vPoint, listValue: :keys vList, mapValue: :keys vMap, diceValue: :keys vDice, rangeValue: :keys vRange)\n}",
       "randomSequence": [

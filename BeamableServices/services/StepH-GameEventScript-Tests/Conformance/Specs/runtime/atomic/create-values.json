@@ -432,6 +432,82 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "generated list builder values",
+      "script": "module AtomicGeneratedListBuilderValues\non Start {\n  let sourceList be [1, 'two', :boss, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  let fromRange be :list[:select item from 1 to 4 => item * item]\n  let filteredRange be :list[:select item from 1 to 6 where item mod 2 = 0 => item]\n  let fromList be :list[:select item in sourceList => item]\n  let fromEmptyList be :list[:select item in emptyList => item]\n  let fromDice be :list[:select item in dice => item + 1]\n  let fromText be :list[:select item in text => item]\n  let fromMap be :list[:select item in map => item * 10]\n  let invalidSource be :list[:select item in 10 => item]\n  emit Done(fromRange: fromRange, filteredRange: filteredRange, fromList: fromList, fromEmptyList: fromEmptyList, fromDice: fromDice, fromText: fromText, fromMap: fromMap, invalidSource: invalidSource)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "fromRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "9" },
+                    { "type": ":integer", "value": "16" }
+                  ]
+                },
+                "filteredRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "6" }
+                  ]
+                },
+                "fromList": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":text", "value": "two" },
+                    { "type": ":tag", "value": "boss" },
+                    { "type": ":boolean", "value": true }
+                  ]
+                },
+                "fromEmptyList": {
+                  "type": ":list",
+                  "items": []
+                },
+                "fromDice": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "7" },
+                    { "type": ":integer", "value": "5" },
+                    { "type": ":integer", "value": "3" }
+                  ]
+                },
+                "fromText": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":text", "value": "a" },
+                    { "type": ":text", "value": "b" }
+                  ]
+                },
+                "fromMap": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "10" },
+                    { "type": ":integer", "value": "20" }
+                  ]
+                },
+                "invalidSource": {
+                  "type": ":list",
+                  "items": []
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

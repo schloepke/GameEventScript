@@ -62,6 +62,10 @@ internal static class VmRegisterBooleanLogic
             case Percentage:
                 ratio = a.FloatValue;
                 break;
+            case Tag when a.IsNumeric:
+                ratio = a.AsNumeric;
+                ratio = ratio is > 1d or < -1d ? ratio / 100d : ratio;
+                break;
             default:
                 dst.SetNothing();
                 return;

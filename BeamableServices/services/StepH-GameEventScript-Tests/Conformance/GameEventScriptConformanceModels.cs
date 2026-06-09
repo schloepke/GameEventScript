@@ -162,6 +162,16 @@ public sealed class GameEventScriptExpectedCompileErrorSpec
     public string? ModuleName { get; set; }
 
     public string? MessageContains { get; set; }
+
+    public string? SourceName { get; set; }
+
+    public int? Line { get; set; }
+
+    public int? Column { get; set; }
+
+    public int? EndLine { get; set; }
+
+    public int? EndColumn { get; set; }
 }
 
 public sealed class GameEventScriptConformanceCase(

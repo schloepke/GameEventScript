@@ -458,6 +458,27 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
+    public void PublicLinearBytecodeLowersIntegerAndFloatRandomTakesSeparately()
+    {
+        const string script =
+            """
+            module RandomTakes
+
+            on Start {
+              let integerValue be :random from 1 to 6
+              let floatValue be :random from 0.0 to 1.0
+              let mixedValue be :random from 1 to 2.0
+              emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)
+            }
+            """;
+
+        var compiled = GameEventScriptManager.Compile(script);
+
+        Assert.AreEqual(1, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomTake));
+        Assert.AreEqual(2, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomTakeFloat));
+    }
+
+    [TestMethod]
     public void PublicLinearBytecodeStoresPipelineMetadataInSideTables()
     {
         const string script =

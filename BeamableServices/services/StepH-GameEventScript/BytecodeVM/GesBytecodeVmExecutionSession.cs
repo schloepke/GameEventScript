@@ -5235,10 +5235,15 @@ internal sealed partial class GesBytecodeVmExecutionSession
 
         GameEventScriptValue EvaluateChanceUnary(GameEventScriptValue operand)
         {
+            if (operand.IsNothing())
+            {
+                return GesNothing();
+            }
+
             var percentage = ConvertToPercentage(operand);
             if (!percentage.IsPercentage())
             {
-                return GesBoolean(false);
+                return GesNothing();
             }
 
             var ratio = percentage.AsNumber();

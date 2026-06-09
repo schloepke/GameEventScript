@@ -194,6 +194,33 @@
       "expectedError": {
         "phase": "syntax"
       }
+    },
+    {
+      "kind": "compileError",
+      "name": "take selector count must be positive",
+      "script": "on Start(values) {\n  let result be values[:take first 0]\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "messageContains": "Expected positive integer for take count"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "drop selector count must be positive",
+      "script": "on Start(values) {\n  let result be values[:drop first 0]\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "messageContains": "Expected positive integer for drop count"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "choose selector count must be positive",
+      "script": "on Start(values) {\n  let result be values[:choose 0 at random]\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "messageContains": "Expected positive integer for choose count"
+      }
     }
   ]
 }

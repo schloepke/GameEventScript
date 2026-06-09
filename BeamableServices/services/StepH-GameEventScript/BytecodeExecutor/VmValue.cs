@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using StepH.GameEventScript.Api;
@@ -389,29 +388,19 @@ internal struct VmValue
         Dice when ObjectValue is int[] dices => SumDices(dices),
         _ => double.NaN,
     };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long SumDices(int[] values)
     {
         long sum = 0;
         foreach (var value in values) sum += value;
         return sum;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double AsNumericWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
     {
         unit = Unit;
         return AsNumeric;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal string ReadTextOrTag() => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ReadOnlySpan<ushort> ResolveIntegerAsPointerList() => OwningState.Binary.Uint16ConstantTable.Resolve((ushort)IntegerValue);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool EqualsValue(ref VmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
     {
         Integer => IntegerValue == other.IntegerValue,
@@ -420,8 +409,6 @@ internal struct VmValue
         Text or Tag => string.Equals(ReadTextOrTag(), other.ReadTextOrTag(), StringComparison.Ordinal),
         _ => ReferenceEquals(ObjectValue, other.ObjectValue)
     };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool TryGetInteger(out long value)
     {
         if (Kind != Integer)
@@ -433,8 +420,6 @@ internal struct VmValue
         value = IntegerValue;
         return true;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool TryCreateStream(out IVmStream stream)
     {
         switch (Kind)
@@ -469,8 +454,6 @@ internal struct VmValue
                 return false;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal string ConvertToText()
     {
         return Kind switch
@@ -495,25 +478,17 @@ internal struct VmValue
             _ => Kind.ToString()
         };
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit)
         => unit.IsNumericUnit()
             ? $"{value.ToString(CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
             : value.ToString(CultureInfo.InvariantCulture);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit)
     {
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
         return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatTriplet(string typeName, VmFloatTriplet triplet, GameEventScriptBytecodeInstructionUnit unit)
         => $"{typeName}[x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)}]";
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatDice(int[] dice)
     {
         if (dice.Length == 0) return "dice[]";
@@ -528,8 +503,6 @@ internal struct VmValue
         builder.Append(']');
         return builder.ToString();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatList(VmListObject list)
     {
         var builder = new StringBuilder("[");
@@ -542,8 +515,6 @@ internal struct VmValue
         builder.Append(']');
         return builder.ToString();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatMap(VmMapObject map)
     {
         var builder = new StringBuilder("map[");
@@ -560,16 +531,10 @@ internal struct VmValue
         builder.Append(']');
         return builder.ToString();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatRange(long from, long to, long step)
         => $"range[{from.ToString(CultureInfo.InvariantCulture)} to {to.ToString(CultureInfo.InvariantCulture)} step {step.ToString(CultureInfo.InvariantCulture)}]";
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatRange(double from, double to, double step)
         => $"range[{FormatRangeComponent(from)} to {FormatRangeComponent(to)} step {FormatRangeComponent(step)}]";
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static string FormatRangeComponent(double value)
         => value.ToString("0.############################", CultureInfo.InvariantCulture);
 }

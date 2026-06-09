@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -14,7 +13,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class VmRegisterMath
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmAdd(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -124,8 +122,6 @@ internal static class VmRegisterMath
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmSubtract(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -420,8 +416,6 @@ internal static class VmRegisterMath
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMultiply(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -557,8 +551,6 @@ internal static class VmRegisterMath
 
         dst.SetFloat(fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDivide(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -685,8 +677,6 @@ internal static class VmRegisterMath
         if (a.Kind is Percentage) dst.SetPercentage(fallbackResult);
         else dst.SetFloat(fallbackResult, fallbackUnit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmPower(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -791,8 +781,6 @@ internal static class VmRegisterMath
         if (double.IsNaN(left)) dst.SetFloat(double.NaN);
         else dst.SetFloat(Math.Pow(left, right), unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmFloorDivide(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -889,8 +877,6 @@ internal static class VmRegisterMath
         if (double.IsFinite(floorResult) && floorResult is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)floorResult, unit);
         else dst.SetFloat(floorResult, unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmModulo(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1010,8 +996,6 @@ internal static class VmRegisterMath
         if (fallbackModuloResult != 0d && (fallbackModuloResult < 0d && right > 0d || fallbackModuloResult > 0d && right < 0d)) fallbackModuloResult += right;
         dst.SetFloat(fallbackModuloResult, unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmRemainder(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1099,8 +1083,6 @@ internal static class VmRegisterMath
 
         dst.SetFloat(double.IsInfinity(right) ? left : left % right, unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMin(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1318,8 +1300,6 @@ internal static class VmRegisterMath
 
         dst = comparison < 0 ? b : a;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMax(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1537,8 +1517,6 @@ internal static class VmRegisterMath
 
         dst = comparison > 0 ? b : a;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmNegate(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1574,8 +1552,6 @@ internal static class VmRegisterMath
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmAbs(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1613,8 +1589,6 @@ internal static class VmRegisterMath
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmClamp(ref this VmValue dst, ref VmValue value, ref VmValue min, ref VmValue max, ref GameEventScriptTextTable textTable)
     {
         switch (value.Kind)
@@ -1711,8 +1685,6 @@ internal static class VmRegisterMath
         var fallbackResult = raw < lowerFallback ? lowerFallback : raw > upperFallback ? upperFallback : raw;
         dst.SetFloat(fallbackResult, unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmNaturalLog(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -1758,8 +1730,6 @@ internal static class VmRegisterMath
                 return;
         }
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTerm(ref this VmValue dst, ref VmValue source, ref VmValue termSlot)
     {
         long index;

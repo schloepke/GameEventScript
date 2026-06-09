@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -8,8 +7,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterSeries
 {
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTakeFirst(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -37,8 +34,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmOneRandom(ref this VmValue dst, ref VmValue source, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (source.Kind)
@@ -65,8 +60,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTakeRandom(ref this VmValue dst, ref VmValue source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (source.Kind)
@@ -91,8 +84,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDropFirst(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -120,8 +111,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTakeLast(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -146,8 +135,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDropLast(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -172,8 +159,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTakeHighest(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -198,8 +183,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmTakeLowest(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -224,8 +207,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDropHighest(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -250,8 +231,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDropLowest(ref this VmValue dst, ref VmValue source, short count)
     {
         switch (source.Kind)
@@ -276,8 +255,6 @@ internal static class VmRegisterSeries
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstSeries(ref VmValue dst, GameEventScriptSeriesValue series, short count)
     {
         if (count <= 0)
@@ -290,8 +267,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < count; i++) list.Items[i].BindArguments(series.GetTerm(i));
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstList(ref VmValue dst, VmListObject source, short count)
     {
         if (count <= 0)
@@ -305,8 +280,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) list.Items[i] = source.Items[i];
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropFirstList(ref VmValue dst, VmListObject source, short count)
     {
         if (count <= 0)
@@ -321,8 +294,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) list.Items[i] = source.Items[start + i];
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeLastList(ref VmValue dst, VmListObject source, short count)
     {
         if (count <= 0)
@@ -337,8 +308,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) list.Items[i] = source.Items[start + i];
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropLastList(ref VmValue dst, VmListObject source, short count)
     {
         if (count <= 0)
@@ -352,8 +321,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) list.Items[i] = source.Items[i];
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstDice(ref VmValue dst, int[] source, short count)
     {
         if (count <= 0)
@@ -367,8 +334,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) dice[i] = source[i];
         dst.SetDice(dice);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropFirstDice(ref VmValue dst, int[] source, short count)
     {
         if (count <= 0)
@@ -383,8 +348,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) dice[i] = source[start + i];
         dst.SetDice(dice);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeLastDice(ref VmValue dst, int[] source, short count)
     {
         if (count <= 0)
@@ -399,8 +362,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) dice[i] = source[start + i];
         dst.SetDice(dice);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropLastDice(ref VmValue dst, int[] source, short count)
     {
         if (count <= 0)
@@ -414,8 +375,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) dice[i] = source[i];
         dst.SetDice(dice);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeExtremeList(ref VmValue dst, VmListObject source, short count, bool highest)
     {
         if (count <= 0 || source.Length == 0)
@@ -449,8 +408,6 @@ internal static class VmRegisterSeries
 
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropExtremeList(ref VmValue dst, VmListObject source, short count, bool highest)
     {
         if (count <= 0)
@@ -478,8 +435,6 @@ internal static class VmRegisterSeries
 
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SelectExtremeSlots(VmValue[] items, int length, bool[] selected, int selectedCount, bool highest)
     {
         for (var i = 0; i < selectedCount; i++)
@@ -501,8 +456,6 @@ internal static class VmRegisterSeries
             selected[best] = true;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstStream(ref VmValue dst, IVmStream stream, short count)
     {
         if (count <= 0)
@@ -530,8 +483,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropFirstStream(ref VmValue dst, IVmStream stream, short count)
     {
         var item = dst.OwningState.CreateNothing();
@@ -554,8 +505,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeLastStream(ref VmValue dst, IVmStream stream, short count)
     {
         if (count <= 0)
@@ -593,8 +542,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropLastStream(ref VmValue dst, IVmStream stream, short count)
     {
         var item = dst.OwningState.CreateNothing();
@@ -616,8 +563,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeExtremeStream(ref VmValue dst, IVmStream stream, short count, bool highest)
     {
         if (count <= 0)
@@ -655,8 +600,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropExtremeStream(ref VmValue dst, IVmStream stream, short count, bool highest)
     {
         var item = dst.OwningState.CreateNothing();
@@ -700,8 +643,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void OneRandomRange(ref VmValue dst, VmRange range, GameEventScriptRandomGenerator randomGenerator)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -715,8 +656,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) dst.SetInteger(value);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void OneRandomRange(ref VmValue dst, VmFloatRange range, GameEventScriptRandomGenerator randomGenerator)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -730,8 +669,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) dst.SetFloat(value);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void OneRandomStream(ref VmValue dst, IVmStream stream, GameEventScriptRandomGenerator randomGenerator)
     {
         var item = dst.OwningState.CreateNothing();
@@ -753,8 +690,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeRandomList(ref VmValue dst, VmListObject source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         if (count <= 0 || source.Length == 0)
@@ -769,8 +704,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) list.Items[i] = source.Items[indices[i]];
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeRandomDice(ref VmValue dst, int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         if (count <= 0 || source.Length == 0)
@@ -785,8 +718,6 @@ internal static class VmRegisterSeries
         for (var i = 0; i < length; i++) dice[i] = source[indices[i]];
         dst.SetDice(dice);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeRandomRange(ref VmValue dst, VmRange range, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         var sourceLength = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -837,8 +768,6 @@ internal static class VmRegisterSeries
 
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeRandomRange(ref VmValue dst, VmFloatRange range, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         var sourceLength = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -889,8 +818,6 @@ internal static class VmRegisterSeries
 
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeRandomStream(ref VmValue dst, IVmStream stream, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         if (count <= 0)
@@ -928,8 +855,6 @@ internal static class VmRegisterSeries
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GameEventScriptRandomGenerator randomGenerator)
     {
         var indices = new int[sourceLength];
@@ -951,8 +876,6 @@ internal static class VmRegisterSeries
 
         return selectedIndices;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void InsertExtreme(VmValue[] buffer, ref VmValue item, ref int itemCount, bool highest)
     {
         var index = itemCount;
@@ -967,8 +890,6 @@ internal static class VmRegisterSeries
         buffer[index] = item;
         itemCount++;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SetListFromBuffer(ref VmValue dst, VmValue[] buffer, int length)
     {
         if (length == 0)
@@ -981,8 +902,6 @@ internal static class VmRegisterSeries
         Array.Copy(buffer, list.Items, length);
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstRange(ref VmValue dst, VmRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1001,8 +920,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, count, out var to)) dst.SetRange(range.from, to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropFirstRange(ref VmValue dst, ref VmValue source, VmRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1021,8 +938,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, count + 1L, out var from)) dst.SetRange(from, range.to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeLastRange(ref VmValue dst, VmRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1041,8 +956,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length - count + 1L, out var from)) dst.SetRange(from, range.to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropLastRange(ref VmValue dst, ref VmValue source, VmRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1061,8 +974,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length - count, out var to)) dst.SetRange(range.from, to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeFirstRange(ref VmValue dst, VmFloatRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1081,8 +992,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, count, out var to)) dst.SetRange(range.from, to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropFirstRange(ref VmValue dst, ref VmValue source, VmFloatRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1101,8 +1010,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, count + 1L, out var from)) dst.SetRange(from, range.to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeLastRange(ref VmValue dst, VmFloatRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1121,8 +1028,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length - count + 1L, out var from)) dst.SetRange(from, range.to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropLastRange(ref VmValue dst, ref VmValue source, VmFloatRange range, short count)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1141,8 +1046,6 @@ internal static class VmRegisterSeries
         if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length - count, out var to)) dst.SetRange(range.from, to, range.step);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeExtremeRange(ref VmValue dst, VmRange range, short count, bool highest)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1187,8 +1090,6 @@ internal static class VmRegisterSeries
             }
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropExtremeRange(ref VmValue dst, ref VmValue source, VmRange range, short count, bool highest)
     {
         if (range.step > 0)
@@ -1201,8 +1102,6 @@ internal static class VmRegisterSeries
         if (highest) DropFirstRange(ref dst, ref source, range, count);
         else DropLastRange(ref dst, ref source, range, count);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void TakeExtremeRange(ref VmValue dst, VmFloatRange range, short count, bool highest)
     {
         var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
@@ -1247,8 +1146,6 @@ internal static class VmRegisterSeries
             }
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void DropExtremeRange(ref VmValue dst, ref VmValue source, VmFloatRange range, short count, bool highest)
     {
         if (range.step > 0d)
@@ -1261,8 +1158,6 @@ internal static class VmRegisterSeries
         if (highest) DropFirstRange(ref dst, ref source, range, count);
         else DropLastRange(ref dst, ref source, range, count);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int CompareForOrdering(ref VmValue left, ref VmValue right)
     {
         if (left.IsNumeric && right.IsNumeric)
@@ -1309,8 +1204,6 @@ internal static class VmRegisterSeries
                 return left.Kind.CompareTo(right.Kind);
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetOrderingRank(ref VmValue value)
     {
         if (value.IsNumeric) return 1;

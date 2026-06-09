@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -7,13 +6,10 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterMemberIndexAccess
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMemberAccess(ref this VmValue dst, ushort memberNameIndex, ref VmValue obj)
     {
         dst.VmMemberAccess(dst.OwningState.Binary.TextConstantTable.Resolve(memberNameIndex), ref obj);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmMemberAccess(ref this VmValue dst, string key, ref VmValue obj)
     {
         switch (obj.Kind)
@@ -75,8 +71,6 @@ internal static class VmRegisterMemberIndexAccess
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmIndexAccess(ref this VmValue dst, long indexIn, ref VmValue obj)
     {
         if (indexIn <= 0)
@@ -122,8 +116,6 @@ internal static class VmRegisterMemberIndexAccess
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmPropertyAccess(ref this VmValue dst, ref VmValue property, ref VmValue obj)
     {
         if (property.TryGetInteger(out var indexIn))

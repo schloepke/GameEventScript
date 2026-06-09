@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -9,7 +8,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterMessages
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void CreateMessageSignature(ref this VmValue dest, ReadOnlySpan<ushort> shape, VmState vmState,  GameEventScriptSession session)
     {
         if (shape.Length == 0)
@@ -25,8 +23,6 @@ internal static class VmRegisterMessages
         }
         dest.SetMessageHandler(GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void CreateMessage(ref this VmValue dest, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
@@ -49,8 +45,6 @@ internal static class VmRegisterMessages
             dest.SetNothing();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void BindHandler(ref this VmValue dest, ref VmValue handler, ReadOnlySpan<ushort> argumentSlots)
     {
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)

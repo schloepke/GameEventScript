@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -8,7 +7,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterCollectionOperators
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLength(ref this VmValue dst, ref VmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -30,8 +28,6 @@ internal static class VmRegisterCollectionOperators
                 break;
         }
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStartsWith(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -148,8 +144,6 @@ internal static class VmRegisterCollectionOperators
 
         dst.SetBoolean(true);
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmEndsWith(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
@@ -268,8 +262,6 @@ internal static class VmRegisterCollectionOperators
 
         dst.SetBoolean(true);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContains(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (b.Kind)
@@ -402,24 +394,14 @@ internal static class VmRegisterCollectionOperators
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContainsAny(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
         => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: false);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContainsAll(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
         => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmHasAny(ref this VmValue dst, ref VmValue source)
         => VmHasAnyAll(ref dst, ref source, requireAll: false);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmHasAll(ref this VmValue dst, ref VmValue source)
         => VmHasAnyAll(ref dst, ref source, requireAll: true);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void VmHasAnyAll(ref VmValue dst, ref VmValue source, bool requireAll)
     {
         switch (source.Kind)
@@ -660,8 +642,6 @@ internal static class VmRegisterCollectionOperators
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void VmContainsAnyAll(ref VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
     {
         if (b.Kind is Nothing)
@@ -814,8 +794,6 @@ internal static class VmRegisterCollectionOperators
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void VmContainsAnyAllStream(ref VmValue dst, ref VmValue a, IVmStream stream, bool requireAll)
     {
         var candidates = new VmValue[8];
@@ -928,8 +906,6 @@ internal static class VmRegisterCollectionOperators
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmContainsValue(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (b.Kind)
@@ -977,8 +953,6 @@ internal static class VmRegisterCollectionOperators
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmUnion(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
@@ -1077,8 +1051,6 @@ internal static class VmRegisterCollectionOperators
 
         dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmIntersect(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
@@ -1264,8 +1236,6 @@ internal static class VmRegisterCollectionOperators
 
         dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmZip(ref this VmValue dst, ref VmValue a, ref VmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.Kind is not List || b.Kind is not List || a.ObjectValue is not VmListObject aList || b.ObjectValue is not VmListObject bList)
@@ -1287,8 +1257,6 @@ internal static class VmRegisterCollectionOperators
 
         dst.SetList(list);
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmValues(ref this VmValue dst, ref VmValue a)
     {
         switch (a.Kind)
@@ -1301,8 +1269,6 @@ internal static class VmRegisterCollectionOperators
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmKeys(ref this VmValue dst, ref VmValue a)
     {
         switch (a.Kind)
@@ -1315,8 +1281,6 @@ internal static class VmRegisterCollectionOperators
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmEntries(ref this VmValue dst, ref VmValue a)
     {
         switch (a.Kind)

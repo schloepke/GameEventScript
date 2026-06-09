@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.BytecodeExecutor.VmUnitCalculation;
@@ -7,7 +6,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterRandom
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmRandom(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptRandomGenerator randomGenerator, ref GameEventScriptTextTable textTable)
     {
         switch (from.Kind)
@@ -89,8 +87,6 @@ internal static class VmRegisterRandom
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmRandomFloat(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptRandomGenerator randomGenerator)
     {
         if (from.Kind is Nothing || to.Kind is Nothing)

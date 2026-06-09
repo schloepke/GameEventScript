@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.BytecodeExecutor.VmState.StateValue;
@@ -62,8 +61,6 @@ internal class VmState
     internal readonly int MaxRegisterSlots;
     
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         MaxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
@@ -108,35 +105,21 @@ internal class VmState
         ProcessingMessage = message;
         return true;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref VmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref VmValue ConditionalRegister(ushort index)
     {
         RegisterSlots[index + RegisterFrameStart].UpdatedTextTruthinessCache();
         return ref RegisterSlots[index + RegisterFrameStart];
     } 
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ref VmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue[] CreateRegisterArray(int size)
     {
         var values = new VmValue[size];
         for (var i = 0; i < values.Length; i++) values[i].InitRegister(this);
         return values;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmListObject CreateList(int size) => size == 0 ? EmptyList : new VmListObject(this, size);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmMapObject CreateMap(IReadOnlyDictionary<string, VmValue> entries) => new(this, entries);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateNothing()
     {
         var value = new VmValue();
@@ -152,8 +135,6 @@ internal class VmState
         value.SetBoolean(boolean);
         return value;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateInteger(long integer)
     {
         var value = new VmValue();
@@ -161,8 +142,6 @@ internal class VmState
         value.SetInteger(integer);
         return value;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateText(string text)
     {
         var value = new VmValue();
@@ -170,8 +149,6 @@ internal class VmState
         value.SetText(text);
         return value;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal VmValue CreateTag(string tag)
     {
         var value = new VmValue();
@@ -179,8 +156,6 @@ internal class VmState
         value.SetTag(tag);
         return value;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
     {
         if (RandomGeneratorsPointer >= RandomGenerators.Length) return RaiseError("Random generator stack overflow");
@@ -188,24 +163,18 @@ internal class VmState
         RandomGenerator = randomGenerator;
         return true;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool PopRandom()
     {
         if (RandomGeneratorsPointer == 0) return RaiseError("Random generator stack underflow");
         RandomGenerator = RandomGenerators[--RandomGeneratorsPointer];
         return true;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool RaiseError(string message)
     {
         State = Error;
         ErrorMessage = message;
         return false;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void Reset()
     {
         InstructionPointer = 0;
@@ -218,14 +187,10 @@ internal class VmState
         ProcessingMessage = null;
         State = Ready;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void JumpAddress(ushort address)
     {
         InstructionPointer = address;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool CallAddress(ushort address, ushort? resultRegister = null, bool normalizeResultAsPredicate = false)
     {
         var nextRegisterFrameStart = RegisterFrameStart + RegisterFrameLength;
@@ -246,8 +211,6 @@ internal class VmState
         StageLength = 0;
         return true;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal bool CallRecordConstructor(ushort recordId, ushort resultRegister)
     {
         if (recordId >= RecordConstructors.Length) return RaiseError($"Record constructor '{recordId}' was not found.");
@@ -257,8 +220,6 @@ internal class VmState
         if (StageLength != bind.ArgumentNames.Count) return RaiseError($"Record constructor '{recordId}' has the wrong number of arguments.");
         return CallAddress(bind.EntryAddress, resultRegister);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ReturnVoid()
     {
         if (CallStackPointer == 0)
@@ -278,8 +239,6 @@ internal class VmState
         StageLength = 0;
         if (callFrame.ResultRegisterIndex.HasValue) RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart].SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ReturnValue(ushort registerIndex)
     {
         var result = RegisterSlots[registerIndex + RegisterFrameStart];
@@ -302,17 +261,9 @@ internal class VmState
         if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
         RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal string FetchStringByPointer(ushort index) => Binary.TextConstantTable.Resolve(index);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ModifyLocalSlots(short slotCount)
     {
         switch (slotCount)
@@ -340,42 +291,20 @@ internal class VmState
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void ClearStage()
     {
         ClearRegisterRange(RegisterFrameStart + RegisterFrameLength, StageLength);
         StageLength = 0;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageRegister(ushort index) => AddStageSlot() = RegisterSlots[index + RegisterFrameStart];
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageValue(ref VmValue value) => AddStageSlot() = value;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageNothing() => AddStageSlot().SetNothing();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageBoolean(bool value) => AddStageSlot().SetBoolean(value);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetInteger(value, unit);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetFloat(value, unit);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StagePercentage(double value) => AddStageSlot().SetPercentage(value);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageTextConstant(ushort constantIndex) => AddStageSlot().SetTextPointer(constantIndex);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal void StageTagConstant(ushort constantIndex) => AddStageSlot().SetTagPointer(constantIndex);
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ref VmValue AddStageSlot()
     {
         var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;
@@ -383,8 +312,6 @@ internal class VmState
         StageLength++;
         return ref RegisterSlots[stageRegisterIndex];
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool EnsureRegisterCapacity(int requiredSlots)
     {
         if (requiredSlots <= RegisterSlots.Length) return true;
@@ -406,8 +333,6 @@ internal class VmState
 
         return true;
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ClearRegisterRange(int start, int count)
     {
         var end = start + count;

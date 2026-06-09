@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
 
@@ -66,8 +65,6 @@ internal sealed class VmTableData
             if (requiredEnd > Data.Length) throw new ArgumentException("A VM table column points outside of the data segment.", nameof(Columns));
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static uint GetColumnWidth(VmTableColumnKind kind) => kind switch
     {
         VmTableColumnKind.Boolean => 1,
@@ -291,20 +288,10 @@ internal sealed class VmTable
 
     public static VmTable CreateMap(VmTableColumnKind keyKind, VmTableColumnKind valueKind, int capacity = 0, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
         VmTableBuilder.Map(keyKind, valueKind, capacity, keyNameIndex, valueNameIndex).ToTable();
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool GetBoolean(int rowIndex, int columnIndex) => ReadScalar(rowIndex, columnIndex) != 0;
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public long GetInteger(int rowIndex, int columnIndex) => unchecked((long)ReadScalar(rowIndex, columnIndex));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double GetFloat(int rowIndex, int columnIndex) => BitConverter.Int64BitsToDouble(unchecked((long)ReadScalar(rowIndex, columnIndex)));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort GetTextIndex(int rowIndex, int columnIndex) => checked((ushort)ReadScalar(rowIndex, columnIndex));
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ushort GetTagIndex(int rowIndex, int columnIndex) => checked((ushort)ReadScalar(rowIndex, columnIndex));
 
     public bool TryFindBoolean(int columnIndex, bool value, out int rowIndex) => TryFindScalar(columnIndex, value ? 1UL : 0UL, out rowIndex);
@@ -312,10 +299,7 @@ internal sealed class VmTable
     public bool TryFindFloat(int columnIndex, double value, out int rowIndex) => TryFindScalar(columnIndex, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)), out rowIndex);
     public bool TryFindTextIndex(int columnIndex, ushort value, out int rowIndex) => TryFindScalar(columnIndex, value, out rowIndex);
     public bool TryFindTagIndex(int columnIndex, ushort value, out int rowIndex) => TryFindScalar(columnIndex, value, out rowIndex);
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ulong ReadScalar(int rowIndex, int columnIndex) => Data.Data[GetOffset(rowIndex, columnIndex)];
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private int GetOffset(int rowIndex, int columnIndex)
     {
         var column = Data.Columns[columnIndex];

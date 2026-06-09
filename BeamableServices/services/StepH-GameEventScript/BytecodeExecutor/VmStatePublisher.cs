@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -9,7 +8,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmStatePublisher
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool VmPublishMessage(this VmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession session)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
@@ -32,8 +30,6 @@ internal static class VmStatePublisher
             return false;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool VmPublishMessageWithTags(this VmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
@@ -62,8 +58,6 @@ internal static class VmStatePublisher
             return false;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool VmPublishMessageValue(this VmState vmState, ref VmValue messageSlot, bool publish, GameEventScriptSession session)
     {
         if (messageSlot.Kind is Message && messageSlot.ObjectValue is GameEventScriptMessage msg)
@@ -72,8 +66,6 @@ internal static class VmStatePublisher
         }
         return false;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static bool VmPublishMessageValueWithTags(this VmState vmState, ref VmValue messageSlot, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
     {
         if (messageSlot.Kind is not Message || messageSlot.ObjectValue is not GameEventScriptMessage msg) return false;
@@ -84,9 +76,6 @@ internal static class VmStatePublisher
         }
         return publish ? session.Publish(msg.WithTags(tags)) : session.Emit(msg.WithTags(tags));
     }
-    
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void AddTagsToList(List<string> tags, GameEventScriptValue value)
     {
         if (value.IsList())

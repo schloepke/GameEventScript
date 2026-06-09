@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -11,8 +10,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterCustomType
 {
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateExternalType(ref this VmValue dst, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         var state = dst.OwningState;

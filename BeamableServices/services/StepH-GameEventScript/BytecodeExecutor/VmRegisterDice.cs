@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -6,8 +5,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 internal static class VmRegisterDice
 {
     private static readonly int[] EmptyDice = [];
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateDice(ref this VmValue dst, short count, short sides, VmState state, GameEventScriptSession session)
     {
         if (count <= 0 || sides <= 0)

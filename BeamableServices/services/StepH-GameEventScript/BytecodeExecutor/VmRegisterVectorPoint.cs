@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
@@ -7,7 +6,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterVectorPoint
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateVector(ref this VmValue dst, short start, VmState state)
     {
         if (start == 0 && state.StageLength > 0)
@@ -76,8 +74,6 @@ internal static class VmRegisterVectorPoint
             dst.SetVector(x, y, z, unit);
         }
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreatePoint(ref this VmValue dst, short start, VmState state)
     {
         if (start == 0 && state.StageLength > 0)

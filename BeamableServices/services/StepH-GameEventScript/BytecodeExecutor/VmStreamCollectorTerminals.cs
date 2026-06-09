@@ -2,13 +2,10 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 internal static class VmStreamCollectorTerminals
 {
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamCollectList(ref this VmValue dst, ref VmValue iterator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -43,8 +40,6 @@ internal static class VmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamCollectMap(ref this VmValue dst, ref VmValue iterator, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -83,8 +78,6 @@ internal static class VmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamCollectMapValue(ref this VmValue dst, ref VmValue iterator, ushort itemSlot, ushort keyEntryAddress, ushort valueEntryAddress, IVmStreamEntryEvaluator evaluator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -131,8 +124,6 @@ internal static class VmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmFirst(ref this VmValue dst, ref VmValue source)
     {
         switch (source.Kind)
@@ -169,8 +160,6 @@ internal static class VmStreamCollectorTerminals
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLast(ref this VmValue dst, ref VmValue source)
     {
         switch (source.Kind)
@@ -207,8 +196,6 @@ internal static class VmStreamCollectorTerminals
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmSingle(ref this VmValue dst, ref VmValue source)
     {
         switch (source.Kind)
@@ -242,8 +229,6 @@ internal static class VmStreamCollectorTerminals
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void FirstFromStream(ref VmValue dst, IVmStream stream)
     {
         var item = dst.OwningState.CreateNothing();
@@ -257,8 +242,6 @@ internal static class VmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void LastFromStream(ref VmValue dst, IVmStream stream)
     {
         var item = dst.OwningState.CreateNothing();
@@ -280,8 +263,6 @@ internal static class VmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SingleFromStream(ref VmValue dst, IVmStream stream)
     {
         var item = dst.OwningState.CreateNothing();
@@ -302,24 +283,18 @@ internal static class VmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void FirstFromText(ref VmValue dst, ref VmValue source)
     {
         var text = source.ReadTextOrTag();
         if (text.Length > 0) dst.SetText(text[0].ToString());
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void LastFromText(ref VmValue dst, ref VmValue source)
     {
         var text = source.ReadTextOrTag();
         if (text.Length > 0) dst.SetText(text[^1].ToString());
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void SingleFromText(ref VmValue dst, ref VmValue source)
     {
         var text = source.ReadTextOrTag();

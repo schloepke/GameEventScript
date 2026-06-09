@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -10,7 +9,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterSortGroupDistinct
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDistinct(ref this VmValue dst, ref VmValue source)
     {
         switch (source.Kind)
@@ -127,8 +125,6 @@ internal static class VmRegisterSortGroupDistinct
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmDistinctBy(ref this VmValue dst, ref VmValue source, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         var state = dst.OwningState;
@@ -236,8 +232,6 @@ internal static class VmRegisterSortGroupDistinct
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGroupBy(ref this VmValue dst, ref VmValue source, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         var state = dst.OwningState;
@@ -403,26 +397,18 @@ internal static class VmRegisterSortGroupDistinct
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmSortAscending(ref this VmValue dst, ref VmValue source)
     {
         VmSort(ref dst, ref source, descending: false);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmSortDescending(ref this VmValue dst, ref VmValue source)
     {
         VmSort(ref dst, ref source, descending: true);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmOrderByAscending(ref this VmValue dst, ref VmValue source, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         VmOrderBy(ref dst, ref source, itemSlot, keyEntryAddress, evaluator, destinationSlot, descending: false);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmOrderByDescending(ref this VmValue dst, ref VmValue source, ushort itemSlot, ushort keyEntryAddress, IVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         VmOrderBy(ref dst, ref source, itemSlot, keyEntryAddress, evaluator, destinationSlot, descending: true);
@@ -756,8 +742,6 @@ internal static class VmRegisterSortGroupDistinct
                 return true;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int GetStableRank(ref VmValue value)
     {
         switch (value.Kind)

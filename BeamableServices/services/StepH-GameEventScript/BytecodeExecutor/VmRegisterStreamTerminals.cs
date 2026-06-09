@@ -1,13 +1,10 @@
 namespace StepH.GameEventScript.BytecodeExecutor;
 using System;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 internal static class VmRegisterStreamTerminals
 {
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamCount(ref this VmValue dst, ref VmValue iterator, ushort destinationSlot)
     {
         var state = dst.OwningState;
@@ -29,8 +26,6 @@ internal static class VmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamSum(ref this VmValue dst, ref VmValue iterator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -63,8 +58,6 @@ internal static class VmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamAverage(ref this VmValue dst, ref VmValue iterator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -107,20 +100,14 @@ internal static class VmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamMin(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator)
     {
         VmStreamMinMax(ref dst, ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamMax(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator)
     {
         VmStreamMinMax(ref dst, ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamOneWeighted(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -188,8 +175,6 @@ internal static class VmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmStreamTakeWeighted(ref VmValue dst, ref VmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })
@@ -280,8 +265,6 @@ internal static class VmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void VmStreamMinMax(ref VmValue dst, ref VmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IVmStreamEntryEvaluator evaluator, bool isMax)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IVmStream stream })

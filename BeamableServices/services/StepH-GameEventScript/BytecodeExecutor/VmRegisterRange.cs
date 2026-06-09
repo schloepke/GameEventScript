@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -7,7 +6,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterRange
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateRange(ref this VmValue dst, ref VmValue from, ref VmValue to)
     {
         if (from.Kind is Integer && to.Kind is Integer)
@@ -23,8 +21,6 @@ internal static class VmRegisterRange
             dst.SetNothing();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateRange(ref this VmValue dst, ref VmValue from, ref VmValue to, ref VmValue step)
     {
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)
@@ -40,8 +36,6 @@ internal static class VmRegisterRange
             dst.SetNothing();
         }
     }
-    
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateRangeStream(ref this VmValue dst, ref VmValue from, ref VmValue to, GameEventScriptSession session)
     {
         if (from.Kind is Integer && to.Kind is Integer)
@@ -69,8 +63,6 @@ internal static class VmRegisterRange
             dst.SetNothing();
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCreateRangeStream(ref this VmValue dst, ref VmValue from, ref VmValue to, ref VmValue step, GameEventScriptSession session)
     {
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)

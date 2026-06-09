@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -8,14 +7,11 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterCompare
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing) dst.SetNothing();
         else dst.SetBoolean(a.Equ(ref b));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool Equ(this VmValue a, ref VmValue b)
     {
         switch (a.Kind)
@@ -84,23 +80,17 @@ internal static class VmRegisterCompare
                 return false;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static long Sum(int[] arr)
     {
         long sum = 0;
         foreach (var v in arr) sum += v;
         return sum;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmNotEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing) dst.SetNothing();
         else dst.SetBoolean(!a.Equ(ref b));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLess(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         switch (a.Kind)
@@ -131,8 +121,6 @@ internal static class VmRegisterCompare
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGreater(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         switch (a.Kind)
@@ -163,8 +151,6 @@ internal static class VmRegisterCompare
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmLessOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         switch (a.Kind)
@@ -195,8 +181,6 @@ internal static class VmRegisterCompare
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmGreaterOrEqual(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         switch (a.Kind)
@@ -227,8 +211,6 @@ internal static class VmRegisterCompare
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool DoubleEqualsUlp(double a, double b)
     {
         var aBits = BitConverter.DoubleToInt64Bits(a);

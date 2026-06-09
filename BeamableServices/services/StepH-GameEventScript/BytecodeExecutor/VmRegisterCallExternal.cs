@@ -1,7 +1,6 @@
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -12,7 +11,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterCallExternal
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCallStandard(ref this VmValue dst, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
     {
         var state = dst.OwningState;
@@ -64,8 +62,6 @@ internal static class VmRegisterCallExternal
             }
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCallExternal(ref this VmValue dst, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
         var state = dst.OwningState;
@@ -148,8 +144,6 @@ internal static class VmRegisterCallExternal
             }
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void BindArguments(ref this VmValue destination, GameEventScriptFastValue argument)
     {
         switch (argument.Kind)
@@ -178,8 +172,6 @@ internal static class VmRegisterCallExternal
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void BindArguments(ref this VmValue destination, GameEventScriptValue argument)
     {
         switch (argument.Kind)
@@ -262,8 +254,6 @@ internal static class VmRegisterCallExternal
                 break;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GameEventScriptFastValue ToGameEventScriptFastValue(this ref VmValue value)
     {
         switch (value.Kind)
@@ -288,8 +278,6 @@ internal static class VmRegisterCallExternal
                 return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue());
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static GameEventScriptValue ToGameEventScriptValue(this ref VmValue a) => a.Kind switch
     {
         Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
@@ -311,8 +299,6 @@ internal static class VmRegisterCallExternal
         Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
         _ => GameEventScriptValueFactory.GesNothing(),
     };
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static List<GameEventScriptValue> ToGameEventScriptValues(this VmListObject list)
     {
         var result = new List<GameEventScriptValue>(list.Items.Length);
@@ -323,8 +309,6 @@ internal static class VmRegisterCallExternal
 
         return result;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this VmMapObject map)
     {
         var result = new Dictionary<string, GameEventScriptValue>(map.Length, StringComparer.Ordinal);
@@ -337,8 +321,6 @@ internal static class VmRegisterCallExternal
 
         return result;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this VmMapObject map, VmState state)
     {
         var typeName = string.Empty;

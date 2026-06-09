@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -448,8 +447,6 @@ internal static class VmRegisterPatterns
         }
         dst.SetList(list);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsFullHouseDice(int[] dice)
     {
         if (dice.Length != 5) return false;

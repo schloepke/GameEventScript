@@ -1,5 +1,4 @@
 using System;
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -8,7 +7,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterShuffleReverse
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmReverse(ref this VmValue dst, ref VmValue source)
     {
         switch (source.Kind)
@@ -61,8 +59,6 @@ internal static class VmRegisterShuffleReverse
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmShuffle(ref this VmValue dst, ref VmValue source, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (source.Kind)
@@ -143,8 +139,6 @@ internal static class VmRegisterShuffleReverse
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ReverseStream(ref VmValue dst, IVmStream stream)
     {
         var item = dst.OwningState.CreateNothing();
@@ -173,8 +167,6 @@ internal static class VmRegisterShuffleReverse
         for (var i = 0; i < count; i++) result.Items[i] = values[count - i - 1];
         dst.SetList(result);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ShuffleStream(ref VmValue dst, IVmStream stream, GameEventScriptRandomGenerator randomGenerator)
     {
         var item = dst.OwningState.CreateNothing();
@@ -204,8 +196,6 @@ internal static class VmRegisterShuffleReverse
         ShuffleList(result, randomGenerator);
         dst.SetList(result);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void ShuffleList(VmListObject list, GameEventScriptRandomGenerator randomGenerator)
     {
         for (var i = list.Length - 1; i > 0; i--)

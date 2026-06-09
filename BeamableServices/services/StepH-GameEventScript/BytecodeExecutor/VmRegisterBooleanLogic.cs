@@ -1,4 +1,3 @@
-using System.Runtime.CompilerServices;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -6,7 +5,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterBooleanLogic
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmOr(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
@@ -15,8 +13,6 @@ internal static class VmRegisterBooleanLogic
         else if (a.IsTruthIndeterminate && b.IsTrue || a.IsTrue && b.IsTruthIndeterminate) dst.SetBoolean(true);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmAnd(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
@@ -25,8 +21,6 @@ internal static class VmRegisterBooleanLogic
         else if (a.IsTruthIndeterminate && b.IsFalse || a.IsFalse && b.IsTruthIndeterminate) dst.SetBoolean(false);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmImplies(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
@@ -35,8 +29,6 @@ internal static class VmRegisterBooleanLogic
         else if (a.IsFalse && b.IsTruthIndeterminate || a.IsTruthIndeterminate && b.IsTrue) dst.SetBoolean(true);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmXor(ref this VmValue dst, ref VmValue a, ref VmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
@@ -44,16 +36,12 @@ internal static class VmRegisterBooleanLogic
         if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue ^ b.IsTrue);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmNot(ref this VmValue dst, ref VmValue a)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
         if (a.IsTruthDeterminate) dst.SetBoolean(!a.IsTrue);
         else dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmChance(ref this VmValue dst, ref VmValue a)
     {
         if (a.IsNothing || a.HasUnit)

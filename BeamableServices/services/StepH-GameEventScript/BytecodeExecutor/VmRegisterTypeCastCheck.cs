@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Globalization;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -11,7 +10,6 @@ namespace StepH.GameEventScript.BytecodeExecutor;
 
 internal static class VmRegisterTypeCastCheck
 {
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCastUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
         switch (xSlot.Kind)
@@ -37,14 +35,10 @@ internal static class VmRegisterTypeCastCheck
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckUnit(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
         dst.SetBoolean(xSlot.Kind is Integer or Float or Vector or Point && xSlot.Unit == unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCast(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
     {
         switch (type)
@@ -135,8 +129,6 @@ internal static class VmRegisterTypeCastCheck
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCastNumeric(ref this VmValue dst, ref VmValue xSlot)
     {
         if (xSlot.Kind is Text)
@@ -162,8 +154,6 @@ internal static class VmRegisterTypeCastCheck
 
         dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCastCustom(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer, ushort destinationSlot)
     {
         var state = dst.OwningState;
@@ -215,8 +205,6 @@ internal static class VmRegisterTypeCastCheck
 
         dst.SetNothing();
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckType(ref this VmValue dst, ref VmValue xSlot, GameEventScriptBytecodeTypeKind type)
     {
         dst.SetBoolean(type switch
@@ -227,11 +215,7 @@ internal static class VmRegisterTypeCastCheck
             _ => xSlot.IsNotNothing && xSlot.Kind == type
         });
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckNumeric(ref this VmValue dst, ref VmValue xSlot) => dst.SetBoolean(xSlot.IsNumeric);
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckInteger(ref this VmValue dst, ref VmValue xSlot)
     {
         if (!xSlot.IsNumeric)
@@ -243,8 +227,6 @@ internal static class VmRegisterTypeCastCheck
         var number = xSlot.AsNumeric;
         dst.SetBoolean(double.IsFinite(number) && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckFractional(ref this VmValue dst, ref VmValue xSlot)
     {
         if (!xSlot.IsNumeric)
@@ -256,14 +238,10 @@ internal static class VmRegisterTypeCastCheck
         var number = xSlot.AsNumeric;
         dst.SetBoolean(double.IsFinite(number) && number != Math.Truncate(number));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VmCheckCustomType(ref this VmValue dst, ref VmValue xSlot, ushort typeTextPointer)
     {
         dst.SetBoolean(IsCustomType(ref xSlot, dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer), ref dst.OwningState.Binary.TextConstantTable));
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CastText(ref VmValue dst, ref VmValue xSlot)
     {
         if (xSlot.Kind is Text)
@@ -274,8 +252,6 @@ internal static class VmRegisterTypeCastCheck
 
         dst.SetText(xSlot.ConvertToText());
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CastList(ref VmValue dst, ref VmValue xSlot, GameEventScriptSession? session)
     {
         switch (xSlot.Kind)
@@ -368,8 +344,6 @@ internal static class VmRegisterTypeCastCheck
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CastMap(ref VmValue dst, ref VmValue xSlot)
     {
         switch (xSlot.Kind)
@@ -418,8 +392,6 @@ internal static class VmRegisterTypeCastCheck
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CastVectorOrPoint(ref VmValue dst, ref VmValue xSlot, bool asPoint)
     {
         var unit = UnitNone;
@@ -562,8 +534,6 @@ internal static class VmRegisterTypeCastCheck
         if (asPoint) dst.SetPoint(x, y, z, unit);
         else dst.SetVector(x, y, z, unit);
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static void CastTag(ref VmValue dst, ref VmValue xSlot)
     {
         switch (xSlot.Kind)
@@ -593,8 +563,6 @@ internal static class VmRegisterTypeCastCheck
                 return;
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsCustomType(ref VmValue value, string typeName, ref GameEventScriptTextTable textTable)
     {
         if (value.ObjectValue is IGameEventScriptCustomTypeValue custom) return string.Equals(custom.CustomTypeName, typeName, StringComparison.Ordinal);

@@ -11,10 +11,11 @@ namespace StepH_GameEventScript_Tests.BytecodeVM;
 [TestClass]
 public sealed class BytecodeVmPerformanceReportTests
 {
+    private static readonly bool RunPerformanceReport = true;
     private const bool UseNewVm = true;
     private const bool RunSoftMode = false;
-    private const int WarmupRuns = 100;
-    private const int MeasuredRuns = 1_000;
+    private const int WarmupRuns = 50;
+    private const int MeasuredRuns = 100;
 
     private const string PerformanceScript =
         """
@@ -51,8 +52,15 @@ public sealed class BytecodeVmPerformanceReportTests
     public TestContext TestContext { get; set; } = null!;
 
     [TestMethod]
+    [TestCategory("Performance")]
     public void BytecodeVmRuntimeCostCanBeReported()
     {
+        if (!RunPerformanceReport)
+        {
+            TestContext.WriteLine("Performance report is disabled. Set RunPerformanceReport=true in this test to execute it manually.");
+            return;
+        }
+
         var diagnosticCollector = new GameEventScriptDiagnosticTraceCollector();
 
         var input = Create("Start", ("values", GameEventScriptValueFactory.GesList(Enumerable.Range(1, 50).Select(value => GameEventScriptValueFactory.GesInteger(value)))));

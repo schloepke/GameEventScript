@@ -361,6 +361,30 @@
     },
     {
       "kind": "scriptApi",
+      "name": "dynamic property access selectors",
+      "script": "module AtomicDynamicPropertyAccess\non Start {\n  let listValue be [10, 20, 30]\n  let mapValue be [name: 'Ada', hp: 10]\n  let vectorValue be :vector(1m, 2m, 3m)\n  let pointValue be :point(4m, 5m, 6m)\n  let textValue be 'ab'\n  let indexKey be 2\n  let textKey be 'name'\n  let tagKey be :hp\n  let vectorKey be 'y'\n  let pointKey be :z\n  let invalidKey be true\n  emit Done(listDynamic: listValue[indexKey], mapText: mapValue[textKey], mapTag: mapValue[tagKey], vectorDynamic: vectorValue[vectorKey], pointDynamic: pointValue[pointKey], textDynamic: textValue[indexKey], invalidProperty: mapValue[invalidKey])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "invalidProperty": { "type": ":nothing" },
+                "listDynamic": { "type": ":integer", "value": "20" },
+                "mapTag": { "type": ":integer", "value": "10" },
+                "mapText": { "type": ":text", "value": "Ada" },
+                "pointDynamic": { "type": ":integer", "unit": ":meter", "value": "6" },
+                "textDynamic": { "type": ":text", "value": "b" },
+                "vectorDynamic": { "type": ":integer", "unit": ":meter", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "message member and index access",
       "script": "module AtomicMessageAccess\non Start {\n  emit Ping(amount: 7) with :radio\n}\n\non Ping as message {\n  emit Done(memberName: message.name, memberTag: message.tags[1], memberMissing: message.missing, indexName: message[:name], indexTag: message['tags'][1], indexMissing: message[:missing], indexOut: message[1])\n}",
       "steps": [

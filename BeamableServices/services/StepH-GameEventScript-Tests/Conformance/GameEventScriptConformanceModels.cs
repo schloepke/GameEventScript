@@ -31,6 +31,10 @@ public sealed class GameEventScriptConformanceTest
 
     public GameEventScriptRuntimeLimitsSpec? RuntimeLimits { get; set; }
 
+    public int? Iterations { get; set; }
+
+    public int? WarmupIterations { get; set; }
+
     public List<GameEventScriptExternalSubscriberSpec>? ExternalSubscribers { get; set; }
 
     public List<GameEventScriptApiStepSpec>? Steps { get; set; }
@@ -52,6 +56,8 @@ public sealed class GameEventScriptConformanceTest
     public int? ExpectedArgumentCount { get; set; }
 
     public List<GameEventScriptMessageDefinitionExpectationSpec>? ExpectedMessageDefinitions { get; set; }
+
+    public GameEventScriptBytecodeOpcodeExpectationSpec? ExpectedOpcodes { get; set; }
 }
 
 public sealed class GameEventScriptSourceSpec
@@ -75,6 +81,17 @@ public sealed class GameEventScriptMessageDefinitionExpectationSpec
     public List<string>? SignatureIds { get; set; }
 
     public int? Count { get; set; }
+}
+
+public sealed class GameEventScriptBytecodeOpcodeExpectationSpec
+{
+    public List<string>? Contains { get; set; }
+
+    public List<string>? NotContains { get; set; }
+
+    public Dictionary<string, int>? Counts { get; set; }
+
+    public Dictionary<string, int>? MinCounts { get; set; }
 }
 
 public sealed class GameEventScriptApiStepSpec

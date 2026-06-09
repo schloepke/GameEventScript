@@ -79,6 +79,9 @@ internal static class GameEventScriptConformanceRunner
             case "compileMetadata":
                 RunCompileMetadataTest(testCase);
                 break;
+            case "bytecode":
+                RunBytecodeOpcodeTest(testCase);
+                break;
             default:
                 Assert.Fail($"{testCase}: unsupported test kind '{testCase.Test.Kind}'.");
                 break;
@@ -283,6 +286,71 @@ internal static class GameEventScriptConformanceRunner
                     $"{testCase}: message definition signature ids for '{expected.Name}' differ.");
             }
         }
+    }
+
+    private static void RunBytecodeOpcodeTest(GameEventScriptConformanceCase testCase)
+    {
+        var expected = testCase.Test.ExpectedOpcodes;
+        if (expected is null)
+        {
+            Assert.Fail($"{testCase}: bytecode tests require expectedOpcodes.");
+        }
+
+        var compiled = CompileBytecode(testCase.Test);
+        var opCodes = compiled.Code.Select(instruction => instruction.OpCode).ToArray();
+        var counts = opCodes
+            .GroupBy(opCode => opCode)
+            .ToDictionary(group => group.Key, group => group.Count());
+        var failures = new List<string>();
+
+        foreach (var name in expected.Contains ?? [])
+        {
+            var opCode = ParseExpectedOpcode(testCase, name);
+            if (!counts.ContainsKey(opCode))
+            {
+                failures.Add($"expected opcode '{name}' to be present.");
+            }
+        }
+
+        foreach (var name in expected.NotContains ?? [])
+        {
+            var opCode = ParseExpectedOpcode(testCase, name);
+            if (counts.ContainsKey(opCode))
+            {
+                failures.Add($"expected opcode '{name}' to be absent, but found {counts[opCode]} occurrence(s).");
+            }
+        }
+
+        foreach (var pair in expected.Counts ?? [])
+        {
+            var opCode = ParseExpectedOpcode(testCase, pair.Key);
+            counts.TryGetValue(opCode, out var actual);
+            if (actual != pair.Value)
+            {
+                failures.Add($"expected opcode '{pair.Key}' count {pair.Value}, actual {actual}.");
+            }
+        }
+
+        foreach (var pair in expected.MinCounts ?? [])
+        {
+            var opCode = ParseExpectedOpcode(testCase, pair.Key);
+            counts.TryGetValue(opCode, out var actual);
+            if (actual < pair.Value)
+            {
+                failures.Add($"expected opcode '{pair.Key}' count >= {pair.Value}, actual {actual}.");
+            }
+        }
+
+        if (failures.Count == 0)
+        {
+            return;
+        }
+
+        Assert.Fail(
+            $"{testCase}: bytecode opcode expectations differ.{Environment.NewLine}" +
+            string.Join(Environment.NewLine, failures) + Environment.NewLine +
+            "Actual opcodes:" + Environment.NewLine +
+            DescribeOpcodes(opCodes));
     }
 
     internal static void RegisterExternalSubscribers(GameEventScriptConformanceCase testCase, GameEventScriptHost host)
@@ -644,6 +712,22 @@ internal static class GameEventScriptConformanceRunner
 
     private static bool Matches(int? expected, int? actual)
         => expected is null || expected == actual;
+
+    private static GameEventScriptBytecodeOpCode ParseExpectedOpcode(GameEventScriptConformanceCase testCase, string name)
+    {
+        if (Enum.TryParse<GameEventScriptBytecodeOpCode>(name, ignoreCase: false, out var opCode))
+        {
+            return opCode;
+        }
+
+        Assert.Fail($"{testCase}: unknown expected opcode '{name}'.");
+        return default;
+    }
+
+    private static string DescribeOpcodes(IReadOnlyList<GameEventScriptBytecodeOpCode> opCodes)
+        => string.Join(
+            Environment.NewLine,
+            opCodes.Select((opCode, index) => $"{index:D4}: {opCode}"));
 
     private static bool MessageMatches(string? expected, params string?[] actualMessages)
         => string.IsNullOrWhiteSpace(expected) ||

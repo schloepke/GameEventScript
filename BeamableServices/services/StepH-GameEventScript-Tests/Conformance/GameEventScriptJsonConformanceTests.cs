@@ -1,10 +1,13 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
+using StepH.GameEventScript.BytecodeVM;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 
@@ -24,6 +27,11 @@ public sealed class GameEventScriptOldVmJsonConformanceTests : GameEventScriptJs
     [TestMethod]
     [DynamicData(nameof(CompileSyntaxErrorsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void CompileSyntaxErrors(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
+    [DynamicData(nameof(CompileBytecodeLoweringCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void CompileBytecodeLowering(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
@@ -399,6 +407,249 @@ public sealed class GameEventScriptNewVmJsonConformanceSmokeTests : GameEventScr
     }
 }
 
+[TestClass]
+public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonConformanceTestBase
+{
+    private static readonly bool RunPerformanceReport = true;
+    private static readonly int PerformanceIterations = 1_000;
+    private static readonly int PerformanceWarmupIterations = 10;
+    private const int DefaultIterations = 1_000;
+    private const int DefaultWarmupIterations = 100;
+
+    [TestMethod]
+    [TestCategory("Performance")]
+    public void PerformanceReport()
+    {
+        var testCases = GameEventScriptConformanceRunner.AllConformanceCases(Path.Combine(SpecDirectory, "performance"));
+        Assert.IsGreaterThan(0, testCases.Count);
+
+        if (!RunPerformanceReport)
+        {
+            TestContext.WriteLine(
+                "Performance report is disabled. Set RunPerformanceReport=true in this test to execute it manually. " +
+                "Use PerformanceIterations and PerformanceWarmupIterations in this test to override JSON iteration counts. " +
+                $"Loaded {testCases.Count} performance case(s).");
+            return;
+        }
+
+        foreach (var testCase in testCases)
+        {
+            RunPerformanceCase(testCase);
+        }
+    }
+
+    private void RunPerformanceCase(GameEventScriptConformanceCase testCase)
+    {
+        if (!string.Equals(testCase.Test.Kind, "performance", StringComparison.OrdinalIgnoreCase))
+        {
+            Assert.Fail($"{testCase}: performance suite contains unsupported test kind '{testCase.Test.Kind}'.");
+        }
+
+        if (testCase.Test.Steps is null || testCase.Test.Steps.Count == 0)
+        {
+            Assert.Fail($"{testCase}: performance tests require at least one step.");
+        }
+
+        var iterations = ResolveIterationCount(PerformanceIterations, testCase.Test.Iterations, DefaultIterations);
+        var warmupIterations = ResolveIterationCount(PerformanceWarmupIterations, testCase.Test.WarmupIterations, DefaultWarmupIterations);
+        var compiled = Measure("ges compile", () => GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test));
+        var oldBuild = Measure<IGameEventScriptModule>("old vm build", () => GesBytecodeVmExecutableBuilder.Build(compiled.Value));
+        var newBuild = Measure<IGameEventScriptModule>("new vm build", () => GameEventScriptVirtualMaschine.Create(compiled.Value.ToGameEventScriptBinary(), 4096, 256));
+
+        AssertPerformanceCorrectness(testCase, "old vm", oldBuild.Value);
+        AssertPerformanceCorrectness(testCase, "new vm", newBuild.Value);
+
+        var oldRun = MeasurePerformanceRun(testCase, oldBuild.Value, iterations, warmupIterations);
+        var newRun = MeasurePerformanceRun(testCase, newBuild.Value, iterations, warmupIterations);
+
+        TestContext.WriteLine($"Performance: {testCase.SuiteName}/{testCase.Test.Name}");
+        TestContext.WriteLine($"  iterations={iterations}, warmupIterations={warmupIterations}, steps={testCase.Test.Steps.Count}");
+        WriteMeasured("compile", compiled);
+        WriteMeasured("old build", oldBuild);
+        WriteMeasured("new build", newBuild);
+        WriteRun("old run", oldRun, iterations);
+        WriteRun("new run", newRun, iterations);
+        TestContext.WriteLine($"  speedup={(oldRun.Elapsed.TotalMilliseconds / Math.Max(0.0001d, newRun.Elapsed.TotalMilliseconds)):0.00}x");
+        TestContext.WriteLine($"  allocationRatio={(oldRun.AllocatedBytes / (double)Math.Max(1L, newRun.AllocatedBytes)):0.00}x");
+    }
+
+    private static void AssertPerformanceCorrectness(
+        GameEventScriptConformanceCase testCase,
+        string engine,
+        IGameEventScriptModule module)
+    {
+        var emitted = new List<GameEventScriptMessage>();
+        var published = new List<GameEventScriptMessage>();
+        var host = CreatePerformanceHost(testCase, module, emitted, published);
+
+        for (var stepIndex = 0; stepIndex < testCase.Test.Steps!.Count; stepIndex++)
+        {
+            emitted.Clear();
+            published.Clear();
+            var step = testCase.Test.Steps[stepIndex];
+            var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
+            if (!handled)
+            {
+                Assert.Fail($"{testCase} {engine} step {stepIndex + 1}: handler was not found or could not start.");
+            }
+
+            AssertMessages(testCase, engine, stepIndex, "emitted messages", step.ExpectedPublished, emitted);
+            AssertMessages(testCase, engine, stepIndex, "outbound published messages", step.ExpectedOutboundPublished, published);
+        }
+    }
+
+    private static PerformanceRunMetrics MeasurePerformanceRun(
+        GameEventScriptConformanceCase testCase,
+        IGameEventScriptModule module,
+        int iterations,
+        int warmupIterations)
+    {
+        var emittedCount = 0;
+        var publishedCount = 0;
+        var host = CreatePerformanceHost(
+            testCase,
+            module,
+            _ => emittedCount++,
+            _ => publishedCount++);
+
+        RunPerformanceIterations(testCase, host, warmupIterations);
+        ForceFullCollection();
+        emittedCount = 0;
+        publishedCount = 0;
+        var beforeAllocated = GC.GetAllocatedBytesForCurrentThread();
+        var stopwatch = Stopwatch.StartNew();
+        RunPerformanceIterations(testCase, host, iterations);
+        stopwatch.Stop();
+        return new PerformanceRunMetrics(
+            stopwatch.Elapsed,
+            GC.GetAllocatedBytesForCurrentThread() - beforeAllocated,
+            emittedCount,
+            publishedCount);
+    }
+
+    private static void RunPerformanceIterations(GameEventScriptConformanceCase testCase, GameEventScriptHost host, int iterations)
+    {
+        for (var iteration = 0; iteration < iterations; iteration++)
+        {
+            foreach (var step in testCase.Test.Steps!)
+            {
+                var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
+                if (!handled)
+                {
+                    Assert.Fail($"{testCase}: handler was not found or could not start during performance run.");
+                }
+            }
+        }
+    }
+
+    private static GameEventScriptHost CreatePerformanceHost(
+        GameEventScriptConformanceCase testCase,
+        IGameEventScriptModule module,
+        List<GameEventScriptMessage> emitted,
+        List<GameEventScriptMessage> published)
+        => CreatePerformanceHost(testCase, module, emitted.Add, published.Add);
+
+    private static GameEventScriptHost CreatePerformanceHost(
+        GameEventScriptConformanceCase testCase,
+        IGameEventScriptModule module,
+        Action<GameEventScriptMessage> emitted,
+        Action<GameEventScriptMessage> published)
+    {
+        var builder = GameEventScriptManager.CreateHostBuilder()
+            .WithRandom(GameEventScriptConformanceRunner.CreateRandomForTest(testCase.Test.RandomSequence))
+            .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
+            .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+            .WithRuntimeLimits(GameEventScriptConformanceRunner.CreateRuntimeLimitsForTest(testCase.Test.RuntimeLimits))
+            .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
+                messageEmitted: emitted,
+                messagePublished: emitted))
+            .WithPublishHook(message =>
+            {
+                published(message);
+                return true;
+            });
+        var host = builder.Build().Load(module);
+        GameEventScriptConformanceRunner.RegisterExternalSubscribers(testCase, host);
+        return host;
+    }
+
+    private static void AssertMessages(
+        GameEventScriptConformanceCase testCase,
+        string engine,
+        int stepIndex,
+        string label,
+        IReadOnlyList<JsonElement>? expectedPublished,
+        IReadOnlyList<GameEventScriptMessage> actual)
+    {
+        var expected = (expectedPublished ?? []).Select(GameEventScriptConformanceValueCodec.DecodeMessage).ToArray();
+        var expectedJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(expected);
+        var actualJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(actual);
+        if (expectedJson == actualJson)
+        {
+            return;
+        }
+
+        Assert.Fail(
+            $"{testCase} {engine} step {stepIndex + 1}: {label} differ.{Environment.NewLine}" +
+            $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
+            $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}");
+    }
+
+    private static int ResolveIterationCount(int testOverride, int? jsonValue, int defaultValue)
+        => testOverride >= 0 ? testOverride : Math.Max(0, jsonValue ?? defaultValue);
+
+    private static Measured<T> Measure<T>(string name, Func<T> action)
+    {
+        ForceFullCollection();
+        var beforeAllocated = GC.GetAllocatedBytesForCurrentThread();
+        var stopwatch = Stopwatch.StartNew();
+        var value = action();
+        stopwatch.Stop();
+        return new Measured<T>(name, value, stopwatch.Elapsed, GC.GetAllocatedBytesForCurrentThread() - beforeAllocated);
+    }
+
+    private void WriteMeasured<T>(string label, Measured<T> measured)
+        => TestContext.WriteLine(
+            $"  {label}: {measured.Elapsed.TotalMilliseconds,9:#,##0.000} ms / {FormatBytes(measured.AllocatedBytes),9}");
+
+    private void WriteRun(string label, PerformanceRunMetrics run, int iterations)
+        => TestContext.WriteLine(
+            $"  {label}: {run.Elapsed.TotalMilliseconds,9:#,##0.000} ms / {FormatBytes(run.AllocatedBytes),9} " +
+            $"(per invoke {run.Elapsed.TotalMilliseconds / Math.Max(1, iterations):0.0000} ms / {FormatBytes(run.AllocatedBytes / Math.Max(1, iterations))}, " +
+            $"emitted={run.EmittedMessages}, outbound={run.OutboundPublishedMessages})");
+
+    private static string FormatBytes(long bytes)
+    {
+        string[] units = ["B", "KB", "MB", "GB"];
+        var value = (double)bytes;
+        var unitIndex = 0;
+        while (value >= 1024d && unitIndex < units.Length - 1)
+        {
+            value /= 1024d;
+            unitIndex++;
+        }
+
+        return unitIndex == 0
+            ? $"{bytes} {units[unitIndex]}"
+            : $"{value:0.##} {units[unitIndex]}";
+    }
+
+    private static void ForceFullCollection()
+    {
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+    }
+
+    private sealed record Measured<T>(string Name, T Value, TimeSpan Elapsed, long AllocatedBytes);
+
+    private sealed record PerformanceRunMetrics(
+        TimeSpan Elapsed,
+        long AllocatedBytes,
+        int EmittedMessages,
+        int OutboundPublishedMessages);
+}
+
 public abstract class GameEventScriptJsonConformanceTestBase
 {
     protected static readonly string SpecDirectory = Path.Combine(GetSourceDirectory(), "Specs");
@@ -413,6 +664,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> CompileSyntaxErrorsCases()
         => Cases("compile/syntax-errors.json");
+
+    public static IEnumerable<object[]> CompileBytecodeLoweringCases()
+        => Cases("compile/bytecode-lowering.json");
 
     public static IEnumerable<object[]> RuntimeAtomicMathMatrixCases()
         => Cases("runtime/atomic/math-matrix.json");

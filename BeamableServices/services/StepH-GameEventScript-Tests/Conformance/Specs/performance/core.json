@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "name": "PerformanceCore",
+  "level": "performance",
+  "tests": [
+    {
+      "kind": "performance",
+      "name": "math integer hot path",
+      "iterations": 1000,
+      "warmupIterations": 100,
+      "script": "module PerformanceMath\n\non Start(value) {\n  let a be value + 5\n  let b be a * 3\n  let c be b - 7\n  let d be c div 2\n  let e be d * d\n  let f be e mod 97\n  let g be f + 10\n  let h be g * 2\n  let i be h - 15\n  let j be i div 5\n  emit Done(result: j)\n}\n",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": { "type": ":integer", "value": "10" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "result": { "type": ":integer", "value": "29" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "performance",
+      "name": "range select and aggregate",
+      "iterations": 1000,
+      "warmupIterations": 100,
+      "script": "module PerformanceRanges\n\non Start {\n  let values be :list[:select item from 1 to 100 => item * 2]\n  let total be values[:sum value => value]\n  let count be :len values\n  emit Done(total: total, count: count)\n}\n",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "count": { "type": ":integer", "value": "100" },
+                "total": { "type": ":integer", "value": "10100" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "performance",
+      "name": "record creation and casts",
+      "iterations": 1000,
+      "warmupIterations": 100,
+      "script": "module PerformanceTypes\n\nrecord :sample as {\n  _ value: :number,\n  label: :text,\n  doubled: :number computed by value * 2\n}\n\non Start {\n  let rec be :sample(21, label: 'ok')\n  let textNumber be '42' as :number\n  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :sample)\n}\n",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "doubled": { "type": ":integer", "value": "42" },
+                "isSample": { "type": ":boolean", "value": true },
+                "label": { "type": ":text", "value": "ok" },
+                "textNumber": { "type": ":integer", "value": "42" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "performance",
+      "name": "pipeline filter select sum and direct list slice",
+      "iterations": 1000,
+      "warmupIterations": 100,
+      "script": "module PerformancePipelines\n\non Start {\n  let values be [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]\n  let firstTen be values[:take first 10]\n  let directTotal be firstTen[:sum value => value]\n  let streamTotal be values[:filter value where value mod 2 = 0][:select value => value * 2][:sum value => value]\n  let streamCount be values[:filter value where value > 10][:count value where true]\n  emit Done(directTotal: directTotal, streamTotal: streamTotal, streamCount: streamCount)\n}\n",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "directTotal": { "type": ":integer", "value": "55" },
+                "streamCount": { "type": ":integer", "value": "10" },
+                "streamTotal": { "type": ":integer", "value": "220" }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

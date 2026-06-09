@@ -27,6 +27,55 @@
     },
     {
       "kind": "scriptApi",
+      "name": "branch can publish outbound and continue with local emit",
+      "script": "module BinaryRunnerBranch\n\non Start(value) {\n  if value > 10 {\n    publish High(value: value)\n  }\n  emit Done(value: value)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": {
+                "type": ":integer",
+                "value": "12"
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "High",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "12"
+                }
+              }
+            },
+            {
+              "name": "Done",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "12"
+                }
+              }
+            }
+          ],
+          "expectedOutboundPublished": [
+            {
+              "name": "High",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "12"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "emit tags match handler filters",
       "script": "on Start {\n  let group be [:radio, :command, :radio]\n  emit Signal(value: 1) with group\n  emit Signal(value: 2) with :radio, :blocked\n  emit Signal(value: 3)\n}\n\non Signal(value) matching :radio, :command {\n  emit Seen(value: value)\n}\n\non Signal(value) matching :radio without :blocked {\n  emit Seen(value: value + 10)\n}\n\non Signal(value) without :radio {\n  emit Seen(value: value + 100)\n}",
       "steps": [

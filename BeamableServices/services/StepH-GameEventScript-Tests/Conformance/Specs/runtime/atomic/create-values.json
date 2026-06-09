@@ -435,6 +435,54 @@
     },
     {
       "kind": "scriptApi",
+      "name": "stage literal value kinds",
+      "script": "module AtomicStageLiteralValueKinds\non Start {\n  let stagedList be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', :ready]\n  let stagedMap be [falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: :ready]\n  emit Done(stagedList: stagedList, stagedMap: stagedMap)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "stagedList": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":boolean", "value": false },
+                    { "type": ":boolean", "value": true },
+                    { "type": ":integer", "value": "12" },
+                    { "type": ":float", "value": "12.5" },
+                    { "type": ":integer", "unit": ":meter", "value": "7" },
+                    { "type": ":float", "unit": ":meter", "value": "1.5" },
+                    { "type": ":percentage", "value": "0.25" },
+                    { "type": ":text", "value": "txt" },
+                    { "type": ":tag", "value": "ready" }
+                  ]
+                },
+                "stagedMap": {
+                  "type": ":map",
+                  "entries": {
+                    "falseValue": { "type": ":boolean", "value": false },
+                    "floatValue": { "type": ":float", "value": "12.5" },
+                    "integerValue": { "type": ":integer", "value": "12" },
+                    "meterFloat": { "type": ":float", "unit": ":meter", "value": "1.5" },
+                    "meterInteger": { "type": ":integer", "unit": ":meter", "value": "7" },
+                    "percentageValue": { "type": ":percentage", "value": "0.25" },
+                    "tagValue": { "type": ":tag", "value": "ready" },
+                    "textValue": { "type": ":text", "value": "txt" },
+                    "trueValue": { "type": ":boolean", "value": true }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "generated list builder values",
       "script": "module AtomicGeneratedListBuilderValues\non Start {\n  let sourceList be [1, 'two', :boss, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  let fromRange be :list[:select item from 1 to 4 => item * item]\n  let filteredRange be :list[:select item from 1 to 6 where item mod 2 = 0 => item]\n  let fromList be :list[:select item in sourceList => item]\n  let fromEmptyList be :list[:select item in emptyList => item]\n  let fromDice be :list[:select item in dice => item + 1]\n  let fromText be :list[:select item in text => item]\n  let fromMap be :list[:select item in map => item * 10]\n  let invalidSource be :list[:select item in 10 => item]\n  emit Done(fromRange: fromRange, filteredRange: filteredRange, fromList: fromList, fromEmptyList: fromEmptyList, fromDice: fromDice, fromText: fromText, fromMap: fromMap, invalidSource: invalidSource)\n}",
       "steps": [
@@ -502,6 +550,70 @@
                 "invalidSource": {
                   "type": ":list",
                   "items": []
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "generated range iterator variants",
+      "script": "module AtomicGeneratedRangeIteratorVariants\non Start {\n  let fromValue be 2\n  let toValue be 5\n  let stepValue be 2\n  let shortRange be :list[:select item from 1 to 3 => item]\n  let dynamicRange be :list[:select item from fromValue to toValue => item]\n  let dynamicSteppedRange be :list[:select item from fromValue to toValue step stepValue => item]\n  let descendingRange be :list[:select item from 5 to 1 step (0 - 2) => item]\n  let floatRange be :list[:select item from 1.5 to 2.5 step 0.5 => item]\n  let emptyRange be :list[:select item from 3 to 1 => item]\n  emit Done(shortRange: shortRange, dynamicRange: dynamicRange, dynamicSteppedRange: dynamicSteppedRange, descendingRange: descendingRange, floatRange: floatRange, emptyRange: emptyRange)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "descendingRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "5" },
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "1" }
+                  ]
+                },
+                "dynamicRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" },
+                    { "type": ":integer", "value": "4" },
+                    { "type": ":integer", "value": "5" }
+                  ]
+                },
+                "dynamicSteppedRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "4" }
+                  ]
+                },
+                "emptyRange": {
+                  "type": ":list",
+                  "items": []
+                },
+                "floatRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":float", "value": "1.5" },
+                    { "type": ":float", "value": "2" },
+                    { "type": ":float", "value": "2.5" }
+                  ]
+                },
+                "shortRange": {
+                  "type": ":list",
+                  "items": [
+                    { "type": ":integer", "value": "1" },
+                    { "type": ":integer", "value": "2" },
+                    { "type": ":integer", "value": "3" }
+                  ]
                 }
               }
             }

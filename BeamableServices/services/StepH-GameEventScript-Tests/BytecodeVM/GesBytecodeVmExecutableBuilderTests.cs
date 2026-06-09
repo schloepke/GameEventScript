@@ -146,33 +146,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeLowersImplicationWithBranchingTriStateShape()
-    {
-        const string script =
-            """
-            module ShortCircuit
-
-            on Start(missing) {
-              let skipped be false -> missing
-              let resolved be missing -> true
-              emit Done(skipped: skipped, resolved: resolved)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.JumpIfFalse));
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
-            instruction.DestinationSlot >= 0 &&
-            instruction.XSlot == instruction.YSlot));
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.Implies &&
-            instruction.DestinationSlot >= 0 &&
-            instruction.XSlot != instruction.YSlot));
-    }
-
-    [TestMethod]
     public void PublicLinearBytecodeUsesGenericCastTypeCheckOpcodesAndDedicatedPercentageLoads()
     {
         const string script =
@@ -205,56 +178,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             instruction.UnitAndFlags is not 0 and not (byte)GameEventScriptBytecodeInstructionUnit.UnitDegree and
                 not (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter and
                 not (byte)GameEventScriptBytecodeInstructionUnit.UnitSecond));
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeLowersNumericHelperToNumericOpcodes()
-    {
-        const string script =
-            """
-            module NumericSugar
-
-            on Start(value) {
-              let numericValue be value as :number
-              let isNumeric be numericValue is numeric
-              emit Done(numericValue: numericValue, isNumeric: isNumeric)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsFalse(Enum.GetNames<GameEventScriptBytecodeTypeKind>().Contains("Number"));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CastNumeric));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CheckNumeric));
-        Assert.IsFalse(compiled.Code.Any(instruction =>
-            (instruction.OpCode is GameEventScriptBytecodeOpCode.Cast or GameEventScriptBytecodeOpCode.CheckType) &&
-            Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeOperand) &&
-            Enum.GetName(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeOperand) == "Number"));
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeUsesDedicatedSpatialCreationOpcodes()
-    {
-        const string script =
-            """
-            module SpatialCreation
-
-            on Start(value) {
-              let position be :vector(y: value, z: 3)
-              let target be :point(1, value)
-              emit Done(position: position, target: target)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.CreateVector &&
-            instruction.ImmediateX == 1));
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.CreatePoint &&
-            instruction.ImmediateX == 0));
-        Assert.IsFalse(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRecord));
     }
 
     [TestMethod]
@@ -305,32 +228,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
     }
 
     [TestMethod]
-    public void PublicLinearBytecodeStoresLoopIteratorsAndLinearRandomScopes()
-    {
-        const string script =
-            """
-            module SideTables
-
-            on Start {
-              for item from 1 to 3 emit Tick(value: item)
-              :random with -7 {
-                emit Done(value: :random from 1 to 6)
-              }
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRangeIteratorShort));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamNext));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamClose));
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant &&
-            instruction.I64 == -7L));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPop));
-    }
-
-    [TestMethod]
     public void PublicLinearBytecodeStoresLargeRandomSeedAsInt64()
     {
         const long seed = 0x1_0000_0001L;
@@ -350,30 +247,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.IsTrue(compiled.Code.Any(instruction =>
             instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant &&
             instruction.I64 == seed));
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeUsesIteratorOpcodesForDynamicForSources()
-    {
-        const string script =
-            """
-            module LoopIterators
-
-            on Start(begin, finish, step) {
-              for item from begin to finish emit RangeItem(value: item)
-              for item from begin to finish step step emit StepItem(value: item)
-              let items be [1, 2, 3]
-              for item in items emit CollectionItem(value: item)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRangeIterator));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamCreate));
-        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamNext));
-        Assert.IsGreaterThanOrEqualTo(3, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.StreamClose));
     }
 
     [TestMethod]
@@ -435,69 +308,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(1, published.Count);
         Assert.AreEqual("Done", published[0].Name);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(42), published[0].Arguments["value"]);
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeUsesDynamicRandomPushForExplicitIntegerSeed()
-    {
-        const string script =
-            """
-            module RandomScopes
-
-            on Start(seed) {
-              let value be :random with (seed as :number) 1
-              emit Done(value: value)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPush));
-        Assert.IsTrue(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPop));
-        Assert.IsFalse(compiled.Code.Any(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomPushConstant));
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeLowersIntegerAndFloatRandomTakesSeparately()
-    {
-        const string script =
-            """
-            module RandomTakes
-
-            on Start {
-              let integerValue be :random from 1 to 6
-              let floatValue be :random from 0.0 to 1.0
-              let mixedValue be :random from 1 to 2.0
-              emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.AreEqual(1, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomTake));
-        Assert.AreEqual(2, compiled.Code.Count(instruction => instruction.OpCode == GameEventScriptBytecodeOpCode.RandomTakeFloat));
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeStoresPipelineMetadataInSideTables()
-    {
-        const string script =
-            """
-            module SideTables
-
-            on Start(values) {
-              let selected be values[:select item => item + 1]
-              emit Done(count: :len selected)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.StreamMap &&
-            instruction.EntryAddress > 0));
-        Assert.IsTrue(compiled.Code.Any(instruction =>
-            instruction.OpCode == GameEventScriptBytecodeOpCode.StreamCollectList));
     }
 
     [TestMethod]
@@ -2082,51 +1892,6 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(13), published[0].Arguments["score"]);
         Assert.AreEqual(GameEventScriptValueFactory.GesInteger(6), published[0].Arguments["replacement"]);
         Assert.AreEqual(GameEventScriptNothingValue.Instance, published[0].Arguments["invalidShuffle"]);
-    }
-
-    [TestMethod]
-    public void PublicLinearBytecodeSeriesTermTakeDropDoNotEmitPipelineOpcodes()
-    {
-        const string script =
-            """
-            module SeriesAtomicShape
-
-            on Start {
-              let naturals be :series.natural()
-              let term be naturals[:term 3]
-              let firstValues be naturals[:take first 4]
-              let dropped be naturals[:drop first 2]
-              let lastValues be naturals[:take last 2]
-              let droppedLast be naturals[:drop last 1]
-              let highestValues be naturals[:take highest 2]
-              let lowestValues be naturals[:take lowest 2]
-              let droppedHighest be naturals[:drop highest 1]
-              let droppedLowest be naturals[:drop lowest 1]
-              emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)
-            }
-            """;
-
-        var compiled = GameEventScriptManager.Compile(script);
-        var opCodes = compiled.Code.Select(instruction => instruction.OpCode).ToArray();
-
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.Term);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeFirst);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropFirst);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLast);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLast);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeHighest);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.TakeLowest);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropHighest);
-        CollectionAssert.Contains(opCodes, GameEventScriptBytecodeOpCode.DropLowest);
-        Assert.IsFalse(opCodes.Any(opCode => opCode >= GameEventScriptBytecodeOpCode.Distinct));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMap));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamFilter));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCollectList));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamCount));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamSum));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamAverage));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMin));
-        Assert.IsFalse(opCodes.Contains(GameEventScriptBytecodeOpCode.StreamMax));
     }
 
     [TestMethod]

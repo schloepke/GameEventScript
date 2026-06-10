@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Diagnostics;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using StepH.GameEventScript;
@@ -175,7 +176,10 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
 [TestClass]
 public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonConformanceTestBase
 {
-    private static readonly bool RunPerformanceReport = true;
+    private static readonly bool RunPerformanceReport = false;
+    private static readonly bool ComparePerformanceReportToReference = true;
+    private static readonly double PerformanceElapsedRegressionTolerance = 0.15d;
+    private static readonly double PerformanceElapsedMinimumToleranceMilliseconds = 1d;
     private static readonly int PerformanceIterations = 1_000;
     private static readonly int PerformanceWarmupIterations = 10;
     private const int DefaultIterations = 1_000;
@@ -193,17 +197,172 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             TestContext.WriteLine(
                 "Performance report is disabled. Set RunPerformanceReport=true in this test to execute it manually. " +
                 "Use PerformanceIterations and PerformanceWarmupIterations in this test to override JSON iteration counts. " +
+                "Copy PerformanceReport.current.txt to PerformanceReport.reference.txt to approve a new baseline. " +
                 $"Loaded {testCases.Count} performance case(s).");
             return;
         }
 
+        var report = new StringBuilder();
+        report.AppendLine("# GameEventScript Performance Conformance Report");
+        report.AppendLine();
+        report.AppendLine($"cases={testCases.Count}");
+        report.AppendLine($"performanceIterations={PerformanceIterations}");
+        report.AppendLine($"performanceWarmupIterations={PerformanceWarmupIterations}");
+        report.AppendLine();
         foreach (var testCase in testCases)
         {
-            RunPerformanceCase(testCase);
+            RunPerformanceCase(testCase, report);
+        }
+
+        var current = report.ToString();
+        var referencePath = GetPerformanceReferencePath();
+        var currentPath = GetPerformanceCurrentPath(referencePath);
+        File.WriteAllText(currentPath, current);
+
+        TestContext.WriteLine($"Performance current:   {currentPath}");
+        TestContext.WriteLine($"Performance reference: {referencePath}");
+        TestContext.WriteLine("Current:");
+        TestContext.WriteLine(current);
+
+        var reference = File.Exists(referencePath) ? File.ReadAllText(referencePath) : string.Empty;
+        TestContext.WriteLine("Reference:");
+        TestContext.WriteLine(reference.Length == 0 ? "<missing>" : reference);
+
+        if (!ComparePerformanceReportToReference)
+        {
+            TestContext.WriteLine("Performance reference comparison is disabled. Set ComparePerformanceReportToReference=true to assert the snapshot.");
+            return;
+        }
+
+        if (!File.Exists(referencePath))
+        {
+            Assert.Fail($"Performance reference does not exist. Copy current to reference to approve it: {currentPath} -> {referencePath}");
+        }
+
+        if (!PerformanceReportMatchesReference(reference, current, out var performanceDiff))
+        {
+            Assert.Fail(
+                $"Performance report regressed. Current: {currentPath}; Reference: {referencePath}{Environment.NewLine}" +
+                performanceDiff);
         }
     }
 
-    private void RunPerformanceCase(GameEventScriptConformanceCase testCase)
+    private static string GetPerformanceReferencePath()
+        => Path.Combine(
+            Path.GetDirectoryName(SpecDirectory) ?? throw new DirectoryNotFoundException("Conformance directory was not found."),
+            "PerformanceReport.reference.txt");
+
+    private static string GetPerformanceCurrentPath(string referencePath)
+        => Path.Combine(
+            Path.GetDirectoryName(referencePath) ?? throw new DirectoryNotFoundException("Performance reference directory was not found."),
+            "PerformanceReport.current.txt");
+
+    private static bool PerformanceReportMatchesReference(string reference, string current, out string diff)
+    {
+        var referenceLines = reference.ReplaceLineEndings("\n").Split('\n');
+        var currentLines = current.ReplaceLineEndings("\n").Split('\n');
+        var builder = new StringBuilder();
+        var count = Math.Max(referenceLines.Length, currentLines.Length);
+        for (var index = 0; index < count; index++)
+        {
+            if (index >= referenceLines.Length)
+            {
+                builder.AppendLine($"line {index + 1}: unexpected current line '{currentLines[index]}'");
+                continue;
+            }
+
+            if (index >= currentLines.Length)
+            {
+                builder.AppendLine($"line {index + 1}: missing current line, expected '{referenceLines[index]}'");
+                continue;
+            }
+
+            var referenceLine = referenceLines[index];
+            var currentLine = currentLines[index];
+            if (referenceLine == currentLine)
+            {
+                continue;
+            }
+
+            if (TryComparePerformanceMetric(referenceLine, currentLine, out var metricDiff))
+            {
+                if (metricDiff.Length > 0)
+                {
+                    builder.AppendLine($"line {index + 1}: {metricDiff}");
+                }
+
+                continue;
+            }
+
+            builder.AppendLine($"line {index + 1}: expected '{referenceLine}' but was '{currentLine}'");
+        }
+
+        diff = builder.ToString();
+        return diff.Length == 0;
+    }
+
+    private static bool TryComparePerformanceMetric(string referenceLine, string currentLine, out string diff)
+    {
+        diff = string.Empty;
+        var referenceSeparator = referenceLine.IndexOf('=');
+        var currentSeparator = currentLine.IndexOf('=');
+        if (referenceSeparator <= 0 || currentSeparator <= 0)
+        {
+            return false;
+        }
+
+        var key = referenceLine[..referenceSeparator];
+        if (!string.Equals(key, currentLine[..currentSeparator], StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var referenceValue = referenceLine[(referenceSeparator + 1)..];
+        var currentValue = currentLine[(currentSeparator + 1)..];
+        if (key.EndsWith(".elapsedMs", StringComparison.Ordinal) ||
+            key.EndsWith(".perInvokeElapsedMs", StringComparison.Ordinal))
+        {
+            if (!double.TryParse(referenceValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var referenceMs) ||
+                !double.TryParse(currentValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var currentMs))
+            {
+                return false;
+            }
+
+            var allowed = referenceMs + Math.Max(
+                referenceMs * PerformanceElapsedRegressionTolerance,
+                PerformanceElapsedMinimumToleranceMilliseconds);
+            if (currentMs > allowed)
+            {
+                diff = $"{key} regressed: reference={referenceMs.ToString("0.0000", CultureInfo.InvariantCulture)} ms, " +
+                       $"current={currentMs.ToString("0.0000", CultureInfo.InvariantCulture)} ms, " +
+                       $"allowed={allowed.ToString("0.0000", CultureInfo.InvariantCulture)} ms";
+            }
+
+            return true;
+        }
+
+        if (key.EndsWith(".allocatedBytes", StringComparison.Ordinal) ||
+            key.EndsWith(".perInvokeAllocatedBytes", StringComparison.Ordinal))
+        {
+            if (!long.TryParse(referenceValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var referenceBytes) ||
+                !long.TryParse(currentValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var currentBytes))
+            {
+                return false;
+            }
+
+            if (currentBytes > referenceBytes)
+            {
+                diff = $"{key} allocated more: reference={referenceBytes.ToString(CultureInfo.InvariantCulture)}, " +
+                       $"current={currentBytes.ToString(CultureInfo.InvariantCulture)}";
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    private void RunPerformanceCase(GameEventScriptConformanceCase testCase, StringBuilder report)
     {
         if (!string.Equals(testCase.Test.Kind, "performance", StringComparison.OrdinalIgnoreCase))
         {
@@ -224,11 +383,27 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
         var newRun = MeasurePerformanceRun(testCase, newBuild.Value, iterations, warmupIterations);
 
-        TestContext.WriteLine($"Performance: {testCase.SuiteName}/{testCase.Test.Name}");
-        TestContext.WriteLine($"  iterations={iterations}, warmupIterations={warmupIterations}, steps={testCase.Test.Steps.Count}");
-        WriteMeasured("compile", compiled);
-        WriteMeasured("new build", newBuild);
-        WriteRun("new run", newRun, iterations);
+        AppendPerformanceCase(report, testCase, iterations, warmupIterations, compiled, newBuild, newRun);
+    }
+
+    private static void AppendPerformanceCase(
+        StringBuilder report,
+        GameEventScriptConformanceCase testCase,
+        int iterations,
+        int warmupIterations,
+        Measured<GameEventScriptCompiled> compiled,
+        Measured<IGameEventScriptModule> build,
+        PerformanceRunMetrics run)
+    {
+        report.AppendLine($"## {testCase.SuiteName}/{testCase.Test.Name}");
+        report.AppendLine();
+        report.AppendLine($"iterations={iterations}");
+        report.AppendLine($"warmupIterations={warmupIterations}");
+        report.AppendLine($"steps={testCase.Test.Steps!.Count}");
+        AppendMeasured(report, "compile", compiled);
+        AppendMeasured(report, "build", build);
+        AppendRun(report, "run", run, iterations);
+        report.AppendLine();
     }
 
     private static void AssertPerformanceCorrectness(
@@ -366,31 +541,41 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         return new Measured<T>(name, value, stopwatch.Elapsed, GC.GetAllocatedBytesForCurrentThread() - beforeAllocated);
     }
 
-    private void WriteMeasured<T>(string label, Measured<T> measured)
-        => TestContext.WriteLine(
-            $"  {label}: {measured.Elapsed.TotalMilliseconds,9:#,##0.000} ms / {FormatBytes(measured.AllocatedBytes),9}");
-
-    private void WriteRun(string label, PerformanceRunMetrics run, int iterations)
-        => TestContext.WriteLine(
-            $"  {label}: {run.Elapsed.TotalMilliseconds,9:#,##0.000} ms / {FormatBytes(run.AllocatedBytes),9} " +
-            $"(per invoke {run.Elapsed.TotalMilliseconds / Math.Max(1, iterations):0.0000} ms / {FormatBytes(run.AllocatedBytes / Math.Max(1, iterations))}, " +
-            $"emitted={run.EmittedMessages}, outbound={run.OutboundPublishedMessages})");
-
-    private static string FormatBytes(long bytes)
+    private static void AppendMeasured<T>(StringBuilder report, string label, Measured<T> measured)
     {
-        string[] units = ["B", "KB", "MB", "GB"];
-        var value = (double)bytes;
-        var unitIndex = 0;
-        while (value >= 1024d && unitIndex < units.Length - 1)
-        {
-            value /= 1024d;
-            unitIndex++;
-        }
-
-        return unitIndex == 0
-            ? $"{bytes} {units[unitIndex]}"
-            : $"{value:0.##} {units[unitIndex]}";
+        report.Append(label);
+        report.Append(".elapsedMs=");
+        report.AppendLine(FormatMilliseconds(measured.Elapsed.TotalMilliseconds));
+        report.Append(label);
+        report.Append(".allocatedBytes=");
+        report.AppendLine(measured.AllocatedBytes.ToString(CultureInfo.InvariantCulture));
     }
+
+    private static void AppendRun(StringBuilder report, string label, PerformanceRunMetrics run, int iterations)
+    {
+        var safeIterations = Math.Max(1, iterations);
+        report.Append(label);
+        report.Append(".elapsedMs=");
+        report.AppendLine(FormatMilliseconds(run.Elapsed.TotalMilliseconds));
+        report.Append(label);
+        report.Append(".allocatedBytes=");
+        report.AppendLine(run.AllocatedBytes.ToString(CultureInfo.InvariantCulture));
+        report.Append(label);
+        report.Append(".perInvokeElapsedMs=");
+        report.AppendLine(FormatMilliseconds(run.Elapsed.TotalMilliseconds / safeIterations));
+        report.Append(label);
+        report.Append(".perInvokeAllocatedBytes=");
+        report.AppendLine((run.AllocatedBytes / safeIterations).ToString(CultureInfo.InvariantCulture));
+        report.Append(label);
+        report.Append(".emittedMessages=");
+        report.AppendLine(run.EmittedMessages.ToString(CultureInfo.InvariantCulture));
+        report.Append(label);
+        report.Append(".outboundPublishedMessages=");
+        report.AppendLine(run.OutboundPublishedMessages.ToString(CultureInfo.InvariantCulture));
+    }
+
+    private static string FormatMilliseconds(double milliseconds)
+        => milliseconds.ToString("0.0000", CultureInfo.InvariantCulture);
 
     private static void ForceFullCollection()
     {

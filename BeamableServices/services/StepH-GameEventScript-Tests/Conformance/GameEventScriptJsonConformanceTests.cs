@@ -177,7 +177,7 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
 [TestClass]
 public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonConformanceTestBase
 {
-    private static readonly bool RunPerformanceReport = false;
+    private static readonly bool RunPerformanceReport = true;
     private static readonly bool ComparePerformanceReportToReference = true;
     private static readonly double PerformanceElapsedRegressionTolerance = 0.15d;
     private static readonly double PerformanceElapsedMinimumToleranceMilliseconds = 1d;

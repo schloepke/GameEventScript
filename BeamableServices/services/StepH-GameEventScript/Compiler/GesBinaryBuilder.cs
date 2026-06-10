@@ -47,14 +47,14 @@ internal sealed partial class GesBinaryBuilder
     public GesRegisterRef AddRegister(string name)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Register name must be non-empty.", nameof(name));
-        var register = new RegisterSymbol(_registers.Count, name, IsTemporary: false);
+        var register = new RegisterSymbol(_registers.Count, name, IsTemporary: false, CurrentRoutineId);
         _registers.Add(register);
         return new GesRegisterRef(register.Id);
     }
 
     public GesRegisterRef AddTemporaryRegister(string? name = null)
     {
-        var register = new RegisterSymbol(_registers.Count, string.IsNullOrWhiteSpace(name) ? null : name, IsTemporary: true);
+        var register = new RegisterSymbol(_registers.Count, string.IsNullOrWhiteSpace(name) ? null : name, IsTemporary: true, CurrentRoutineId);
         _registers.Add(register);
         return new GesRegisterRef(register.Id);
     }
@@ -121,15 +121,17 @@ internal sealed partial class GesBinaryBuilder
         ValidateOperand(c);
         ValidateOperand(d);
         ValidateOperand(secondaryList);
-        _items.Add(PlanItem.ForInstruction(new InstructionPlan(opcode, unit, flags, dst, x, y, a, b, c, d, secondaryList, count, i64, f64)));
+        _items.Add(PlanItem.ForInstruction(new InstructionPlan(CurrentRoutineId, opcode, unit, flags, dst, x, y, a, b, c, d, secondaryList, count, i64, f64)));
         return this;
     }
 
     public GameEventScriptBinary Build()
     {
-        var items = _optimize ? OptimizePeepholeMoves(_items) : _items.ToArray();
-        var labelAddresses = ResolveLabelAddresses(items);
-        var registerMap = AllocateRegisters(items);
+        EnsureScopesClosed();
+        var optimizedItems = _optimize ? OptimizePeepholeMoves(_items) : _items.ToArray();
+        var labelAddresses = ResolveLabelAddresses(optimizedItems);
+        var registerMap = AllocateRegisters(optimizedItems);
+        var items = PatchRoutineSlotLocals(optimizedItems, registerMap);
         var builder = new GameEventScriptBinaryBuilder()
             .WithVersion(_version)
             .WithModuleName(_moduleName)
@@ -420,6 +422,8 @@ internal sealed partial class GesBinaryBuilder
     {
         var intervals = BuildRegisterIntervals(items);
         var result = new Dictionary<int, ushort>();
+        if (_routines.Count > 0) return AllocateScopedRegisters(items);
+
         ushort nextPinned = 0;
         foreach (var register in _registers.Where(register => !register.IsTemporary))
         {
@@ -605,7 +609,91 @@ internal sealed partial class GesBinaryBuilder
     private static ushort ToUShort(int value, string operand)
         => value is < 0 or > ushort.MaxValue ? throw new InvalidOperationException($"{operand} '{value}' does not fit into UInt16.") : checked((ushort)value);
 
-    private readonly record struct RegisterSymbol(int Id, string? Name, bool IsTemporary);
+    private IReadOnlyDictionary<int, ushort> AllocateScopedRegisters(IReadOnlyList<PlanItem> items)
+    {
+        var intervals = BuildRegisterIntervals(items);
+        var intervalsByRoutine = intervals.GroupBy(interval => _registers[interval.RegisterId].RoutineId)
+            .ToDictionary(group => group.Key, group => group.ToList());
+        var result = new Dictionary<int, ushort>();
+
+        foreach (var routine in _routines)
+        {
+            ushort nextPinned = 0;
+            foreach (var argument in routine.ArgumentRegisters)
+            {
+                result[argument.Id] = nextPinned++;
+            }
+
+            foreach (var register in _registers.Where(register => register.RoutineId == routine.Id && !register.IsTemporary))
+            {
+                if (!result.ContainsKey(register.Id)) result[register.Id] = nextPinned++;
+            }
+
+            var active = new List<(int RegisterId, int End, ushort Slot)>();
+            var freeSlots = new Stack<ushort>();
+            var nextTempSlot = nextPinned;
+            if (intervalsByRoutine.TryGetValue(routine.Id, out var routineIntervals))
+            {
+                foreach (var interval in routineIntervals
+                             .Where(interval => _registers[interval.RegisterId].IsTemporary)
+                             .OrderBy(interval => interval.Start)
+                             .ThenBy(interval => interval.RegisterId))
+                {
+                    for (var index = active.Count - 1; index >= 0; index--)
+                    {
+                        if (active[index].End >= interval.Start) continue;
+                        freeSlots.Push(active[index].Slot);
+                        active.RemoveAt(index);
+                    }
+
+                    var slot = freeSlots.Count > 0 ? freeSlots.Pop() : nextTempSlot++;
+                    result[interval.RegisterId] = slot;
+                    active.Add((interval.RegisterId, interval.End, slot));
+                }
+            }
+        }
+
+        if (intervalsByRoutine.TryGetValue(NoRoutineId, out var globalIntervals))
+        {
+            ushort nextPinned = 0;
+            foreach (var register in _registers.Where(register => register.RoutineId == NoRoutineId && !register.IsTemporary))
+            {
+                result[register.Id] = nextPinned++;
+            }
+
+            var active = new List<(int RegisterId, int End, ushort Slot)>();
+            var freeSlots = new Stack<ushort>();
+            var nextTempSlot = nextPinned;
+            foreach (var interval in globalIntervals
+                         .Where(interval => _registers[interval.RegisterId].IsTemporary)
+                         .OrderBy(interval => interval.Start)
+                         .ThenBy(interval => interval.RegisterId))
+            {
+                for (var index = active.Count - 1; index >= 0; index--)
+                {
+                    if (active[index].End >= interval.Start) continue;
+                    freeSlots.Push(active[index].Slot);
+                    active.RemoveAt(index);
+                }
+
+                var slot = freeSlots.Count > 0 ? freeSlots.Pop() : nextTempSlot++;
+                result[interval.RegisterId] = slot;
+                active.Add((interval.RegisterId, interval.End, slot));
+            }
+        }
+
+        foreach (var interval in intervals)
+        {
+            if (!result.ContainsKey(interval.RegisterId))
+            {
+                throw new InvalidOperationException($"Register '{interval.RegisterId}' was not allocated.");
+            }
+        }
+
+        return result;
+    }
+
+    private readonly record struct RegisterSymbol(int Id, string? Name, bool IsTemporary, int RoutineId);
 
     private readonly record struct LabelSymbol(int Id, string? Name)
     {
@@ -637,6 +725,7 @@ internal sealed partial class GesBinaryBuilder
     }
 
     private sealed record InstructionPlan(
+        int RoutineId,
         GameEventScriptBytecodeOpCode OpCode,
         GameEventScriptBytecodeInstructionUnit Unit,
         GameEventScriptInstructionFlag Flags,

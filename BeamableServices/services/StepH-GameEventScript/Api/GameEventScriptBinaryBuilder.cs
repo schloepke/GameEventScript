@@ -116,7 +116,7 @@ public class GameEventScriptBinaryBuilder
     public GameEventScriptBinary Build()
     {
         return new GameEventScriptBinary(
-            new GameEventScriptBinaryHeader { Version = 1, Flags = _flags, FileSize = _fileSize },
+            new GameEventScriptBinaryHeader { Version = _version, Flags = _flags, FileSize = _fileSize },
             _moduleName,
             BuildTextTable(_stringPool),
             BuildUInt16SliceTable(_uint16Table),

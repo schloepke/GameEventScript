@@ -366,7 +366,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 pc++;
                 return true;
 
-            case GameEventScriptBytecodeOpCode.MoveSlot:
+            case GameEventScriptBytecodeOpCode.Move:
                 if (!DefineSlot(instruction.DestinationSlot, ResolveSlot(instruction.XSlot)))
                 {
                     return false;
@@ -1466,7 +1466,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                 case GameEventScriptBytecodeOpCode.ReturnValue:
                     return true;
 
-                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case GameEventScriptBytecodeOpCode.Move:
                 case var opCode when IsInlineConstantInstruction(opCode):
                     if (!AddTemp(instruction.DestinationSlot))
                     {
@@ -1687,7 +1687,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     hasValue = true;
                     return true;
 
-                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case GameEventScriptBytecodeOpCode.Move:
                     if (!projection.SetTemp(instruction.DestinationSlot, projection.GetSlot(instruction.XSlot)))
                     {
                         return false;
@@ -1861,7 +1861,7 @@ internal sealed partial class GesBytecodeVmExecutionSession
                     hasValue = true;
                     return true;
 
-                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case GameEventScriptBytecodeOpCode.Move:
                     if (!projection.SetTemp(instruction.DestinationSlot, projection.GetSlot(instruction.XSlot)))
                     {
                         return false;

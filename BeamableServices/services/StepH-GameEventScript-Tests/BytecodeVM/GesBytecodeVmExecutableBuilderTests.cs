@@ -41,7 +41,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
         StringAssert.Contains(first, "handlers[1]");
         StringAssert.Contains(first, "SlotLocals");
         StringAssert.Contains(first, "LoadInteger");
-        StringAssert.Contains(first, "MoveSlot");
+        StringAssert.Contains(first, "Move");
         StringAssert.Contains(first, "LoadMessage");
         StringAssert.Contains(first, "EmitMessage");
         Assert.IsFalse(first.Contains("maxStackDepth", StringComparison.Ordinal));

@@ -229,7 +229,7 @@ internal sealed class GesLinearBytecodeBuilder
             if (fieldIndex != constructorParameterIndex)
             {
                 Emit(CreateInstruction(
-                    GameEventScriptBytecodeOpCode.MoveSlot,
+                    GameEventScriptBytecodeOpCode.Move,
                     dest: fieldIndex,
                     a: constructorParameterIndex));
             }
@@ -501,7 +501,7 @@ internal sealed class GesLinearBytecodeBuilder
 
                     diagnosticAddress = result == letSlot
                         ? _code.Count - 1
-                        : Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: letSlot, a: result));
+                        : Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Move, dest: letSlot, a: result));
                 }
 
                 if (!string.IsNullOrEmpty(let.DeclaredType))
@@ -687,7 +687,7 @@ internal sealed class GesLinearBytecodeBuilder
             a: iteratorSlot));
         var iterationScopeAddress = BeginScope(state.NextSlot);
         var iterationContext = collectionContext.CreateScope(state.NextSlot, AllocateScopedLocalSlot);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: identifierSlot, a: itemSlot));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Move, dest: identifierSlot, a: itemSlot));
 
         var skipProjectionJump = -1;
         if (generatedCollection.Predicate is not null)
@@ -959,7 +959,7 @@ internal sealed class GesLinearBytecodeBuilder
                 }
 
                 instructionAddress = Emit(CreateInstruction(
-                    GameEventScriptBytecodeOpCode.MoveSlot,
+                    GameEventScriptBytecodeOpCode.Move,
                     dest: destinationSlot,
                     a: sourceSlot));
                 return true;
@@ -1343,14 +1343,14 @@ internal sealed class GesLinearBytecodeBuilder
             var jumpToNextBranch = Emit(CreateJumpInstruction(GameEventScriptBytecodeOpCode.JumpIfNotTrue, conditionSlot: condition));
 
             var value = EmitSourceExpression(branch.ValueExpression, context, state);
-            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: resultSlot, a: value));
+            Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Move, dest: resultSlot, a: value));
             endJumps.Add(Emit(CreateJumpInstruction(GameEventScriptBytecodeOpCode.Jump)));
 
             PatchTarget(jumpToNextBranch, _code.Count);
         }
 
         var otherwiseValue = EmitSourceExpression(guardedChoice.OtherwiseExpression, context, state);
-        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.MoveSlot, dest: resultSlot, a: otherwiseValue));
+        Emit(CreateInstruction(GameEventScriptBytecodeOpCode.Move, dest: resultSlot, a: otherwiseValue));
 
         var endAddress = _code.Count;
         foreach (var jump in endJumps)

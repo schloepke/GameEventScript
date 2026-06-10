@@ -92,8 +92,8 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder CheckFractional(GesRegisterRef destination, GesRegisterRef source)
         => AddOpcode(GameEventScriptBytecodeOpCode.CheckFractional, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 
-    public GesBinaryBuilder MoveSlot(GesRegisterRef destination, GesRegisterRef source)
-        => AddOpcode(GameEventScriptBytecodeOpCode.MoveSlot, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
+    public GesBinaryBuilder Move(GesRegisterRef destination, GesRegisterRef source)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Move, dst: GesOperand.Register(destination), x: GesOperand.Register(source));
 
     public GesBinaryBuilder MemberAccess(GesRegisterRef destination, string memberName, GesRegisterRef target)
         => AddOpcode(GameEventScriptBytecodeOpCode.MemberAccess, dst: GesOperand.Register(destination), x: GesOperand.Text(memberName), y: GesOperand.Register(target));
@@ -475,9 +475,6 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder TakePattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesLabelRef? faceEntry = null)
         => PatternOpcode(GameEventScriptBytecodeOpCode.TakePattern, destination, source, pattern, count, faceEntry);
-
-    public GesBinaryBuilder Move(GesRegisterRef destination, GesRegisterRef source)
-        => MoveSlot(destination, source);
 
     public GesBinaryBuilder LoadBoolean(GesRegisterRef destination, bool value)
         => value ? LoadTrue(destination) : LoadFalse(destination);

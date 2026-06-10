@@ -363,7 +363,7 @@ internal sealed class GesBytecodeVmLinearExecutable
                 ValidateMessageShape(module, instruction.ListIndex, $"{context} handler shape");
                 break;
 
-            case GameEventScriptBytecodeOpCode.MoveSlot:
+            case GameEventScriptBytecodeOpCode.Move:
                 ValidateSlot(module, instruction.XSlot, $"{context} source slot");
                 break;
 

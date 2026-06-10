@@ -235,7 +235,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).VmCheckFractional(ref vmState.Register(instruction.XSlot));
                             break;
 
-                        case MoveSlot:
+                        case Move:
                             vmState.Register(instruction.DestinationSlot) = vmState.Register(instruction.XSlot);
                             break;
                         case MemberAccess:

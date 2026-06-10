@@ -320,7 +320,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     CheckInteger = 0x1B,
     CheckFractional = 0x1C,
 
-    MoveSlot = 0x1D,
+    Move = 0x1D,
     MemberAccess = 0x1E,
     IndexAccess = 0x1F,
     PropertyAccess = 0x20,

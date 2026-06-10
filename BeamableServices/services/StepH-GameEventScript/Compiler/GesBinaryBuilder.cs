@@ -510,7 +510,7 @@ internal sealed partial class GesBinaryBuilder
             if (item.Instruction is null ||
                 index + 1 >= items.Count ||
                 items[index + 1].Instruction is not { } move ||
-                move.OpCode != GameEventScriptBytecodeOpCode.MoveSlot ||
+                move.OpCode != GameEventScriptBytecodeOpCode.Move ||
                 item.Instruction.Destination.Kind != GesOperandKind.Register ||
                 move.X.Kind != GesOperandKind.Register ||
                 move.Destination.Kind != GesOperandKind.Register ||

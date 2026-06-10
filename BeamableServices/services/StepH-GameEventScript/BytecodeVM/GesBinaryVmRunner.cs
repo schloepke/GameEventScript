@@ -105,7 +105,7 @@ internal sealed class GesBinaryVmRunner
             maxSlot = Math.Max(maxSlot, instruction.DestinationSlot);
             switch (instruction.OpCode)
             {
-                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case GameEventScriptBytecodeOpCode.Move:
                 case GameEventScriptBytecodeOpCode.ReturnValue:
                 case GameEventScriptBytecodeOpCode.Cast:
                 case GameEventScriptBytecodeOpCode.CastCustom:
@@ -204,7 +204,7 @@ internal sealed class GesBinaryVmRunState
                 case GameEventScriptBytecodeOpCode.SlotLocals:
                     break;
 
-                case GameEventScriptBytecodeOpCode.MoveSlot:
+                case GameEventScriptBytecodeOpCode.Move:
                     Set(instruction.DestinationSlot, Get(instruction.XSlot));
                     break;
 

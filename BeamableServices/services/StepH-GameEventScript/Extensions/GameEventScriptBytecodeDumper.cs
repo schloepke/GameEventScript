@@ -348,7 +348,7 @@ public static class GameEventScriptBytecodeDumper
                 AppendSlot(builder, "object", instruction.YSlot);
                 break;
 
-            case GameEventScriptBytecodeOpCode.MoveSlot:
+            case GameEventScriptBytecodeOpCode.Move:
             case GameEventScriptBytecodeOpCode.Negate:
             case GameEventScriptBytecodeOpCode.Not:
             case GameEventScriptBytecodeOpCode.HasValue:

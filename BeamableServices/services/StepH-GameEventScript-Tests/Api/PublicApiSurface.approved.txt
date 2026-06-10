@@ -187,7 +187,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CheckNumeric = 26
   enum-field CheckInteger = 27
   enum-field CheckFractional = 28
-  enum-field MoveSlot = 29
+  enum-field Move = 29
   enum-field MemberAccess = 30
   enum-field IndexAccess = 31
   enum-field PropertyAccess = 32

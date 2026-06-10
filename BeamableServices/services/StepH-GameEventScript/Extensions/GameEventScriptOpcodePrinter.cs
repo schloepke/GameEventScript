@@ -124,7 +124,7 @@ public class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CheckInteger => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.CheckFractional => [TargetRegister, SourceRegister],
 
-            GameEventScriptBytecodeOpCode.MoveSlot => [TargetRegister, SourceRegister],
+            GameEventScriptBytecodeOpCode.Move => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.MemberAccess => [TargetRegister, MemberName, ObjectRegister],
             GameEventScriptBytecodeOpCode.IndexAccess => [TargetRegister, IndexImmediate, ObjectRegister],
             GameEventScriptBytecodeOpCode.PropertyAccess => [TargetRegister, PropertyRegister, ObjectRegister],

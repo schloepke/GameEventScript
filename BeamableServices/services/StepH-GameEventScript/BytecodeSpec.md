@@ -6,7 +6,7 @@ The goal is a compact, portable, high-level bytecode for the GameEventScript DSL
 that is naturally executable by a linear program-counter VM.
 
 The public bytecode model is **operand-stack-free**. Normal expression
-evaluation reads from and writes to explicit local slots. A portable call stack
+evaluation reads from and writes to explicit local registers. A portable call stack
 is still part of the VM target state for calls, return addresses, frame
 metadata, scoped locals, and resumable execution. The C# call stack is not part
 of script control flow.
@@ -18,12 +18,12 @@ pipelines. High-level language constructs lower either to normal linear
 instructions or to explicit opcodes that reference normalized tables. Function
 and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
-temporary slots from handler locals with temporary frame extensions. Predicate
+temporary registers from handler locals with temporary frame extensions. Predicate
 calls use `Call`, `CallStandard`, or `CallExternal` with
 `GameEventScriptInstructionFlag.NormalizeResultAsPredicate` set in
 `UnitAndFlags`. Local calls use direct `Call` instructions with target entry
 addresses and contiguous staged argument sequences. Extension calls use direct
-`CallStandard` or `CallExternal` instructions with argument slot lists.
+`CallStandard` or `CallExternal` instructions with argument register lists.
 Extrema reduce operators, type constructors, local builders, message literals,
 handler binding, casts, type checks, member access, and seeded-random
 expressions are layout-free direct instructions.
@@ -33,8 +33,8 @@ expressions are layout-free direct instructions.
 - Represent executable script code as one linear instruction memory.
 - Make every executable position addressable by a stable instruction address.
 - Use labels only as debug/dump symbols that point at instruction addresses.
-- Use slot/register-style instructions: every value-producing instruction writes
-  to a destination slot and reads operands from source slots or pools.
+- Use register-style instructions: every value-producing instruction writes
+  to a destination register and reads operands from source registers or pools.
 - Compile control flow such as `if`, loops, guarded choices, predicates, and
   functions into jumps and calls.
 - Keep domain-heavy collection operations high-level when that is faster or
@@ -152,7 +152,7 @@ GameEventScriptBytecodeInstruction
   I64/Payload/F64
 ```
 
-`MaxFrameSlots` is the maximum local slot count needed by any handler or
+`MaxFrameSlots` is the maximum local register count needed by any handler or
 callable frame, including parameters, user `let` bindings, compiler temporaries,
 loop temporaries, and high-level operation temporaries.
 
@@ -253,7 +253,7 @@ Predicates:
 - A parameter type hint means "coerce this bound value as the entry starts".
 - Coercion is lenient and uses the same conversion predicates as
   `value as :type`.
-- After entry coercion, the compiler and VM may treat the local slot as
+- After entry coercion, the compiler and VM may treat the local register as
   normalized to that type for optimization.
 
 The portable metadata carries the hint:
@@ -271,24 +271,24 @@ counter and dump show where normalization happens:
 
 ```text
 @0000 SlotLocals locals+=localCount
-@0001 Cast dst=s0 src=s0 kind=Custom type=:unit
-@0002 Cast dst=s1 src=s1 kind=Integer
+@0001 Cast dst=r0 src=r0 kind=Custom type=:unit
+@0002 Cast dst=r1 src=r1 kind=Integer
 ```
 
-Handler arguments are preloaded into slots `0..n-1` before the entry starts.
+Handler arguments are preloaded into registers `0..n-1` before the entry starts.
 Untyped handler parameters therefore emit no binding instruction. Callable
-parameters use the same slot/type metadata externally; the call ABI stages
+parameters use the same register/type metadata externally; the call ABI stages
 arguments before `Call`, and the callee starts with those values already
-assigned to slots `0..n-1`.
+assigned to registers `0..n-1`.
 
 ## Instruction Addresses
 
 An instruction address is the zero-based index into `Code`.
 
 ```text
-@0000 LoadInteger dst=s3 value=3
-@0001 Add dst=s4 left=s1 right=s2
-@0002 JumpIfNotTrue cond=s4 target=@0010
+@0000 LoadInteger dst=r3 value=3
+@0001 Add dst=r4 left=r1 right=r2
+@0002 JumpIfNotTrue cond=r4 target=@0010
 ```
 
 Predicates:
@@ -325,20 +325,20 @@ Instruction
 
 Operands are interpreted by opcode:
 
-- `DestinationSlot`: destination slot for value-producing instructions.
-- `XSlot`, `YSlot`: primary-word slot operands.
+- `DestinationSlot`: destination register for value-producing instructions.
+- `XSlot`, `YSlot`: primary-word register operands.
 - `ConditionSlot`, `TargetAddress`, `EntryAddress`: primary-word control-flow aliases.
 - `StringIndex`, `ListIndex`, `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`:
   primary-word pool/table or type operands.
 - `ImmediateX`, `ImmediateY`: compact signed immediates in the primary word.
 - `Index`: compact unsigned 1-based index in the primary word for `IndexAccess`.
-- `Count`: signed local slot delta alias over `ImmediateX`.
+- `Count`: signed local register delta alias over `ImmediateX`.
 - `AU`, `BU`, `CU`, `DU`, plus signed `AS`, `BS`, `CS`, `DS` views:
   payload-word 16-bit views for wider opcodes.
 - `I64`, `Payload`, `F64`: aligned payload-word literal views for signed
   integer payloads, raw unsigned payload bits, and double/float loads.
 - Branch opcodes use the primary fields documented by their opcode shape.
-- Iterator and pipeline terminal opcodes document their own slot, immediate, and
+- Iterator and pipeline terminal opcodes document their own register, immediate, and
   helper-entry fields explicitly. They do not use sentinel operands for absent
   parameters.
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
@@ -346,7 +346,7 @@ Operands are interpreted by opcode:
   `SecondaryListIndex`, `AU`, or `BU`.
 - `SlotLocals Count` is the required prolog instruction for every executable
   entry address. Entry prologs use a non-negative signed count and add local
-  slots beyond the arguments already present in the frame. Negative counts are
+  registers beyond the arguments already present in the frame. Negative counts are
   only valid for normal scope exits. The bind/export tables do not carry this
   internal execution value.
 
@@ -366,7 +366,7 @@ the group; reserved opcode pages are not modeled as separate groups. The current
 groups are:
 
 ```text
-0x00 Group 1: no-op, frame slots, jumps, calls, returns, emit operations
+0x00 Group 1: no-op, frame registers, jumps, calls, returns, emit operations
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
 0x20 Group 1 type checks, loads, argument staging, value creation
 0x30 Group 1 argument staging and value creation continuation
@@ -390,17 +390,17 @@ payload object:
 { "Opcode": "LoadInteger", "Flags": "0x00", "Dst": "0x0007", "X": "0x0000", "Y": "0x0000", "Parameter": "0x000000000000002A" }
 ```
 
-`Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination slot,
+`Flags` is the raw `UnitAndFlags` byte, `Dst` is the raw destination register,
 `X` and `Y` are the raw primary operands, and `Parameter` is the raw unsigned
 64-bit payload word covering bytes `8..15`. For literal instructions the
 payload carries `I64`, raw `Payload`, or the IEEE-754 `F64` bit pattern.
 
 Large structured metadata belongs in tables and pools, not nested instruction
-objects. Examples: `UShortListPool` message shapes/slot lists, `StringPool`
+objects. Examples: `UShortListPool` message shapes/register lists, `StringPool`
 names, bind tables, and optional debug/diagnostic layouts.
 
 An instruction that produces a `nothing` value writes it to `DestinationSlot`. Returning
-without a value uses `ReturnVoid`; returning a slot value uses
+without a value uses `ReturnVoid`; returning a register value uses
 `ReturnValue XSlot`. There is no implicit push. There are no operand-stack `Pop` or
 `Duplicate` instructions in the portable target model.
 
@@ -417,7 +417,7 @@ randomStack[]
 activeHighLevelOperationState
 ```
 
-Each frame owns a local slot array or a frame slice in a shared slot memory:
+Each frame owns a local register array or a frame slice in a shared register memory:
 
 ```text
 Frame
@@ -433,7 +433,7 @@ Frame
 
 The C# stack is not part of script control flow. `Call` pushes a portable frame
 record onto `callStack`; `ReturnValue` restores the next `pc` and writes the returned
-value to the caller's destination slot.
+value to the caller's destination register.
 
 Manual stepping pauses after the instruction budget is consumed. The current
 `pc` points the dump/debugger at the active instruction. If execution is inside
@@ -445,7 +445,7 @@ operation-local debug state such as selector index or item index.
 Handlers and callables are metadata over the shared code segment. Their
 `EntryAddress` points at a `SlotLocals` prolog instruction. The instruction
 immediately after the prolog is the first executable body instruction. Handler
-and callable arguments are already present in slots `0..n-1` when their frame
+and callable arguments are already present in registers `0..n-1` when their frame
 starts.
 
 ```text
@@ -469,7 +469,7 @@ CallableEntry
   ReturnSlot
 ```
 
-The local slot count is intentionally not part of the bind/export metadata. It
+The local register count is intentionally not part of the bind/export metadata. It
 is encoded as non-negative `SlotLocals Count` at the entry address because it is
 a VM execution detail needed equally by exported handlers/callables and private
 helper entries.
@@ -519,9 +519,9 @@ TypeFieldEntry
 ```
 
 These addresses point at expression code that writes one value into the declared
-return slot. During record construction, computed-field and clamp helpers run in
-helper frames whose visible slots contain the already materialized field values.
-Temporary slots for these helpers must start after the source field slots so a
+return register. During record construction, computed-field and clamp helpers run in
+helper frames whose visible registers contain the already materialized field values.
+Temporary registers for these helpers must start after the source field registers so a
 helper cannot overwrite its own inputs.
 
 ## Opcode Families
@@ -529,7 +529,7 @@ helper cannot overwrite its own inputs.
 The opcode set should be high-level enough for GameEventScript, but flat enough
 for `pc`-based execution.
 
-### Slots and Coercion
+### Registers and Coercion
 
 - `LoadNothing dst`
 - `LoadTrue dst`
@@ -598,31 +598,31 @@ a tag. `Cast :vector` and `Cast :point` are structural conversions: vector to
 point and point to vector copy the three components and optional unit directly.
 These conversions are casts, not affine vector/point arithmetic.
 
-`let` lowers to expression code that writes into a temporary or final slot,
-followed by an optional direct cast and `Move` into the declared local slot.
+`let` lowers to expression code that writes into a temporary or final register,
+followed by an optional direct cast and `Move` into the declared local register.
 Handler and callable parameter type hints lower to optional direct casts over
-the preloaded argument slots.
+the preloaded argument registers.
 
 ### Scopes
 
 - `SlotLocals Count`
 
-Scopes are explicit signed local slot deltas. `SlotLocals Count` extends the
-same frame by `Count` slots when `Count > 0`, and clears/releases `-Count`
-slots when `Count < 0`. Slot addresses stay absolute in the current frame, so
-reserving two locals from active slots `s0..s3` exposes `s0..s5`. Existing
-parent slots remain visible and are not rolled back by scope exit. The compiler
+Scopes are explicit signed local register deltas. `SlotLocals Count` extends the
+same frame by `Count` registers when `Count > 0`, and clears/releases `-Count`
+registers when `Count < 0`. Register addresses stay absolute in the current frame, so
+reserving two locals from active registers `r0..r3` exposes `r0..r5`. Existing
+parent registers remain visible and are not rolled back by scope exit. The compiler
 must emit matching deltas for normal exits; `ReturnValue` and `ReturnVoid`
 discard the whole active frame, so no negative `SlotLocals` is needed
 immediately before a return.
 
 ### Arithmetic and Logic
 
-Binary operations read source slots and write `DestinationSlot`:
+Binary operations read source registers and write `DestinationSlot`:
 
 ```text
-Add dst=s3 left=s1 right=s2
-Equal dst=s4 left=s3 right=s0
+Add dst=r3 left=r1 right=r2
+Equal dst=r4 left=r3 right=r0
 ```
 
 Required operations:
@@ -810,11 +810,11 @@ behavior matters:
 
 ```text
 ; dst = a and b
-@0100 JumpIfFalse cond=sA target=@0105
-@0101 ... evaluate b into sB ...
-@0102 And dst=sDst left=sA right=sB
+@0100 JumpIfFalse cond=rA target=@0105
+@0101 ... evaluate b into rB ...
+@0102 And dst=rDst left=rA right=rB
 @0103 Jump @0106
-@0105 LoadFalse dst=sDst
+@0105 LoadFalse dst=rDst
 @0106 ...
 ```
 
@@ -852,26 +852,26 @@ not an implicit `as :boolean` conversion.
 Example:
 
 ```text
-@0100 Move dst=s10 src=s0
-@0101 LoadInteger dst=s11 value=0
-@0102 Greater dst=s12 left=s10 right=s11
-@0103 JumpIfNotTrue cond=s12 target=@0108
-@0104 LoadInteger dst=s1 value=1
+@0100 Move dst=r10 src=r0
+@0101 LoadInteger dst=r11 value=0
+@0102 Greater dst=r12 left=r10 right=r11
+@0103 JumpIfNotTrue cond=r12 target=@0108
+@0104 LoadInteger dst=r1 value=1
 @0105 Jump @0110
-@0108 LoadInteger dst=s1 value=2
+@0108 LoadInteger dst=r1 value=2
 @0110 ...
 ```
 
 Guarded expressions lower to explicit condition jumps and value writes to a
-shared destination slot. Conditions are evaluated in order via `JumpIfNotTrue`;
+shared destination register. Conditions are evaluated in order via `JumpIfNotTrue`;
 only the first true branch value is evaluated, and otherwise code runs when no
 condition is true. The public bytecode has no `GuardedChoice` layout.
 
 `for` statements lower to normal linear iterator control flow. The source is
-evaluated once, an iterator is stored in a temporary slot, `StreamNext` writes
-each item into an item slot and jumps to the close block when exhausted, and the
+evaluated once, an iterator is stored in a temporary register, `StreamNext` writes
+each item into an item register and jumps to the close block when exhausted, and the
 body runs inside an iteration scope. Literal I16 ranges should use
-`CreateRangeIteratorShort`; dynamic ranges and collection sources use the slot-based
+`CreateRangeIteratorShort`; dynamic ranges and collection sources use the register-based
 iterator opcodes. Generated collections use the same iterator opcodes plus
 VM-internal collection builder opcodes.
 
@@ -887,16 +887,16 @@ call instruction does not store an argument count; the VM uses the contiguous
 metadata. A stage sequence may contain only `Stage*` instructions and must be
 followed by a stage consumer (`Call`, `CreateVector`, `CreatePoint`,
 `CreateList`, `CreateMap`, `CreateRecord`, or `CreateExternalType`). The
-callee frame receives arguments in slots `0..n-1`.
+callee frame receives arguments in registers `0..n-1`.
 The `x is predicate` syntax is unary sugar that lowers to one staged argument
 plus `Call` with `NormalizeResultAsPredicate`.
 
 ```text
-@0500 StageRegister src=s0
-@0501 Call dst=s3 callable=wounded stagedArgs=1
-@0502 JumpIfNotTrue cond=s3 target=@0510
-@0520 StageRegister src=s2
-@0521 Call dst=s4 predicate=@0900 flags=NormalizeResultAsPredicate stagedArgs=1
+@0500 StageRegister src=r0
+@0501 Call dst=r3 callable=wounded stagedArgs=1
+@0502 JumpIfNotTrue cond=r3 target=@0510
+@0520 StageRegister src=r2
+@0521 Call dst=r4 predicate=@0900 flags=NormalizeResultAsPredicate stagedArgs=1
 ```
 
 Type constructors, variadic operators, collection builders, maps,
@@ -929,14 +929,14 @@ Range loop shape:
 
 ```text
 @0200 SlotLocals locals+=loopLocalCount
-@0201 CreateRangeIteratorShort dst=sIterator from=1 to=20 step=1
-@0202 StreamNext dst=sItem iterator=sIterator noMore=@0210
+@0201 CreateRangeIteratorShort dst=rIterator from=1 to=20 step=1
+@0202 StreamNext dst=rItem iterator=rIterator noMore=@0210
 @0203 SlotLocals locals+=iterationLocalCount
-@0204 MoveSlot dst=sIdentifier src=sItem
+@0204 Move dst=rIdentifier src=rItem
 @0205 ...
 @0208 SlotLocals locals-=iterationLocalCount
 @0209 Jump @0202
-@0210 StreamClose iterator=sIterator
+@0210 StreamClose iterator=rIterator
 @0211 SlotLocals locals-=loopLocalCount
 ```
 
@@ -944,26 +944,26 @@ Collection loop shape:
 
 ```text
 @0300 SlotLocals locals+=loopLocalCount
-@0301 StreamCreate dst=sIterator source=sValues
-@0302 StreamNext dst=sItem iterator=sIterator noMore=@0310
+@0301 StreamCreate dst=rIterator source=rValues
+@0302 StreamNext dst=rItem iterator=rIterator noMore=@0310
 @0303 SlotLocals locals+=iterationLocalCount
 @0304 ...
 @0308 SlotLocals locals-=iterationLocalCount
 @0309 Jump @0302
-@0310 StreamClose iterator=sIterator
+@0310 StreamClose iterator=rIterator
 @0311 SlotLocals locals-=loopLocalCount
 ```
 
 Loop runtime state is stored in the VM-internal iterator value held by the
-compiler-assigned iterator slot.
+compiler-assigned iterator register.
 
 ### Values and Containers
 
-- `LoadMessage dst messageShapeIndex argumentSlotListIndex`
-- `BindHandler dst handlerSlot argumentSlotListIndex`
-- `MemberAccess dst nameIndex objectSlot`
-- `IndexAccess dst immediateIndex objectSlot`
-- `PropertyAccess dst selectorSlot objectSlot`
+- `LoadMessage dst messageShapeIndex argumentRegisterListIndex`
+- `BindHandler dst handlerRegister argumentRegisterListIndex`
+- `MemberAccess dst nameIndex objectRegister`
+- `IndexAccess dst immediateIndex objectRegister`
+- `PropertyAccess dst selectorRegister objectRegister`
 - `CreateDice dst count sides`
 - `CreateVector dst immediateX`
 - `CreatePoint dst immediateX`
@@ -972,16 +972,16 @@ compiler-assigned iterator slot.
 - `CreateMap dst keyNameListIndex` consumes the contiguous staged value sequence
   immediately before the opcode as map values; keys stay in `keyNameListIndex`
   for now.
-- `CreateRange dst fromSlot toSlot`
+- `CreateRange dst fromRegister toRegister`
 
 `IndexAccess` is reserved for non-negative literal selectors that fit the
 unsigned 16-bit `Index` operand. Negative literal selectors and larger numeric
 selectors lower through `PropertyAccess`, so they keep the normal runtime
 selector semantics.
-- `CreateRangeWithStep dst fromSlot toSlot stepSlot`
-- `RandomTake dst fromSlot toSlot`
-- `RandomTakeFloat dst fromSlot toSlot`
-- `RandomPush seedSlot`
+- `CreateRangeWithStep dst fromRegister toRegister stepRegister`
+- `RandomTake dst fromRegister toRegister`
+- `RandomTakeFloat dst fromRegister toRegister`
+- `RandomPush seedRegister`
 - `RandomPushConstant seedI64`
 - `RandomPop`
 - `CreateRecord dst recordBindId` consumes the contiguous staged value sequence
@@ -999,9 +999,9 @@ other value-loading and construction instructions. `CreateRecord` and
 script records and host-bound external values.
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
-`StringPool` indexes, while slot lists contain frame slot indexes. Record
+`StringPool` indexes, while register lists contain frame register indexes. Record
 constructors reference `Record` bind ids; external type, list, map, vector, and
-point constructors consume staged values instead of argument slot lists.
+point constructors consume staged values instead of argument register lists.
 Vector and point constructors are fixed built-ins. Their source arguments are
 lowered into staged component values in canonical `x, y, z` order; `immediateX`
 stores the first staged component index (`0`, `1`, or `2`) so leading missing
@@ -1075,32 +1075,32 @@ Handlers may declare static tag filters:
 Publishing and emitting are distinct opcodes. Static message literals are
 registered as `OutboundMessage` bind entries. Direct
 `EmitMessage*`/`PublishMessage*` opcodes store the outbound message bind id in
-`MessageDestination`, the argument slot-list in `ListIndex`, and tagged forms
-store the tag slot-list in `SecondaryListIndex`. Dynamic message values use the
-message slot in `XSlot`; tagged dynamic forms store their concrete tag slot-list
+`MessageDestination`, the argument register-list in `ListIndex`, and tagged forms
+store the tag register-list in `SecondaryListIndex`. Dynamic message values use the
+message register in `XSlot`; tagged dynamic forms store their concrete tag register-list
 index in `ListIndex`. Static outbound message signatures are not duplicated as
-message-shape entries in `UShortListPool`; only the argument and tag slot-lists
+message-shape entries in `UShortListPool`; only the argument and tag register-lists
 remain there. Zero-argument messages use a concrete empty argument-list entry in
 `UShortListPool`.
 
-Arguments and tags are evaluated by preceding code into slots:
+Arguments and tags are evaluated by preceding code into registers:
 
 ```text
-@0400 Move dst=s20 src=sDamage
-@0401 Move dst=s21 src=sTarget
-@0402 LoadTag dst=s22 tag=:radio
+@0400 Move dst=r20 src=rDamage
+@0401 Move dst=r21 src=rTarget
+@0402 LoadTag dst=r22 tag=:radio
 @0403 PublishMessageWithTags outbound=#0 args=#1 tags=#2
 ```
 
 Publishing or emitting a first-class message value uses `PublishMessageValue`
 or `EmitMessageValue`. Tagged dynamic values use
-`PublishMessageValueWithTags messageSlot tagSlotList` or
-`EmitMessageValueWithTags messageSlot tagSlotList`.
+`PublishMessageValueWithTags messageRegister tagRegisterList` or
+`EmitMessageValueWithTags messageRegister tagRegisterList`.
 
 ### Extensions, Intrinsics, and External Types
 
-- `CallStandard dst extensionShapeIndex argumentSlotListIndex`
-- `CallExternal dst externalReferenceIndex argumentSlotListIndex`
+- `CallStandard dst extensionShapeIndex argumentRegisterListIndex`
+- `CallExternal dst externalReferenceIndex argumentRegisterListIndex`
 
 Predicate extension calls use the same opcode with
 `NormalizeResultAsPredicate` set in `UnitAndFlags`.
@@ -1114,7 +1114,7 @@ Standard intrinsics are non-overridable and do not appear in
 shape stored in `UShortListPool` as
 `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`.
 All extension call arguments, including zero-argument calls, are represented by
-a concrete argument slot-list entry in `UShortListPool`.
+a concrete argument register-list entry in `UShortListPool`.
 
 External type constructors are collected separately in
 `ExternalTypeConstructorReferences` and dynamically bound against the host's
@@ -1132,25 +1132,25 @@ Core streaming shape:
 
 ```text
 StreamCreate source -> iterator
-StreamMap transformedIterator sourceIterator mapEntry itemBindingSlot captureSlotList
-StreamFilter filteredIterator sourceIterator predicateEntry itemBindingSlot captureSlotList
+StreamMap transformedIterator sourceIterator mapEntry itemBindingRegister captureRegisterList
+StreamFilter filteredIterator sourceIterator predicateEntry itemBindingRegister captureRegisterList
 StreamCount dst iterator
 StreamSum dst iterator
 StreamAverage dst iterator
-StreamMin dst iterator itemBindingSlot projectionEntry
-StreamMax dst iterator itemBindingSlot projectionEntry
-StreamOneWeighted dst iterator itemBindingSlot weightEntry captureSlotList
-StreamTakeWeighted dst iterator count itemBindingSlot weightEntry captureSlotList
+StreamMin dst iterator itemBindingRegister projectionEntry
+StreamMax dst iterator itemBindingRegister projectionEntry
+StreamOneWeighted dst iterator itemBindingRegister weightEntry captureRegisterList
+StreamTakeWeighted dst iterator count itemBindingRegister weightEntry captureRegisterList
 StreamCollectList dst iterator
-StreamCollectMap dst iterator itemBindingSlot keyEntry
-StreamCollectMapValue dst iterator itemBindingSlot keyEntry valueEntry
+StreamCollectMap dst iterator itemBindingRegister keyEntry
+StreamCollectMapValue dst iterator itemBindingRegister keyEntry valueEntry
 Distinct dst source
-DistinctBy dst source itemBindingSlot keyEntry
-GroupBy dst source itemBindingSlot keyEntry
+DistinctBy dst source itemBindingRegister keyEntry
+GroupBy dst source itemBindingRegister keyEntry
 SortAscending dst source
 SortDescending dst source
-OrderByAscending dst source itemBindingSlot keyEntry
-OrderByDescending dst source itemBindingSlot keyEntry
+OrderByAscending dst source itemBindingRegister keyEntry
+OrderByDescending dst source itemBindingRegister keyEntry
 Reverse dst source
 Shuffle dst source
 OneRandom dst source
@@ -1211,15 +1211,15 @@ terminals because it must evaluate a helper expression for every candidate:
 `:choose 1 weighted by ...` lowers to `StreamOneWeighted` and returns one item
 or `nothing`; `:choose n weighted by ...` lowers to `StreamTakeWeighted` and
 returns a list with up to `n` items. The current source item is bound to the
-helper-local item slot, and the capture slot list is copied into helper-local
-slots starting at `1`. Only positive finite weights participate.
+helper-local item register, and the capture register list is copied into helper-local
+registers starting at `1`. Only positive finite weights participate.
 
 `StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
 iterator. Their helper entries run as isolated helper frames: the current source
-item is bound to helper-local slot `AU` (normally slot `0`), and `BU` references
-a `UShortListPool` entry containing caller-frame capture slots copied when the
+item is bound to helper-local register `AU` (normally register `0`), and `BU` references
+a `UShortListPool` entry containing caller-frame capture registers copied when the
 iterator is created. Captures are exposed to the helper in order starting at
-slot `1`. `StreamMap` yields the helper `ReturnValue`. `StreamFilter` treats the
+register `1`. `StreamMap` yields the helper `ReturnValue`. `StreamFilter` treats the
 helper `ReturnValue` as a predicate and yields the original source item only when
 that predicate is true.
 
@@ -1244,8 +1244,8 @@ operations. Pattern operations use `HasPattern` or `TakePattern` with `AU`
 holding a `GameEventScriptBytecodePatternKind` value. `CountAny` and
 `CountFace` use `ImmediateY` as the required count; `CountFace` additionally
 uses `BU` as the face helper entry address. These opcodes reference only source
-or iterator slots, helper entry addresses, immediate counts, pattern ids, and
-binding slots; there are no pipeline selector, pattern, or object-pattern pools.
+or iterator registers, helper entry addresses, immediate counts, pattern ids, and
+binding registers; there are no pipeline selector, pattern, or object-pattern pools.
 
 Streaming/materialization contract:
 
@@ -1275,7 +1275,7 @@ CreateRangeIterator* / StreamCreate iterator
 loop:
   StreamNext item iterator noMore
   SlotLocals locals+=iterationLocalCount
-  MoveSlot identifier item
+  Move identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
   ListBuilderAdd builder projected
@@ -1299,11 +1299,11 @@ materializing the result.
 Diagnostics are execution instrumentation, not bytecode. The bytecode stream
 does not contain diagnostic-only instructions. Diagnostic-only metadata is
 carried by the optional `DebugSegment`, linked to instruction addresses and
-slots. Runtime collectors read the executable diagnostic sites derived from that
+registers. Runtime collectors read the executable diagnostic sites derived from that
 segment; production bytecode side tables must not carry diagnostic-only fields.
 If debug info is disabled, the debug segment may be empty. Compile diagnostics
 request debug info so trace collectors can resolve instruction addresses and
-slots.
+registers.
 
 ```text
 DebugSegment
@@ -1320,12 +1320,12 @@ DebugDiagnosticSite
 The VM records diagnostic events while executing normal instructions:
 
 - Handler and parameter events are derived from handler metadata and
-  preloaded argument slots plus optional parameter-cast execution.
+  preloaded argument registers plus optional parameter-cast execution.
 - Function and predicate call events are derived from callable metadata and
   direct call entry addresses.
 - Let and expression-to-nothing events are derived from debug diagnostic sites.
 - Publish argument events are derived from outbound-message bind metadata and
-  slot-list metadata.
+  register-list metadata.
 
 ## Debug Segment
 
@@ -1357,17 +1357,17 @@ and human-readable bytecode reviews.
 ## Dump Format
 
 The primary bytecode dump should show a single global address space and explicit
-slot operands:
+register operands:
 
 ```text
 code[26]
 @0000 L_handler_Start:
 @0000 SlotLocals locals+=5
 @0001 SlotLocals locals+=1
-@0003 StreamCreate dst=s2 source=s0
-@0004 StreamNext dst=s3 iterator=s2 noMore=@0010
+@0003 StreamCreate dst=r2 source=r0
+@0004 StreamNext dst=r3 iterator=r2 noMore=@0010
 @0005 ...
-@0010 StreamClose iterator=s2
+@0010 StreamClose iterator=r2
 @0011 SlotLocals locals-=1
 @0012 ReturnVoid
 ```
@@ -1377,13 +1377,13 @@ With typed parameters:
 ```text
 handler DamageTaken(unit, amount)
   params:
-    unit -> s0 as :unit
-    amount -> s1 as :number
+    unit -> r0 as :unit
+    amount -> r1 as :number
 
 @0000 L_handler_DamageTaken:
 @0000 SlotLocals locals+=localCount
-@0001 Cast dst=s0 src=s0 kind=Custom type=:unit
-@0002 Cast dst=s1 src=s1 kind=Integer
+@0001 Cast dst=r0 src=r0 kind=Custom type=:unit
+@0002 Cast dst=r1 src=r1 kind=Integer
 @0003 ...
 @0004 ...
 ```

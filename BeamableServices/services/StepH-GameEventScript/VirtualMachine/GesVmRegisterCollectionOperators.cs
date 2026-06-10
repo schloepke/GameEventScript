@@ -1,0 +1,1349 @@
+using System;
+using System.Collections.Generic;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+
+namespace StepH.GameEventScript.VirtualMachine;
+
+internal static class GesVmRegisterCollectionOperators
+{
+    internal static void VmLength(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Text or Tag when a.IsStoragePointer:
+                dst.SetInteger(textTable.Resolve((ushort)a.IntegerValue).Length);
+                break;
+            case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
+                dst.SetInteger(text.Length);
+                break;
+            case List or Map or Dice or GameEventScriptBytecodeTypeKind.Range:
+                dst.SetInteger(a.IntegerValue);
+                break;
+            case Nothing:
+                dst.SetInteger(0);
+                break;
+            default:
+                dst.SetNothing();
+                break;
+        }
+    }
+    internal static void VmStartsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Text or Tag when b.Kind is Text or Tag:
+                dst.SetBoolean(a.ReadTextOrTag().StartsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        GesVmListObject? leftList = null;
+        GesVmListObject? rightList = null;
+        int[]? leftDice = null;
+        int[]? rightDice = null;
+        GesVmRange? leftRange = null;
+        GesVmRange? rightRange = null;
+        GesVmFloatRange? leftFloatRange = null;
+        GesVmFloatRange? rightFloatRange = null;
+
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is GesVmListObject value:
+                leftList = value;
+                break;
+            case Dice when a.ObjectValue is int[] value:
+                leftDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmRange value:
+                leftRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmFloatRange value:
+                leftFloatRange = value;
+                break;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+
+        switch (b.Kind)
+        {
+            case List when b.ObjectValue is GesVmListObject value:
+                rightList = value;
+                break;
+            case Dice when b.ObjectValue is int[] value:
+                rightDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmRange value:
+                rightRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmFloatRange value:
+                rightFloatRange = value;
+                break;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.IntegerValue > a.IntegerValue)
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        var leftInteger = leftRange?.from ?? 0;
+        var rightInteger = rightRange?.from ?? 0;
+        var leftFloat = leftFloatRange?.from ?? 0d;
+        var rightFloat = rightFloatRange?.from ?? 0d;
+
+        for (var i = 0; i < b.IntegerValue; i++)
+        {
+            var left = dst.OwningState.CreateNothing();
+            if (leftList is not null) left = leftList.Items[i];
+            else if (leftDice is not null) left.SetInteger(leftDice[i]);
+            else if (leftRange is not null)
+            {
+                left.SetInteger(leftInteger);
+                leftInteger += leftRange.step;
+            }
+            else if (leftFloatRange is not null)
+            {
+                left.SetFloat(leftFloat);
+                leftFloat += leftFloatRange.step;
+            }
+
+            var right = dst.OwningState.CreateNothing();
+            if (rightList is not null) right = rightList.Items[i];
+            else if (rightDice is not null) right.SetInteger(rightDice[i]);
+            else if (rightRange is not null)
+            {
+                right.SetInteger(rightInteger);
+                rightInteger += rightRange.step;
+            }
+            else if (rightFloatRange is not null)
+            {
+                right.SetFloat(rightFloat);
+                rightFloat += rightFloatRange.step;
+            }
+
+            if (left.EqualsValue(ref right)) continue;
+            dst.SetBoolean(false);
+            return;
+        }
+
+        dst.SetBoolean(true);
+    }
+    internal static void VmEndsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (a.Kind)
+        {
+            case Text or Tag when b.Kind is Text or Tag:
+                dst.SetBoolean(a.ReadTextOrTag().EndsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        GesVmListObject? leftList = null;
+        GesVmListObject? rightList = null;
+        int[]? leftDice = null;
+        int[]? rightDice = null;
+        GesVmRange? leftRange = null;
+        GesVmRange? rightRange = null;
+        GesVmFloatRange? leftFloatRange = null;
+        GesVmFloatRange? rightFloatRange = null;
+
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is GesVmListObject value:
+                leftList = value;
+                break;
+            case Dice when a.ObjectValue is int[] value:
+                leftDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmRange value:
+                leftRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmFloatRange value:
+                leftFloatRange = value;
+                break;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+
+        switch (b.Kind)
+        {
+            case List when b.ObjectValue is GesVmListObject value:
+                rightList = value;
+                break;
+            case Dice when b.ObjectValue is int[] value:
+                rightDice = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmRange value:
+                rightRange = value;
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmFloatRange value:
+                rightFloatRange = value;
+                break;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+
+        if (b.IntegerValue > a.IntegerValue)
+        {
+            dst.SetBoolean(false);
+            return;
+        }
+
+        var leftOffset = a.IntegerValue - b.IntegerValue;
+        var leftInteger = leftRange is not null ? leftRange.from + leftRange.step * leftOffset : 0;
+        var rightInteger = rightRange?.from ?? 0;
+        var leftFloat = leftFloatRange is not null ? leftFloatRange.from + leftFloatRange.step * leftOffset : 0d;
+        var rightFloat = rightFloatRange?.from ?? 0d;
+
+        for (var i = 0; i < b.IntegerValue; i++)
+        {
+            var leftIndex = leftOffset + i;
+            var left = dst.OwningState.CreateNothing();
+            if (leftList is not null) left = leftList.Items[leftIndex];
+            else if (leftDice is not null) left.SetInteger(leftDice[leftIndex]);
+            else if (leftRange is not null)
+            {
+                left.SetInteger(leftInteger);
+                leftInteger += leftRange.step;
+            }
+            else if (leftFloatRange is not null)
+            {
+                left.SetFloat(leftFloat);
+                leftFloat += leftFloatRange.step;
+            }
+
+            var right = dst.OwningState.CreateNothing();
+            if (rightList is not null) right = rightList.Items[i];
+            else if (rightDice is not null) right.SetInteger(rightDice[i]);
+            else if (rightRange is not null)
+            {
+                right.SetInteger(rightInteger);
+                rightInteger += rightRange.step;
+            }
+            else if (rightFloatRange is not null)
+            {
+                right.SetFloat(rightFloat);
+                rightFloat += rightFloatRange.step;
+            }
+
+            if (left.EqualsValue(ref right)) continue;
+            dst.SetBoolean(false);
+            return;
+        }
+
+        dst.SetBoolean(true);
+    }
+    internal static void VmContains(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (b.Kind)
+        {
+            case Text or Tag when a.Kind is Text or Tag:
+                dst.SetBoolean(b.ReadTextOrTag().Contains(a.ReadTextOrTag(), StringComparison.Ordinal));
+                return;
+            case Text or Tag:
+                dst.SetBoolean(false);
+                return;
+            case List when b.ObjectValue is GesVmListObject list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    if (!list.Items[i].EqualsValue(ref a)) continue;
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case Stream when b.ObjectValue is IGesVmStream stream:
+                var item = dst.OwningState.CreateNothing();
+                try
+                {
+                    while (stream.TryNext(ref item))
+                    {
+                        if (!item.EqualsValue(ref a)) continue;
+                        dst.SetBoolean(true);
+                        return;
+                    }
+
+                    dst.SetBoolean(false);
+                    return;
+                }
+                finally
+                {
+                    if (stream is IDisposable disposable) disposable.Dispose();
+                }
+            case Dice when b.ObjectValue is int[] dice:
+                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    if (dice[i] != a.IntegerValue) continue;
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case Map when b.ObjectValue is GesVmMapObject map:
+                if (a.Kind is not (Text or Tag))
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var key = a.ReadTextOrTag();
+                dst.SetBoolean(!key.StartsWith("_", StringComparison.Ordinal) && map.Entries.ContainsKey(key));
+                return;
+            case Vector or Point when b.ObjectValue is GesVmFloatTriplet triplet:
+                if (!a.IsNumeric)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var value = dst.OwningState.CreateNothing();
+                value.SetFloat(triplet.X, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Y, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Z, b.Unit);
+                dst.SetBoolean(value.EqualsValue(ref a));
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmRange range:
+                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || range.step == 0)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                dst.SetBoolean(range.step > 0
+                    ? a.IntegerValue >= range.from && a.IntegerValue <= range.to && unchecked((ulong)a.IntegerValue - (ulong)range.from) % (ulong)range.step == 0UL
+                    : a.IntegerValue <= range.from && a.IntegerValue >= range.to && unchecked((ulong)range.from - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.step) == 0UL);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmFloatRange range:
+                if (!a.IsNumeric || range.step == 0d)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var number = a.AsNumeric;
+                if (!double.IsFinite(number))
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                if (range.step > 0d)
+                {
+                    var quotient = (number - range.from) / range.step;
+                    dst.SetBoolean(number >= range.from && number <= range.to && quotient == Math.Truncate(quotient));
+                    return;
+                }
+
+                var descendingQuotient = (range.from - number) / -range.step;
+                dst.SetBoolean(number <= range.from && number >= range.to && descendingQuotient == Math.Truncate(descendingQuotient));
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+    }
+    internal static void VmContainsAny(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+        => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: false);
+    internal static void VmContainsAll(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+        => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
+    internal static void VmHasAny(ref this GesVmValue dst, ref GesVmValue source)
+        => VmHasAnyAll(ref dst, ref source, requireAll: false);
+    internal static void VmHasAll(ref this GesVmValue dst, ref GesVmValue source)
+        => VmHasAnyAll(ref dst, ref source, requireAll: true);
+    private static void VmHasAnyAll(ref GesVmValue dst, ref GesVmValue source, bool requireAll)
+    {
+        switch (source.Kind)
+        {
+            case Nothing:
+                dst.SetNothing();
+                return;
+            case Stream when source.ObjectValue is IGesVmStream stream:
+            {
+                var item = dst.OwningState.CreateNothing();
+                try
+                {
+                    while (stream.TryNext(ref item))
+                    {
+                        if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
+                        if (item.IsTrue)
+                        {
+                            if (!requireAll)
+                            {
+                                dst.SetBoolean(true);
+                                return;
+                            }
+                        }
+                        else if (requireAll)
+                        {
+                            dst.SetBoolean(false);
+                            return;
+                        }
+                    }
+
+                    dst.SetBoolean(requireAll);
+                    return;
+                }
+                finally
+                {
+                    if (stream is IDisposable disposable) disposable.Dispose();
+                }
+            }
+            case List when source.ObjectValue is GesVmListObject list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list.Items[i];
+                    if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            case Dice when source.ObjectValue is int[] dice:
+                if (dice.Length == 0)
+                {
+                    dst.SetBoolean(requireAll);
+                    return;
+                }
+
+                if (!requireAll)
+                {
+                    for (var i = 0; i < dice.Length; i++)
+                    {
+                        if (dice[i] == 0) continue;
+                        dst.SetBoolean(true);
+                        return;
+                    }
+
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    if (dice[i] != 0) continue;
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                dst.SetBoolean(true);
+                return;
+            case Map or Custom when source.ObjectValue is GesVmMapObject map:
+            {
+                var list = map.ValueList;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list.Items[i];
+                    if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case Text or Tag:
+            {
+                var text = source.ReadTextOrTag();
+                if (text.Length == 0)
+                {
+                    dst.SetBoolean(requireAll);
+                    return;
+                }
+
+                var item = dst.OwningState.CreateNothing();
+                for (var i = 0; i < text.Length; i++)
+                {
+                    item.SetText(text[i].ToString());
+                    item.UpdatedTextTruthinessCache();
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case Vector or Point when source.ObjectValue is GesVmFloatTriplet triplet:
+                if (triplet.X != 0d && double.IsFinite(triplet.X))
+                {
+                    if (!requireAll)
+                    {
+                        dst.SetBoolean(true);
+                        return;
+                    }
+                }
+                else if (requireAll)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                if (triplet.Y != 0d && double.IsFinite(triplet.Y))
+                {
+                    if (!requireAll)
+                    {
+                        dst.SetBoolean(true);
+                        return;
+                    }
+                }
+                else if (requireAll)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                if (triplet.Z != 0d && double.IsFinite(triplet.Z))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    if (value != 0)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                    value += range.step;
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmFloatRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    if (value != 0d && double.IsFinite(value))
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                    value += range.step;
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+    }
+    private static void VmContainsAnyAll(ref GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
+    {
+        if (b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        if (b.Kind is Stream && b.ObjectValue is IGesVmStream stream)
+        {
+            VmContainsAnyAllStream(ref dst, ref a, stream, requireAll);
+            return;
+        }
+
+        var candidate = dst.OwningState.CreateNothing();
+        var probe = dst.OwningState.CreateNothing();
+
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is GesVmListObject list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    candidate = list.Items[i];
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            case Dice when a.ObjectValue is int[] dice:
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    candidate.SetInteger(dice[i]);
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            case Text or Tag:
+            {
+                var text = a.ReadTextOrTag();
+                for (var i = 0; i < text.Length; i++)
+                {
+                    candidate.SetText(text[i].ToString());
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetInteger(value);
+                    value += range.step;
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmFloatRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetFloat(value);
+                    value += range.step;
+                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    if (probe.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            dst.SetBoolean(true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        dst.SetBoolean(false);
+                        return;
+                    }
+
+                }
+
+                dst.SetBoolean(requireAll);
+                return;
+            }
+            default:
+                dst.SetBoolean(requireAll);
+                return;
+        }
+    }
+    private static void VmContainsAnyAllStream(ref GesVmValue dst, ref GesVmValue a, IGesVmStream stream, bool requireAll)
+    {
+        var candidates = new GesVmValue[8];
+        var candidateCount = 0;
+
+        void AddCandidate(GesVmValue value)
+        {
+            if (candidateCount == candidates.Length) Array.Resize(ref candidates, candidates.Length << 1);
+            candidates[candidateCount++] = value;
+        }
+
+        var candidate = dst.OwningState.CreateNothing();
+        switch (a.Kind)
+        {
+            case List when a.ObjectValue is GesVmListObject list:
+                for (var i = 0; i < list.Length; i++) AddCandidate(list.Items[i]);
+                break;
+            case Dice when a.ObjectValue is int[] dice:
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    candidate.SetInteger(dice[i]);
+                    AddCandidate(candidate);
+                }
+
+                break;
+            case Text or Tag:
+            {
+                var text = a.ReadTextOrTag();
+                for (var i = 0; i < text.Length; i++)
+                {
+                    candidate.SetText(text[i].ToString());
+                    AddCandidate(candidate);
+                }
+
+                break;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetInteger(value);
+                    value += range.step;
+                    AddCandidate(candidate);
+                }
+
+                break;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmFloatRange range:
+            {
+                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var value = range.from;
+                for (var i = 0L; i < length; i++)
+                {
+                    candidate.SetFloat(value);
+                    value += range.step;
+                    AddCandidate(candidate);
+                }
+
+                break;
+            }
+        }
+
+        try
+        {
+            if (candidateCount == 0)
+            {
+                dst.SetBoolean(requireAll);
+                return;
+            }
+
+            var item = dst.OwningState.CreateNothing();
+            if (!requireAll)
+            {
+                while (stream.TryNext(ref item))
+                {
+                    for (var i = 0; i < candidateCount; i++)
+                    {
+                        if (!item.EqualsValue(ref candidates[i])) continue;
+                        dst.SetBoolean(true);
+                        return;
+                    }
+                }
+
+                dst.SetBoolean(false);
+                return;
+            }
+
+            var found = new bool[candidateCount];
+            var foundCount = 0;
+            while (stream.TryNext(ref item))
+            {
+                for (var i = 0; i < candidateCount; i++)
+                {
+                    if (found[i] || !item.EqualsValue(ref candidates[i])) continue;
+                    found[i] = true;
+                    foundCount++;
+                }
+
+                if (foundCount != candidateCount) continue;
+                dst.SetBoolean(true);
+                return;
+            }
+
+            dst.SetBoolean(false);
+        }
+        finally
+        {
+            if (stream is IDisposable disposable) disposable.Dispose();
+        }
+    }
+    internal static void VmContainsValue(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        switch (b.Kind)
+        {
+            case Map or Custom when b.ObjectValue is GesVmMapObject map:
+                foreach (var pair in map.Entries)
+                {
+                    if (pair.Key.StartsWith("_", StringComparison.Ordinal) || !pair.Value.EqualsValue(ref a)) continue;
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                dst.SetBoolean(false);
+                return;
+            case Vector or Point when b.ObjectValue is GesVmFloatTriplet triplet:
+                if (!a.IsNumeric)
+                {
+                    dst.SetBoolean(false);
+                    return;
+                }
+
+                var value = dst.OwningState.CreateNothing();
+                value.SetFloat(triplet.X, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Y, b.Unit);
+                if (value.EqualsValue(ref a))
+                {
+                    dst.SetBoolean(true);
+                    return;
+                }
+
+                value.SetFloat(triplet.Z, b.Unit);
+                dst.SetBoolean(value.EqualsValue(ref a));
+                return;
+            case Nothing:
+                dst.SetNothing();
+                return;
+            default:
+                dst.SetBoolean(false);
+                return;
+        }
+    }
+    internal static void VmUnion(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        if (a.Kind is Nothing || b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        switch (a.Kind)
+        {
+            case Map when a.ObjectValue is GesVmMapObject aMap:
+            {
+                switch (b.Kind)
+                {
+                    case Map when b.ObjectValue is GesVmMapObject bMap:
+                    {
+                        var map = new Dictionary<string, GesVmValue>(aMap.Entries, StringComparer.Ordinal);
+                        foreach (var pair in bMap.Entries) map[pair.Key] = pair.Value;
+                        dst.SetMap(new GesVmMapObject(dst.OwningState, map));
+                        return;
+                    }
+                    case List when b.ObjectValue is GesVmListObject keys:
+                    {
+                        var map = new Dictionary<string, GesVmValue>(aMap.Entries, StringComparer.Ordinal);
+                        for (var i = 0; i < keys.Length; i++)
+                        {
+                            var keyValue = keys.Items[i];
+                            if (keyValue.Kind is not (Text or Tag))
+                            {
+                                dst.SetNothing();
+                                return;
+                            }
+
+                            var key = keyValue.ReadTextOrTag();
+                            if (map.ContainsKey(key)) continue;
+                            var flag = dst.OwningState.CreateBoolean(true);
+                            map[key] = flag;
+                        }
+
+                        dst.SetMap(new GesVmMapObject(dst.OwningState, map));
+                        return;
+                    }
+                }
+
+                break;
+            }
+            case List when a.ObjectValue is GesVmListObject aList:
+            {
+                switch (b.Kind)
+                {
+                    case List when b.ObjectValue is GesVmListObject bList:
+                    {
+                        var list = new GesVmListObject(dst.OwningState, aList.Length + bList.Length);
+                        for (var i = 0; i < aList.Length; i++) list.Items[i] = aList.Items[i];
+                        for (var i = 0; i < bList.Length; i++) list.Items[aList.Length + i] = bList.Items[i];
+                        dst.SetList(list);
+                        return;
+                    }
+                    case Dice when b.ObjectValue is int[] bDice:
+                    {
+                        var list = new GesVmListObject(dst.OwningState, aList.Length + bDice.Length);
+                        for (var i = 0; i < aList.Length; i++) list.Items[i] = aList.Items[i];
+                        for (var i = 0; i < bDice.Length; i++) list.Items[aList.Length + i].SetInteger(bDice[i]);
+                        dst.SetList(list);
+                        return;
+                    }
+                }
+
+                break;
+            }
+            case Dice when a.ObjectValue is int[] aDice:
+            {
+                switch (b.Kind)
+                {
+                    case Dice when b.ObjectValue is int[] bDice:
+                    {
+                        var dice = new int[aDice.Length + bDice.Length];
+                        Array.Copy(aDice, dice, aDice.Length);
+                        Array.Copy(bDice, 0, dice, aDice.Length, bDice.Length);
+                        dst.SetDice(dice);
+                        return;
+                    }
+                    case List when b.ObjectValue is GesVmListObject bList:
+                    {
+                        var list = new GesVmListObject(dst.OwningState, aDice.Length + bList.Length);
+                        for (var i = 0; i < aDice.Length; i++) list.Items[i].SetInteger(aDice[i]);
+                        for (var i = 0; i < bList.Length; i++) list.Items[aDice.Length + i] = bList.Items[i];
+                        dst.SetList(list);
+                        return;
+                    }
+                }
+
+                break;
+            }
+        }
+
+        dst.SetNothing();
+    }
+    internal static void VmIntersect(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        if (a.Kind is Nothing || b.Kind is Nothing)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        switch (a.Kind)
+        {
+            case Map when a.ObjectValue is GesVmMapObject aMap:
+            {
+                var keys = new HashSet<string>(StringComparer.Ordinal);
+                switch (b.Kind)
+                {
+                    case Map when b.ObjectValue is GesVmMapObject bMap:
+                    {
+                        foreach (var key in bMap.Entries.Keys) keys.Add(key);
+                        break;
+                    }
+                    case List when b.ObjectValue is GesVmListObject keyList:
+                    {
+                        for (var i = 0; i < keyList.Length; i++)
+                        {
+                            var keyValue = keyList.Items[i];
+                            if (keyValue.Kind is not (Text or Tag))
+                            {
+                                dst.SetNothing();
+                                return;
+                            }
+
+                            keys.Add(keyValue.ReadTextOrTag());
+                        }
+                        break;
+                    }
+                    default:
+                        dst.SetNothing();
+                        return;
+                }
+                var map = new Dictionary<string, GesVmValue>(StringComparer.Ordinal);
+                foreach (var pair in aMap.Entries) if (keys.Contains(pair.Key)) map[pair.Key] = pair.Value;
+                dst.SetMap(new GesVmMapObject(dst.OwningState, map));
+                return;
+            }
+            case List when a.ObjectValue is GesVmListObject leftList:
+            {
+                switch (b.Kind)
+                {
+                    case List when b.ObjectValue is GesVmListObject rightList:
+                    {
+                        var removed = new bool[rightList.Length];
+                        var resultLength = 0;
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                if (removed[j] || !leftList.Items[i].EqualsValue(ref rightList.Items[j])) continue;
+                                removed[j] = true;
+                                resultLength++;
+                                break;
+                            }
+                        }
+                        var list = new GesVmListObject(dst.OwningState, resultLength);
+                        var index = 0;
+                        Array.Clear(removed, 0, removed.Length);
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                if (removed[j] || !leftList.Items[i].EqualsValue(ref rightList.Items[j])) continue;
+                                removed[j] = true;
+                                list.Items[index++] = leftList.Items[i];
+                                break;
+                            }
+                        }
+                        dst.SetList(list);
+                        return;
+                    }
+                    case Dice when b.ObjectValue is int[] rightDice:
+                    {
+                        var removed = new bool[rightDice.Length];
+                        var resultLength = 0;
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            ref var item = ref leftList.Items[i];
+                            if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || item.IntegerValue != rightDice[j]) continue;
+                                removed[j] = true;
+                                resultLength++;
+                                break;
+                            }
+                        }
+                        var list = new GesVmListObject(dst.OwningState, resultLength);
+                        var index = 0;
+                        Array.Clear(removed, 0, removed.Length);
+                        for (var i = 0; i < leftList.Length; i++)
+                        {
+                            ref var item = ref leftList.Items[i];
+                            if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || item.IntegerValue != rightDice[j]) continue;
+                                removed[j] = true;
+                                list.Items[index++] = item;
+                                break;
+                            }
+                        }
+                        dst.SetList(list);
+                        return;
+                    }
+                }
+
+                break;
+            }
+            case Dice when a.ObjectValue is int[] leftDice:
+            {
+                switch (b.Kind)
+                {
+                    case Dice when b.ObjectValue is int[] rightDice:
+                        var removed = new bool[rightDice.Length];
+                        var resultLength = 0;
+                        for (var i = 0; i < leftDice.Length; i++)
+                        {
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || leftDice[i] != rightDice[j]) continue;
+                                removed[j] = true;
+                                resultLength++;
+                                break;
+                            }
+                        }
+                        var dice = new int[resultLength];
+                        var index = 0;
+                        Array.Clear(removed, 0, removed.Length);
+                        for (var i = 0; i < leftDice.Length; i++)
+                        {
+                            for (var j = 0; j < rightDice.Length; j++)
+                            {
+                                if (removed[j] || leftDice[i] != rightDice[j]) continue;
+                                removed[j] = true;
+                                dice[index++] = leftDice[i];
+                                break;
+                            }
+                        }
+                        dst.SetDice(dice);
+                        return;
+                    case List when b.ObjectValue is GesVmListObject rightList:
+                        var removed1 = new bool[rightList.Length];
+                        var resultLength1 = 0;
+                        for (var i = 0; i < leftDice.Length; i++)
+                        {
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                ref var item = ref rightList.Items[j];
+                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
+                                removed1[j] = true;
+                                resultLength1++;
+                                break;
+                            }
+                        }
+                        var list = new GesVmListObject(dst.OwningState, resultLength1);
+                        var index1 = 0;
+                        Array.Clear(removed1, 0, removed1.Length);
+                        for (var i = 0; i < leftDice.Length; i++)
+                        {
+                            for (var j = 0; j < rightList.Length; j++)
+                            {
+                                ref var item = ref rightList.Items[j];
+                                if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
+                                removed1[j] = true;
+                                list.Items[index1++].SetInteger(leftDice[i]);
+                                break;
+                            }
+                        }
+                        dst.SetList(list);
+                        return;
+                }
+                break;
+            }
+        }
+
+        dst.SetNothing();
+    }
+    internal static void VmZip(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    {
+        if (a.Kind is not List || b.Kind is not List || a.ObjectValue is not GesVmListObject aList || b.ObjectValue is not GesVmListObject bList)
+        {
+            dst.SetNothing();
+            return;
+        }
+
+        var length = Math.Min(aList.Length, bList.Length);
+        var list = new GesVmListObject(dst.OwningState, length);
+        for (var i = 0; i < length; i++)
+        {
+            list.Items[i].SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue>
+            {
+                ["left"] = aList.Items[i],
+                ["right"] = bList.Items[i]
+            }));
+        }
+
+        dst.SetList(list);
+    }
+    internal static void VmValues(ref this GesVmValue dst, ref GesVmValue a)
+    {
+        switch (a.Kind)
+        {
+            case Map or Custom when a.ObjectValue is GesVmMapObject map:
+                dst.SetList(map.ValueList);
+                break;
+            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
+                var valueEntries = externalValue.AsMap();
+                var valueKeys = new string[valueEntries.Count];
+                var valueKeyCount = 0;
+                foreach (var key in valueEntries.Keys)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    valueKeys[valueKeyCount++] = key;
+                }
+
+                Array.Sort(valueKeys, 0, valueKeyCount, StringComparer.Ordinal);
+                var values = new GesVmListObject(dst.OwningState, valueKeyCount);
+                for (var i = 0; i < valueKeyCount; i++) values.Items[i].BindArguments(valueEntries[valueKeys[i]]);
+                dst.SetList(values);
+                break;
+            default:
+                dst.SetNothing();
+                break;
+        }
+    }
+    internal static void VmKeys(ref this GesVmValue dst, ref GesVmValue a)
+    {
+        switch (a.Kind)
+        {
+            case Map or Custom when a.ObjectValue is GesVmMapObject map:
+                dst.SetList(map.KeyList);
+                break;
+            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
+                var keyEntries = externalValue.AsMap();
+                var keyKeys = new string[keyEntries.Count];
+                var keyCount = 0;
+                foreach (var key in keyEntries.Keys)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    keyKeys[keyCount++] = key;
+                }
+
+                Array.Sort(keyKeys, 0, keyCount, StringComparer.Ordinal);
+                var keys = new GesVmListObject(dst.OwningState, keyCount);
+                for (var i = 0; i < keyCount; i++) keys.Items[i].SetTag(keyKeys[i]);
+                dst.SetList(keys);
+                break;
+            default:
+                dst.SetNothing();
+                break;
+        }
+    }
+    internal static void VmEntries(ref this GesVmValue dst, ref GesVmValue a)
+    {
+        switch (a.Kind)
+        {
+            case Map or Custom when a.ObjectValue is GesVmMapObject map:
+                dst.SetList(map.EntryList);
+                break;
+            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
+                var entryEntries = externalValue.AsMap();
+                var entryKeys = new string[entryEntries.Count];
+                var entryKeyCount = 0;
+                foreach (var key in entryEntries.Keys)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    entryKeys[entryKeyCount++] = key;
+                }
+
+                Array.Sort(entryKeys, 0, entryKeyCount, StringComparer.Ordinal);
+                var entries = new GesVmListObject(dst.OwningState, entryKeyCount);
+                for (var i = 0; i < entryKeyCount; i++)
+                {
+                    var value = dst.OwningState.CreateNothing();
+                    value.BindArguments(entryEntries[entryKeys[i]]);
+                    entries.Items[i].SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue> { ["key"] = dst.OwningState.CreateTag(entryKeys[i]), ["value"] = value }));
+                }
+
+                dst.SetList(entries);
+                break;
+            default:
+                dst.SetNothing();
+                break;
+        }
+    }
+
+}

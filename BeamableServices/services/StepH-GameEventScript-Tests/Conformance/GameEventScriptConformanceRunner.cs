@@ -14,7 +14,7 @@ namespace StepH_GameEventScript_Tests.Conformance;
 
 internal static class GameEventScriptConformanceRunner
 {
-    internal const string BytecodeExecutorEngine = "bytecodeexecutor";
+    internal const string VirtualMachineEngine = "virtualmachine";
     internal static readonly GameEventScriptExternalTypeRegistry ExternalTypeRegistry =
         GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
 
@@ -47,7 +47,7 @@ internal static class GameEventScriptConformanceRunner
     internal static IReadOnlyList<GameEventScriptConformanceCase> AllConformanceCases(string specDirectory, string relativeSpecFile)
         => EnumerateConformanceCases(specDirectory, relativeSpecFile).ToArray();
 
-    internal static IEnumerable<GameEventScriptConformanceCase> EnumerateBytecodeExecutorScriptApiCases(string specDirectory)
+    internal static IEnumerable<GameEventScriptConformanceCase> EnumerateVirtualMachineScriptApiCases(string specDirectory)
     {
         foreach (var (file, suite, test) in EnumerateTests(specDirectory))
         {
@@ -55,7 +55,7 @@ internal static class GameEventScriptConformanceRunner
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
             if (string.Equals(test.Kind, "scriptApi", StringComparison.OrdinalIgnoreCase))
             {
-                yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, BytecodeExecutorEngine);
+                yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, VirtualMachineEngine);
             }
         }
     }
@@ -154,7 +154,7 @@ internal static class GameEventScriptConformanceRunner
         {
             ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
-            yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, UsesRuntimeEngine(test.Kind) ? BytecodeExecutorEngine : null);
+            yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, UsesRuntimeEngine(test.Kind) ? VirtualMachineEngine : null);
         }
     }
 
@@ -171,7 +171,7 @@ internal static class GameEventScriptConformanceRunner
         {
             ValidateRequired(test.Kind, "test kind", file, suite.Name, test.Name);
             ValidateRequired(test.Name, "test name", file, suite.Name, test.Name);
-            yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, UsesRuntimeEngine(test.Kind) ? BytecodeExecutorEngine : null);
+            yield return new GameEventScriptConformanceCase(file, suite.Name!, ResolveLevel(file, suite, test), test, UsesRuntimeEngine(test.Kind) ? VirtualMachineEngine : null);
         }
     }
 

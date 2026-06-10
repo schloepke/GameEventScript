@@ -3,20 +3,20 @@
 using System.Globalization;
 using System.Text;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.BytecodeExecutor;
+using StepH.GameEventScript.VirtualMachine;
 using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Extensions;
 
 internal static class GameEventScriptVmStateDumper
 {
-    internal static string Dump(this VmState state)
+    internal static string Dump(this GesVmState state)
         => Dump(state, includeInstructionAddresses: true, scriptSource: null);
 
-    internal static string Dump(this VmState state, string? scriptSource)
+    internal static string Dump(this GesVmState state, string? scriptSource)
         => Dump(state, includeInstructionAddresses: true, scriptSource: scriptSource);
 
-    internal static string Dump(this VmState state, bool includeInstructionAddresses, string? scriptSource)
+    internal static string Dump(this GesVmState state, bool includeInstructionAddresses, string? scriptSource)
     {
         var builder = new StringBuilder();
         builder
@@ -113,7 +113,7 @@ internal static class GameEventScriptVmStateDumper
         builder.AppendLine();
     }
 
-    private static void AppendCallStack(StringBuilder builder, VmState state)
+    private static void AppendCallStack(StringBuilder builder, GesVmState state)
     {
         builder
             .Append("CallFrames: ").AppendLine(state.CallStackPointer.ToString(CultureInfo.InvariantCulture))
@@ -142,7 +142,7 @@ internal static class GameEventScriptVmStateDumper
         }
     }
 
-    private static void AppendStageArea(StringBuilder builder, VmState state)
+    private static void AppendStageArea(StringBuilder builder, GesVmState state)
     {
         var stageStart = state.RegisterFrameStart + state.RegisterFrameLength;
         builder
@@ -156,7 +156,7 @@ internal static class GameEventScriptVmStateDumper
         builder.AppendLine();
     }
 
-    private static void AppendCurrentExecutionFrame(StringBuilder builder, VmState state)
+    private static void AppendCurrentExecutionFrame(StringBuilder builder, GesVmState state)
     {
         builder
             .AppendLine("CurrentExecutionFrame")
@@ -169,7 +169,7 @@ internal static class GameEventScriptVmStateDumper
         AppendRegisters(builder, state, state.RegisterFrameStart, state.RegisterFrameLength, "  ");
     }
 
-    private static void AppendRegisters(StringBuilder builder, VmState state, int start, int length, string indent)
+    private static void AppendRegisters(StringBuilder builder, GesVmState state, int start, int length, string indent)
     {
         if (length == 0)
         {
@@ -201,7 +201,7 @@ internal static class GameEventScriptVmStateDumper
         }
     }
 
-    private static string FormatRegister(VmValue value)
+    private static string FormatRegister(GesVmValue value)
     {
         var builder = new StringBuilder();
         builder

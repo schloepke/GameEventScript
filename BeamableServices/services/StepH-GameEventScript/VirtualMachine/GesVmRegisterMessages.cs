@@ -1,0 +1,71 @@
+using System;
+using System.Collections.Generic;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+
+namespace StepH.GameEventScript.VirtualMachine;
+
+internal static class GesVmRegisterMessages
+{
+    internal static void CreateMessageSignature(ref this GesVmValue dest, ReadOnlySpan<ushort> shape, GesVmState vmState,  GameEventScriptSession session)
+    {
+        if (shape.Length == 0)
+        {
+            vmState.RaiseError("Cannot create message signature from empty shape");
+            return;
+        }
+        var messageName = vmState.Binary.TextConstantTable.Resolve(shape[0]);
+        var argumentNames = new List<string>(shape.Length - 1);
+        for (var index = 1; index < shape.Length; index++)
+        {
+            argumentNames.Add(vmState.Binary.TextConstantTable.Resolve(shape[index]));
+        }
+        dest.SetMessageHandler(GameEventScriptMessageSignature.Create(messageName, argumentNames));
+    }
+    internal static void CreateMessage(ref this GesVmValue dest, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots)
+    {
+        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
+        {
+            dest.OwningState.RaiseError("Message signature shape and argument slots mismatch");
+            return;
+        }
+        var messageName = dest.OwningState.Binary.TextConstantTable.Resolve(shape[0]);
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
+        for (var index = 0; index < argumentSlots.Length; index++)
+        {
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(dest.OwningState.Binary.TextConstantTable.Resolve(shape[index + 1]), dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue());
+        }
+        try
+        {
+            dest.SetMessage(GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
+        }
+        catch (ArgumentException)
+        {
+            dest.SetNothing();
+        }
+    }
+    internal static void BindHandler(ref this GesVmValue dest, ref GesVmValue handler, ReadOnlySpan<ushort> argumentSlots)
+    {
+        if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
+        {
+            dest.SetNothing();
+            return;
+        }
+
+        var arguments = new GameEventScriptValue[argumentSlots.Length];
+        for (var index = 0; index < arguments.Length; index++)
+        {
+            arguments[index] = dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue();
+        }
+        if (signature.TryCreateMessage(arguments, out var message))
+        {
+            dest.SetMessage(message);
+        }
+        else
+        {
+            dest.SetNothing();
+        }
+    }
+
+}

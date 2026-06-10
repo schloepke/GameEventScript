@@ -35,6 +35,8 @@ public sealed class GameEventScriptConformanceTest
 
     public int? WarmupIterations { get; set; }
 
+    public bool DumpBinary { get; set; }
+
     public List<GameEventScriptExternalSubscriberSpec>? ExternalSubscribers { get; set; }
 
     public List<GameEventScriptApiStepSpec>? Steps { get; set; }

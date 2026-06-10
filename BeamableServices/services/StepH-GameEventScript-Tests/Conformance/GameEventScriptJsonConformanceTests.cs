@@ -7,6 +7,7 @@ using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.BytecodeExecutor;
+using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -378,6 +379,11 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         var warmupIterations = ResolveIterationCount(PerformanceWarmupIterations, testCase.Test.WarmupIterations, DefaultWarmupIterations);
         var compiled = Measure("ges compile", () => GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test));
         var newBuild = Measure<IGameEventScriptModule>("new vm build", () => GameEventScriptVirtualMaschine.Create(compiled.Value.ToGameEventScriptBinary(), 4096, 256));
+        if (testCase.Test.DumpBinary)
+        {
+            TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
+            TestContext.WriteLine(compiled.Value.ToGameEventScriptBinary().Dump(GetScriptSourceForDump(testCase)));
+        }
 
         AssertPerformanceCorrectness(testCase, "new vm", newBuild.Value);
 
@@ -749,7 +755,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         }
     }
 
-    private static string? GetScriptSourceForDump(GameEventScriptConformanceCase testCase)
+    protected static string? GetScriptSourceForDump(GameEventScriptConformanceCase testCase)
     {
         var test = testCase.Test;
         if (!string.IsNullOrWhiteSpace(test.Script))

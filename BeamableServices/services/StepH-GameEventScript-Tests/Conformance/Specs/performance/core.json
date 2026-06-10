@@ -102,6 +102,96 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "performance",
+      "name": "engine performance mixed pipelines control flow and messages",
+      "iterations": 1000,
+      "warmupIterations": 50,
+      "dumpBinary": false,
+      "runtimeLimits": {
+        "maxProcessedEventsPerRun": 128
+      },
+      "script": "module EnginePerformance\n\npredicate high(value as :number) means value >= 10\n\non Start(values) {\n  let total be values[:filter value where value is high][:select value => value + 5%][:sum value => :integer.floor value]\n  let average be values[:filter value where value is high][:select value => value + 5%][:average value => :integer.floor value]\n  let oddCount be values[:filter value where value mod 2 = 1][:count value where true]\n  let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]\n  let scaled as :quantity(m) be 100m + 5%\n  let folded be (15% + 15%) * 2\n  let directOddScaled be values[:filter value where value mod 2 = 1][:select value => value * 2][:count value where value > 10]\n  if scaled > 100m {\n    let success be scaled + folded\n    let divis be scaled ÷ folded\n    let myHandler be Success(message, value)\n    let myMessage be myHandler(message: 'hello', value: success)\n    let myMessageDirect be Success(message: 'world', value: scaled)\n  }\n  for item from 1 to 16 {\n    let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]\n  }\n  let workTotal be values[:filter value where value >= 10][:select value => value + 5%][:select value => value * 2][:sum value => value]\n  emit Done(total: total, average: average, oddCount: oddCount, directOddScaled: directOddScaled, first: firstBoosted, scaled: scaled, folded: folded, workTotal: workTotal)\n}\n",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "values": {
+                "type": ":list",
+                "items": [
+                  { "type": ":integer", "value": "1" },
+                  { "type": ":integer", "value": "2" },
+                  { "type": ":integer", "value": "3" },
+                  { "type": ":integer", "value": "4" },
+                  { "type": ":integer", "value": "5" },
+                  { "type": ":integer", "value": "6" },
+                  { "type": ":integer", "value": "7" },
+                  { "type": ":integer", "value": "8" },
+                  { "type": ":integer", "value": "9" },
+                  { "type": ":integer", "value": "10" },
+                  { "type": ":integer", "value": "11" },
+                  { "type": ":integer", "value": "12" },
+                  { "type": ":integer", "value": "13" },
+                  { "type": ":integer", "value": "14" },
+                  { "type": ":integer", "value": "15" },
+                  { "type": ":integer", "value": "16" },
+                  { "type": ":integer", "value": "17" },
+                  { "type": ":integer", "value": "18" },
+                  { "type": ":integer", "value": "19" },
+                  { "type": ":integer", "value": "20" },
+                  { "type": ":integer", "value": "21" },
+                  { "type": ":integer", "value": "22" },
+                  { "type": ":integer", "value": "23" },
+                  { "type": ":integer", "value": "24" },
+                  { "type": ":integer", "value": "25" },
+                  { "type": ":integer", "value": "26" },
+                  { "type": ":integer", "value": "27" },
+                  { "type": ":integer", "value": "28" },
+                  { "type": ":integer", "value": "29" },
+                  { "type": ":integer", "value": "30" },
+                  { "type": ":integer", "value": "31" },
+                  { "type": ":integer", "value": "32" },
+                  { "type": ":integer", "value": "33" },
+                  { "type": ":integer", "value": "34" },
+                  { "type": ":integer", "value": "35" },
+                  { "type": ":integer", "value": "36" },
+                  { "type": ":integer", "value": "37" },
+                  { "type": ":integer", "value": "38" },
+                  { "type": ":integer", "value": "39" },
+                  { "type": ":integer", "value": "40" },
+                  { "type": ":integer", "value": "41" },
+                  { "type": ":integer", "value": "42" },
+                  { "type": ":integer", "value": "43" },
+                  { "type": ":integer", "value": "44" },
+                  { "type": ":integer", "value": "45" },
+                  { "type": ":integer", "value": "46" },
+                  { "type": ":integer", "value": "47" },
+                  { "type": ":integer", "value": "48" },
+                  { "type": ":integer", "value": "49" },
+                  { "type": ":integer", "value": "50" }
+                ]
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "average": { "type": ":float", "value": "31.024390243902438" },
+                "directOddScaled": { "type": ":integer", "value": "22" },
+                "first": { "type": ":float", "value": "10.5" },
+                "folded": { "type": ":float", "value": "0.6" },
+                "oddCount": { "type": ":integer", "value": "25" },
+                "scaled": { "type": ":integer", "value": "105", "unit": ":meter" },
+                "total": { "type": ":integer", "value": "1272" },
+                "workTotal": { "type": ":integer", "value": "2583" }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

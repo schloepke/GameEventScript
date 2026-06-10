@@ -21,7 +21,7 @@ public static class GameEventScriptManager
     public static IGameEventScriptModule CompileModule(string input, GameEventScriptCompileOptions? options = null)
         => CreateScriptBuilder().AddScript(input).CompileModule(options);
 
-    public static IGameEventScriptModule CreateModule(GameEventScriptBinary binary, ushort registerSize = 128, ushort stackSize = 128)
+    public static IGameEventScriptModule CreateModule(GameEventScriptBinary binary, ushort registerSize = 512, ushort stackSize = 128)
         => GameEventScriptVirtualMaschine.Create(binary, registerSize, stackSize);
     
     public static GameEventScriptHostBuilder CreateHostBuilder()

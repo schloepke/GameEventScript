@@ -136,7 +136,7 @@ internal static class GameEventScriptConformanceRunner
 
     internal static IGameEventScriptModule CompileScripts(GameEventScriptConformanceTest test)
     {
-        return CreateScriptBuilder(test).CompileModule(CreateCompileOptions(test));
+        return CreateScriptBuilder(test).CompileModuleOldVm(CreateCompileOptions(test));
     }
 
     internal static GameEventScriptCompiled CompileBytecodeForTest(GameEventScriptConformanceTest test)

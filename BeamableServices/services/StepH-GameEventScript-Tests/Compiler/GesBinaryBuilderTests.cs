@@ -81,4 +81,42 @@ public sealed class GesBinaryBuilderTests
         Assert.AreEqual((ushort)2, binary.InstructionTable[2].YSlot);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[3].OpCode);
     }
+
+    [TestMethod]
+    public void OptimizeCanRewritePlanBeforeBuild()
+    {
+        var builder = new GesBinaryBuilder()
+            .WithModuleName("BuilderRewrite")
+            .WithOptimization(false);
+        var first = builder.AddRegister("first");
+        var second = builder.AddRegister("second");
+
+        var binary = builder
+            .Nop()
+            .LoadInteger(first, 1)
+            .ReturnVoid()
+            .Optimize(context =>
+            {
+                context.RemoveAt(0);
+                Assert.IsTrue(context.TryGetInstruction(0, out var load));
+                context.ReplaceInstruction(0, load with { I64 = 2 });
+                context.InsertInstructionAfter(
+                    0,
+                    context.CreateInstructionNear(
+                        0,
+                        GameEventScriptBytecodeOpCode.LoadInteger,
+                        dst: GesOperand.Register(second),
+                        i64: 3));
+            })
+            .Build();
+
+        Assert.HasCount(3, binary.InstructionTable);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[0].OpCode);
+        Assert.AreEqual((ushort)0, binary.InstructionTable[0].DestinationSlot);
+        Assert.AreEqual(2L, binary.InstructionTable[0].I64);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[1].OpCode);
+        Assert.AreEqual((ushort)1, binary.InstructionTable[1].DestinationSlot);
+        Assert.AreEqual(3L, binary.InstructionTable[1].I64);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[2].OpCode);
+    }
 }

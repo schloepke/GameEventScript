@@ -128,7 +128,7 @@ internal sealed partial class GesBinaryBuilder
     public GameEventScriptBinary Build()
     {
         EnsureScopesClosed();
-        var optimizedItems = _optimize ? OptimizePeepholeMoves(_items) : _items.ToArray();
+        var optimizedItems = _optimize ? RunDefaultOptimizationPasses(_items) : _items.ToArray();
         var labelAddresses = ResolveLabelAddresses(optimizedItems);
         var registerMap = AllocateRegisters(optimizedItems);
         var items = PatchRoutineSlotLocals(optimizedItems, registerMap);
@@ -505,63 +505,6 @@ internal sealed partial class GesBinaryBuilder
         return result;
     }
 
-    private PlanItem[] OptimizePeepholeMoves(IReadOnlyList<PlanItem> items)
-    {
-        var result = new List<PlanItem>(items.Count);
-        for (var index = 0; index < items.Count; index++)
-        {
-            var item = items[index];
-            if (item.Instruction is null ||
-                index + 1 >= items.Count ||
-                items[index + 1].Instruction is not { } move ||
-                move.OpCode != GameEventScriptBytecodeOpCode.Move ||
-                item.Instruction.Destination.Kind != GesOperandKind.Register ||
-                move.X.Kind != GesOperandKind.Register ||
-                move.Destination.Kind != GesOperandKind.Register ||
-                item.Instruction.Destination.RegisterRef.Id != move.X.RegisterRef.Id ||
-                !_registers[item.Instruction.Destination.RegisterRef.Id].IsTemporary ||
-                item.Instruction.ReadRegisters().Any(register => register.Id == move.Destination.RegisterRef.Id) ||
-                CountRegisterReads(items, item.Instruction.Destination.RegisterRef) != 1 ||
-                CountRegisterWrites(items, item.Instruction.Destination.RegisterRef) != 1)
-            {
-                result.Add(item);
-                continue;
-            }
-
-            result.Add(PlanItem.ForInstruction(item.Instruction.WithDestination(move.Destination)));
-            index++;
-        }
-
-        return result.ToArray();
-    }
-
-    private static int CountRegisterReads(IReadOnlyList<PlanItem> items, GesRegisterRef register)
-    {
-        var count = 0;
-        foreach (var item in items)
-        {
-            if (item.Instruction is not { } instruction) continue;
-            count += instruction.ReadRegisters().Count(value => value.Id == register.Id);
-        }
-
-        return count;
-    }
-
-    private static int CountRegisterWrites(IReadOnlyList<PlanItem> items, GesRegisterRef register)
-    {
-        var count = 0;
-        foreach (var item in items)
-        {
-            if (item.Instruction?.Destination.Kind == GesOperandKind.Register &&
-                item.Instruction.Destination.RegisterRef.Id == register.Id)
-            {
-                count++;
-            }
-        }
-
-        return count;
-    }
-
     private void ValidateOperand(GesOperand operand)
     {
         switch (operand.Kind)
@@ -717,14 +660,14 @@ internal sealed partial class GesBinaryBuilder
         public int End { get; set; } = end;
     }
 
-    private readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction)
+    internal readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction)
     {
         public static PlanItem ForLabel(GesLabelRef label) => new(label, null);
 
         public static PlanItem ForInstruction(InstructionPlan instruction) => new(null, instruction);
     }
 
-    private sealed record InstructionPlan(
+    internal sealed record InstructionPlan(
         int RoutineId,
         GameEventScriptBytecodeOpCode OpCode,
         GameEventScriptBytecodeInstructionUnit Unit,

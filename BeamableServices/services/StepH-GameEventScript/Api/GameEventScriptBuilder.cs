@@ -147,11 +147,11 @@ public sealed class GameEventScriptBuilder
     /// <summary>
     /// Builds and returns a new internal module model based on the configured sources.
     /// </summary>
-    /// <returns>A built <see cref="GesModule"/> instance.</returns>
+    /// <returns>A built <see cref="GesSyntaxTreeModule"/> instance.</returns>
     /// <exception cref="GameEventScriptCompileException">
     /// Thrown when errors are encountered during the build process.
     /// </exception>
-    internal GesModule BuildModule(GameEventScriptCompileOptions? options = null)
+    internal GesSyntaxTreeModule BuildModule(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
         var modules = _sources.Select(source => GesParser.Parse(source.Text, source.SourceName, compileOptions)).ToArray();
@@ -175,13 +175,13 @@ public sealed class GameEventScriptBuilder
 
         foreach (var module in modules)
         {
-            GesValidator.ValidateModule(module, callables, validationTypeDefinitions, compileOptions, errors);
+            GesAstValidator.ValidateModule(module, callables, validationTypeDefinitions, compileOptions, errors);
         }
 
         errors.ThrowIfAny();
 
-        var moduleResult = new GesModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions);
-        return compileOptions.Optimize ? GesOptimizer.Optimize(moduleResult, compileOptions) : moduleResult;
+        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions);
+        return compileOptions.Optimize ? GesAstOptimizer.Optimize(moduleResult, compileOptions) : moduleResult;
     }
 
     private sealed record SourceInput(string Text, string? SourceName);

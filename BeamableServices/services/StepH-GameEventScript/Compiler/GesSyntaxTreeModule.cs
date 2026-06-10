@@ -12,9 +12,9 @@ internal enum GameEventScriptCallableKind
     FunctionCall
 }
 
-internal sealed class GesModule
+internal sealed class GesSyntaxTreeModule
 {
-    internal GesModule(string moduleName,
+    internal GesSyntaxTreeModule(string moduleName,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
         IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition>? externalTypeDefinitions = null)

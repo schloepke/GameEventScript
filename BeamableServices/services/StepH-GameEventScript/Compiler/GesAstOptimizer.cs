@@ -8,11 +8,11 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Compiler;
 
-internal static class GesOptimizer
+internal static class GesAstOptimizer
 {
     private static readonly ISet<string> EmptyTypeNames = new HashSet<string>(StringComparer.Ordinal);
 
-    public static GesModule Optimize(GesModule module, GameEventScriptCompileOptions? options = null)
+    public static GesSyntaxTreeModule Optimize(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = options ?? new GameEventScriptCompileOptions();
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
@@ -38,7 +38,7 @@ internal static class GesOptimizer
                 .ToArray(),
             StringComparer.Ordinal);
 
-        return new GesModule(
+        return new GesSyntaxTreeModule(
             module.ModuleName,
             optimizedTypes,
             optimizedCallables,

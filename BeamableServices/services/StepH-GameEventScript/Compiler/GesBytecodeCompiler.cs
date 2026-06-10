@@ -11,7 +11,7 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesBytecodeCompiler
 {
-    public static GameEventScriptCompiled Compile(GesModule module, GameEventScriptCompileOptions? options = null)
+    public static GameEventScriptCompiled Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = (options ?? new GameEventScriptCompileOptions()).NormalizeDebugInfo();
@@ -19,7 +19,7 @@ internal static class GesBytecodeCompiler
         return builder.Build();
     }
 
-    private sealed class CompilerBuilder(GesModule module, GameEventScriptCompileOptions options)
+    private sealed class CompilerBuilder(GesSyntaxTreeModule module, GameEventScriptCompileOptions options)
     {
         private readonly Dictionary<string, int> _stringIndex = new(StringComparer.Ordinal);
         private readonly List<string> _stringPool = [];

@@ -7,7 +7,7 @@ using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Compiler;
 
-internal static class GesValidator
+internal static class GesAstValidator
 {
     private sealed class ValidationScope(IEnumerable<string>? names = null)
     {

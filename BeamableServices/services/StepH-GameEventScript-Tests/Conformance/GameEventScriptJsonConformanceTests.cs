@@ -188,6 +188,8 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
     [TestMethod]
     [TestCategory("Performance")]
+    [TestCategory("Explicit")]
+    [DoNotParallelize]
     public void PerformanceReport()
     {
         var testCases = GameEventScriptConformanceRunner.AllConformanceCases(Path.Combine(SpecDirectory, "performance"));
@@ -196,7 +198,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         if (!RunPerformanceReport)
         {
             TestContext.WriteLine(
-                "Performance report is disabled. Set RunPerformanceReport=true in this test to execute it manually. " +
+                "Explicit performance report is disabled. Set RunPerformanceReport=true in this test and run this test explicitly to execute it manually. " +
                 "Use PerformanceIterations and PerformanceWarmupIterations in this test to override JSON iteration counts. " +
                 "Copy PerformanceReport.current.txt to PerformanceReport.reference.txt to approve a new baseline. " +
                 $"Loaded {testCases.Count} performance case(s).");

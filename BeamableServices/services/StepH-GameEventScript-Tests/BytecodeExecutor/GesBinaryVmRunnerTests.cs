@@ -99,7 +99,7 @@ public sealed class BytecodeExecutorTests
             .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+            .Load(GameEventScriptManager.CompileModule(script));
         var handled = host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesInteger(40))));
 
         Assert.IsTrue(handled);
@@ -125,7 +125,7 @@ public sealed class BytecodeExecutorTests
             .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(emitted.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+            .Load(GameEventScriptManager.CompileModule(script));
 
         host.StartSession().Update(100);
 
@@ -158,7 +158,7 @@ public sealed class BytecodeExecutorTests
             .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(emitted.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+            .Load(GameEventScriptManager.CompileModule(script));
         var handled = host.PublishToCompletion(Create("Start"));
 
         Assert.IsTrue(handled);
@@ -189,7 +189,7 @@ public sealed class BytecodeExecutorTests
             .WithRandom(GameEventScriptRandomGenerator.FromSeed(1))
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(emitted.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModuleNewVm(script));
+            .Load(GameEventScriptManager.CompileModule(script));
 
         var handled = host.PublishToCompletion(Create("Start"));
 

@@ -267,7 +267,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxExecutionSteps = 200 })
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModule(script));
+            .Load(GameEventScriptManager.CompileModuleOldVm(script));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -296,7 +296,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             """;
 
         var published = new List<GameEventScriptMessage>();
-        var module = GameEventScriptManager.CompileModule(script);
+        var module = GameEventScriptManager.CompileModuleOldVm(script);
         var host = GameEventScriptHost.CreateBuilder()
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
@@ -884,7 +884,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRangeItems = 1 })
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModule(script));
+            .Load(GameEventScriptManager.CompileModuleOldVm(script));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -1224,7 +1224,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRangeItems = 1 })
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModule(script));
+            .Load(GameEventScriptManager.CompileModuleOldVm(script));
 
         host.PublishToCompletion(Create("Start"));
 
@@ -2735,7 +2735,7 @@ public sealed class GesBytecodeVmExecutableBuilderTests
             .WithRegistry(StandardOverrideRegistry.Instance)
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
             .Build()
-            .Load(GameEventScriptManager.CompileModule(script));
+            .Load(GameEventScriptManager.CompileModuleOldVm(script));
 
         host.PublishToCompletion(Create("Start", ("value", GameEventScriptValueFactory.GesFloat(10.9d))));
 

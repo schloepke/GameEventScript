@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -16,6 +17,9 @@ internal static class VmRegisterMemberIndexAccess
         {
             case Map or Custom when obj.ObjectValue is VmMapObject map && map.TryGet(key, out var value):
                 dst = value;
+                return;
+            case Custom when obj.ObjectValue is GameEventScriptValue externalValue && externalValue.TryGetMapMember(key, out var value):
+                dst.BindArguments(value);
                 return;
             case Vector or Point when obj.ObjectValue is VmFloatTriplet vp && vp.TryGet(key, out var value):
                 dst.SetFloat(value, obj.Unit);

@@ -24,19 +24,18 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     }
 
     [TestMethod]
-    public void CompilerAndBytecodeVmTypesStayInternal()
+    public void CompilerTypesStayInternal()
     {
         var leakedTypes = typeof(GameEventScriptCompiled)
             .Assembly
             .GetExportedTypes()
             .Where(type =>
-                IsNamespace(type, "StepH.GameEventScript.Compiler") ||
-                IsNamespace(type, "StepH.GameEventScript.BytecodeVM"))
-            .Select(type => type.FullName)
-            .OrderBy(name => name, StringComparer.Ordinal)
-            .ToArray();
+                IsNamespace(type, "StepH.GameEventScript.Compiler"))
+                .Select(type => type.FullName)
+                .OrderBy(name => name, StringComparer.Ordinal)
+                .ToArray();
 
-        Assert.HasCount(0, leakedTypes, "Public compiler/BytecodeVM types leaked:\n" + string.Join("\n", leakedTypes));
+        Assert.HasCount(0, leakedTypes, "Public compiler types leaked:\n" + string.Join("\n", leakedTypes));
     }
 
     internal static string BuildPublicSurfaceSnapshot()

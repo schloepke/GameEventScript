@@ -31,6 +31,18 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
     public void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         _externalTypeRegistry = typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
+        foreach (var bind in _vmState.Binary.BindTable.Entries)
+        {
+            if (bind.Kind is not ExternalType) continue;
+            var typeName = _vmState.Binary.TextConstantTable.Resolve(bind.Name);
+            var argumentLabels = bind.ArgumentNames.Select(_vmState.Binary.TextConstantTable.Resolve);
+            var reference = new GameEventScriptExternalTypeConstructorReference(typeName, argumentLabels);
+            if (!_externalTypeRegistry.TryResolve(reference, out _))
+            {
+                throw new GameEventScriptDynamicLinkException(
+                    $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound.");
+            }
+        }
     }
     
     public static GameEventScriptVirtualMaschine Create(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)

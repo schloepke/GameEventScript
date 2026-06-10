@@ -47,7 +47,7 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
-    public void WildcardMessageSignatureMatchesByNameWithoutOldVmDispatchKind()
+    public void WildcardMessageSignatureMatchesByNameWithoutLegacyDispatchKind()
     {
         var calls = new List<string>();
         var host = GameEventScriptHost.CreateBuilder().Build();

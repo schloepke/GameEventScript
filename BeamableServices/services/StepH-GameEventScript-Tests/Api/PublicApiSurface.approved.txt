@@ -65,7 +65,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithOptimization(System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptCompiled Compile(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
-  method StepH.GameEventScript.Api.IGameEventScriptModule CompileModuleOldVm(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
   property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind Kind { get }
@@ -635,7 +634,6 @@ static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptCompiled Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
   method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
-  method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModuleOldVm(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.IGameEventScriptModule CreateModule(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
 sealed class StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent
   ctor GameEventScriptDiagnosticEvent(System.Int32 Sequence, StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind Kind, System.String Name, StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments, System.String Detail)

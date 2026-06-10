@@ -216,6 +216,12 @@ internal static class VmRegisterCallExternal
                 destination.SetList(list);
                 break;
             case GameEventScriptValueKind.Map:
+                if (argument is IGameEventScriptExternalObjectValue)
+                {
+                    destination.SetExternalCustomType(argument);
+                    break;
+                }
+
                 var sourceEntries = argument.AsMap();
                 var isCustomType = argument.TryGetCustomTypeName(out var customTypeName);
                 var entries = new Dictionary<string, VmValue>(sourceEntries.Count + (isCustomType ? 1 : 0), StringComparer.Ordinal);
@@ -290,6 +296,7 @@ internal static class VmRegisterCallExternal
         Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
         List when a.ObjectValue is VmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
         Map when a.ObjectValue is VmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
+        Custom when a.ObjectValue is GameEventScriptValue custom => custom,
         Custom when a.ObjectValue is VmMapObject map => map.ToGameEventScriptCustomTypeValue(a.OwningState),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is VmRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),

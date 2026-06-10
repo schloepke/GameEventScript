@@ -371,6 +371,21 @@ internal static class VmRegisterTypeCastCheck
                 dst.SetMap(new VmMapObject(dst.OwningState, visibleEntries));
                 return;
             }
+            case Custom when xSlot.ObjectValue is GameEventScriptValue externalValue:
+            {
+                var sourceEntries = externalValue.AsMap();
+                var entries = new Dictionary<string, VmValue>(sourceEntries.Count, StringComparer.Ordinal);
+                foreach (var (key, sourceValue) in sourceEntries)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    var value = dst.OwningState.CreateNothing();
+                    value.BindArguments(sourceValue);
+                    entries[key] = value;
+                }
+
+                dst.SetMap(new VmMapObject(dst.OwningState, entries));
+                return;
+            }
             case Vector or Point when xSlot.ObjectValue is VmFloatTriplet triplet:
             {
                 var x = dst.OwningState.CreateNothing();

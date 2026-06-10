@@ -154,26 +154,6 @@ internal static class VmRegisterCustomType
                 parameter);
         }
 
-        var result = constructor.Invoke(arguments);
-        if (result.TryGetCustomTypeName(out var customTypeName))
-        {
-            var sourceEntries = result.AsMap();
-            var entries = new Dictionary<string, VmValue>(sourceEntries.Count + 1, System.StringComparer.Ordinal)
-            {
-                [GameEventScriptValue.HiddenTypeKey] = state.CreateTag(customTypeName)
-            };
-
-            foreach (var (key, sourceValue) in sourceEntries)
-            {
-                var value = state.CreateNothing();
-                value.BindArguments(sourceValue);
-                entries[key] = value;
-            }
-
-            dst.SetRecord(new VmMapObject(state, entries));
-            return;
-        }
-
-        dst.BindArguments(result);
+        dst.BindArguments(constructor.Invoke(arguments));
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.BytecodeExecutor;
@@ -1264,6 +1265,21 @@ internal static class VmRegisterCollectionOperators
             case Map or Custom when a.ObjectValue is VmMapObject map:
                 dst.SetList(map.ValueList);
                 break;
+            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
+                var valueEntries = externalValue.AsMap();
+                var valueKeys = new string[valueEntries.Count];
+                var valueKeyCount = 0;
+                foreach (var key in valueEntries.Keys)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    valueKeys[valueKeyCount++] = key;
+                }
+
+                Array.Sort(valueKeys, 0, valueKeyCount, StringComparer.Ordinal);
+                var values = new VmListObject(dst.OwningState, valueKeyCount);
+                for (var i = 0; i < valueKeyCount; i++) values.Items[i].BindArguments(valueEntries[valueKeys[i]]);
+                dst.SetList(values);
+                break;
             default:
                 dst.SetNothing();
                 break;
@@ -1276,6 +1292,21 @@ internal static class VmRegisterCollectionOperators
             case Map or Custom when a.ObjectValue is VmMapObject map:
                 dst.SetList(map.KeyList);
                 break;
+            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
+                var keyEntries = externalValue.AsMap();
+                var keyKeys = new string[keyEntries.Count];
+                var keyCount = 0;
+                foreach (var key in keyEntries.Keys)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    keyKeys[keyCount++] = key;
+                }
+
+                Array.Sort(keyKeys, 0, keyCount, StringComparer.Ordinal);
+                var keys = new VmListObject(dst.OwningState, keyCount);
+                for (var i = 0; i < keyCount; i++) keys.Items[i].SetTag(keyKeys[i]);
+                dst.SetList(keys);
+                break;
             default:
                 dst.SetNothing();
                 break;
@@ -1287,6 +1318,27 @@ internal static class VmRegisterCollectionOperators
         {
             case Map or Custom when a.ObjectValue is VmMapObject map:
                 dst.SetList(map.EntryList);
+                break;
+            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
+                var entryEntries = externalValue.AsMap();
+                var entryKeys = new string[entryEntries.Count];
+                var entryKeyCount = 0;
+                foreach (var key in entryEntries.Keys)
+                {
+                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+                    entryKeys[entryKeyCount++] = key;
+                }
+
+                Array.Sort(entryKeys, 0, entryKeyCount, StringComparer.Ordinal);
+                var entries = new VmListObject(dst.OwningState, entryKeyCount);
+                for (var i = 0; i < entryKeyCount; i++)
+                {
+                    var value = dst.OwningState.CreateNothing();
+                    value.BindArguments(entryEntries[entryKeys[i]]);
+                    entries.Items[i].SetMap(new VmMapObject(dst.OwningState, new Dictionary<string, VmValue> { ["key"] = dst.OwningState.CreateTag(entryKeys[i]), ["value"] = value }));
+                }
+
+                dst.SetList(entries);
                 break;
             default:
                 dst.SetNothing();

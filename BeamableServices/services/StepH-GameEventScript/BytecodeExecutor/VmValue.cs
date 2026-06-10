@@ -288,6 +288,15 @@ internal struct VmValue
         ObjectValue = record;
     }
 
+    internal void SetExternalCustomType(GameEventScriptValue value)
+    {
+        Kind = Custom;
+        Flags = StorageObjectFlag | HasValueFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = value;
+    }
+
     internal void SetRange(long from, long to, long step)
     {
         Kind = GameEventScriptBytecodeTypeKind.Range;

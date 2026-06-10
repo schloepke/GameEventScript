@@ -90,7 +90,7 @@ public sealed class BytecodeExecutorTests
         var published = new List<GameEventScriptMessage>();
 
         TestContext.WriteLine("-----");
-        TestContext.WriteLine("BytecodeVM Dump:\n" + compiled.DumpBytecode());
+        TestContext.WriteLine("Bytecode Dump:\n" + compiled.DumpBytecode());
         TestContext.WriteLine("-----");
         TestContext.WriteLine("Binary file:\n" + binary.Dump(includeInstructionAddresses: false, script));
         TestContext.WriteLine("-----");

@@ -46,7 +46,7 @@ expressions are layout-free direct instructions.
 
 ## Non-Goals
 
-- No public exposure of `StepH.GameEventScript.BytecodeVM` implementation types.
+- No public exposure of bytecode runtime implementation types.
 - No requirement that the diagnostic dump format matches the binary `.gesb`
   encoding.
 - No requirement to split every DSL operation into primitive opcodes.

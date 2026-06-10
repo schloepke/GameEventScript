@@ -1,7 +1,6 @@
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -61,12 +60,12 @@ public class GameEventScriptDiagnosticTest
             })
             .WithDiagnosticCollector(collector)
             .Build()
-            .Load(GesBytecodeVmExecutableBuilder.Build(bytecode));
+            .Load(GameEventScriptManager.CreateModule(bytecode.ToGameEventScriptBinary()));
         
         host.PublishToCompletion(input);
         
         TestContext.WriteLine(collector.ToString());
-        TestContext.WriteLine("BytecodeVM Dump:\n" + bytecode.DumpBytecode());
+        TestContext.WriteLine("Bytecode Dump:\n" + bytecode.DumpBytecode());
         
     }
 }

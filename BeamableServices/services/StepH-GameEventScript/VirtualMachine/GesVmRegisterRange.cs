@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterRange
 {
-    internal static void VmCreateRange(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to)
+    internal static void GesVmCreateRange(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to)
     {
         if (from.Kind is Integer && to.Kind is Integer)
         {
@@ -21,7 +21,7 @@ internal static class GesVmRegisterRange
             dst.SetNothing();
         }
     }
-    internal static void VmCreateRange(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, ref GesVmValue step)
+    internal static void GesVmCreateRange(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, ref GesVmValue step)
     {
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)
         {
@@ -36,7 +36,7 @@ internal static class GesVmRegisterRange
             dst.SetNothing();
         }
     }
-    internal static void VmCreateRangeStream(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, GameEventScriptSession session)
+    internal static void GesVmCreateRangeStream(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, GameEventScriptSession session)
     {
         if (from.Kind is Integer && to.Kind is Integer)
         {
@@ -63,7 +63,7 @@ internal static class GesVmRegisterRange
             dst.SetNothing();
         }
     }
-    internal static void VmCreateRangeStream(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, ref GesVmValue step, GameEventScriptSession session)
+    internal static void GesVmCreateRangeStream(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, ref GesVmValue step, GameEventScriptSession session)
     {
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)
         {

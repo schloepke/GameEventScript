@@ -10,7 +10,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterTypeCastCheck
 {
-    internal static void VmCastUnit(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    internal static void GesVmCastUnit(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
         switch (xSlot.Kind)
         {
@@ -35,11 +35,11 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
         }
     }
-    internal static void VmCheckUnit(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    internal static void GesVmCheckUnit(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
         dst.SetBoolean(xSlot.Kind is Integer or Float or Vector or Point && xSlot.Unit == unit);
     }
-    internal static void VmCast(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
+    internal static void GesVmCast(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
     {
         switch (type)
         {
@@ -129,7 +129,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
         }
     }
-    internal static void VmCastNumeric(ref this GesVmValue dst, ref GesVmValue xSlot)
+    internal static void GesVmCastNumeric(ref this GesVmValue dst, ref GesVmValue xSlot)
     {
         if (xSlot.Kind is Text)
         {
@@ -148,13 +148,13 @@ internal static class GesVmRegisterTypeCastCheck
         if (xSlot.Kind is Series && xSlot.ObjectValue is GameEventScriptSeriesValue series)
         {
             dst.BindArguments(series.FirstTerm);
-            dst.VmCastNumeric(ref dst);
+            dst.GesVmCastNumeric(ref dst);
             return;
         }
 
         dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
     }
-    internal static void VmCastCustom(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer, ushort destinationSlot)
+    internal static void GesVmCastCustom(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer, ushort destinationSlot)
     {
         var state = dst.OwningState;
         var typeName = state.Binary.TextConstantTable.Resolve(typeTextPointer);
@@ -205,7 +205,7 @@ internal static class GesVmRegisterTypeCastCheck
 
         dst.SetNothing();
     }
-    internal static void VmCheckType(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeTypeKind type)
+    internal static void GesVmCheckType(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeTypeKind type)
     {
         dst.SetBoolean(type switch
         {
@@ -215,8 +215,8 @@ internal static class GesVmRegisterTypeCastCheck
             _ => xSlot.IsNotNothing && xSlot.Kind == type
         });
     }
-    internal static void VmCheckNumeric(ref this GesVmValue dst, ref GesVmValue xSlot) => dst.SetBoolean(xSlot.IsNumeric);
-    internal static void VmCheckInteger(ref this GesVmValue dst, ref GesVmValue xSlot)
+    internal static void GesVmCheckNumeric(ref this GesVmValue dst, ref GesVmValue xSlot) => dst.SetBoolean(xSlot.IsNumeric);
+    internal static void GesVmCheckInteger(ref this GesVmValue dst, ref GesVmValue xSlot)
     {
         if (!xSlot.IsNumeric)
         {
@@ -227,7 +227,7 @@ internal static class GesVmRegisterTypeCastCheck
         var number = xSlot.AsNumeric;
         dst.SetBoolean(double.IsFinite(number) && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
     }
-    internal static void VmCheckFractional(ref this GesVmValue dst, ref GesVmValue xSlot)
+    internal static void GesVmCheckFractional(ref this GesVmValue dst, ref GesVmValue xSlot)
     {
         if (!xSlot.IsNumeric)
         {
@@ -238,7 +238,7 @@ internal static class GesVmRegisterTypeCastCheck
         var number = xSlot.AsNumeric;
         dst.SetBoolean(double.IsFinite(number) && number != Math.Truncate(number));
     }
-    internal static void VmCheckCustomType(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer)
+    internal static void GesVmCheckCustomType(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer)
     {
         dst.SetBoolean(IsCustomType(ref xSlot, dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer), ref dst.OwningState.Binary.TextConstantTable));
     }

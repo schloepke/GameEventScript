@@ -13,7 +13,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class GesVmRegisterMath
 {
-    internal static void VmAdd(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmAdd(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -122,7 +122,7 @@ internal static class GesVmRegisterMath
                 break;
         }
     }
-    internal static void VmSubtract(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmSubtract(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -416,7 +416,7 @@ internal static class GesVmRegisterMath
                 break;
         }
     }
-    internal static void VmMultiply(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmMultiply(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -551,7 +551,7 @@ internal static class GesVmRegisterMath
 
         dst.SetFloat(fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
     }
-    internal static void VmDivide(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmDivide(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -677,7 +677,7 @@ internal static class GesVmRegisterMath
         if (a.Kind is Percentage) dst.SetPercentage(fallbackResult);
         else dst.SetFloat(fallbackResult, fallbackUnit);
     }
-    internal static void VmPower(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmPower(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -781,7 +781,7 @@ internal static class GesVmRegisterMath
         if (double.IsNaN(left)) dst.SetFloat(double.NaN);
         else dst.SetFloat(Math.Pow(left, right), unit);
     }
-    internal static void VmFloorDivide(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmFloorDivide(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -877,7 +877,7 @@ internal static class GesVmRegisterMath
         if (double.IsFinite(floorResult) && floorResult is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)floorResult, unit);
         else dst.SetFloat(floorResult, unit);
     }
-    internal static void VmModulo(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmModulo(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -996,7 +996,7 @@ internal static class GesVmRegisterMath
         if (fallbackModuloResult != 0d && (fallbackModuloResult < 0d && right > 0d || fallbackModuloResult > 0d && right < 0d)) fallbackModuloResult += right;
         dst.SetFloat(fallbackModuloResult, unit);
     }
-    internal static void VmRemainder(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmRemainder(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -1083,7 +1083,7 @@ internal static class GesVmRegisterMath
 
         dst.SetFloat(double.IsInfinity(right) ? left : left % right, unit);
     }
-    internal static void VmMin(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmMin(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -1300,7 +1300,7 @@ internal static class GesVmRegisterMath
 
         dst = comparison < 0 ? b : a;
     }
-    internal static void VmMax(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmMax(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -1517,7 +1517,7 @@ internal static class GesVmRegisterMath
 
         dst = comparison > 0 ? b : a;
     }
-    internal static void VmNegate(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmNegate(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -1552,7 +1552,7 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void VmAbs(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmAbs(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -1589,7 +1589,7 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void VmClamp(ref this GesVmValue dst, ref GesVmValue value, ref GesVmValue min, ref GesVmValue max, ref GameEventScriptTextTable textTable)
+    internal static void GesVmClamp(ref this GesVmValue dst, ref GesVmValue value, ref GesVmValue min, ref GesVmValue max, ref GameEventScriptTextTable textTable)
     {
         switch (value.Kind)
         {
@@ -1685,7 +1685,7 @@ internal static class GesVmRegisterMath
         var fallbackResult = raw < lowerFallback ? lowerFallback : raw > upperFallback ? upperFallback : raw;
         dst.SetFloat(fallbackResult, unit);
     }
-    internal static void VmNaturalLog(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmNaturalLog(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -1730,7 +1730,7 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void VmTerm(ref this GesVmValue dst, ref GesVmValue source, ref GesVmValue termSlot)
+    internal static void GesVmTerm(ref this GesVmValue dst, ref GesVmValue source, ref GesVmValue termSlot)
     {
         long index;
         bool ret;

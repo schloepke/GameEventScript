@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterTakeDrop
 {
-    internal static void VmTakeFirst(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmTakeFirst(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -34,7 +34,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmOneRandom(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmOneRandom(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (source.Kind)
         {
@@ -60,7 +60,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmTakeRandom(ref this GesVmValue dst, ref GesVmValue source, short count, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmTakeRandom(ref this GesVmValue dst, ref GesVmValue source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (source.Kind)
         {
@@ -84,7 +84,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmDropFirst(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmDropFirst(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -111,7 +111,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmTakeLast(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmTakeLast(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -135,7 +135,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmDropLast(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmDropLast(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -159,7 +159,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmTakeHighest(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmTakeHighest(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -183,7 +183,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmTakeLowest(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmTakeLowest(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -207,7 +207,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmDropHighest(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmDropHighest(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {
@@ -231,7 +231,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void VmDropLowest(ref this GesVmValue dst, ref GesVmValue source, short count)
+    internal static void GesVmDropLowest(ref this GesVmValue dst, ref GesVmValue source, short count)
     {
         switch (source.Kind)
         {

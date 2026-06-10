@@ -11,7 +11,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCallExternal
 {
-    internal static void VmCallStandard(ref this GesVmValue dst, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
+    internal static void GesVmCallStandard(ref this GesVmValue dst, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
     {
         var state = dst.OwningState;
         var shape = state.FetchUInt16SliceTableByPointer(extensionShapeIndex);
@@ -62,7 +62,7 @@ internal static class GesVmRegisterCallExternal
             }
         }
     }
-    internal static void VmCallExternal(ref this GesVmValue dst, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
+    internal static void GesVmCallExternal(ref this GesVmValue dst, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
         var state = dst.OwningState;
         var found = false;

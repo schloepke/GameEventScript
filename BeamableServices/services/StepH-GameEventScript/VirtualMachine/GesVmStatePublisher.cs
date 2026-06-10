@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmStatePublisher
 {
-    internal static bool VmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession session)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -30,7 +30,7 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool VmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -58,7 +58,7 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool VmPublishMessageValue(this GesVmState vmState, ref GesVmValue messageSlot, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValue(this GesVmState vmState, ref GesVmValue messageSlot, bool publish, GameEventScriptSession session)
     {
         if (messageSlot.Kind is Message && messageSlot.ObjectValue is GameEventScriptMessage msg)
         {
@@ -66,7 +66,7 @@ internal static class GesVmStatePublisher
         }
         return false;
     }
-    internal static bool VmPublishMessageValueWithTags(this GesVmState vmState, ref GesVmValue messageSlot, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, ref GesVmValue messageSlot, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
     {
         if (messageSlot.Kind is not Message || messageSlot.ObjectValue is not GameEventScriptMessage msg) return false;
         var tags = new List<string>(tagSlots.Length);

@@ -5,7 +5,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterBooleanLogic
 {
-    internal static void VmOr(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmOr(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
         if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
@@ -13,7 +13,7 @@ internal static class GesVmRegisterBooleanLogic
         else if (a.IsTruthIndeterminate && b.IsTrue || a.IsTrue && b.IsTruthIndeterminate) dst.SetBoolean(true);
         else dst.SetNothing();
     }
-    internal static void VmAnd(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmAnd(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
         if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
@@ -21,7 +21,7 @@ internal static class GesVmRegisterBooleanLogic
         else if (a.IsTruthIndeterminate && b.IsFalse || a.IsFalse && b.IsTruthIndeterminate) dst.SetBoolean(false);
         else dst.SetNothing();
     }
-    internal static void VmImplies(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmImplies(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
         if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
@@ -29,20 +29,20 @@ internal static class GesVmRegisterBooleanLogic
         else if (a.IsFalse && b.IsTruthIndeterminate || a.IsTruthIndeterminate && b.IsTrue) dst.SetBoolean(true);
         else dst.SetNothing();
     }
-    internal static void VmXor(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmXor(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
         if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
         if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue ^ b.IsTrue);
         else dst.SetNothing();
     }
-    internal static void VmNot(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmNot(ref this GesVmValue dst, ref GesVmValue a)
     {
         if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
         if (a.IsTruthDeterminate) dst.SetBoolean(!a.IsTrue);
         else dst.SetNothing();
     }
-    internal static void VmChance(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmChance(ref this GesVmValue dst, ref GesVmValue a)
     {
         if (a.IsNothing || a.HasUnit)
         {

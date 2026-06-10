@@ -6,7 +6,7 @@ using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 internal static class GesVmStreamCollectorTerminals
 {
-    internal static void VmStreamCollectList(ref this GesVmValue dst, ref GesVmValue iterator)
+    internal static void GesVmStreamCollectList(ref this GesVmValue dst, ref GesVmValue iterator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
@@ -40,7 +40,7 @@ internal static class GesVmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void VmStreamCollectMap(ref this GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmStreamCollectMap(ref this GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
@@ -78,7 +78,7 @@ internal static class GesVmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void VmStreamCollectMapValue(ref this GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, ushort valueEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmStreamCollectMapValue(ref this GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, ushort valueEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
@@ -124,7 +124,7 @@ internal static class GesVmStreamCollectorTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void VmFirst(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmFirst(ref this GesVmValue dst, ref GesVmValue source)
     {
         switch (source.Kind)
         {
@@ -160,7 +160,7 @@ internal static class GesVmStreamCollectorTerminals
                 return;
         }
     }
-    internal static void VmLast(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmLast(ref this GesVmValue dst, ref GesVmValue source)
     {
         switch (source.Kind)
         {
@@ -196,7 +196,7 @@ internal static class GesVmStreamCollectorTerminals
                 return;
         }
     }
-    internal static void VmSingle(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmSingle(ref this GesVmValue dst, ref GesVmValue source)
     {
         switch (source.Kind)
         {

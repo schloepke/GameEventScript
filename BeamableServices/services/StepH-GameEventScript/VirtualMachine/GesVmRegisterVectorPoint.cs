@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterVectorPoint
 {
-    internal static void VmCreateVector(ref this GesVmValue dst, short start, GesVmState state)
+    internal static void GesVmCreateVector(ref this GesVmValue dst, short start, GesVmState state)
     {
         if (start == 0 && state.StageLength > 0)
         {
@@ -74,7 +74,7 @@ internal static class GesVmRegisterVectorPoint
             dst.SetVector(x, y, z, unit);
         }
     }
-    internal static void VmCreatePoint(ref this GesVmValue dst, short start, GesVmState state)
+    internal static void GesVmCreatePoint(ref this GesVmValue dst, short start, GesVmState state)
     {
         if (start == 0 && state.StageLength > 0)
         {

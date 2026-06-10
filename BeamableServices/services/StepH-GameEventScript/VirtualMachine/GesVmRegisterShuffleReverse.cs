@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterShuffleReverse
 {
-    internal static void VmReverse(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmReverse(ref this GesVmValue dst, ref GesVmValue source)
     {
         switch (source.Kind)
         {
@@ -59,7 +59,7 @@ internal static class GesVmRegisterShuffleReverse
                 return;
         }
     }
-    internal static void VmShuffle(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmShuffle(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (source.Kind)
         {

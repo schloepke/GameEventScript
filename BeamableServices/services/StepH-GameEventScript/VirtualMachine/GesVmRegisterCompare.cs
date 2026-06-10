@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCompare
 {
-    internal static void VmEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing) dst.SetNothing();
         else dst.SetBoolean(a.Equ(ref b));
@@ -86,12 +86,12 @@ internal static class GesVmRegisterCompare
         foreach (var v in arr) sum += v;
         return sum;
     }
-    internal static void VmNotEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmNotEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing) dst.SetNothing();
         else dst.SetBoolean(!a.Equ(ref b));
     }
-    internal static void VmLess(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmLess(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         switch (a.Kind)
         {
@@ -121,7 +121,7 @@ internal static class GesVmRegisterCompare
                 return;
         }
     }
-    internal static void VmGreater(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmGreater(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         switch (a.Kind)
         {
@@ -151,7 +151,7 @@ internal static class GesVmRegisterCompare
                 return;
         }
     }
-    internal static void VmLessOrEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmLessOrEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         switch (a.Kind)
         {
@@ -181,7 +181,7 @@ internal static class GesVmRegisterCompare
                 return;
         }
     }
-    internal static void VmGreaterOrEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmGreaterOrEqual(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
     {
         switch (a.Kind)
         {

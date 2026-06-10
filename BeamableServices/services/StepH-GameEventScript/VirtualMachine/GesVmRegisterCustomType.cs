@@ -10,7 +10,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCustomType
 {
-    internal static void VmCreateExternalType(ref this GesVmValue dst, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal static void GesVmCreateExternalType(ref this GesVmValue dst, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         var state = dst.OwningState;
         var found = false;
@@ -88,55 +88,55 @@ internal static class GesVmRegisterCustomType
                     converted.SetNothing();
                     break;
                 case "boolean":
-                    converted.VmCast(ref source, Boolean);
+                    converted.GesVmCast(ref source, Boolean);
                     break;
                 case "number":
-                    converted.VmCast(ref source, Float);
+                    converted.GesVmCast(ref source, Float);
                     break;
                 case "numeric":
-                    converted.VmCastNumeric(ref source);
+                    converted.GesVmCastNumeric(ref source);
                     break;
                 case "percentage":
-                    converted.VmCast(ref source, Percentage);
+                    converted.GesVmCast(ref source, Percentage);
                     break;
                 case "tag":
-                    converted.VmCast(ref source, Tag);
+                    converted.GesVmCast(ref source, Tag);
                     break;
                 case "text":
-                    converted.VmCast(ref source, Text);
+                    converted.GesVmCast(ref source, Text);
                     break;
                 case "vector":
-                    converted.VmCast(ref source, Vector);
+                    converted.GesVmCast(ref source, Vector);
                     break;
                 case "point":
-                    converted.VmCast(ref source, Point);
+                    converted.GesVmCast(ref source, Point);
                     break;
                 case "range":
-                    converted.VmCast(ref source, Range);
+                    converted.GesVmCast(ref source, Range);
                     break;
                 case "message":
-                    converted.VmCast(ref source, Message);
+                    converted.GesVmCast(ref source, Message);
                     break;
                 case "handler":
-                    converted.VmCast(ref source, Handler);
+                    converted.GesVmCast(ref source, Handler);
                     break;
                 case "list":
-                    converted.VmCast(ref source, List);
+                    converted.GesVmCast(ref source, List);
                     break;
                 case "map":
-                    converted.VmCast(ref source, Map);
+                    converted.GesVmCast(ref source, Map);
                     break;
                 case "dice":
-                    converted.VmCast(ref source, Dice);
+                    converted.GesVmCast(ref source, Dice);
                     break;
                 case "degree":
-                    converted.VmCastUnit(ref source, UnitDegree);
+                    converted.GesVmCastUnit(ref source, UnitDegree);
                     break;
                 case "meter":
-                    converted.VmCastUnit(ref source, UnitMeter);
+                    converted.GesVmCastUnit(ref source, UnitMeter);
                     break;
                 case "second":
-                    converted.VmCastUnit(ref source, UnitSecond);
+                    converted.GesVmCastUnit(ref source, UnitSecond);
                     break;
                 default:
                     converted.SetNothing();

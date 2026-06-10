@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterPatterns
 {
-    internal static void VmHasPattern(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
+    internal static void GesVmHasPattern(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         if (pattern == CountFace)
         {
@@ -72,7 +72,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    internal static void VmTakePattern(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
+    internal static void GesVmTakePattern(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         if (pattern == CountFace)
         {

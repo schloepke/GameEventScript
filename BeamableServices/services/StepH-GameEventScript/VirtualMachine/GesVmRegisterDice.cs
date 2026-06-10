@@ -5,7 +5,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 internal static class GesVmRegisterDice
 {
     private static readonly int[] EmptyDice = [];
-    internal static void VmCreateDice(ref this GesVmValue dst, short count, short sides, GesVmState state, GameEventScriptSession session)
+    internal static void GesVmCreateDice(ref this GesVmValue dst, short count, short sides, GesVmState state, GameEventScriptSession session)
     {
         if (count <= 0 || sides <= 0)
         {

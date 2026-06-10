@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCollectionOperators
 {
-    internal static void VmLength(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmLength(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -29,7 +29,7 @@ internal static class GesVmRegisterCollectionOperators
                 break;
         }
     }
-    internal static void VmStartsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmStartsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -145,7 +145,7 @@ internal static class GesVmRegisterCollectionOperators
 
         dst.SetBoolean(true);
     }
-    internal static void VmEndsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmEndsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (a.Kind)
         {
@@ -263,7 +263,7 @@ internal static class GesVmRegisterCollectionOperators
 
         dst.SetBoolean(true);
     }
-    internal static void VmContains(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmContains(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (b.Kind)
         {
@@ -395,15 +395,15 @@ internal static class GesVmRegisterCollectionOperators
                 return;
         }
     }
-    internal static void VmContainsAny(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
-        => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: false);
-    internal static void VmContainsAll(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
-        => VmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
-    internal static void VmHasAny(ref this GesVmValue dst, ref GesVmValue source)
-        => VmHasAnyAll(ref dst, ref source, requireAll: false);
-    internal static void VmHasAll(ref this GesVmValue dst, ref GesVmValue source)
-        => VmHasAnyAll(ref dst, ref source, requireAll: true);
-    private static void VmHasAnyAll(ref GesVmValue dst, ref GesVmValue source, bool requireAll)
+    internal static void GesVmContainsAny(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+        => GesVmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: false);
+    internal static void GesVmContainsAll(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+        => GesVmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
+    internal static void GesVmHasAny(ref this GesVmValue dst, ref GesVmValue source)
+        => GesVmHasAnyAll(ref dst, ref source, requireAll: false);
+    internal static void GesVmHasAll(ref this GesVmValue dst, ref GesVmValue source)
+        => GesVmHasAnyAll(ref dst, ref source, requireAll: true);
+    private static void GesVmHasAnyAll(ref GesVmValue dst, ref GesVmValue source, bool requireAll)
     {
         switch (source.Kind)
         {
@@ -643,7 +643,7 @@ internal static class GesVmRegisterCollectionOperators
                 return;
         }
     }
-    private static void VmContainsAnyAll(ref GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
+    private static void GesVmContainsAnyAll(ref GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
     {
         if (b.Kind is Nothing)
         {
@@ -653,7 +653,7 @@ internal static class GesVmRegisterCollectionOperators
 
         if (b.Kind is Stream && b.ObjectValue is IGesVmStream stream)
         {
-            VmContainsAnyAllStream(ref dst, ref a, stream, requireAll);
+            GesVmContainsAnyAllStream(ref dst, ref a, stream, requireAll);
             return;
         }
 
@@ -666,7 +666,7 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < list.Length; i++)
                 {
                     candidate = list.Items[i];
-                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    probe.GesVmContains(ref candidate, ref b, ref textTable);
                     if (probe.IsTrue)
                     {
                         if (!requireAll)
@@ -689,7 +689,7 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < dice.Length; i++)
                 {
                     candidate.SetInteger(dice[i]);
-                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    probe.GesVmContains(ref candidate, ref b, ref textTable);
                     if (probe.IsTrue)
                     {
                         if (!requireAll)
@@ -714,7 +714,7 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < text.Length; i++)
                 {
                     candidate.SetText(text[i].ToString());
-                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    probe.GesVmContains(ref candidate, ref b, ref textTable);
                     if (probe.IsTrue)
                     {
                         if (!requireAll)
@@ -742,7 +742,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     candidate.SetInteger(value);
                     value += range.step;
-                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    probe.GesVmContains(ref candidate, ref b, ref textTable);
                     if (probe.IsTrue)
                     {
                         if (!requireAll)
@@ -770,7 +770,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     candidate.SetFloat(value);
                     value += range.step;
-                    probe.VmContains(ref candidate, ref b, ref textTable);
+                    probe.GesVmContains(ref candidate, ref b, ref textTable);
                     if (probe.IsTrue)
                     {
                         if (!requireAll)
@@ -795,7 +795,7 @@ internal static class GesVmRegisterCollectionOperators
                 return;
         }
     }
-    private static void VmContainsAnyAllStream(ref GesVmValue dst, ref GesVmValue a, IGesVmStream stream, bool requireAll)
+    private static void GesVmContainsAnyAllStream(ref GesVmValue dst, ref GesVmValue a, IGesVmStream stream, bool requireAll)
     {
         var candidates = new GesVmValue[8];
         var candidateCount = 0;
@@ -907,7 +907,7 @@ internal static class GesVmRegisterCollectionOperators
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void VmContainsValue(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmContainsValue(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         switch (b.Kind)
         {
@@ -954,7 +954,7 @@ internal static class GesVmRegisterCollectionOperators
                 return;
         }
     }
-    internal static void VmUnion(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmUnion(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
@@ -1052,7 +1052,7 @@ internal static class GesVmRegisterCollectionOperators
 
         dst.SetNothing();
     }
-    internal static void VmIntersect(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmIntersect(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
@@ -1237,7 +1237,7 @@ internal static class GesVmRegisterCollectionOperators
 
         dst.SetNothing();
     }
-    internal static void VmZip(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmZip(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
         if (a.Kind is not List || b.Kind is not List || a.ObjectValue is not GesVmListObject aList || b.ObjectValue is not GesVmListObject bList)
         {
@@ -1258,7 +1258,7 @@ internal static class GesVmRegisterCollectionOperators
 
         dst.SetList(list);
     }
-    internal static void VmValues(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmValues(ref this GesVmValue dst, ref GesVmValue a)
     {
         switch (a.Kind)
         {
@@ -1285,7 +1285,7 @@ internal static class GesVmRegisterCollectionOperators
                 break;
         }
     }
-    internal static void VmKeys(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmKeys(ref this GesVmValue dst, ref GesVmValue a)
     {
         switch (a.Kind)
         {
@@ -1312,7 +1312,7 @@ internal static class GesVmRegisterCollectionOperators
                 break;
         }
     }
-    internal static void VmEntries(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmEntries(ref this GesVmValue dst, ref GesVmValue a)
     {
         switch (a.Kind)
         {

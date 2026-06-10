@@ -7,11 +7,11 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterMemberIndexAccess
 {
-    internal static void VmMemberAccess(ref this GesVmValue dst, ushort memberNameIndex, ref GesVmValue obj)
+    internal static void GesVmMemberAccess(ref this GesVmValue dst, ushort memberNameIndex, ref GesVmValue obj)
     {
-        dst.VmMemberAccess(dst.OwningState.Binary.TextConstantTable.Resolve(memberNameIndex), ref obj);
+        dst.GesVmMemberAccess(dst.OwningState.Binary.TextConstantTable.Resolve(memberNameIndex), ref obj);
     }
-    internal static void VmMemberAccess(ref this GesVmValue dst, string key, ref GesVmValue obj)
+    internal static void GesVmMemberAccess(ref this GesVmValue dst, string key, ref GesVmValue obj)
     {
         switch (obj.Kind)
         {
@@ -75,7 +75,7 @@ internal static class GesVmRegisterMemberIndexAccess
                 return;
         }
     }
-    internal static void VmIndexAccess(ref this GesVmValue dst, long indexIn, ref GesVmValue obj)
+    internal static void GesVmIndexAccess(ref this GesVmValue dst, long indexIn, ref GesVmValue obj)
     {
         if (indexIn <= 0)
         {
@@ -120,21 +120,21 @@ internal static class GesVmRegisterMemberIndexAccess
                 return;
         }
     }
-    internal static void VmPropertyAccess(ref this GesVmValue dst, ref GesVmValue property, ref GesVmValue obj)
+    internal static void GesVmPropertyAccess(ref this GesVmValue dst, ref GesVmValue property, ref GesVmValue obj)
     {
         if (property.TryGetInteger(out var indexIn))
         {
-            dst.VmIndexAccess(indexIn, ref obj);
+            dst.GesVmIndexAccess(indexIn, ref obj);
             return;
         }
 
         switch (property.Kind)
         {
             case Text or Tag when property.IsStoragePointer:
-                dst.VmMemberAccess((ushort)property.IntegerValue, ref obj);
+                dst.GesVmMemberAccess((ushort)property.IntegerValue, ref obj);
                 return;
             case Text or Tag when property.ObjectValue is string key:
-                dst.VmMemberAccess(key, ref obj);
+                dst.GesVmMemberAccess(key, ref obj);
                 return;
             default:
                 dst.SetNothing();

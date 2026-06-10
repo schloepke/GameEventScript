@@ -9,7 +9,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterSortGroupDistinct
 {
-    internal static void VmDistinct(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmDistinct(ref this GesVmValue dst, ref GesVmValue source)
     {
         switch (source.Kind)
         {
@@ -125,7 +125,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 return;
         }
     }
-    internal static void VmDistinctBy(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
+    internal static void GesVmDistinctBy(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         var state = dst.OwningState;
         switch (source.Kind)
@@ -232,7 +232,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 return;
         }
     }
-    internal static void VmGroupBy(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
+    internal static void GesVmGroupBy(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
         var state = dst.OwningState;
         switch (source.Kind)
@@ -397,24 +397,24 @@ internal static class GesVmRegisterSortGroupDistinct
                 return;
         }
     }
-    internal static void VmSortAscending(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmSortAscending(ref this GesVmValue dst, ref GesVmValue source)
     {
-        VmSort(ref dst, ref source, descending: false);
+        GesVmSort(ref dst, ref source, descending: false);
     }
-    internal static void VmSortDescending(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmSortDescending(ref this GesVmValue dst, ref GesVmValue source)
     {
-        VmSort(ref dst, ref source, descending: true);
+        GesVmSort(ref dst, ref source, descending: true);
     }
-    internal static void VmOrderByAscending(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
+    internal static void GesVmOrderByAscending(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
-        VmOrderBy(ref dst, ref source, itemSlot, keyEntryAddress, evaluator, destinationSlot, descending: false);
+        GesVmOrderBy(ref dst, ref source, itemSlot, keyEntryAddress, evaluator, destinationSlot, descending: false);
     }
-    internal static void VmOrderByDescending(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
+    internal static void GesVmOrderByDescending(ref this GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot)
     {
-        VmOrderBy(ref dst, ref source, itemSlot, keyEntryAddress, evaluator, destinationSlot, descending: true);
+        GesVmOrderBy(ref dst, ref source, itemSlot, keyEntryAddress, evaluator, destinationSlot, descending: true);
     }
 
-    private static void VmSort(ref GesVmValue dst, ref GesVmValue source, bool descending)
+    private static void GesVmSort(ref GesVmValue dst, ref GesVmValue source, bool descending)
     {
         var state = dst.OwningState;
         switch (source.Kind)
@@ -544,7 +544,7 @@ internal static class GesVmRegisterSortGroupDistinct
         }
     }
 
-    private static void VmOrderBy(ref GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot, bool descending)
+    private static void GesVmOrderBy(ref GesVmValue dst, ref GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, ushort destinationSlot, bool descending)
     {
         var state = dst.OwningState;
         switch (source.Kind)

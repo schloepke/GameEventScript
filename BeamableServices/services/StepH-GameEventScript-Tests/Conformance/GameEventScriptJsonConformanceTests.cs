@@ -967,7 +967,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var published = new List<GameEventScriptMessage>();
         var observedRuntimeLimits = new List<TestRuntimeLimitEvent>();
         var scriptSource = GetScriptSourceForDump(testCase);
-        var vmModule = (GameEventScriptVirtualMaschine)GameEventScriptManager.CreateModuleNewVm(binary, 4096, 256);
+        var vmModule = (GameEventScriptVirtualMaschine)GameEventScriptManager.CreateModule(binary, 4096, 256);
         vmModule.DebugScriptSource = scriptSource;
         var lastCapturedVmDump = string.Empty;
         var host = GameEventScriptManager.CreateHostBuilder()

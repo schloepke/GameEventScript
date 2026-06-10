@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using StepH.GameEventScript.BytecodeExecutor;
 using StepH.GameEventScript.BytecodeVM;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
@@ -142,6 +143,14 @@ public sealed class GameEventScriptBuilder
     /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
     /// <returns>A bindable runtime module that exports the compiled message handlers.</returns>
     public IGameEventScriptModule CompileModule(GameEventScriptCompileOptions? options = null)
+        => GameEventScriptVirtualMaschine.Create(Compile(options).ToGameEventScriptBinary(), 128, 128);
+
+    /// <summary>
+    /// Compiles the configured GameEventScript sources into a bindable legacy BytecodeVM runtime module.
+    /// </summary>
+    /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
+    /// <returns>A bindable legacy runtime module that exports the compiled message handlers.</returns>
+    public IGameEventScriptModule CompileModuleOldVm(GameEventScriptCompileOptions? options = null)
         => GesBytecodeVmExecutableBuilder.Build(Compile(options));
 
     /// <summary>

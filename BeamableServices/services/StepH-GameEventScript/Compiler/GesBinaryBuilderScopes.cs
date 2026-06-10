@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "UnusedMethodReturnValue.Global")]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 internal sealed partial class GesBinaryBuilder
 {
     private const int NoRoutineId = -1;

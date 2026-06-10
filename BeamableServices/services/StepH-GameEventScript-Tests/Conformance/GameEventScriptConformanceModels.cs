@@ -39,6 +39,10 @@ public sealed class GameEventScriptConformanceTest
 
     public List<GameEventScriptExternalSubscriberSpec>? ExternalSubscribers { get; set; }
 
+    public List<JsonElement>? ExpectedInitializationPublished { get; set; }
+
+    public List<JsonElement>? ExpectedInitializationOutboundPublished { get; set; }
+
     public List<GameEventScriptApiStepSpec>? Steps { get; set; }
 
     public GameEventScriptExpectedCompileErrorSpec? ExpectedError { get; set; }

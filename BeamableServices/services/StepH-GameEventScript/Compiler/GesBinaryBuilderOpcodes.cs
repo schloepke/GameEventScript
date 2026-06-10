@@ -1,8 +1,12 @@
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
 
+[SuppressMessage("ReSharper", "UnusedMember.Global")]
+[SuppressMessage("ReSharper", "UnusedMethodReturnValue.Global")]
+[SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 internal sealed partial class GesBinaryBuilder
 {
     public GesBinaryBuilder Nop()

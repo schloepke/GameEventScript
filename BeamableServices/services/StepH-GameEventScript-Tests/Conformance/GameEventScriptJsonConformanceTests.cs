@@ -713,7 +713,24 @@ public abstract class GameEventScriptJsonConformanceTestBase
             return;
         }
 
-        GameEventScriptConformanceRunner.RunCase(testCase);
+        switch (testCase.Test.Kind)
+        {
+            case "compileError":
+                GameEventScriptConformanceRunner.RunCompileErrorTest(testCase);
+                break;
+            case "messageApi":
+                GameEventScriptConformanceRunner.RunMessageApiTest(testCase);
+                break;
+            case "compileMetadata":
+                GameEventScriptConformanceRunner.RunCompileMetadataTest(testCase);
+                break;
+            case "bytecode":
+                GameEventScriptConformanceRunner.RunBytecodeOpcodeTest(testCase);
+                break;
+            default:
+                Assert.Fail($"{testCase}: unsupported test kind '{testCase.Test.Kind}'.");
+                break;
+        }
     }
 
     protected void RunScriptApiConformanceCase(GameEventScriptConformanceCase testCase)
@@ -805,9 +822,12 @@ public abstract class GameEventScriptJsonConformanceTestBase
         mismatch = string.Empty;
         debugDump = string.Empty;
         var test = testCase.Test;
-        if (test.Steps is null || test.Steps.Count == 0)
+        var hasInitializationExpectations =
+            test.ExpectedInitializationPublished is not null ||
+            test.ExpectedInitializationOutboundPublished is not null;
+        if ((test.Steps is null || test.Steps.Count == 0) && !hasInitializationExpectations)
         {
-            mismatch = "scriptApi tests require at least one step.";
+            mismatch = "scriptApi tests require at least one step or initialization expectation.";
             return false;
         }
 
@@ -846,10 +866,30 @@ public abstract class GameEventScriptJsonConformanceTestBase
             .Build()
             .Load(vmModule);
         GameEventScriptConformanceRunner.RegisterExternalSubscribers(testCase, host);
-
-        for (var stepIndex = 0; stepIndex < test.Steps.Count; stepIndex++)
+        if (hasInitializationExpectations)
         {
-            var step = test.Steps[stepIndex];
+            host.StartSession().Update(runtimeLimits.MaxExecutionSteps);
+        }
+
+        if (test.ExpectedInitializationPublished is not null &&
+            !TryMatchMessages(testCase, -1, "initialization emitted messages", test.ExpectedInitializationPublished, emitted, includeMessageDiff, out var initializationEmittedDiff))
+        {
+            mismatch = $"initialization: emitted messages differ.{Environment.NewLine}{initializationEmittedDiff}";
+            debugDump = CaptureVmDump(lastCapturedVmDump);
+            return false;
+        }
+
+        if (test.ExpectedInitializationOutboundPublished is not null &&
+            !TryMatchMessages(testCase, -1, "initialization published messages", test.ExpectedInitializationOutboundPublished, published, includeMessageDiff, out var initializationPublishedDiff))
+        {
+            mismatch = $"initialization: published messages differ.{Environment.NewLine}{initializationPublishedDiff}";
+            debugDump = CaptureVmDump(lastCapturedVmDump);
+            return false;
+        }
+
+        for (var stepIndex = 0; stepIndex < (test.Steps?.Count ?? 0); stepIndex++)
+        {
+            var step = test.Steps![stepIndex];
             emitted.Clear();
             published.Clear();
             observedRuntimeLimits.Clear();
@@ -1016,7 +1056,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
     {
         var builder = new StringBuilder();
         builder.AppendLine($"Test: {testCase.Test.Name ?? testCase.ToString()}");
-        builder.AppendLine($"Step: {stepIndex + 1}");
+        builder.AppendLine(stepIndex >= 0 ? $"Step: {stepIndex + 1}" : "Step: initialization");
         builder.AppendLine($"Channel: {label}");
 
         if (expected.Count != actual.Count)

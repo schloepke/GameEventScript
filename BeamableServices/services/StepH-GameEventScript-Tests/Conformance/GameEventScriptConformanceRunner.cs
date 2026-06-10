@@ -63,77 +63,6 @@ internal static class GameEventScriptConformanceRunner
     internal static string GetCaseId(GameEventScriptConformanceCase testCase)
         => $"{testCase.SuiteName}/{testCase.Test.Name}";
 
-    internal static void RunCase(GameEventScriptConformanceCase testCase)
-    {
-        switch (testCase.Test.Kind)
-        {
-            case "scriptApi":
-                RunScriptApiTest(testCase);
-                break;
-            case "compileError":
-                RunCompileErrorTest(testCase);
-                break;
-            case "messageApi":
-                RunMessageApiTest(testCase);
-                break;
-            case "compileMetadata":
-                RunCompileMetadataTest(testCase);
-                break;
-            case "bytecode":
-                RunBytecodeOpcodeTest(testCase);
-                break;
-            default:
-                Assert.Fail($"{testCase}: unsupported test kind '{testCase.Test.Kind}'.");
-                break;
-        }
-    }
-
-    internal static void RunScriptApiTest(
-        GameEventScriptConformanceCase testCase,
-        Func<GameEventScriptConformanceTest, IGameEventScriptModule>? compileScripts = null)
-    {
-        var test = testCase.Test;
-        var compiled = (compileScripts ?? CompileScripts)(test);
-        var published = new List<GameEventScriptMessage>();
-        var outboundPublished = new List<GameEventScriptMessage>();
-        var runtimeLimitEvents = new List<TestRuntimeLimitEvent>();
-        var builder = GameEventScriptManager.CreateHostBuilder()
-            .WithRandom(CreateRandom(test.RandomSequence))
-            .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
-            .WithExternalTypes(ExternalTypeRegistry)
-            .WithRuntimeLimits(CreateRuntimeLimits(test.RuntimeLimits))
-            .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
-                messageEmitted: published.Add,
-                messagePublished: published.Add,
-                runtimeLimitReached: (name, detail, limit) => runtimeLimitEvents.Add(new TestRuntimeLimitEvent(name, detail, limit))))
-            .WithPublishHook(message =>
-            {
-                outboundPublished.Add(message);
-                return true;
-            });
-
-        var host = builder.Build().Load(compiled);
-        RegisterExternalSubscribers(testCase, host);
-        if (test.Steps is null || test.Steps.Count == 0)
-        {
-            Assert.Fail($"{testCase}: scriptApi tests require at least one step.");
-        }
-
-        for (var stepIndex = 0; stepIndex < test.Steps.Count; stepIndex++)
-        {
-            var step = test.Steps[stepIndex];
-            published.Clear();
-            outboundPublished.Clear();
-            runtimeLimitEvents.Clear();
-
-            host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(step.Input, "step input", testCase)));
-
-            AssertPublishedMessages(testCase, stepIndex, "published messages", step.ExpectedPublished, published);
-            AssertPublishedMessages(testCase, stepIndex, "outbound published messages", step.ExpectedOutboundPublished, outboundPublished);
-            AssertRuntimeLimits(testCase, stepIndex, step, runtimeLimitEvents);
-        }
-    }
-
     internal static IGameEventScriptModule CompileScripts(GameEventScriptConformanceTest test)
     {
         return CreateScriptBuilder(test).CompileModule(CreateCompileOptions(test));
@@ -210,7 +139,7 @@ internal static class GameEventScriptConformanceRunner
            string.Equals(kind, "compileError", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(kind, "compileMetadata", StringComparison.OrdinalIgnoreCase);
 
-    private static void RunCompileErrorTest(GameEventScriptConformanceCase testCase)
+    internal static void RunCompileErrorTest(GameEventScriptConformanceCase testCase)
     {
         var expected = testCase.Test.ExpectedError;
         if (expected is null)
@@ -231,7 +160,7 @@ internal static class GameEventScriptConformanceRunner
         Assert.Fail($"{testCase}: expected compilation to fail.");
     }
 
-    private static void RunMessageApiTest(GameEventScriptConformanceCase testCase)
+    internal static void RunMessageApiTest(GameEventScriptConformanceCase testCase)
     {
         var signatureSpec = testCase.Test.Signature
                             ?? throw new InvalidOperationException($"{testCase}: messageApi tests require signature.");
@@ -255,7 +184,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static void RunCompileMetadataTest(GameEventScriptConformanceCase testCase)
+    internal static void RunCompileMetadataTest(GameEventScriptConformanceCase testCase)
     {
         var expectedDefinitions = testCase.Test.ExpectedMessageDefinitions;
         if (expectedDefinitions is null || expectedDefinitions.Count == 0)
@@ -288,7 +217,7 @@ internal static class GameEventScriptConformanceRunner
         }
     }
 
-    private static void RunBytecodeOpcodeTest(GameEventScriptConformanceCase testCase)
+    internal static void RunBytecodeOpcodeTest(GameEventScriptConformanceCase testCase)
     {
         var expected = testCase.Test.ExpectedOpcodes;
         if (expected is null)
@@ -387,106 +316,6 @@ internal static class GameEventScriptConformanceRunner
                 },
                 subscriber.Priority ?? 0);
         }
-    }
-
-    private static void AssertPublishedMessages(
-        GameEventScriptConformanceCase testCase,
-        int stepIndex,
-        string label,
-        IReadOnlyList<JsonElement>? expectedPublished,
-        IReadOnlyList<GameEventScriptMessage> actual)
-    {
-        var expected = (expectedPublished ?? []).Select(GameEventScriptConformanceValueCodec.DecodeMessage).ToArray();
-        var expectedJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(expected);
-        var actualJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(actual);
-        if (expectedJson == actualJson)
-        {
-            return;
-        }
-
-        Assert.Fail(
-            $"{testCase} step {stepIndex + 1}: {label} differ.{Environment.NewLine}" +
-            $"Expected:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(expected)}{Environment.NewLine}" +
-            $"Actual:{Environment.NewLine}{GameEventScriptConformanceValueCodec.ToPrettyJson(actual)}");
-    }
-
-    private static void AssertRuntimeLimits(
-        GameEventScriptConformanceCase testCase,
-        int stepIndex,
-        GameEventScriptApiStepSpec step,
-        IReadOnlyList<TestRuntimeLimitEvent> actual)
-    {
-        var expectedRuntimeLimits = step.ExpectedRuntimeLimits;
-        if (expectedRuntimeLimits is null || expectedRuntimeLimits.Count == 0)
-        {
-            AssertUnexpectedRuntimeLimits(testCase, stepIndex, step.UnexpectedRuntimeLimits, actual);
-            return;
-        }
-
-        var nextStart = 0;
-        foreach (var expected in expectedRuntimeLimits)
-        {
-            var foundIndex = -1;
-            for (var i = nextStart; i < actual.Count; i++)
-            {
-                if (RuntimeLimitMatches(expected, actual[i]))
-                {
-                    foundIndex = i;
-                    break;
-                }
-            }
-
-            if (foundIndex < 0)
-            {
-                Assert.Fail(
-                    $"{testCase} step {stepIndex + 1}: expected runtime limit was not found in order: {DescribeRuntimeLimitExpectation(expected)}.{Environment.NewLine}" +
-                    $"Actual runtime limits:{Environment.NewLine}{DescribeRuntimeLimits(actual)}");
-            }
-
-            nextStart = foundIndex + 1;
-        }
-
-        AssertUnexpectedRuntimeLimits(testCase, stepIndex, step.UnexpectedRuntimeLimits, actual);
-    }
-
-    private static void AssertUnexpectedRuntimeLimits(
-        GameEventScriptConformanceCase testCase,
-        int stepIndex,
-        IReadOnlyList<GameEventScriptRuntimeLimitExpectationSpec>? unexpectedRuntimeLimits,
-        IReadOnlyList<TestRuntimeLimitEvent> actual)
-    {
-        if (unexpectedRuntimeLimits is null || unexpectedRuntimeLimits.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var unexpected in unexpectedRuntimeLimits)
-        {
-            var found = actual.FirstOrDefault(runtimeLimit => RuntimeLimitMatches(unexpected, runtimeLimit));
-            if (found is not null)
-            {
-                Assert.Fail(
-                    $"{testCase} step {stepIndex + 1}: unexpected runtime limit was found: {DescribeRuntimeLimitExpectation(unexpected)}.{Environment.NewLine}" +
-                    $"Actual runtime limits:{Environment.NewLine}{DescribeRuntimeLimits(actual)}");
-            }
-        }
-    }
-
-    private static bool RuntimeLimitMatches(GameEventScriptRuntimeLimitExpectationSpec expected, TestRuntimeLimitEvent actual)
-    {
-        if (!string.IsNullOrWhiteSpace(expected.Name) &&
-            !string.Equals(expected.Name, actual.Name, StringComparison.Ordinal))
-        {
-            return false;
-        }
-
-        if (expected.Limit is not null && expected.Limit.Value != actual.Limit)
-        {
-            return false;
-        }
-
-        return string.IsNullOrEmpty(expected.DetailContains) ||
-               actual.Detail.Contains(expected.DetailContains, StringComparison.Ordinal);
     }
 
     private static void AssertCompileError(
@@ -742,12 +571,6 @@ internal static class GameEventScriptConformanceRunner
 
         Assert.AreEqual(expected, actual, $"{testCase}: {description} differs.");
     }
-
-    private static string DescribeRuntimeLimitExpectation(GameEventScriptRuntimeLimitExpectationSpec expected)
-        => $"name={expected.Name ?? "*"}, limit={expected.Limit?.ToString(CultureInfo.InvariantCulture) ?? "*"}, detailContains={expected.DetailContains ?? "*"}";
-
-    private static string DescribeRuntimeLimits(IEnumerable<TestRuntimeLimitEvent> runtimeLimits)
-        => string.Join(Environment.NewLine, runtimeLimits.Select(runtimeLimit => $"{runtimeLimit.Name} ({runtimeLimit.Limit}): {runtimeLimit.Detail}"));
 
     private static void ValidateRequired(string? value, string description, string file, string? suite, string? test)
     {

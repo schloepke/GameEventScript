@@ -362,6 +362,22 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "initialization handler emits when session starts",
+      "script": "module RuntimeInitialization\n\non initialization {\n  emit Ready(value: 1)\n}",
+      "expectedInitializationPublished": [
+        {
+          "name": "Ready",
+          "args": {
+            "value": {
+              "type": ":integer",
+              "value": "1"
+            }
+          }
+        }
+      ]
     }
   ]
 }

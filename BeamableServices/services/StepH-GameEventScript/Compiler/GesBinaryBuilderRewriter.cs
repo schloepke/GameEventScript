@@ -21,10 +21,9 @@ internal sealed partial class GesBinaryBuilder
     {
         _ = pass ?? throw new ArgumentNullException(nameof(pass));
         EnsureScopesClosed();
-        var context = new RewriteContext(this, _items);
+        var context = new RewriteContext(this, LinearizePlanItems());
         pass.Rewrite(context);
-        _items.Clear();
-        _items.AddRange(context.Items);
+        _rewrittenItems = context.ToArray();
         return this;
     }
 
@@ -32,10 +31,9 @@ internal sealed partial class GesBinaryBuilder
     {
         _ = rewrite ?? throw new ArgumentNullException(nameof(rewrite));
         EnsureScopesClosed();
-        var context = new RewriteContext(this, _items);
+        var context = new RewriteContext(this, LinearizePlanItems());
         rewrite(context);
-        _items.Clear();
-        _items.AddRange(context.Items);
+        _rewrittenItems = context.ToArray();
         return this;
     }
 
@@ -69,6 +67,12 @@ internal sealed partial class GesBinaryBuilder
 
         public GesRegisterRef AddTemporaryRegister(string? name = null) => _builder.AddTemporaryRegister(name);
 
+        public GesRegisterRef AddRegisterNear(int index, string name)
+            => _builder.AddRegisterInRoutine(name, ResolveRoutineIdNear(index));
+
+        public GesRegisterRef AddTemporaryRegisterNear(int index, string? name = null)
+            => _builder.AddTemporaryRegisterInRoutine(name, ResolveRoutineIdNear(index));
+
         public GesLabelRef AddLabel(string? name = null) => _builder.AddLabel(name);
 
         public bool TryGetInstruction(int index, out InstructionPlan instruction)
@@ -92,6 +96,18 @@ internal sealed partial class GesBinaryBuilder
             }
 
             label = default;
+            return false;
+        }
+
+        public bool TryGetSourceRange(int index, out GameEventScriptSourceLocation? sourceRange)
+        {
+            if ((uint)index < (uint)_items.Count)
+            {
+                sourceRange = _items[index].SourceRange;
+                return true;
+            }
+
+            sourceRange = null;
             return false;
         }
 
@@ -188,42 +204,56 @@ internal sealed partial class GesBinaryBuilder
         {
             RequireIndex(index);
             ValidateInstruction(instruction);
-            _items[index] = PlanItem.ForInstruction(instruction);
+            _items[index] = PlanItem.ForInstruction(instruction, _items[index].SourceRange);
+        }
+
+        public void ReplaceInstruction(int index, InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange)
+        {
+            RequireIndex(index);
+            ValidateInstruction(instruction);
+            _items[index] = PlanItem.ForInstruction(instruction, sourceRange);
         }
 
         public void ReplaceWithLabel(int index, GesLabelRef label)
         {
             RequireIndex(index);
             _builder.RequireLabel(label);
-            _items[index] = PlanItem.ForLabel(label);
+            _items[index] = PlanItem.ForLabel(label, _items[index].SourceRange);
         }
 
-        public void InsertInstructionBefore(int index, InstructionPlan instruction)
-        {
-            RequireInsertIndex(index);
-            ValidateInstruction(instruction);
-            _items.Insert(index, PlanItem.ForInstruction(instruction));
-        }
-
-        public void InsertInstructionAfter(int index, InstructionPlan instruction)
-        {
-            RequireIndex(index);
-            ValidateInstruction(instruction);
-            _items.Insert(index + 1, PlanItem.ForInstruction(instruction));
-        }
-
-        public void InsertLabelBefore(int index, GesLabelRef label)
-        {
-            RequireInsertIndex(index);
-            _builder.RequireLabel(label);
-            _items.Insert(index, PlanItem.ForLabel(label));
-        }
-
-        public void InsertLabelAfter(int index, GesLabelRef label)
+        public void ReplaceWithLabel(int index, GesLabelRef label, GameEventScriptSourceLocation? sourceRange)
         {
             RequireIndex(index);
             _builder.RequireLabel(label);
-            _items.Insert(index + 1, PlanItem.ForLabel(label));
+            _items[index] = PlanItem.ForLabel(label, sourceRange);
+        }
+
+        public void InsertInstructionBefore(int index, InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange = null)
+        {
+            RequireInsertIndex(index);
+            ValidateInstruction(instruction);
+            _items.Insert(index, PlanItem.ForInstruction(instruction, sourceRange));
+        }
+
+        public void InsertInstructionAfter(int index, InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange = null)
+        {
+            RequireIndex(index);
+            ValidateInstruction(instruction);
+            _items.Insert(index + 1, PlanItem.ForInstruction(instruction, sourceRange));
+        }
+
+        public void InsertLabelBefore(int index, GesLabelRef label, GameEventScriptSourceLocation? sourceRange = null)
+        {
+            RequireInsertIndex(index);
+            _builder.RequireLabel(label);
+            _items.Insert(index, PlanItem.ForLabel(label, sourceRange));
+        }
+
+        public void InsertLabelAfter(int index, GesLabelRef label, GameEventScriptSourceLocation? sourceRange = null)
+        {
+            RequireIndex(index);
+            _builder.RequireLabel(label);
+            _items.Insert(index + 1, PlanItem.ForLabel(label, sourceRange));
         }
 
         public void RemoveAt(int index)

@@ -11,8 +11,9 @@ internal sealed partial class GesBinaryBuilder
 {
     private readonly List<RegisterSymbol> _registers = [];
     private readonly List<LabelSymbol> _labels = [];
-    private readonly List<PlanItem> _items = [];
+    private readonly List<PlanItem> _rootItems = [];
     private readonly List<BindPlan> _binds = [];
+    private PlanItem[]? _rewrittenItems;
     private ushort _version = 1;
     private string _moduleName = "Unknown";
     private GameEventScriptBinaryFlags _flags = GameEventScriptBinaryFlags.None;
@@ -45,18 +46,60 @@ internal sealed partial class GesBinaryBuilder
     }
 
     public GesRegisterRef AddRegister(string name)
+        => AddRegisterInRoutine(name, CurrentRoutineId);
+
+    public GesRegisterRef AddTemporaryRegister(string? name = null)
+        => AddTemporaryRegisterInRoutine(name, CurrentRoutineId);
+
+    private GesRegisterRef AddRegisterInRoutine(string name, int routineId)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Register name must be non-empty.", nameof(name));
-        var register = new RegisterSymbol(_registers.Count, name, IsTemporary: false, CurrentRoutineId);
+        ValidateRoutineId(routineId);
+        var register = new RegisterSymbol(_registers.Count, name, IsTemporary: false, routineId);
         _registers.Add(register);
         return new GesRegisterRef(register.Id);
     }
 
-    public GesRegisterRef AddTemporaryRegister(string? name = null)
+    private GesRegisterRef AddTemporaryRegisterInRoutine(string? name, int routineId)
     {
-        var register = new RegisterSymbol(_registers.Count, string.IsNullOrWhiteSpace(name) ? null : name, IsTemporary: true, CurrentRoutineId);
+        ValidateRoutineId(routineId);
+        var register = new RegisterSymbol(_registers.Count, string.IsNullOrWhiteSpace(name) ? null : name, IsTemporary: true, routineId);
         _registers.Add(register);
         return new GesRegisterRef(register.Id);
+    }
+
+    private List<PlanItem> CurrentPlanItems => CurrentRoutineId == NoRoutineId
+        ? _rootItems
+        : _routines[CurrentRoutineId].Items;
+
+    private void AppendPlanItem(PlanItem item)
+    {
+        _rewrittenItems = null;
+        CurrentPlanItems.Add(item);
+    }
+
+    private PlanItem[] LinearizePlanItems()
+    {
+        var count = _rootItems.Count;
+        foreach (var routine in _routines)
+        {
+            count += routine.Items.Count;
+        }
+
+        var result = new List<PlanItem>(count);
+        result.AddRange(_rootItems);
+        foreach (var routine in _routines)
+        {
+            result.AddRange(routine.Items);
+        }
+
+        return result.ToArray();
+    }
+
+    private void ValidateRoutineId(int routineId)
+    {
+        if (routineId == NoRoutineId) return;
+        if (routineId < 0 || routineId >= _routines.Count) throw new ArgumentOutOfRangeException(nameof(routineId), "Unknown routine id.");
     }
 
     public GesLabelRef AddLabel(string? name = null)
@@ -69,7 +112,7 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder MarkLabel(GesLabelRef label)
     {
         RequireLabel(label);
-        _items.Add(PlanItem.ForLabel(label));
+        AppendPlanItem(PlanItem.ForLabel(label, CurrentSourceRange));
         return this;
     }
 
@@ -121,14 +164,15 @@ internal sealed partial class GesBinaryBuilder
         ValidateOperand(c);
         ValidateOperand(d);
         ValidateOperand(secondaryList);
-        _items.Add(PlanItem.ForInstruction(new InstructionPlan(CurrentRoutineId, opcode, unit, flags, dst, x, y, a, b, c, d, secondaryList, count, i64, f64)));
+        AppendPlanItem(PlanItem.ForInstruction(new InstructionPlan(CurrentRoutineId, opcode, unit, flags, dst, x, y, a, b, c, d, secondaryList, count, i64, f64), CurrentSourceRange));
         return this;
     }
 
     public GameEventScriptBinary Build()
     {
         EnsureScopesClosed();
-        var optimizedItems = _optimize ? RunDefaultOptimizationPasses(_items) : _items.ToArray();
+        var planItems = _rewrittenItems ?? LinearizePlanItems();
+        var optimizedItems = _optimize ? RunDefaultOptimizationPasses(planItems) : planItems.ToArray();
         var labelAddresses = ResolveLabelAddresses(optimizedItems);
         var registerMap = AllocateRegisters(optimizedItems);
         var items = PatchRoutineSlotLocals(optimizedItems, registerMap);
@@ -660,11 +704,11 @@ internal sealed partial class GesBinaryBuilder
         public int End { get; set; } = end;
     }
 
-    internal readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction)
+    internal readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction, GameEventScriptSourceLocation? SourceRange)
     {
-        public static PlanItem ForLabel(GesLabelRef label) => new(label, null);
+        public static PlanItem ForLabel(GesLabelRef label, GameEventScriptSourceLocation? sourceRange = null) => new(label, null, sourceRange);
 
-        public static PlanItem ForInstruction(InstructionPlan instruction) => new(null, instruction);
+        public static PlanItem ForInstruction(InstructionPlan instruction, GameEventScriptSourceLocation? sourceRange = null) => new(null, instruction, sourceRange);
     }
 
     internal sealed record InstructionPlan(

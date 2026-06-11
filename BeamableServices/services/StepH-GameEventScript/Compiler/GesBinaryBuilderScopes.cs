@@ -44,17 +44,23 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryRoutineScope BeginRecordConstructor(string typeName, IReadOnlyList<string>? argumentNames = null, ushort? id = null)
         => BeginRoutine(GameEventScriptBinaryBindKind.Record, typeName, argumentNames, id);
 
+    public GesBinaryRoutineScope BeginHelper(string name, IReadOnlyList<string>? argumentNames = null)
+        => BeginRoutine(null, name, argumentNames, id: null);
+
     private GesBinaryRoutineScope BeginRoutine(
-        GameEventScriptBinaryBindKind kind,
+        GameEventScriptBinaryBindKind? kind,
         string name,
         IReadOnlyList<string>? argumentNames,
         ushort? id,
         IReadOnlyList<string>? requiredTags = null,
         IReadOnlyList<string>? excludedTags = null)
     {
-        if (_routineStack.Count > 0) throw new InvalidOperationException("Cannot begin a routine while another routine is active.");
-        if (_scopeStack.Count > 0) throw new InvalidOperationException("Cannot begin a routine while a lexical scope is active.");
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Routine name must be non-empty.", nameof(name));
+        if (kind is null && id.HasValue) throw new ArgumentException("Helper routines cannot have bind ids.", nameof(id));
+        if (kind is null && ((requiredTags?.Count ?? 0) > 0 || (excludedTags?.Count ?? 0) > 0))
+        {
+            throw new ArgumentException("Helper routines cannot have tag filters.", nameof(requiredTags));
+        }
 
         var routineId = _routines.Count;
         var entryLabel = AddLabel(name);
@@ -70,7 +76,11 @@ internal sealed partial class GesBinaryBuilder
         }
 
         routine.ArgumentRegisters = arguments;
-        routine.Bind = AddBind(kind, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
+        if (kind.HasValue)
+        {
+            routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
+        }
+
         SlotLocals(0);
         return new GesBinaryRoutineScope(this, routine);
     }
@@ -145,7 +155,7 @@ internal sealed partial class GesBinaryBuilder
             }
 
             var instruction = result[slotLocalsIndex].Instruction!;
-            result[slotLocalsIndex] = PlanItem.ForInstruction(instruction with { Count = (short)localCount });
+            result[slotLocalsIndex] = PlanItem.ForInstruction(instruction with { Count = (short)localCount }, result[slotLocalsIndex].SourceRange);
         }
 
         return result;
@@ -187,7 +197,11 @@ internal sealed partial class GesBinaryBuilder
 
         public GesLabelRef EntryLabel => _routine.EntryLabel;
 
-        public GesBindRef Bind => _routine.Bind;
+        public bool HasBind => _routine.Bind.HasValue;
+
+        public GesBindRef Bind => _routine.Bind ?? throw new InvalidOperationException($"Routine '{_routine.Name}' does not have a bind entry.");
+
+        public GesBindRef? OptionalBind => _routine.Bind;
 
         public IReadOnlyList<GesRegisterRef> Arguments => _routine.ArgumentRegisters;
 
@@ -242,18 +256,19 @@ internal sealed partial class GesBinaryBuilder
 
     internal sealed class RoutinePlan(
         int id,
-        GameEventScriptBinaryBindKind kind,
+        GameEventScriptBinaryBindKind? kind,
         string name,
         GesLabelRef entryLabel,
         IReadOnlyList<string> argumentNames)
     {
         public int Id { get; } = id;
-        public GameEventScriptBinaryBindKind Kind { get; } = kind;
+        public GameEventScriptBinaryBindKind? Kind { get; } = kind;
         public string Name { get; } = name;
         public GesLabelRef EntryLabel { get; } = entryLabel;
         public IReadOnlyList<string> ArgumentNames { get; } = argumentNames;
         public IReadOnlyList<GesRegisterRef> ArgumentRegisters { get; set; } = [];
-        public GesBindRef Bind { get; set; }
+        public List<PlanItem> Items { get; } = [];
+        public GesBindRef? Bind { get; set; }
         public bool IsClosed { get; set; }
     }
 

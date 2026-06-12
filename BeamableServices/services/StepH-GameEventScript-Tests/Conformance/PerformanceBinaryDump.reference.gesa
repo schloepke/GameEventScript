@@ -1,0 +1,748 @@
+# GameEventScript Performance Binary Dump Report
+
+cases=5
+
+// -------------------------------------------------------------------------------
+//  Performance Case: PerformanceCore/math integer hot path
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+//  Module: PerformanceMath
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+//
+//  Disassembled at <stable>
+// -------------------------------------------------------------------------------
+// Script:
+//
+//		module PerformanceMath
+//		
+//		on Start(value) {
+//		  let a be value + 5
+//		  let b be a * 3
+//		  let c be b - 7
+//		  let d be c div 2
+//		  let e be d * d
+//		  let f be e mod 97
+//		  let g be f + 10
+//		  let h be g * 2
+//		  let i be h - 15
+//		  let j be i div 5
+//		  emit Done(result: j)
+//		}
+//		
+//
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "PerformanceMath"
+.flags optimization
+
+
+.segment text
+
+T_Start:			.text "Start"
+T_value:			.text "value"
+T_aim:				.text "aim"
+T_bearing:			.text "bearing"
+T_degree:			.text "degree"
+T_range:			.text "range"
+T_meter:			.text "meter"
+T_steps:			.text "steps"
+T_direction:		.text "direction"
+T_vector:			.text "vector"
+T_checksum:			.text "checksum"
+T_number:			.text "number"
+T_a:				.text "a"
+T_b:				.text "b"
+T_c:				.text "c"
+T_d:				.text "d"
+T_e:				.text "e"
+T_f:				.text "f"
+T_g:				.text "g"
+T_h:				.text "h"
+T_i:				.text "i"
+T_j:				.text "j"
+T_Done:				.text "Done"
+T_result:			.text "result"
+
+
+.segment lists
+
+U16_0:				.u16 []
+Args_1:				.registers [r10]
+
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_value] entry=Start // "Start(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_result] // "Done(result)"
+
+
+.segment code
+
+Start:				 // handler Start(value)
+		@0000		SlotLocals #11
+		@0001		LoadInteger r11, #5
+		@0002		Add r1, r0, r11
+		@0003		LoadInteger r11, #3
+		@0004		Multiply r2, r1, r11
+		@0005		LoadInteger r11, #7
+		@0006		Subtract r3, r2, r11
+		@0007		LoadInteger r11, #2
+		@0008		IntegerDivide r4, r3, r11
+		@0009		Multiply r5, r4, r4
+		@0010		LoadInteger r11, #97
+		@0011		Modulo r6, r5, r11
+		@0012		LoadInteger r11, #10
+		@0013		Add r7, r6, r11
+		@0014		LoadInteger r11, #2
+		@0015		Multiply r8, r7, r11
+		@0016		LoadInteger r11, #15
+		@0017		Subtract r9, r8, r11
+		@0018		LoadInteger r11, #5
+		@0019		IntegerDivide r10, r9, r11
+		@0020		EmitMessage Outbound_Done, Args_1 // "Done(result)"
+		@0021		ReturnVoid
+
+
+// -------------------------------------------------------------------------------
+//  Performance Case: PerformanceCore/range select and aggregate
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+//  Module: PerformanceRanges
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+//
+//  Disassembled at <stable>
+// -------------------------------------------------------------------------------
+// Script:
+//
+//		module PerformanceRanges
+//		
+//		on Start {
+//		  let values be :list[:select item from 1 to 100 => item * 2]
+//		  let total be values[:sum value => value]
+//		  let count be :len values
+//		  emit Done(total: total, count: count)
+//		}
+//		
+//
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "PerformanceRanges"
+.flags optimization
+
+
+.segment text
+
+T_Start:			.text "Start"
+T_aim:				.text "aim"
+T_bearing:			.text "bearing"
+T_degree:			.text "degree"
+T_range:			.text "range"
+T_meter:			.text "meter"
+T_steps:			.text "steps"
+T_direction:		.text "direction"
+T_vector:			.text "vector"
+T_checksum:			.text "checksum"
+T_number:			.text "number"
+T_values:			.text "values"
+T_list:				.text "list"
+T_item:				.text "item"
+T_total:			.text "total"
+T_value:			.text "value"
+T_count:			.text "count"
+T_len:				.text "len"
+T_Done:				.text "Done"
+
+
+.segment lists
+
+Captures_0:			.registers []
+Args_1:				.registers [r2, r3]
+
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[] entry=Start // "Start()"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_count] // "Done(total, count)"
+
+
+.segment code
+
+Start:				 // handler Start()
+		@0000		SlotLocals #11
+		@0001		ListBuilderCreate r4
+		@0002		Nop
+		@0003		CreateRangeIteratorShort r6, #1, #100, #1
+Start_4:			
+		@0004		StreamNext r7, r6, Start_12
+		@0005		SlotLocals #2
+		@0006		Move r5, r7
+		@0007		LoadInteger r8, #2
+		@0008		Multiply r9, r5, r8
+		@0009		ListBuilderAdd r4, r9
+		@0010		SlotLocals #-2
+		@0011		Jump Start_4
+Start_12:			
+		@0012		StreamClose r6
+		@0013		Nop
+		@0014		ListBuilderFinish r10, r4
+		@0015		Move r0, r10
+		@0016		StreamCreate r4, r0
+		@0017		StreamMap r5, r4, Start_23, r0, Captures_0
+		@0018		StreamSum r6, r5
+		@0019		Move r2, r6
+		@0020		Length r3, r0
+		@0021		EmitMessage Outbound_Done, Args_1 // "Done(total, count)"
+		@0022		ReturnVoid
+Start_23:			
+		@0023		SlotLocals #0
+		@0024		ReturnValue r0
+
+
+// -------------------------------------------------------------------------------
+//  Performance Case: PerformanceCore/record creation and casts
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+//  Module: PerformanceTypes
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+//
+//  Disassembled at <stable>
+// -------------------------------------------------------------------------------
+// Script:
+//
+//		module PerformanceTypes
+//		
+//		record :sample as {
+//		  _ value: :number,
+//		  label: :text,
+//		  doubled: :number computed by value * 2
+//		}
+//		
+//		on Start {
+//		  let rec be :sample(21, label: 'ok')
+//		  let textNumber be '42' as :number
+//		  emit Done(doubled: rec.doubled, label: rec.label, textNumber: textNumber, isSample: rec is :sample)
+//		}
+//		
+//
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "PerformanceTypes"
+.flags optimization
+
+
+.segment text
+
+T_sample:			.text "sample"
+T_value:			.text "value"
+T_number:			.text "number"
+T_label:			.text "label"
+T_text:				.text "text"
+T_doubled:			.text "doubled"
+T_Start:			.text "Start"
+T_aim:				.text "aim"
+T_bearing:			.text "bearing"
+T_degree:			.text "degree"
+T_range:			.text "range"
+T_meter:			.text "meter"
+T_steps:			.text "steps"
+T_direction:		.text "direction"
+T_vector:			.text "vector"
+T_checksum:			.text "checksum"
+T_rec:				.text "rec"
+T_17:				.text "_"
+T_ok:				.text "ok"
+T_textNumber:		.text "textNumber"
+T_Done:				.text "Done"
+T_isSample:			.text "isSample"
+T___type:			.text "__type"
+
+
+.segment lists
+
+U16_0:				.u16 []
+Args_1:				.registers [r2, r3, r1, r4]
+Keys_2:				.texts [T_value, T_label, T_doubled, T___type] // "value", "label", "doubled", "__type"
+
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[] entry=Start // "Start()"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_doubled, T_label, T_textNumber, T_isSample] // "Done(doubled, label, textNumber, isSample)"
+Record_sample:		.bind Record id=0 name=T_sample args=[T_17, T_label] entry=record_sample // "sample(_, label)"
+
+
+.segment code
+
+Start:				 // handler Start()
+		@0000		SlotLocals #5
+		@0001		StageInteger #21
+		@0002		StageText T_ok // "ok"
+		@0003		CreateRecord r2, Record_sample // "sample(_, label)"
+		@0004		Move r0, r2
+		@0005		LoadInteger r1, #42
+		@0006		MemberAccess r2, T_doubled, r0 // "doubled"
+		@0007		MemberAccess r3, T_label, r0 // "label"
+		@0008		CheckCustomType r4, r0, T_sample // "sample"
+		@0009		EmitMessage Outbound_Done, Args_1 // "Done(doubled, label, textNumber, isSample)"
+		@0010		ReturnVoid
+
+record_sample:		 // record sample(_, label)
+		@0011		SlotLocals #5
+		@0012		CastNumeric r0, r0
+		@0013		Cast r1, r1, Text
+		@0014		LoadInteger r3, #2
+		@0015		Multiply r4, r0, r3
+		@0016		CastNumeric r2, r4
+		@0017		StageRegister r0
+		@0018		StageRegister r1
+		@0019		StageRegister r2
+		@0020		StageTag T_sample // "sample"
+		@0021		CreateMap r5, Keys_2 // "value", "label", "doubled", "__type"
+		@0022		CastCustom r6, r5, T_sample // "sample"
+		@0023		ReturnValue r6
+
+
+// -------------------------------------------------------------------------------
+//  Performance Case: PerformanceCore/pipeline filter select sum and direct list slice
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+//  Module: PerformancePipelines
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+//
+//  Disassembled at <stable>
+// -------------------------------------------------------------------------------
+// Script:
+//
+//		module PerformancePipelines
+//		
+//		on Start {
+//		  let values be [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+//		  let firstTen be values[:take first 10]
+//		  let directTotal be firstTen[:sum value => value]
+//		  let streamTotal be values[:filter value where value mod 2 = 0][:select value => value * 2][:sum value => value]
+//		  let streamCount be values[:filter value where value > 10][:count value where true]
+//		  emit Done(directTotal: directTotal, streamTotal: streamTotal, streamCount: streamCount)
+//		}
+//		
+//
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "PerformancePipelines"
+.flags optimization
+
+
+.segment text
+
+T_Start:			.text "Start"
+T_aim:				.text "aim"
+T_bearing:			.text "bearing"
+T_degree:			.text "degree"
+T_range:			.text "range"
+T_meter:			.text "meter"
+T_steps:			.text "steps"
+T_direction:		.text "direction"
+T_vector:			.text "vector"
+T_checksum:			.text "checksum"
+T_number:			.text "number"
+T_values:			.text "values"
+T_firstTen:			.text "firstTen"
+T_directTotal:		.text "directTotal"
+T_value:			.text "value"
+T_streamTotal:		.text "streamTotal"
+T_streamCount:		.text "streamCount"
+T_Done:				.text "Done"
+
+
+.segment lists
+
+Captures_0:			.registers []
+Args_1:				.registers [r3, r4, r5]
+
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[] entry=Start // "Start()"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_streamTotal, T_streamCount] // "Done(directTotal, streamTotal, streamCount)"
+
+
+.segment code
+
+Start:				 // handler Start()
+		@0000		SlotLocals #11
+		@0001		StageInteger #1
+		@0002		StageInteger #2
+		@0003		StageInteger #3
+		@0004		StageInteger #4
+		@0005		StageInteger #5
+		@0006		StageInteger #6
+		@0007		StageInteger #7
+		@0008		StageInteger #8
+		@0009		StageInteger #9
+		@0010		StageInteger #10
+		@0011		StageInteger #11
+		@0012		StageInteger #12
+		@0013		StageInteger #13
+		@0014		StageInteger #14
+		@0015		StageInteger #15
+		@0016		StageInteger #16
+		@0017		StageInteger #17
+		@0018		StageInteger #18
+		@0019		StageInteger #19
+		@0020		StageInteger #20
+		@0021		CreateList r6
+		@0022		Move r0, r6
+		@0023		TakeFirst r6, r0, #10
+		@0024		Move r1, r6
+		@0025		StreamCreate r6, r1
+		@0026		StreamMap r7, r6, Start_42, r0, Captures_0
+		@0027		StreamSum r8, r7
+		@0028		Move r3, r8
+		@0029		StreamCreate r6, r0
+		@0030		StreamFilter r7, r6, Start_44, r0, Captures_0
+		@0031		StreamMap r8, r7, Start_50, r0, Captures_0
+		@0032		StreamMap r9, r8, Start_54, r0, Captures_0
+		@0033		StreamSum r10, r9
+		@0034		Move r4, r10
+		@0035		StreamCreate r6, r0
+		@0036		StreamFilter r7, r6, Start_56, r0, Captures_0
+		@0037		StreamFilter r8, r7, Start_60, r0, Captures_0
+		@0038		StreamCount r9, r8
+		@0039		Move r5, r9
+		@0040		EmitMessage Outbound_Done, Args_1 // "Done(directTotal, streamTotal, streamCount)"
+		@0041		ReturnVoid
+Start_42:			
+		@0042		SlotLocals #0
+		@0043		ReturnValue r0
+Start_44:			
+		@0044		SlotLocals #4
+		@0045		LoadInteger r1, #2
+		@0046		Modulo r2, r0, r1
+		@0047		LoadInteger r3, #0
+		@0048		Equal r4, r2, r3
+		@0049		ReturnValue r4
+Start_50:			
+		@0050		SlotLocals #2
+		@0051		LoadInteger r1, #2
+		@0052		Multiply r2, r0, r1
+		@0053		ReturnValue r2
+Start_54:			
+		@0054		SlotLocals #0
+		@0055		ReturnValue r0
+Start_56:			
+		@0056		SlotLocals #2
+		@0057		LoadInteger r1, #10
+		@0058		Greater r2, r0, r1
+		@0059		ReturnValue r2
+Start_60:			
+		@0060		SlotLocals #1
+		@0061		LoadTrue r1
+		@0062		ReturnValue r1
+
+
+// -------------------------------------------------------------------------------
+//  Performance Case: PerformanceCore/engine performance mixed pipelines control flow and messages
+// -------------------------------------------------------------------------------
+
+// -------------------------------------------------------------------------------
+//  Module: EnginePerformance
+//  Type: Game Event Script Assembler
+//  Format version: 1.0
+//
+//  Disassembled at <stable>
+// -------------------------------------------------------------------------------
+// Script:
+//
+//		module EnginePerformance
+//		
+//		predicate high(value as :number) means value >= 10
+//		
+//		on Start(values) {
+//		  let total be values[:filter value where value is high][:select value => value + 5%][:sum value => :integer.floor value]
+//		  let average be values[:filter value where value is high][:select value => value + 5%][:average value => :integer.floor value]
+//		  let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
+//		  let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
+//		  let scaled as :quantity(m) be 100m + 5%
+//		  let folded be (15% + 15%) * 2
+//		  let directOddScaled be values[:filter value where value mod 2 = 1][:select value => value * 2][:count value where value > 10]
+//		  if scaled > 100m {
+//		    let success be scaled + folded
+//		    let divis be scaled ÷ folded
+//		    let myHandler be Success(message, value)
+//		    let myMessage be myHandler(message: 'hello', value: success)
+//		    let myMessageDirect be Success(message: 'world', value: scaled)
+//		  }
+//		  for item from 1 to 16 {
+//		    let foldedBucket be values[:filter value where (value + item) mod 7 > 0][:select value => (value + item) * 2][:sum value => value]
+//		  }
+//		  let workTotal be values[:filter value where value >= 10][:select value => value + 5%][:select value => value * 2][:sum value => value]
+//		  emit Done(total: total, average: average, oddCount: oddCount, directOddScaled: directOddScaled, first: firstBoosted, scaled: scaled, folded: folded, workTotal: workTotal)
+//		}
+//		
+//
+// -------------------------------------------------------------------------------
+
+.gesb 1
+.module "EnginePerformance"
+.flags optimization
+
+
+.segment text
+
+T_high:				.text "high"
+T_value:			.text "value"
+T_number:			.text "number"
+T_Start:			.text "Start"
+T_values:			.text "values"
+T_aim:				.text "aim"
+T_bearing:			.text "bearing"
+T_degree:			.text "degree"
+T_range:			.text "range"
+T_meter:			.text "meter"
+T_steps:			.text "steps"
+T_direction:		.text "direction"
+T_vector:			.text "vector"
+T_checksum:			.text "checksum"
+T_total:			.text "total"
+T_average:			.text "average"
+T_oddCount:			.text "oddCount"
+T_firstBoosted:		.text "firstBoosted"
+T_first:			.text "first"
+T_scaled:			.text "scaled"
+T_quantity_m:		.text "quantity:m"
+T_folded:			.text "folded"
+T_directOddScaled:	.text "directOddScaled"
+T_success:			.text "success"
+T_divis:			.text "divis"
+T_myHandler:		.text "myHandler"
+T_Success:			.text "Success"
+T_message:			.text "message"
+T_myMessage:		.text "myMessage"
+T_hello:			.text "hello"
+T_myMessageDirect:	.text "myMessageDirect"
+T_world:			.text "world"
+T_item:				.text "item"
+T_foldedBucket:		.text "foldedBucket"
+T_workTotal:		.text "workTotal"
+T_Done:				.text "Done"
+T_integer:			.text "integer"
+T_floor:			.text "floor"
+T_38:				.text "_"
+
+
+.segment lists
+
+Captures_0:			.registers []
+Shape_1:			.texts [T_Success, T_message, T_value] // "Success", "message", "value"
+Args_2:				.registers [r14, r10]
+Args_3:				.registers [r15, r6]
+Captures_4:			.registers [r10]
+Args_5:				.registers [r2, r3, r4, r8, r5, r6, r7, r9]
+Args_6:				.registers [r0]
+StdExt_7:			.texts [T_integer, T_floor, T_38] // "integer", "floor", "_"
+
+
+.segment bind
+
+Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[T_values] entry=Start // "Start(values)"
+Predicate_high:		.bind Predicate id=0 name=T_high args=[T_value] entry=predicate_high // "high(value)"
+Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average, T_oddCount, T_directOddScaled, T_first, T_scaled, T_folded, T_workTotal] // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
+
+
+.segment code
+
+Start:				 // handler Start(values)
+		@0000		SlotLocals #15
+		@0001		StreamCreate r10, r0
+		@0002		StreamFilter r11, r10, Start_70, r0, Captures_0
+		@0003		StreamMap r12, r11, Start_74, r0, Captures_0
+		@0004		StreamMap r13, r12, Start_78, r0, Captures_0
+		@0005		StreamSum r14, r13
+		@0006		Move r2, r14
+		@0007		StreamCreate r10, r0
+		@0008		StreamFilter r11, r10, Start_81, r0, Captures_0
+		@0009		StreamMap r12, r11, Start_85, r0, Captures_0
+		@0010		StreamMap r13, r12, Start_89, r0, Captures_0
+		@0011		StreamAverage r14, r13
+		@0012		Move r3, r14
+		@0013		StreamCreate r10, r0
+		@0014		StreamFilter r11, r10, Start_92, r0, Captures_0
+		@0015		StreamFilter r12, r11, Start_98, r0, Captures_0
+		@0016		StreamCount r13, r12
+		@0017		Move r4, r13
+		@0018		StreamCreate r10, r0
+		@0019		StreamFilter r11, r10, Start_101, r0, Captures_0
+		@0020		StreamMap r12, r11, Start_105, r0, Captures_0
+		@0021		First r13, r12
+		@0022		Move r5, r13
+		@0023		LoadInteger r6, #105, unit:meter
+		@0024		CastUnit r6, r6, unit:meter
+		@0025		LoadFloat r7, #0.6
+		@0026		StreamCreate r10, r0
+		@0027		StreamFilter r11, r10, Start_109, r0, Captures_0
+		@0028		StreamMap r12, r11, Start_115, r0, Captures_0
+		@0029		StreamFilter r13, r12, Start_119, r0, Captures_0
+		@0030		StreamCount r14, r13
+		@0031		Move r8, r14
+		@0032		LoadInteger r10, #100, unit:meter
+		@0033		Greater r11, r6, r10
+		@0034		JumpIfNotTrue r11, Start_47
+		@0035		SlotLocals #1
+		@0036		Add r10, r6, r7
+		@0037		Divide r11, r6, r7
+		@0038		LoadHandler r13, Shape_1 // "Success", "message", "value"
+		@0039		Move r12, r13
+		@0040		LoadText r14, T_hello // "hello"
+		@0041		BindHandler r15, r12, Args_2
+		@0042		Move r13, r15
+		@0043		LoadText r15, T_world // "world"
+		@0044		LoadMessage r16, Shape_1, Args_3 // "Success", "message", "value"
+		@0045		Move r14, r16
+		@0046		SlotLocals #-1
+Start_47:			
+		@0047		Nop
+		@0048		CreateRangeIteratorShort r11, #1, #16, #1
+Start_49:			
+		@0049		StreamNext r10, r11, Start_59
+		@0050		SlotLocals #6
+		@0051		StreamCreate r13, r0
+		@0052		StreamFilter r14, r13, Start_123, r0, Captures_4
+		@0053		StreamMap r15, r14, Start_130, r0, Captures_4
+		@0054		StreamMap r16, r15, Start_135, r0, Captures_0
+		@0055		StreamSum r17, r16
+		@0056		Move r12, r17
+		@0057		SlotLocals #-6
+		@0058		Jump Start_49
+Start_59:			
+		@0059		StreamClose r11
+		@0060		Nop
+		@0061		StreamCreate r10, r0
+		@0062		StreamFilter r11, r10, Start_137, r0, Captures_0
+		@0063		StreamMap r12, r11, Start_141, r0, Captures_0
+		@0064		StreamMap r13, r12, Start_145, r0, Captures_0
+		@0065		StreamMap r14, r13, Start_149, r0, Captures_0
+		@0066		StreamSum r15, r14
+		@0067		Move r9, r15
+		@0068		EmitMessage Outbound_Done, Args_5 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
+		@0069		ReturnVoid
+Start_70:			
+		@0070		SlotLocals #1
+		@0071		StageRegister r0
+		@0072		Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+		@0073		ReturnValue r1
+Start_74:			
+		@0074		SlotLocals #2
+		@0075		LoadPercentage r1, #0.05
+		@0076		Add r2, r0, r1
+		@0077		ReturnValue r2
+Start_78:			
+		@0078		SlotLocals #1
+		@0079		CallStandard r1, StdExt_7, Args_6 // "integer", "floor", "_"
+		@0080		ReturnValue r1
+Start_81:			
+		@0081		SlotLocals #1
+		@0082		StageRegister r0
+		@0083		Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+		@0084		ReturnValue r1
+Start_85:			
+		@0085		SlotLocals #2
+		@0086		LoadPercentage r1, #0.05
+		@0087		Add r2, r0, r1
+		@0088		ReturnValue r2
+Start_89:			
+		@0089		SlotLocals #1
+		@0090		CallStandard r1, StdExt_7, Args_6 // "integer", "floor", "_"
+		@0091		ReturnValue r1
+Start_92:			
+		@0092		SlotLocals #4
+		@0093		LoadInteger r1, #2
+		@0094		Modulo r2, r0, r1
+		@0095		LoadInteger r3, #1
+		@0096		Equal r4, r2, r3
+		@0097		ReturnValue r4
+Start_98:			
+		@0098		SlotLocals #1
+		@0099		LoadTrue r1
+		@0100		ReturnValue r1
+Start_101:			
+		@0101		SlotLocals #1
+		@0102		StageRegister r0
+		@0103		Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+		@0104		ReturnValue r1
+Start_105:			
+		@0105		SlotLocals #2
+		@0106		LoadPercentage r1, #0.05
+		@0107		Add r2, r0, r1
+		@0108		ReturnValue r2
+Start_109:			
+		@0109		SlotLocals #4
+		@0110		LoadInteger r1, #2
+		@0111		Modulo r2, r0, r1
+		@0112		LoadInteger r3, #1
+		@0113		Equal r4, r2, r3
+		@0114		ReturnValue r4
+Start_115:			
+		@0115		SlotLocals #2
+		@0116		LoadInteger r1, #2
+		@0117		Multiply r2, r0, r1
+		@0118		ReturnValue r2
+Start_119:			
+		@0119		SlotLocals #2
+		@0120		LoadInteger r1, #10
+		@0121		Greater r2, r0, r1
+		@0122		ReturnValue r2
+Start_123:			
+		@0123		SlotLocals #5
+		@0124		Add r2, r0, r1
+		@0125		LoadInteger r3, #7
+		@0126		Modulo r4, r2, r3
+		@0127		LoadInteger r5, #0
+		@0128		Greater r6, r4, r5
+		@0129		ReturnValue r6
+Start_130:			
+		@0130		SlotLocals #3
+		@0131		Add r2, r0, r1
+		@0132		LoadInteger r3, #2
+		@0133		Multiply r4, r2, r3
+		@0134		ReturnValue r4
+Start_135:			
+		@0135		SlotLocals #0
+		@0136		ReturnValue r0
+Start_137:			
+		@0137		SlotLocals #2
+		@0138		LoadInteger r1, #10
+		@0139		GreaterOrEqual r2, r0, r1
+		@0140		ReturnValue r2
+Start_141:			
+		@0141		SlotLocals #2
+		@0142		LoadPercentage r1, #0.05
+		@0143		Add r2, r0, r1
+		@0144		ReturnValue r2
+Start_145:			
+		@0145		SlotLocals #2
+		@0146		LoadInteger r1, #2
+		@0147		Multiply r2, r0, r1
+		@0148		ReturnValue r2
+Start_149:			
+		@0149		SlotLocals #0
+		@0150		ReturnValue r0
+
+predicate_high:		 // predicate high(value)
+		@0151		SlotLocals #2
+		@0152		CastNumeric r0, r0
+		@0153		LoadInteger r1, #10
+		@0154		GreaterOrEqual r2, r0, r1
+		@0155		ReturnValue r2
+
+

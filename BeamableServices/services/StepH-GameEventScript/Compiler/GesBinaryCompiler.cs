@@ -73,7 +73,7 @@ internal static class GesBinaryCompiler
                     var fieldRegister = fieldRegisters[fieldIndex];
                     if (field.ComputedExpression is not null)
                     {
-                        var computed = EmitExpression(field.ComputedExpression, context, state);
+                        var computed = EmitExpressionForRead(field.ComputedExpression, context, state);
                         EmitCastInto(fieldRegister, computed, field.TypeName);
                         continue;
                     }
@@ -81,8 +81,8 @@ internal static class GesBinaryCompiler
                     EmitCastInto(fieldRegister, fieldRegister, field.TypeName);
                     if (field.MinimumExpression is not null && field.MaximumExpression is not null)
                     {
-                        var minimum = EmitExpression(field.MinimumExpression, context, state);
-                        var maximum = EmitExpression(field.MaximumExpression, context, state);
+                        var minimum = EmitExpressionForRead(field.MinimumExpression, context, state);
+                        var maximum = EmitExpressionForRead(field.MaximumExpression, context, state);
                         _builder.Clamp(fieldRegister, fieldRegister, minimum, maximum);
                         EmitCastInto(fieldRegister, fieldRegister, field.TypeName);
                     }
@@ -152,7 +152,7 @@ internal static class GesBinaryCompiler
                     }
                 }
 
-                var result = EmitExpression(callable.Expression, context, new ExpressionState(context.RegisterCount));
+                var result = EmitExpressionForRead(callable.Expression, context, new ExpressionState(context.RegisterCount));
                 _builder.ReturnValue(result);
             }
         }
@@ -191,7 +191,7 @@ internal static class GesBinaryCompiler
                         break;
 
                     case ExpressionStatementNode expression:
-                        EmitExpression(expression.Expression, context, new ExpressionState(context.RegisterCount));
+                        EmitExpressionForRead(expression.Expression, context, new ExpressionState(context.RegisterCount));
                         break;
 
                     case IfStatementNode ifStatement:
@@ -218,7 +218,7 @@ internal static class GesBinaryCompiler
 
         private void EmitIf(IfStatementNode ifStatement, LoweringContext context)
         {
-            var condition = EmitExpression(ifStatement.Condition, context, new ExpressionState(context.RegisterCount));
+            var condition = EmitExpressionForRead(ifStatement.Condition, context, new ExpressionState(context.RegisterCount));
             var elseLabel = _builder.AddLabel("if_else");
             var endLabel = _builder.AddLabel("if_end");
             _builder.JumpIfNotTrue(condition, elseLabel);
@@ -252,11 +252,11 @@ internal static class GesBinaryCompiler
 
         private void EmitPublish(PublishStatementNode publish, LoweringContext context)
         {
-            var tags = publish.TagExpressions.Select(expression => EmitExpression(expression, context, new ExpressionState(context.RegisterCount))).ToArray();
+            var tags = publish.TagExpressions.Select(expression => EmitExpressionForRead(expression, context, new ExpressionState(context.RegisterCount))).ToArray();
             if (publish.MessageExpression is MessageLiteralExpressionNode message)
             {
                 var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
-                var arguments = message.Arguments.Select(argument => EmitExpression(argument.Expression, context, new ExpressionState(context.RegisterCount))).ToArray();
+                var arguments = message.Arguments.Select(argument => EmitExpressionForRead(argument.Expression, context, new ExpressionState(context.RegisterCount))).ToArray();
                 var bind = ResolveOutboundMessage(message.Message, argumentNames);
                 if (publish.Kind == PublishStatementKind.Publish)
                 {
@@ -272,7 +272,7 @@ internal static class GesBinaryCompiler
                 return;
             }
 
-            var messageValue = EmitExpression(publish.MessageExpression, context, new ExpressionState(context.RegisterCount));
+            var messageValue = EmitExpressionForRead(publish.MessageExpression, context, new ExpressionState(context.RegisterCount));
             if (publish.Kind == PublishStatementKind.Publish)
             {
                 if (tags.Length == 0) _builder.PublishMessageValue(messageValue);
@@ -325,20 +325,20 @@ internal static class GesBinaryCompiler
                 }
                 case UnaryExpressionNode unary:
                 {
-                    var operand = EmitExpression(unary.Operand, context, state);
+                    var operand = EmitExpressionForRead(unary.Operand, context, state);
                     EmitUnary(destination, unary.Operator, operand);
                     return true;
                 }
                 case BinaryExpressionNode binary when binary.Operator is not (GesBinaryOperator.Or or GesBinaryOperator.And or GesBinaryOperator.Implies):
                 {
-                    var left = EmitExpression(binary.Left, context, state);
-                    var right = EmitExpression(binary.Right, context, state);
+                    var left = EmitExpressionForRead(binary.Left, context, state);
+                    var right = EmitExpressionForRead(binary.Right, context, state);
                     EmitBinary(destination, binary.Operator, left, right);
                     return true;
                 }
                 case TypeCastExpressionNode cast:
                 {
-                    var value = EmitExpression(cast.Value, context, state);
+                    var value = EmitExpressionForRead(cast.Value, context, state);
                     EmitCastInto(destination, value, cast.TypeName);
                     return true;
                 }
@@ -367,7 +367,7 @@ internal static class GesBinaryCompiler
                 case MessageLiteralExpressionNode message:
                 {
                     var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
-                    var arguments = message.Arguments.Select(argument => EmitExpression(argument.Expression, context, state)).ToArray();
+                    var arguments = message.Arguments.Select(argument => EmitExpressionForRead(argument.Expression, context, state)).ToArray();
                     _builder.LoadMessage(destination, MessageShape(message.Message, argumentNames), arguments);
                     return destination;
                 }
@@ -388,10 +388,10 @@ internal static class GesBinaryCompiler
 
                 case RangeExpressionNode range:
                 {
-                    var from = EmitExpression(range.FromExpression, context, state);
-                    var to = EmitExpression(range.ToExpression, context, state);
+                    var from = EmitExpressionForRead(range.FromExpression, context, state);
+                    var to = EmitExpressionForRead(range.ToExpression, context, state);
                     if (range.StepExpression is null) _builder.CreateRange(destination, from, to);
-                    else _builder.CreateRangeWithStep(destination, from, to, EmitExpression(range.StepExpression, context, state));
+                    else _builder.CreateRangeWithStep(destination, from, to, EmitExpressionForRead(range.StepExpression, context, state));
                     return destination;
                 }
 
@@ -402,15 +402,15 @@ internal static class GesBinaryCompiler
                 case ClampExpressionNode clamp:
                     _builder.Clamp(
                         destination,
-                        EmitExpression(clamp.Value, context, state),
-                        EmitExpression(clamp.Minimum, context, state),
-                        EmitExpression(clamp.Maximum, context, state));
+                        EmitExpressionForRead(clamp.Value, context, state),
+                        EmitExpressionForRead(clamp.Minimum, context, state),
+                        EmitExpressionForRead(clamp.Maximum, context, state));
                     return destination;
 
                 case RandomExpressionNode random:
                 {
-                    var from = EmitExpression(random.FromExpression, context, state);
-                    var to = EmitExpression(random.ToExpression, context, state);
+                    var from = EmitExpressionForRead(random.FromExpression, context, state);
+                    var to = EmitExpressionForRead(random.ToExpression, context, state);
                     if (random.FromExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode ||
                         random.ToExpression is FloatLiteralExpressionNode or UnitFloatLiteralExpressionNode)
                     {
@@ -426,7 +426,7 @@ internal static class GesBinaryCompiler
 
                 case SeededRandomExpressionNode seededRandom:
                     EmitRandomPush(seededRandom.SeedExpression, context, state);
-                    var result = EmitExpression(seededRandom.BodyExpression, context, state);
+                    var result = EmitExpressionForRead(seededRandom.BodyExpression, context, state);
                     _builder.Move(destination, result);
                     _builder.RandomPop();
                     return destination;
@@ -454,7 +454,7 @@ internal static class GesBinaryCompiler
                     return destination;
 
                 case TypeCheckExpressionNode check:
-                    EmitCheckInto(destination, EmitExpression(check.Value, context, state), check.TypeName);
+                    EmitCheckInto(destination, EmitExpressionForRead(check.Value, context, state), check.TypeName);
                     return destination;
 
                 case TypeConstructorExpressionNode constructor:
@@ -462,7 +462,7 @@ internal static class GesBinaryCompiler
                     return destination;
 
                 case MemberAccessExpressionNode member:
-                    _builder.MemberAccess(destination, member.Member, EmitExpression(member.Target, context, state));
+                    _builder.MemberAccess(destination, member.Member, EmitExpressionForRead(member.Target, context, state));
                     return destination;
 
                 case CollectionAccessExpressionNode access:
@@ -474,9 +474,16 @@ internal static class GesBinaryCompiler
             }
         }
 
+        private GesRegisterRef EmitExpressionForRead(ExpressionNode expression, LoweringContext context, ExpressionState state)
+        {
+            return expression is IdentifierExpressionNode { Name: not "nothing" } identifier
+                ? context.Require(identifier.Name)
+                : EmitExpression(expression, context, state);
+        }
+
         private GesRegisterRef EmitShortCircuitBinary(BinaryExpressionNode binary, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            var left = EmitExpression(binary.Left, context, state);
+            var left = EmitExpressionForRead(binary.Left, context, state);
             EmitShortCircuitCombine(binary.Operator, destination, left, left);
             var end = _builder.AddLabel("short_circuit_end");
             switch (binary.Operator)
@@ -490,7 +497,7 @@ internal static class GesBinaryCompiler
                     break;
             }
 
-            var right = EmitExpression(binary.Right, context, state);
+            var right = EmitExpressionForRead(binary.Right, context, state);
             EmitShortCircuitCombine(binary.Operator, destination, left, right);
             _builder.MarkLabel(end);
             return destination;
@@ -522,11 +529,11 @@ internal static class GesBinaryCompiler
                 return destination;
             }
 
-            var current = EmitExpression(variadic.Arguments[0], context, state);
+            var current = EmitExpressionForRead(variadic.Arguments[0], context, state);
             if (current.Id != destination.Id) _builder.Move(destination, current);
             for (var index = 1; index < variadic.Arguments.Count; index++)
             {
-                var next = EmitExpression(variadic.Arguments[index], context, state);
+                var next = EmitExpressionForRead(variadic.Arguments[index], context, state);
                 switch (variadic.Operator)
                 {
                     case "min":
@@ -545,7 +552,7 @@ internal static class GesBinaryCompiler
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            var target = EmitExpression(access.Target, context, state);
+            var target = EmitExpressionForRead(access.Target, context, state);
             switch (access.Selector)
             {
                 case ExpressionSelectorNode { Expression: IntegerLiteralExpressionNode integer } when integer.Value is >= 0 and <= ushort.MaxValue:
@@ -558,10 +565,10 @@ internal static class GesBinaryCompiler
                     _builder.MemberAccess(destination, tag.Name, target);
                     return;
                 case ExpressionSelectorNode selector:
-                    _builder.PropertyAccess(destination, EmitExpression(selector.Expression, context, state), target);
+                    _builder.PropertyAccess(destination, EmitExpressionForRead(selector.Expression, context, state), target);
                     return;
                 case SeriesTermSelectorNode term:
-                    _builder.Term(destination, target, EmitExpression(term.IndexExpression, context, state));
+                    _builder.Term(destination, target, EmitExpressionForRead(term.IndexExpression, context, state));
                     return;
                 case SequenceSliceSelectorNode slice:
                     EmitSlice(destination, target, slice);
@@ -690,7 +697,7 @@ internal static class GesBinaryCompiler
             using var sourceRange = _builder.SourceRange(expression.SourceRange);
             using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}");
             var helperContext = LoweringContext.ForRoutineWithParent(helper, parentContext);
-            var result = EmitExpression(expression, helperContext, new ExpressionState(parentState.NextRegister));
+            var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(parentState.NextRegister));
             _builder.ReturnValue(result);
             return helper.EntryLabel;
         }
@@ -731,7 +738,7 @@ internal static class GesBinaryCompiler
             using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}");
             var helperContext = LoweringContext.ForRoutineWithParent(helper, parentContext);
             helperContext.DeclareExisting(identifier, itemBinding);
-            var result = EmitExpression(expression, helperContext, new ExpressionState(parentState.NextRegister));
+            var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(parentState.NextRegister));
             _builder.ReturnValue(result);
             return helper.EntryLabel;
         }
@@ -748,7 +755,7 @@ internal static class GesBinaryCompiler
             using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}");
             var helperContext = LoweringContext.ForRoutineWithParent(helper, parentContext);
             helperContext.DeclareExisting(identifier, itemBinding);
-            var result = EmitExpression(expression, helperContext, new ExpressionState(Math.Max(parentState.NextRegister, itemBinding.Id + 1)));
+            var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(Math.Max(parentState.NextRegister, itemBinding.Id + 1)));
             _builder.ReturnValue(result);
             return helper.EntryLabel;
         }
@@ -773,7 +780,7 @@ internal static class GesBinaryCompiler
                 helperContext.DeclareExisting(captures[index].Name, helper.Arguments[index + 1]);
             }
 
-            var result = EmitExpression(expression, helperContext, new ExpressionState(helperContext.RegisterCount));
+            var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(helperContext.RegisterCount));
             _builder.ReturnValue(result);
             return helper.EntryLabel;
         }
@@ -953,7 +960,7 @@ internal static class GesBinaryCompiler
                 {
                     case ObjectMatchExpressionValueNode expression:
                     {
-                        var expected = EmitExpression(expression.Expression, context, state);
+                        var expected = EmitExpressionForRead(expression.Expression, context, state);
                         entryMatch = state.AllocateTemporary(_builder, context);
                         _builder.Equal(entryMatch, member, expected);
                         break;
@@ -1009,7 +1016,7 @@ internal static class GesBinaryCompiler
 
         private void EmitContains(GesRegisterRef destination, GesRegisterRef target, ContainsSelectorNode contains, LoweringContext context, ExpressionState state)
         {
-            var needle = EmitExpression(contains.ValueExpression, context, state);
+            var needle = EmitExpressionForRead(contains.ValueExpression, context, state);
             switch (contains.Mode)
             {
                 case "all":
@@ -1044,11 +1051,11 @@ internal static class GesBinaryCompiler
             _builder.StreamNext(item, iterator, endLabel);
             if (generatedCollection.Predicate is not null)
             {
-                var predicate = EmitExpression(generatedCollection.Predicate, collectionContext, state);
+                var predicate = EmitExpressionForRead(generatedCollection.Predicate, collectionContext, state);
                 _builder.JumpIfNotTrue(predicate, skipProjectionLabel!.Value);
             }
 
-            var projection = EmitExpression(generatedCollection.Projection, collectionContext, state);
+            var projection = EmitExpressionForRead(generatedCollection.Projection, collectionContext, state);
             _builder.ListBuilderAdd(builderRegister, projection);
             if (skipProjectionLabel.HasValue)
             {
@@ -1067,15 +1074,15 @@ internal static class GesBinaryCompiler
             foreach (var branch in guardedChoice.Branches)
             {
                 var nextBranchLabel = _builder.AddLabel("choice_next");
-                var condition = EmitExpression(branch.ConditionExpression, context, state);
+                var condition = EmitExpressionForRead(branch.ConditionExpression, context, state);
                 _builder.JumpIfNotTrue(condition, nextBranchLabel);
-                var value = EmitExpression(branch.ValueExpression, context, state);
+                var value = EmitExpressionForRead(branch.ValueExpression, context, state);
                 if (value.Id != destination.Id) _builder.Move(destination, value);
                 _builder.Jump(endLabel);
                 _builder.MarkLabel(nextBranchLabel);
             }
 
-            var otherwiseValue = EmitExpression(guardedChoice.OtherwiseExpression, context, state);
+            var otherwiseValue = EmitExpressionForRead(guardedChoice.OtherwiseExpression, context, state);
             if (otherwiseValue.Id != destination.Id) _builder.Move(destination, otherwiseValue);
             _builder.MarkLabel(endLabel);
         }
@@ -1093,8 +1100,8 @@ internal static class GesBinaryCompiler
 
                 case RangeIterationSourceNode range:
                 {
-                    var from = EmitExpression(range.RangeExpression.FromExpression, context, state);
-                    var to = EmitExpression(range.RangeExpression.ToExpression, context, state);
+                    var from = EmitExpressionForRead(range.RangeExpression.FromExpression, context, state);
+                    var to = EmitExpressionForRead(range.RangeExpression.ToExpression, context, state);
                     var iterator = state.AllocateTemporary(_builder, context);
                     if (range.RangeExpression.StepExpression is null)
                     {
@@ -1102,7 +1109,7 @@ internal static class GesBinaryCompiler
                     }
                     else
                     {
-                        _builder.CreateRangeIteratorWithStep(iterator, from, to, EmitExpression(range.RangeExpression.StepExpression, context, state));
+                        _builder.CreateRangeIteratorWithStep(iterator, from, to, EmitExpressionForRead(range.RangeExpression.StepExpression, context, state));
                     }
 
                     return iterator;
@@ -1110,7 +1117,7 @@ internal static class GesBinaryCompiler
 
                 case CollectionIterationSourceNode collection:
                 {
-                    var collectionRegister = EmitExpression(collection.Expression, context, state);
+                    var collectionRegister = EmitExpressionForRead(collection.Expression, context, state);
                     var iterator = state.AllocateTemporary(_builder, context);
                     _builder.StreamCreate(iterator, collectionRegister);
                     return iterator;
@@ -1125,7 +1132,7 @@ internal static class GesBinaryCompiler
         {
             return IsStageConstant(expression)
                 ? StageArgumentPlan.FromExpression(expression)
-                : StageArgumentPlan.FromRegister(EmitExpression(expression, context, state));
+                : StageArgumentPlan.FromRegister(EmitExpressionForRead(expression, context, state));
         }
 
         private void EmitStageArguments(IEnumerable<ExpressionNode> expressions, LoweringContext context, ExpressionState state)
@@ -1207,7 +1214,7 @@ internal static class GesBinaryCompiler
                 return;
             }
 
-            _builder.RandomPush(EmitExpression(seedExpression, context, state));
+            _builder.RandomPush(EmitExpressionForRead(seedExpression, context, state));
         }
 
         private void EmitCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -1230,14 +1237,14 @@ internal static class GesBinaryCompiler
             {
                 foreach (var argument in call.ArgumentList.Arguments)
                 {
-                    EmitExpression(argument.Expression, context, state);
+                    EmitExpressionForRead(argument.Expression, context, state);
                 }
 
                 _builder.LoadNothing(destination);
                 return;
             }
 
-            var arguments = call.Arguments.Select(argument => EmitExpression(argument, context, state)).ToArray();
+            var arguments = call.Arguments.Select(argument => EmitExpressionForRead(argument, context, state)).ToArray();
             _builder.BindHandler(destination, handler, arguments);
         }
 
@@ -1260,14 +1267,14 @@ internal static class GesBinaryCompiler
                 extensionPredicate.ExtensionName,
                 extensionPredicate.FunctionName,
                 [GameEventScriptMessageSignature.UnlabeledParameterName]);
-            var argument = EmitExpression(extensionPredicate.Value, context, state);
+            var argument = EmitExpressionForRead(extensionPredicate.Value, context, state);
             EmitExtensionReferenceInto(reference, destination, [argument], isPredicate: true);
         }
 
         private void EmitExtensionCallInto(ExtensionCallExpressionNode extensionCall, GesRegisterRef destination, LoweringContext context, ExpressionState state, bool isPredicate)
         {
             var argumentNames = extensionCall.Arguments.Select(argument => argument.Name).ToArray();
-            var arguments = extensionCall.Arguments.Select(argument => EmitExpression(argument.Expression, context, state)).ToArray();
+            var arguments = extensionCall.Arguments.Select(argument => EmitExpressionForRead(argument.Expression, context, state)).ToArray();
             var reference = new GameEventScriptExtensionReference(extensionCall.ExtensionName, extensionCall.FunctionName, argumentNames);
             EmitExtensionReferenceInto(reference, destination, arguments, isPredicate);
         }
@@ -1289,7 +1296,7 @@ internal static class GesBinaryCompiler
 
             if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null && IsBuiltInCastType(constructor.TypeName))
             {
-                EmitCastInto(destination, EmitExpression(constructor.Arguments[0].Expression, context, state), constructor.TypeName);
+                EmitCastInto(destination, EmitExpressionForRead(constructor.Arguments[0].Expression, context, state), constructor.TypeName);
                 return;
             }
 

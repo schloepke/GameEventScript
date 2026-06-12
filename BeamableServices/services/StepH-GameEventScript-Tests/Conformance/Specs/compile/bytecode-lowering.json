@@ -5,6 +5,20 @@
   "tests": [
     {
       "kind": "bytecode",
+      "name": "emit arguments read existing registers without temporary moves",
+      "script": "module EmitArgumentReads\n\non Start(value) {\n  let doubled be value * 2\n  emit Done(original: value, result: doubled)\n}\n",
+      "expectedOpcodes": {
+        "notContains": [
+          "Move"
+        ],
+        "contains": [
+          "Multiply",
+          "EmitMessage"
+        ]
+      }
+    },
+    {
+      "kind": "bytecode",
       "name": "random take lowers integer and float variants separately",
       "script": "module RandomTakes\n\non Start {\n  let integerValue be :random from 1 to 6\n  let floatValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)\n}\n",
       "expectedOpcodes": {

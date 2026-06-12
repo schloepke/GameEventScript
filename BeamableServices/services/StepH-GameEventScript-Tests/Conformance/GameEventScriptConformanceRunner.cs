@@ -68,7 +68,7 @@ internal static class GameEventScriptConformanceRunner
         return CreateScriptBuilder(test).CompileModule(CreateCompileOptions(test));
     }
 
-    internal static GameEventScriptCompiled CompileBytecodeForTest(GameEventScriptConformanceTest test)
+    internal static GameEventScriptBinary CompileBytecodeForTest(GameEventScriptConformanceTest test)
         => CompileBytecode(test);
 
     internal static GameEventScriptRandomGenerator CreateRandomForTest(IReadOnlyList<string>? randomSequence)
@@ -226,7 +226,7 @@ internal static class GameEventScriptConformanceRunner
         }
 
         var compiled = CompileBytecode(testCase.Test);
-        var opCodes = compiled.Code.Select(instruction => instruction.OpCode).ToArray();
+        var opCodes = compiled.InstructionTable.Select(instruction => instruction.OpCode).ToArray();
         var counts = opCodes
             .GroupBy(opCode => opCode)
             .ToDictionary(group => group.Key, group => group.Count());
@@ -368,7 +368,7 @@ internal static class GameEventScriptConformanceRunner
            Matches(expected.EndLine, location.EndLine) &&
            Matches(expected.EndColumn, location.EndColumn);
 
-    private static GameEventScriptCompiled CompileBytecode(GameEventScriptConformanceTest test)
+    private static GameEventScriptBinary CompileBytecode(GameEventScriptConformanceTest test)
     {
         return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
     }

@@ -56,6 +56,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinary
   enum-field Debug = 2
 sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   ctor GameEventScriptBuilder()
+  method StepH.GameEventScript.Api.GameEventScriptBinary Compile(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddScript(System.String text, System.String sourceName)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithDebugInfo(System.Boolean enabled)
@@ -63,7 +64,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(System.Type[] types)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithOptimization(System.Boolean enabled)
-  method StepH.GameEventScript.Api.GameEventScriptCompiled Compile(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
 sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
@@ -620,11 +620,12 @@ static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter
 class StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter
   ctor GameEventScriptOpcodePrinter()
 static class StepH.GameEventScript.GameEventScriptManager
+  method static StepH.GameEventScript.Api.GameEventScriptBinary Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()
-  method static StepH.GameEventScript.Api.GameEventScriptCompiled Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
   method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.IGameEventScriptModule CreateModule(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
+  property System.Boolean UseNewCompiler { get set }
 sealed class StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent
   ctor GameEventScriptDiagnosticEvent(System.Int32 Sequence, StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind Kind, System.String Name, StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments, System.String Detail)
   method StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent <Clone>$()

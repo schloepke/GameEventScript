@@ -380,11 +380,11 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         var iterations = ResolveIterationCount(PerformanceIterations, testCase.Test.Iterations, DefaultIterations);
         var warmupIterations = ResolveIterationCount(PerformanceWarmupIterations, testCase.Test.WarmupIterations, DefaultWarmupIterations);
         var compiled = Measure("ges compile", () => GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test));
-        var newBuild = Measure<IGameEventScriptModule>("new vm build", () => GameEventScriptVirtualMaschine.Create(compiled.Value.ToGameEventScriptBinary(), 4096, 256));
+        var newBuild = Measure<IGameEventScriptModule>("new vm build", () => GameEventScriptVirtualMaschine.Create(compiled.Value, 4096, 256));
         if (testCase.Test.DumpBinary)
         {
             TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
-            TestContext.WriteLine(compiled.Value.ToGameEventScriptBinary().Dump(GetScriptSourceForDump(testCase)));
+            TestContext.WriteLine(compiled.Value.Dump(GetScriptSourceForDump(testCase)));
         }
 
         AssertPerformanceCorrectness(testCase, "new vm", newBuild.Value);
@@ -399,7 +399,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         GameEventScriptConformanceCase testCase,
         int iterations,
         int warmupIterations,
-        Measured<GameEventScriptCompiled> compiled,
+        Measured<GameEventScriptBinary> compiled,
         Measured<IGameEventScriptModule> build,
         PerformanceRunMetrics run)
     {
@@ -755,7 +755,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         GameEventScriptBinary binary;
         try
         {
-            binary = GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test).ToGameEventScriptBinary();
+            binary = GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test);
         }
         catch (Exception exception)
         {

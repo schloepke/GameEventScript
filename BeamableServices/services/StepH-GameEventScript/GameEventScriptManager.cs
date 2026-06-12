@@ -9,10 +9,12 @@ namespace StepH.GameEventScript;
 
 public static class GameEventScriptManager
 {
+    public static bool UseNewCompiler { get; set; } = true;
+    
     public static GameEventScriptBuilder CreateScriptBuilder()
         => GameEventScriptBuilder.Create();
 
-    public static GameEventScriptCompiled Compile(string input, GameEventScriptCompileOptions? options = null)
+    public static GameEventScriptBinary Compile(string input, GameEventScriptCompileOptions? options = null)
         => CreateScriptBuilder().AddScript(input).Compile(options);
 
     public static IGameEventScriptModule CompileModule(string input, GameEventScriptCompileOptions? options = null)

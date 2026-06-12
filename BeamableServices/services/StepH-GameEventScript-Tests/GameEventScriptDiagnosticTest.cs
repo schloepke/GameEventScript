@@ -60,12 +60,8 @@ public class GameEventScriptDiagnosticTest
             })
             .WithDiagnosticCollector(collector)
             .Build()
-            .Load(GameEventScriptManager.CreateModule(bytecode.ToGameEventScriptBinary()));
+            .Load(GameEventScriptManager.CreateModule(bytecode));
         
         host.PublishToCompletion(input);
-        
-        TestContext.WriteLine(collector.ToString());
-        TestContext.WriteLine("Bytecode Dump:\n" + bytecode.DumpBytecode());
-        
     }
 }

@@ -25,7 +25,7 @@ public sealed class GameEventScriptBinaryTests
             """;
 
         var compiled = GameEventScriptManager.Compile(script);
-        var binary = compiled.ToGameEventScriptBinary();
+        var binary = compiled;
 
         Assert.AreEqual("BinaryShape", compiled.ModuleName);
         Assert.AreEqual("BinaryShape", binary.ModuleName);
@@ -36,7 +36,7 @@ public sealed class GameEventScriptBinaryTests
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Function && Resolve(binary, entry.Name) == "score"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Predicate && Resolve(binary, entry.Name) == "high"));
-        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < compiled.Code.Count));
+        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < compiled.InstructionTable.Length));
 
         var start = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler);
         CollectionAssert.AreEqual(new[] { "value" }, start.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
@@ -62,7 +62,7 @@ public sealed class GameEventScriptBinaryTests
             }
             """;
 
-        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
+        var binary = GameEventScriptManager.Compile(script);
 
         var handler = binary.BindTable.Entries.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler);
         Assert.AreEqual("Ping", Resolve(binary, handler.Name));
@@ -81,7 +81,7 @@ public sealed class GameEventScriptBinaryTests
             }
             """;
 
-        var dump = GameEventScriptManager.Compile(script).ToGameEventScriptBinary().Dump();
+        var dump = GameEventScriptManager.Compile(script).Dump();
 
         StringAssert.Contains(dump, "// \"Ping as message\"");
         Assert.IsFalse(dump.Contains("// \"Ping(message)\"", StringComparison.Ordinal));
@@ -99,7 +99,7 @@ public sealed class GameEventScriptBinaryTests
             }
             """;
 
-        var dump = GameEventScriptManager.Compile(script).ToGameEventScriptBinary().Dump(
+        var dump = GameEventScriptManager.Compile(script).Dump(
             includeInstructionAddresses: true,
             scriptSource: script);
 
@@ -146,7 +146,7 @@ public sealed class GameEventScriptBinaryTests
             }
             """;
 
-        var binary = GameEventScriptManager.Compile(script).ToGameEventScriptBinary();
+        var binary = GameEventScriptManager.Compile(script);
 
         var json = JsonSerializer.Serialize(binary);
 

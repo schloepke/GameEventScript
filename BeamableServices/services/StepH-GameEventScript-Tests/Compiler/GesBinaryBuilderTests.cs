@@ -110,17 +110,17 @@ public sealed class GesBinaryBuilderTests
         Assert.HasCount(1, binary.BindTable.Entries);
         Assert.AreEqual(GameEventScriptBinaryBindKind.MessageHandler, binary.BindTable.Entries[0].Kind);
         Assert.AreEqual("Start", binary.TextConstantTable.Resolve(binary.BindTable.Entries[0].Name));
-        Assert.AreEqual((ushort)4, binary.BindTable.Entries[0].EntryAddress);
+        Assert.AreEqual((ushort)0, binary.BindTable.Entries[0].EntryAddress);
 
         Assert.HasCount(6, binary.InstructionTable);
         Assert.AreEqual(GameEventScriptBytecodeOpCode.SlotLocals, binary.InstructionTable[0].OpCode);
-        Assert.AreEqual((short)2, binary.InstructionTable[0].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[1].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.Add, binary.InstructionTable[2].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnValue, binary.InstructionTable[3].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.SlotLocals, binary.InstructionTable[4].OpCode);
-        Assert.AreEqual((short)0, binary.InstructionTable[4].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[5].OpCode);
+        Assert.AreEqual((short)0, binary.InstructionTable[0].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[1].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.SlotLocals, binary.InstructionTable[2].OpCode);
+        Assert.AreEqual((short)2, binary.InstructionTable[2].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[3].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.Add, binary.InstructionTable[4].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnValue, binary.InstructionTable[5].OpCode);
     }
 
     [TestMethod]

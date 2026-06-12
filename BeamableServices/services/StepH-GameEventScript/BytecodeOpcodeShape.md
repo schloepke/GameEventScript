@@ -368,9 +368,9 @@ separate approximate-equality opcode.
 | 0x9E | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
 | 0x9F | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
 | 0xA0 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
-| 0xA1 | `StreamCount` | - | result register | `XSlot`=iterator | - | - | Counts finite stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xA2 | `StreamSum` | - | result register | `XSlot`=iterator | - | - | Sums finite stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xA3 | `StreamAverage` | - | result register | `XSlot`=iterator | - | - | Averages finite stream elements. Empty/series -> `nothing`. |
+| 0xA1 | `Count` | - | result register | `XSlot`=source | - | - | Counts finite collection/stream elements. Empty -> `0`; series -> `nothing`. |
+| 0xA2 | `Sum` | - | result register | `XSlot`=source | - | - | Sums finite collection/stream elements. Empty -> `0`; series -> `nothing`. |
+| 0xA3 | `Average` | - | result register | `XSlot`=source | - | - | Averages finite collection/stream elements. Empty/series -> `nothing`. |
 | 0xA4 | `StreamMin` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
 | 0xA5 | `StreamMax` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
 | 0xA6 | `StreamOneWeighted` | - | result register | `XSlot`=iterator | - | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |

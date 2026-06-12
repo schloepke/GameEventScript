@@ -2314,13 +2314,13 @@ internal sealed class GesLinearBytecodeBuilder
     }
 
     private int EmitPipelineCount(int iteratorSlot, ExpressionState state)
-        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.StreamCount, a: iteratorSlot);
+        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Count, a: iteratorSlot);
 
     private int EmitPipelineSum(int iteratorSlot, ExpressionState state)
-        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.StreamSum, a: iteratorSlot);
+        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Sum, a: iteratorSlot);
 
     private int EmitPipelineAverage(int iteratorSlot, ExpressionState state)
-        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.StreamAverage, a: iteratorSlot);
+        => EmitValueInstruction(state, GameEventScriptBytecodeOpCode.Average, a: iteratorSlot);
 
     private int EmitPipelineExtrema(
         int iteratorSlot,

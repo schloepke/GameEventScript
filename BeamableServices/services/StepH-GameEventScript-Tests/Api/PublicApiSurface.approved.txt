@@ -290,9 +290,9 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field StreamClose = 158
   enum-field StreamMap = 159
   enum-field StreamFilter = 160
-  enum-field StreamCount = 161
-  enum-field StreamSum = 162
-  enum-field StreamAverage = 163
+  enum-field Count = 161
+  enum-field Sum = 162
+  enum-field Average = 163
   enum-field StreamMin = 164
   enum-field StreamMax = 165
   enum-field StreamOneWeighted = 166

@@ -408,14 +408,14 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder StreamFilter(GesRegisterRef destination, GesRegisterRef sourceIterator, GesLabelRef predicateEntry, GesRegisterRef itemBinding, IReadOnlyList<GesRegisterRef> captures)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamFilter, dst: GesOperand.Register(destination), x: GesOperand.Register(sourceIterator), y: GesOperand.Label(predicateEntry), a: GesOperand.Register(itemBinding), b: GesOperand.RegisterList(captures));
 
-    public GesBinaryBuilder StreamCount(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamCount, destination, iterator);
+    public GesBinaryBuilder Count(GesRegisterRef destination, GesRegisterRef iterator)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Count, destination, iterator);
 
-    public GesBinaryBuilder StreamSum(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamSum, destination, iterator);
+    public GesBinaryBuilder Sum(GesRegisterRef destination, GesRegisterRef iterator)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Sum, destination, iterator);
 
-    public GesBinaryBuilder StreamAverage(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamAverage, destination, iterator);
+    public GesBinaryBuilder Average(GesRegisterRef destination, GesRegisterRef iterator)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Average, destination, iterator);
 
     public GesBinaryBuilder StreamMin(GesRegisterRef destination, GesRegisterRef iterator, GesRegisterRef itemBinding, GesLabelRef projectionEntry)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamMin, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Register(itemBinding), a: GesOperand.Label(projectionEntry));

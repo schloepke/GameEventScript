@@ -1,33 +1,152 @@
 namespace StepH.GameEventScript.VirtualMachine;
 using System;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 internal static class GesVmRegisterStreamTerminals
 {
-    internal static void GesVmStreamCount(ref this GesVmValue dst, ref GesVmValue iterator, ushort destinationSlot)
+    internal static void GesVmCount(ref this GesVmValue dst, ref GesVmValue iterator)
     {
-        var state = dst.OwningState;
-        if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
+        switch (iterator.Kind)
         {
-            state.Register(destinationSlot).SetNothing();
+            case List when iterator.ObjectValue is GesVmListObject list:
+                dst.SetInteger(list.Length);
+                return;
+            case Map when iterator.ObjectValue is GesVmMapObject map:
+                dst.SetInteger(map.Length);
+                return;
+            case Dice when iterator.ObjectValue is int[] dice:
+                dst.SetInteger(dice.Length);
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmRange range:
+                dst.SetInteger(GameEventScriptRangeMath.GetLength(range.from, range.to, range.step));
+                return;
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmFloatRange range:
+                dst.SetInteger(GameEventScriptRangeMath.GetLength(range.from, range.to, range.step));
+                return;
+            case Vector or Point when iterator.ObjectValue is IGesVmIndexAccess<double> indexAccess:
+                dst.SetInteger(indexAccess.Length);
+                return;
+            case Text or Tag:
+                dst.SetInteger(iterator.ReadTextOrTag().Length);
+                return;
+        }
+
+        IGesVmStream stream;
+        if (iterator is { Kind: Stream, ObjectValue: IGesVmStream sourceStream }) stream = sourceStream;
+        else if (!iterator.TryCreateStream(out stream))
+        {
+            dst.SetNothing();
             return;
         }
 
         long count = 0;
-        var item = state.CreateNothing();
+        var item = dst.OwningState.CreateNothing();
         try
         {
             while (stream.TryNext(ref item)) count++;
-            state.Register(destinationSlot).SetInteger(count);
+            dst.SetInteger(count);
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmStreamSum(ref this GesVmValue dst, ref GesVmValue iterator)
+    internal static void GesVmSum(ref this GesVmValue dst, ref GesVmValue iterator)
     {
+        switch (iterator.Kind)
+        {
+            case List when iterator.ObjectValue is GesVmListObject list:
+            {
+                if (list.Length == 0)
+                {
+                    dst.SetFloat(0d);
+                    return;
+                }
+
+                var listSum = list.Items[0];
+                var listNext = dst.OwningState.CreateNothing();
+                for (var i = 1; i < list.Length; i++)
+                {
+                    listNext.GesVmAdd(ref listSum, ref list.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    listSum = listNext;
+                }
+
+                dst = listSum;
+                return;
+            }
+            case Map when iterator.ObjectValue is GesVmMapObject map:
+            {
+                var values = map.ValueList;
+                if (values.Length == 0)
+                {
+                    dst.SetFloat(0d);
+                    return;
+                }
+
+                var mapSum = values.Items[0];
+                var mapNext = dst.OwningState.CreateNothing();
+                for (var i = 1; i < values.Length; i++)
+                {
+                    mapNext.GesVmAdd(ref mapSum, ref values.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    mapSum = mapNext;
+                }
+
+                dst = mapSum;
+                return;
+            }
+            case Dice when iterator.ObjectValue is int[] dice:
+            {
+                if (dice.Length == 0)
+                {
+                    dst.SetFloat(0d);
+                    return;
+                }
+
+                long diceSum = 0;
+                for (var i = 0; i < dice.Length; i++) diceSum += dice[i];
+                dst.SetInteger(diceSum);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmRange range:
+            {
+                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                if (length <= 0)
+                {
+                    dst.SetFloat(0d);
+                    return;
+                }
+
+                long rangeSum = 0;
+                for (long i = 1; i <= length; i++)
+                {
+                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) rangeSum += value;
+                }
+
+                dst.SetInteger(rangeSum);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmFloatRange range:
+            {
+                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                if (length <= 0)
+                {
+                    dst.SetFloat(0d);
+                    return;
+                }
+
+                var floatRangeSum = 0d;
+                for (long i = 1; i <= length; i++)
+                {
+                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) floatRangeSum += value;
+                }
+
+                dst.SetFloat(floatRangeSum);
+                return;
+            }
+        }
+
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
             dst.SetNothing();
@@ -58,9 +177,107 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmStreamAverage(ref this GesVmValue dst, ref GesVmValue iterator)
+    internal static void GesVmAverage(ref this GesVmValue dst, ref GesVmValue iterator)
     {
-        if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
+        switch (iterator.Kind)
+        {
+            case List when iterator.ObjectValue is GesVmListObject list:
+            {
+                if (list.Length == 0)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var listSum = list.Items[0];
+                var listNext = dst.OwningState.CreateNothing();
+                for (var i = 1; i < list.Length; i++)
+                {
+                    listNext.GesVmAdd(ref listSum, ref list.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    listSum = listNext;
+                }
+
+                var countValue = dst.OwningState.CreateInteger(list.Length);
+                listNext.GesVmDivide(ref listSum, ref countValue, ref dst.OwningState.Binary.TextConstantTable);
+                dst = listNext;
+                return;
+            }
+            case Map when iterator.ObjectValue is GesVmMapObject map:
+            {
+                var values = map.ValueList;
+                if (values.Length == 0)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var mapSum = values.Items[0];
+                var mapNext = dst.OwningState.CreateNothing();
+                for (var i = 1; i < values.Length; i++)
+                {
+                    mapNext.GesVmAdd(ref mapSum, ref values.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    mapSum = mapNext;
+                }
+
+                var countValue = dst.OwningState.CreateInteger(values.Length);
+                mapNext.GesVmDivide(ref mapSum, ref countValue, ref dst.OwningState.Binary.TextConstantTable);
+                dst = mapNext;
+                return;
+            }
+            case Dice when iterator.ObjectValue is int[] dice:
+            {
+                if (dice.Length == 0)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                long diceSum = 0;
+                for (var i = 0; i < dice.Length; i++) diceSum += dice[i];
+                dst.SetFloat((double)diceSum / dice.Length);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmRange range:
+            {
+                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                if (length <= 0)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                long rangeSum = 0;
+                for (long i = 1; i <= length; i++)
+                {
+                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) rangeSum += value;
+                }
+
+                dst.SetFloat((double)rangeSum / length);
+                return;
+            }
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmFloatRange range:
+            {
+                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                if (length <= 0)
+                {
+                    dst.SetNothing();
+                    return;
+                }
+
+                var floatRangeSum = 0d;
+                for (long i = 1; i <= length; i++)
+                {
+                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) floatRangeSum += value;
+                }
+
+                dst.SetFloat(floatRangeSum / length);
+                return;
+            }
+        }
+
+        IGesVmStream stream;
+        if (iterator is { Kind: Stream, ObjectValue: IGesVmStream sourceStream }) stream = sourceStream;
+        else if (!iterator.TryCreateStream(out stream))
         {
             dst.SetNothing();
             return;

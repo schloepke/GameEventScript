@@ -211,30 +211,46 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         }
 
         var report = new StringBuilder();
+        var binaryDumpReport = new StringBuilder();
         report.AppendLine("# GameEventScript Performance Conformance Report");
         report.AppendLine();
         report.AppendLine($"cases={testCases.Count}");
         report.AppendLine($"performanceIterations={PerformanceIterations}");
         report.AppendLine($"performanceWarmupIterations={PerformanceWarmupIterations}");
         report.AppendLine();
+        binaryDumpReport.AppendLine("# GameEventScript Performance Binary Dump Report");
+        binaryDumpReport.AppendLine();
+        binaryDumpReport.AppendLine($"cases={testCases.Count}");
+        binaryDumpReport.AppendLine();
         foreach (var testCase in testCases)
         {
-            RunPerformanceCase(testCase, report);
+            RunPerformanceCase(testCase, report, binaryDumpReport);
         }
 
         var current = report.ToString();
         var referencePath = GetPerformanceReferencePath();
         var currentPath = GetPerformanceCurrentPath(referencePath);
         File.WriteAllText(currentPath, current);
+        var binaryDumpCurrent = binaryDumpReport.ToString();
+        var binaryDumpReferencePath = GetPerformanceBinaryDumpReferencePath();
+        var binaryDumpCurrentPath = GetPerformanceBinaryDumpCurrentPath(binaryDumpReferencePath);
+        File.WriteAllText(binaryDumpCurrentPath, binaryDumpCurrent);
 
         TestContext.WriteLine($"Performance current:   {currentPath}");
         TestContext.WriteLine($"Performance reference: {referencePath}");
+        TestContext.WriteLine($"Performance binary dump current:   {binaryDumpCurrentPath}");
+        TestContext.WriteLine($"Performance binary dump reference: {binaryDumpReferencePath}");
         TestContext.WriteLine("Current:");
         TestContext.WriteLine(current);
 
         var reference = File.Exists(referencePath) ? File.ReadAllText(referencePath) : string.Empty;
         TestContext.WriteLine("Reference:");
         TestContext.WriteLine(reference.Length == 0 ? "<missing>" : reference);
+        var binaryDumpReference = File.Exists(binaryDumpReferencePath) ? File.ReadAllText(binaryDumpReferencePath) : string.Empty;
+        TestContext.WriteLine("Binary dump current:");
+        TestContext.WriteLine(binaryDumpCurrent);
+        TestContext.WriteLine("Binary dump reference:");
+        TestContext.WriteLine(binaryDumpReference.Length == 0 ? "<missing>" : binaryDumpReference);
 
         if (!ComparePerformanceReportToReference)
         {
@@ -247,11 +263,26 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             Assert.Fail($"Performance reference does not exist. Copy current to reference to approve it: {currentPath} -> {referencePath}");
         }
 
+        if (!File.Exists(binaryDumpReferencePath))
+        {
+            Assert.Fail($"Performance binary dump reference does not exist. Copy current to reference to approve it: {binaryDumpCurrentPath} -> {binaryDumpReferencePath}");
+        }
+
         if (!PerformanceReportMatchesReference(reference, current, out var performanceDiff))
         {
             Assert.Fail(
                 $"Performance report regressed. Current: {currentPath}; Reference: {referencePath}{Environment.NewLine}" +
                 performanceDiff);
+        }
+
+        if (!string.Equals(
+                binaryDumpReference.ReplaceLineEndings("\n"),
+                binaryDumpCurrent.ReplaceLineEndings("\n"),
+                StringComparison.Ordinal))
+        {
+            Assert.Fail(
+                $"Performance binary dump changed. Current: {binaryDumpCurrentPath}; Reference: {binaryDumpReferencePath}{Environment.NewLine}" +
+                BinaryDumpDiff(binaryDumpReference, binaryDumpCurrent));
         }
     }
 
@@ -264,6 +295,16 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         => Path.Combine(
             Path.GetDirectoryName(referencePath) ?? throw new DirectoryNotFoundException("Performance reference directory was not found."),
             "PerformanceReport.current.txt");
+
+    private static string GetPerformanceBinaryDumpReferencePath()
+        => Path.Combine(
+            Path.GetDirectoryName(SpecDirectory) ?? throw new DirectoryNotFoundException("Conformance directory was not found."),
+            "PerformanceBinaryDump.reference.gesa");
+
+    private static string GetPerformanceBinaryDumpCurrentPath(string referencePath)
+        => Path.Combine(
+            Path.GetDirectoryName(referencePath) ?? throw new DirectoryNotFoundException("Performance binary dump reference directory was not found."),
+            "PerformanceBinaryDump.current.gesa");
 
     private static bool PerformanceReportMatchesReference(string reference, string current, out string diff)
     {
@@ -370,7 +411,45 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         return false;
     }
 
-    private void RunPerformanceCase(GameEventScriptConformanceCase testCase, StringBuilder report)
+    private static string BinaryDumpDiff(string reference, string current)
+    {
+        var referenceLines = reference.ReplaceLineEndings("\n").Split('\n');
+        var currentLines = current.ReplaceLineEndings("\n").Split('\n');
+        var builder = new StringBuilder();
+        var count = Math.Max(referenceLines.Length, currentLines.Length);
+        for (var index = 0; index < count; index++)
+        {
+            if (index >= referenceLines.Length)
+            {
+                builder.AppendLine($"line {index + 1}: unexpected current line '{currentLines[index]}'");
+                continue;
+            }
+
+            if (index >= currentLines.Length)
+            {
+                builder.AppendLine($"line {index + 1}: missing current line, expected '{referenceLines[index]}'");
+                continue;
+            }
+
+            if (referenceLines[index] == currentLines[index])
+            {
+                continue;
+            }
+
+            builder.AppendLine($"line {index + 1}:");
+            builder.AppendLine($"  expected: {referenceLines[index]}");
+            builder.AppendLine($"  actual:   {currentLines[index]}");
+            if (builder.Length > 4096)
+            {
+                builder.AppendLine("  ...");
+                break;
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private void RunPerformanceCase(GameEventScriptConformanceCase testCase, StringBuilder report, StringBuilder binaryDumpReport)
     {
         if (!string.Equals(testCase.Test.Kind, "performance", StringComparison.OrdinalIgnoreCase))
         {
@@ -385,11 +464,12 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         var iterations = ResolveIterationCount(PerformanceIterations, testCase.Test.Iterations, DefaultIterations);
         var warmupIterations = ResolveIterationCount(PerformanceWarmupIterations, testCase.Test.WarmupIterations, DefaultWarmupIterations);
         var compiled = Measure("ges compile", () => GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test));
+        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, compiled.Value);
         var newBuild = Measure<IGameEventScriptModule>("new vm build", () => GameEventScriptVirtualMaschine.Create(compiled.Value, 4096, 256));
         if (testCase.Test.DumpBinary)
         {
             TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
-            TestContext.WriteLine(compiled.Value.Dump(GetScriptSourceForDump(testCase)));
+            TestContext.WriteLine(StableBinaryDump(compiled.Value, GetScriptSourceForDump(testCase)));
         }
 
         AssertPerformanceCorrectness(testCase, "new vm", newBuild.Value);
@@ -397,6 +477,34 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         var newRun = MeasurePerformanceRun(testCase, newBuild.Value, iterations, warmupIterations);
 
         AppendPerformanceCase(report, testCase, iterations, warmupIterations, compiled, newBuild, newRun);
+    }
+
+    private static void AppendPerformanceBinaryDumpCase(
+        StringBuilder report,
+        GameEventScriptConformanceCase testCase,
+        GameEventScriptBinary binary)
+    {
+        report.AppendLine("// -------------------------------------------------------------------------------");
+        report.Append("//  Performance Case: ").Append(testCase.SuiteName).Append('/').AppendLine(testCase.Test.Name);
+        report.AppendLine("// -------------------------------------------------------------------------------");
+        report.AppendLine();
+        report.AppendLine(StableBinaryDump(binary, GetScriptSourceForDump(testCase)));
+        report.AppendLine();
+    }
+
+    private static string StableBinaryDump(GameEventScriptBinary binary, string? scriptSource)
+    {
+        var dump = binary.Dump(includeInstructionAddresses: false, scriptSource: scriptSource);
+        var lines = dump.ReplaceLineEndings("\n").Split('\n');
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (lines[index].StartsWith("//  Disassembled at ", StringComparison.Ordinal))
+            {
+                lines[index] = "//  Disassembled at <stable>";
+            }
+        }
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private static void AppendPerformanceCase(

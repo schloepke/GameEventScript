@@ -1134,9 +1134,9 @@ Core streaming shape:
 StreamCreate source -> iterator
 StreamMap transformedIterator sourceIterator mapEntry itemBindingRegister captureRegisterList
 StreamFilter filteredIterator sourceIterator predicateEntry itemBindingRegister captureRegisterList
-StreamCount dst iterator
-StreamSum dst iterator
-StreamAverage dst iterator
+Count dst source
+Sum dst source
+Average dst source
 StreamMin dst iterator itemBindingRegister projectionEntry
 StreamMax dst iterator itemBindingRegister projectionEntry
 StreamOneWeighted dst iterator itemBindingRegister weightEntry captureRegisterList
@@ -1223,13 +1223,13 @@ register `1`. `StreamMap` yields the helper `ReturnValue`. `StreamFilter` treats
 helper `ReturnValue` as a predicate and yields the original source item only when
 that predicate is true.
 
-`StreamCount`, `StreamSum`, and `StreamAverage` are fixed finite-stream
-aggregation terminals. `StreamCount` returns `0` for an empty finite stream;
-`StreamSum` returns numeric `0` for an empty finite stream and otherwise folds
-with normal `Add` semantics starting at the first projected item; `StreamAverage`
-returns `nothing` for an empty finite stream and otherwise divides the summed
-value by the item count. All three return `nothing` for series sources because
-they would otherwise require unbounded consumption.
+`Count`, `Sum`, and `Average` are fixed finite aggregation terminals over
+finite collection-like sources or already-created streams. `Count` returns `0`
+for an empty finite source. `Sum` returns numeric `0` for an empty finite source
+and otherwise folds with normal `Add` semantics starting at the first projected
+item. `Average` returns `nothing` for an empty finite source and otherwise
+divides the summed value by the item count. All three return `nothing` for
+series sources because they would otherwise require unbounded consumption.
 
 `StreamMin` and `StreamMax` are fixed extrema terminals. They bind each source
 item to `YSlot`, evaluate `AU` as a projection entry, compare projected numeric

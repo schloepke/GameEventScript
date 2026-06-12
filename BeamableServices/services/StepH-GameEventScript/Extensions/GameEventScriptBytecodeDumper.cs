@@ -466,10 +466,10 @@ public static class GameEventScriptBytecodeDumper
                 break;
 
             case GameEventScriptBytecodeOpCode.StreamCollectList:
-            case GameEventScriptBytecodeOpCode.StreamCount:
-            case GameEventScriptBytecodeOpCode.StreamSum:
-            case GameEventScriptBytecodeOpCode.StreamAverage:
-                AppendSlot(builder, "iterator", instruction.XSlot);
+            case GameEventScriptBytecodeOpCode.Count:
+            case GameEventScriptBytecodeOpCode.Sum:
+            case GameEventScriptBytecodeOpCode.Average:
+                AppendSlot(builder, "source", instruction.XSlot);
                 break;
 
             case GameEventScriptBytecodeOpCode.Distinct:

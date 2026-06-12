@@ -764,6 +764,7 @@ units[:select unit => unit.name]
 units[:any unit where unit.hp <= 0]
 units[:all unit where unit.hp > 0]
 units[:count unit where unit.hp > 0]
+units[:count]
 ```
 
 `=>` is the projection arrow. `↦` is an alias.
@@ -773,11 +774,18 @@ units[:count unit where unit.hp > 0]
 ```ges
 units[:sum unit => unit.hp]
 units[:average unit => unit.hp]
+units[:sum]
+units[:average]
 units[:min unit => unit.hp]
 units[:max unit => unit.hp]
 units[:highest unit => unit.hp]
 units[:lowest unit => unit.hp]
 ```
+
+Bare `:count`, `:sum`, and `:average` are identity forms. `items[:count]`
+counts all finite items, `items[:sum]` is equivalent to
+`items[:sum item => item]`, and `items[:average]` is equivalent to
+`items[:average item => item]`.
 
 `min`/`max` and `highest`/`lowest` return the winning source item, selected by
 the projection.

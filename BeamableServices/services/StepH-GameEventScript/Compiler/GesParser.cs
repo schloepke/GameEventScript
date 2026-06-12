@@ -1517,6 +1517,12 @@ internal sealed class GesParser
 
         if (Match(SelectorCount))
         {
+            SkipNewLines();
+            if (Is(RightBracket))
+            {
+                return WithRange(new CountSelectorNode("value", new BooleanLiteralExpressionNode(true)), startToken);
+            }
+
             var identifier = ExpectIdentifier();
             ExpectWord("where");
             var predicate = ParseExpression();
@@ -1570,6 +1576,12 @@ internal sealed class GesParser
 
         if (Match(SelectorSum))
         {
+            SkipNewLines();
+            if (Is(RightBracket))
+            {
+                return WithRange(new SumSelectorNode("value", new IdentifierExpressionNode("value")), startToken);
+            }
+
             var identifier = ExpectIdentifier();
             Expect(ProjectionArrow);
             var projection = ParseExpression();
@@ -1578,6 +1590,12 @@ internal sealed class GesParser
 
         if (Match(SelectorAverage))
         {
+            SkipNewLines();
+            if (Is(RightBracket))
+            {
+                return WithRange(new AverageSelectorNode("value", new IdentifierExpressionNode("value")), startToken);
+            }
+
             var identifier = ExpectIdentifier();
             Expect(ProjectionArrow);
             var projection = ParseExpression();

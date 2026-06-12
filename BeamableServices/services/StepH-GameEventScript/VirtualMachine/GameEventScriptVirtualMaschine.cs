@@ -606,20 +606,20 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot) = dst;
                             break;
                         }
-                        case StreamCount:
-                            vmState.Register(instruction.DestinationSlot).GesVmStreamCount(ref vmState.Register(instruction.XSlot), instruction.DestinationSlot);
+                        case Count:
+                            vmState.Register(instruction.DestinationSlot).GesVmCount(ref vmState.Register(instruction.XSlot));
                             break;
-                        case StreamSum:
+                        case Sum:
                         {
                             var dst = vmState.CreateNothing();
-                            dst.GesVmStreamSum(ref vmState.Register(instruction.XSlot));
+                            dst.GesVmSum(ref vmState.Register(instruction.XSlot));
                             vmState.Register(instruction.DestinationSlot) = dst;
                             break;
                         }
-                        case StreamAverage:
+                        case Average:
                         {
                             var dst = vmState.CreateNothing();
-                            dst.GesVmStreamAverage(ref vmState.Register(instruction.XSlot));
+                            dst.GesVmAverage(ref vmState.Register(instruction.XSlot));
                             vmState.Register(instruction.DestinationSlot) = dst;
                             break;
                         }

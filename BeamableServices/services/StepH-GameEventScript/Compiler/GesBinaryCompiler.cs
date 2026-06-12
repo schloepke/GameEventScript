@@ -552,6 +552,11 @@ internal static class GesBinaryCompiler
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
+            if (TryEmitCollectionPipelineInto(access, destination, context, state))
+            {
+                return;
+            }
+
             var target = EmitExpressionForRead(access.Target, context, state);
             switch (access.Selector)
             {
@@ -601,13 +606,13 @@ internal static class GesBinaryCompiler
                     EmitPredicateTerminal(destination, target, predicate.Identifier, predicate.Predicate, predicate.Operator, context, state);
                     return;
                 case CountSelectorNode count:
-                    EmitStreamTransformTerminal(destination, target, count.Identifier, count.Predicate, GameEventScriptBytecodeOpCode.StreamCount, filter: true, context, state);
+                    EmitStreamTransformTerminal(destination, target, count.Identifier, count.Predicate, GameEventScriptBytecodeOpCode.Count, filter: true, context, state);
                     return;
                 case SumSelectorNode sum:
-                    EmitStreamTransformTerminal(destination, target, sum.Identifier, sum.Projection, GameEventScriptBytecodeOpCode.StreamSum, filter: false, context, state);
+                    EmitStreamTransformTerminal(destination, target, sum.Identifier, sum.Projection, GameEventScriptBytecodeOpCode.Sum, filter: false, context, state);
                     return;
                 case AverageSelectorNode average:
-                    EmitStreamTransformTerminal(destination, target, average.Identifier, average.Projection, GameEventScriptBytecodeOpCode.StreamAverage, filter: false, context, state);
+                    EmitStreamTransformTerminal(destination, target, average.Identifier, average.Projection, GameEventScriptBytecodeOpCode.Average, filter: false, context, state);
                     return;
                 case MinSelectorNode min:
                     EmitStreamExtrema(destination, target, min.Identifier, min.Projection, isMax: false, context, state);
@@ -663,6 +668,212 @@ internal static class GesBinaryCompiler
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
             }
         }
+
+        private bool TryEmitCollectionPipelineInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
+        {
+            var selectors = new List<CollectionSelectorNode>();
+            ExpressionNode source = access;
+            while (source is CollectionAccessExpressionNode collectionAccess)
+            {
+                selectors.Add(collectionAccess.Selector);
+                source = collectionAccess.Target;
+            }
+
+            selectors.Reverse();
+            if (selectors.Count == 0)
+            {
+                return false;
+            }
+
+            var terminal = selectors[^1];
+            var prefixCount = selectors.Count - 1;
+            for (var index = 0; index < prefixCount; index++)
+            {
+                if (selectors[index] is not (FilterSelectorNode or SelectSelectorNode))
+                {
+                    return false;
+                }
+            }
+
+            if (!CanEmitStreamPipelineTerminal(terminal, prefixCount > 0))
+            {
+                return false;
+            }
+
+            var sourceRegister = EmitExpressionForRead(source, context, state);
+            if (prefixCount == 0 &&
+                terminal is CountSelectorNode count &&
+                IsAlwaysTrue(count.Predicate))
+            {
+                _builder.Count(destination, sourceRegister);
+                return true;
+            }
+
+            if (prefixCount == 0 &&
+                terminal is SumSelectorNode sum &&
+                IsIdentityProjection(sum.Identifier, sum.Projection))
+            {
+                _builder.Sum(destination, sourceRegister);
+                return true;
+            }
+
+            if (prefixCount == 0 &&
+                terminal is AverageSelectorNode average &&
+                IsIdentityProjection(average.Identifier, average.Projection))
+            {
+                _builder.Average(destination, sourceRegister);
+                return true;
+            }
+
+            var iterator = state.AllocateTemporary(_builder, context);
+            _builder.StreamCreate(iterator, sourceRegister);
+            for (var index = 0; index < prefixCount; index++)
+            {
+                iterator = EmitStreamTransformIterator(iterator, selectors[index], context, state);
+            }
+
+            EmitStreamPipelineTerminal(destination, iterator, terminal, context, state);
+            return true;
+        }
+
+        private static bool CanEmitStreamPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
+            => terminal switch
+            {
+                FilterSelectorNode or
+                    SelectSelectorNode or
+                    PredicateSelectorNode or
+                    CountSelectorNode or
+                    SumSelectorNode or
+                    AverageSelectorNode or
+                    MinSelectorNode or
+                    MaxSelectorNode or
+                    MapSelectorNode => true,
+                EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
+                SequenceSliceSelectorNode => hasPrefix,
+                DrawSelectorNode => hasPrefix,
+                _ => false
+            };
+
+        private GesRegisterRef EmitStreamTransformIterator(
+            GesRegisterRef iterator,
+            CollectionSelectorNode selector,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            switch (selector)
+            {
+                case FilterSelectorNode filter:
+                    if (IsAlwaysTrue(filter.Predicate))
+                    {
+                        return iterator;
+                    }
+
+                    var filteredIterator = state.AllocateTemporary(_builder, context);
+                    var filterEntry = EmitStreamSelectorHelperExpression("filter", filter.Identifier, filter.Predicate, context, out var filterItemBinding, out var filterCaptures);
+                    _builder.StreamFilter(filteredIterator, iterator, filterEntry, filterItemBinding, filterCaptures);
+                    return filteredIterator;
+                case SelectSelectorNode select:
+                    if (IsIdentityProjection(select.Identifier, select.Projection))
+                    {
+                        return iterator;
+                    }
+
+                    var mappedIterator = state.AllocateTemporary(_builder, context);
+                    var mapEntry = EmitStreamSelectorHelperExpression("select", select.Identifier, select.Projection, context, out var mapItemBinding, out var mapCaptures);
+                    _builder.StreamMap(mappedIterator, iterator, mapEntry, mapItemBinding, mapCaptures);
+                    return mappedIterator;
+                default:
+                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support non-terminal selector node '{selector.GetType().Name}'.");
+            }
+        }
+
+        private void EmitStreamPipelineTerminal(
+            GesRegisterRef destination,
+            GesRegisterRef iterator,
+            CollectionSelectorNode terminal,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            switch (terminal)
+            {
+                case FilterSelectorNode filter:
+                    _builder.StreamCollectList(destination, EmitStreamTransformIterator(iterator, filter, context, state));
+                    return;
+                case SelectSelectorNode select:
+                    _builder.StreamCollectList(destination, EmitStreamTransformIterator(iterator, select, context, state));
+                    return;
+                case PredicateSelectorNode predicate:
+                {
+                    var predicateIterator = IsIdentityProjection(predicate.Identifier, predicate.Predicate)
+                        ? iterator
+                        : EmitStreamTransformIterator(iterator, new SelectSelectorNode(predicate.Identifier, predicate.Predicate), context, state);
+                    if (predicate.Operator == "all") _builder.HasAll(destination, predicateIterator);
+                    else _builder.HasAny(destination, predicateIterator);
+                    return;
+                }
+                case CountSelectorNode count:
+                {
+                    var countIterator = IsAlwaysTrue(count.Predicate)
+                        ? iterator
+                        : EmitStreamTransformIterator(iterator, new FilterSelectorNode(count.Identifier, count.Predicate), context, state);
+                    _builder.Count(destination, countIterator);
+                    return;
+                }
+                case SumSelectorNode sum:
+                {
+                    var sumIterator = IsIdentityProjection(sum.Identifier, sum.Projection)
+                        ? iterator
+                        : EmitStreamTransformIterator(iterator, new SelectSelectorNode(sum.Identifier, sum.Projection), context, state);
+                    _builder.Sum(destination, sumIterator);
+                    return;
+                }
+                case AverageSelectorNode average:
+                {
+                    var averageIterator = IsIdentityProjection(average.Identifier, average.Projection)
+                        ? iterator
+                        : EmitStreamTransformIterator(iterator, new SelectSelectorNode(average.Identifier, average.Projection), context, state);
+                    _builder.Average(destination, averageIterator);
+                    return;
+                }
+                case MinSelectorNode min:
+                    EmitStreamExtremaFromIterator(destination, iterator, min.Identifier, min.Projection, isMax: false, context, state);
+                    return;
+                case MaxSelectorNode max:
+                    EmitStreamExtremaFromIterator(destination, iterator, max.Identifier, max.Projection, isMax: true, context, state);
+                    return;
+                case MapSelectorNode map:
+                    EmitStreamCollectMapFromIterator(destination, iterator, map, context, state);
+                    return;
+                case EdgeSelectorNode { Predicate: null } edge:
+                    if (edge.Mode == "last") _builder.Last(destination, iterator);
+                    else if (edge.Mode == "single") _builder.Single(destination, iterator);
+                    else _builder.First(destination, iterator);
+                    return;
+                case EdgeSelectorNode { Predicate: not null, Identifier: not null } edge:
+                {
+                    var filteredIterator = EmitStreamTransformIterator(iterator, new FilterSelectorNode(edge.Identifier, edge.Predicate), context, state);
+                    if (edge.Mode == "last") _builder.Last(destination, filteredIterator);
+                    else if (edge.Mode == "single") _builder.Single(destination, filteredIterator);
+                    else _builder.First(destination, filteredIterator);
+                    return;
+                }
+                case SequenceSliceSelectorNode slice:
+                    EmitSlice(destination, iterator, slice);
+                    return;
+                case DrawSelectorNode draw:
+                    if (draw.Count == 1) _builder.First(destination, iterator);
+                    else _builder.TakeFirst(destination, iterator, ToShort(draw.Count, "draw count"));
+                    return;
+                default:
+                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support stream terminal selector node '{terminal.GetType().Name}'.");
+            }
+        }
+
+        private static bool IsIdentityProjection(string identifier, ExpressionNode expression)
+            => expression is IdentifierExpressionNode projection && string.Equals(projection.Name, identifier, StringComparison.Ordinal);
+
+        private static bool IsAlwaysTrue(ExpressionNode expression)
+            => expression is BooleanLiteralExpressionNode { Value: true };
 
         private void EmitPattern(GesRegisterRef destination, GesRegisterRef target, DicePatternNode pattern, bool take, LoweringContext context, ExpressionState state)
         {
@@ -889,6 +1100,24 @@ internal static class GesBinaryCompiler
             LoweringContext context,
             ExpressionState state)
         {
+            if (filter && terminal == GameEventScriptBytecodeOpCode.Count && IsAlwaysTrue(expression))
+            {
+                _builder.Count(destination, target);
+                return;
+            }
+
+            if (!filter && terminal == GameEventScriptBytecodeOpCode.Sum && IsIdentityProjection(identifier, expression))
+            {
+                _builder.Sum(destination, target);
+                return;
+            }
+
+            if (!filter && terminal == GameEventScriptBytecodeOpCode.Average && IsIdentityProjection(identifier, expression))
+            {
+                _builder.Average(destination, target);
+                return;
+            }
+
             var iterator = state.AllocateTemporary(_builder, context);
             var transformedIterator = state.AllocateTemporary(_builder, context);
             var entry = EmitStreamSelectorHelperExpression(filter ? "count" : terminal.ToString(), identifier, expression, context, out var itemBinding, out var captures);
@@ -897,14 +1126,14 @@ internal static class GesBinaryCompiler
             else _builder.StreamMap(transformedIterator, iterator, entry, itemBinding, captures);
             switch (terminal)
             {
-                case GameEventScriptBytecodeOpCode.StreamCount:
-                    _builder.StreamCount(destination, transformedIterator);
+                case GameEventScriptBytecodeOpCode.Count:
+                    _builder.Count(destination, transformedIterator);
                     return;
-                case GameEventScriptBytecodeOpCode.StreamSum:
-                    _builder.StreamSum(destination, transformedIterator);
+                case GameEventScriptBytecodeOpCode.Sum:
+                    _builder.Sum(destination, transformedIterator);
                     return;
-                case GameEventScriptBytecodeOpCode.StreamAverage:
-                    _builder.StreamAverage(destination, transformedIterator);
+                case GameEventScriptBytecodeOpCode.Average:
+                    _builder.Average(destination, transformedIterator);
                     return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support stream terminal '{terminal}'.");
@@ -914,8 +1143,13 @@ internal static class GesBinaryCompiler
         private void EmitStreamExtrema(GesRegisterRef destination, GesRegisterRef target, string identifier, ExpressionNode projection, bool isMax, LoweringContext context, ExpressionState state)
         {
             var iterator = state.AllocateTemporary(_builder, context);
-            var entry = EmitSelectorHelperExpression(isMax ? "max" : "min", identifier, projection, context, state, out var itemBinding);
             _builder.StreamCreate(iterator, target);
+            EmitStreamExtremaFromIterator(destination, iterator, identifier, projection, isMax, context, state);
+        }
+
+        private void EmitStreamExtremaFromIterator(GesRegisterRef destination, GesRegisterRef iterator, string identifier, ExpressionNode projection, bool isMax, LoweringContext context, ExpressionState state)
+        {
+            var entry = EmitSelectorHelperExpression(isMax ? "max" : "min", identifier, projection, context, state, out var itemBinding);
             if (isMax) _builder.StreamMax(destination, iterator, itemBinding, entry);
             else _builder.StreamMin(destination, iterator, itemBinding, entry);
         }
@@ -923,9 +1157,14 @@ internal static class GesBinaryCompiler
         private void EmitStreamCollectMap(GesRegisterRef destination, GesRegisterRef target, MapSelectorNode map, LoweringContext context, ExpressionState state)
         {
             var iterator = state.AllocateTemporary(_builder, context);
+            _builder.StreamCreate(iterator, target);
+            EmitStreamCollectMapFromIterator(destination, iterator, map, context, state);
+        }
+
+        private void EmitStreamCollectMapFromIterator(GesRegisterRef destination, GesRegisterRef iterator, MapSelectorNode map, LoweringContext context, ExpressionState state)
+        {
             var itemBinding = state.AllocateTemporary(_builder, context);
             var keyEntry = EmitSelectorHelperExpression("map_key", map.Identifier, map.KeyProjection, context, state, itemBinding);
-            _builder.StreamCreate(iterator, target);
             if (map.ValueProjection is null)
             {
                 _builder.StreamCollectMap(destination, iterator, itemBinding, keyEntry);

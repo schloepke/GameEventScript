@@ -88,7 +88,9 @@ internal sealed partial class GesBinaryBuilder
 
         var result = new List<PlanItem>(count);
         result.AddRange(_rootItems);
-        foreach (var routine in _routines)
+        foreach (var routine in _routines
+                     .OrderBy(routine => RoutineKindOrder(routine.Kind))
+                     .ThenBy(routine => routine.Id))
         {
             result.AddRange(routine.Items);
         }
@@ -237,7 +239,9 @@ internal sealed partial class GesBinaryBuilder
     {
         var nextIds = new Dictionary<GameEventScriptBinaryBindKind, ushort>();
         var result = new ushort[_binds.Count];
-        foreach (var bind in _binds)
+        foreach (var bind in _binds
+                     .OrderBy(bind => BindKindOrder(bind.Kind))
+                     .ThenBy(bind => bind.Index))
         {
             var id = bind.Id ?? NextId(bind.Kind, nextIds);
             result[bind.Index] = id;
@@ -253,6 +257,23 @@ internal sealed partial class GesBinaryBuilder
 
         return result;
     }
+
+    private static int BindKindOrder(GameEventScriptBinaryBindKind kind)
+        => kind switch
+        {
+            GameEventScriptBinaryBindKind.MessageHandler or
+                GameEventScriptBinaryBindKind.MessageNameHandler => 0,
+            GameEventScriptBinaryBindKind.Record => 1,
+            GameEventScriptBinaryBindKind.Predicate => 2,
+            GameEventScriptBinaryBindKind.Function => 3,
+            GameEventScriptBinaryBindKind.OutboundMessage => 4,
+            GameEventScriptBinaryBindKind.ExtensionCall => 5,
+            GameEventScriptBinaryBindKind.ExternalType => 6,
+            _ => 7
+        };
+
+    private static int RoutineKindOrder(GameEventScriptBinaryBindKind? kind)
+        => kind.HasValue ? BindKindOrder(kind.Value) : 7;
 
     private static ushort NextId(GameEventScriptBinaryBindKind kind, Dictionary<GameEventScriptBinaryBindKind, ushort> nextIds)
     {

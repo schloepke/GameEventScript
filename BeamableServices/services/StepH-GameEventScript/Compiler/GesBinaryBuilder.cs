@@ -89,13 +89,23 @@ internal sealed partial class GesBinaryBuilder
         var result = new List<PlanItem>(count);
         result.AddRange(_rootItems);
         foreach (var routine in _routines
+                     .Where(routine => routine.ParentRoutineId == NoRoutineId)
                      .OrderBy(routine => RoutineKindOrder(routine.Kind))
                      .ThenBy(routine => routine.Id))
         {
-            result.AddRange(routine.Items);
+            AppendRoutineAndOwnedHelpers(result, routine);
         }
 
         return result.ToArray();
+    }
+
+    private void AppendRoutineAndOwnedHelpers(List<PlanItem> result, RoutinePlan routine)
+    {
+        result.AddRange(routine.Items);
+        foreach (var child in _routines.Where(child => child.ParentRoutineId == routine.Id).OrderBy(child => child.Id))
+        {
+            AppendRoutineAndOwnedHelpers(result, child);
+        }
     }
 
     private void ValidateRoutineId(int routineId)

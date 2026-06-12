@@ -62,9 +62,10 @@ internal sealed partial class GesBinaryBuilder
             throw new ArgumentException("Helper routines cannot have tag filters.", nameof(requiredTags));
         }
 
+        var parentRoutineId = CurrentRoutineId;
         var routineId = _routines.Count;
         var entryLabel = AddLabel(name);
-        var routine = new RoutinePlan(routineId, kind, name, entryLabel, argumentNames?.ToArray() ?? []);
+        var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, argumentNames?.ToArray() ?? []);
         _routines.Add(routine);
         _routineStack.Push(routineId);
         MarkLabel(entryLabel);
@@ -256,12 +257,14 @@ internal sealed partial class GesBinaryBuilder
 
     internal sealed class RoutinePlan(
         int id,
+        int parentRoutineId,
         GameEventScriptBinaryBindKind? kind,
         string name,
         GesLabelRef entryLabel,
         IReadOnlyList<string> argumentNames)
     {
         public int Id { get; } = id;
+        public int ParentRoutineId { get; } = parentRoutineId;
         public GameEventScriptBinaryBindKind? Kind { get; } = kind;
         public string Name { get; } = name;
         public GesLabelRef EntryLabel { get; } = entryLabel;

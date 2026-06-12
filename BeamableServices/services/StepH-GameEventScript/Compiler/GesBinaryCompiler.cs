@@ -1346,6 +1346,10 @@ internal static class GesBinaryCompiler
             {
                 _builder.CastUnit(destination, value, unit);
             }
+            else if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName))
+            {
+                throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support quantity type '{typeName}'.");
+            }
             else if (typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional")
             {
                 _builder.CastNumeric(destination, value);
@@ -1370,6 +1374,10 @@ internal static class GesBinaryCompiler
             if (TryGetQuantityUnit(typeName, out var unit))
             {
                 _builder.CheckUnit(destination, value, unit);
+            }
+            else if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName))
+            {
+                throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support quantity type '{typeName}'.");
             }
             else if (typeName is "number" or "numeric")
             {
@@ -1710,7 +1718,7 @@ internal static class GesBinaryCompiler
 
         private static bool IsBuiltInCastType(string typeName)
             => typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional" ||
-               TryGetQuantityUnit(typeName, out _) ||
+               GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName) ||
                TryGetBytecodeTypeKind(typeName, out _);
 
         private static bool TryGetQuantityUnit(string typeName, out GameEventScriptBytecodeInstructionUnit unit)

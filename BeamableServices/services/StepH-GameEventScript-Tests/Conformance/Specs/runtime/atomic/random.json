@@ -6,7 +6,7 @@
     {
       "kind": "scriptApi",
       "name": "random take integer and float opcode paths",
-      "script": "module AtomicRandomTakeOpcodes\non Start {\n  let integerValue be :random from 1 to 6\n  let floatValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  let nothingValue be :random from missing to 6\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue, nothingValue: nothingValue)\n}",
+      "script": "module AtomicRandomTakeOpcodes\non Start {\n  let integerValue be :random from 1 to 6\n  let floatValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  let nothingValue be :random from nothing to 6\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue, nothingValue: nothingValue)\n}",
       "randomSequence": [
         "4",
         "0.25",

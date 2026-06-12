@@ -6,7 +6,7 @@
     {
       "kind": "scriptApi",
       "name": "if branches use true only conditions",
-      "script": "module AtomicControlIfBranches\non Start {\n  if true {\n    emit Branch(name: 'true-then')\n  } else {\n    emit Branch(name: 'true-else')\n  }\n\n  if false {\n    emit Branch(name: 'false-then')\n  } else {\n    emit Branch(name: 'false-else')\n  }\n\n  if missing {\n    emit Branch(name: 'missing-then')\n  } else {\n    emit Branch(name: 'missing-else')\n  }\n\n  emit Done\n}",
+      "script": "module AtomicControlIfBranches\non Start {\n  if true {\n    emit Branch(name: 'true-then')\n  } else {\n    emit Branch(name: 'true-else')\n  }\n\n  if false {\n    emit Branch(name: 'false-then')\n  } else {\n    emit Branch(name: 'false-else')\n  }\n\n  if nothing {\n    emit Branch(name: 'missing-then')\n  } else {\n    emit Branch(name: 'missing-else')\n  }\n\n  emit Done\n}",
       "steps": [
         {
           "input": {
@@ -52,7 +52,7 @@
     {
       "kind": "scriptApi",
       "name": "or short circuits only on true",
-      "script": "module AtomicControlOrShortCircuit\non Start {\n  let trueSkips be true or :test.fail()\n  let falseEvaluates be false or :test.truth()\n  let missingResolves be missing or true\n  let missingStaysUnknown be missing or false\n  emit Done(trueSkips: trueSkips, falseEvaluates: falseEvaluates, missingResolves: missingResolves, missingStaysUnknown: missingStaysUnknown)\n}",
+      "script": "module AtomicControlOrShortCircuit\non Start {\n  let trueSkips be true or :test.fail()\n  let falseEvaluates be false or :test.truth()\n  let missingResolves be nothing or true\n  let missingStaysUnknown be nothing or false\n  emit Done(trueSkips: trueSkips, falseEvaluates: falseEvaluates, missingResolves: missingResolves, missingStaysUnknown: missingStaysUnknown)\n}",
       "steps": [
         {
           "input": {
@@ -87,7 +87,7 @@
     {
       "kind": "scriptApi",
       "name": "and short circuits only on false",
-      "script": "module AtomicControlAndShortCircuit\non Start {\n  let falseSkips be false and :test.fail()\n  let trueEvaluates be true and :test.truth()\n  let missingResolvesFalse be missing and false\n  let missingStaysUnknown be missing and true\n  emit Done(falseSkips: falseSkips, trueEvaluates: trueEvaluates, missingResolvesFalse: missingResolvesFalse, missingStaysUnknown: missingStaysUnknown)\n}",
+      "script": "module AtomicControlAndShortCircuit\non Start {\n  let falseSkips be false and :test.fail()\n  let trueEvaluates be true and :test.truth()\n  let missingResolvesFalse be nothing and false\n  let missingStaysUnknown be nothing and true\n  emit Done(falseSkips: falseSkips, trueEvaluates: trueEvaluates, missingResolvesFalse: missingResolvesFalse, missingStaysUnknown: missingStaysUnknown)\n}",
       "steps": [
         {
           "input": {
@@ -122,7 +122,7 @@
     {
       "kind": "scriptApi",
       "name": "implication short circuits false antecedent",
-      "script": "module AtomicControlImplication\non Start {\n  let falseSkips be false -> :test.fail()\n  let trueEvaluates be true -> true\n  let trueFails be true -> false\n  let missingResolvesTrue be missing -> true\n  let missingStaysUnknown be missing -> false\n  emit Done(falseSkips: falseSkips, trueEvaluates: trueEvaluates, trueFails: trueFails, missingResolvesTrue: missingResolvesTrue, missingStaysUnknown: missingStaysUnknown)\n}",
+      "script": "module AtomicControlImplication\non Start {\n  let falseSkips be false -> :test.fail()\n  let trueEvaluates be true -> true\n  let trueFails be true -> false\n  let missingResolvesTrue be nothing -> true\n  let missingStaysUnknown be nothing -> false\n  emit Done(falseSkips: falseSkips, trueEvaluates: trueEvaluates, trueFails: trueFails, missingResolvesTrue: missingResolvesTrue, missingStaysUnknown: missingStaysUnknown)\n}",
       "steps": [
         {
           "input": {
@@ -161,7 +161,7 @@
     {
       "kind": "scriptApi",
       "name": "guarded choice selects first true branch",
-      "script": "module AtomicControlGuardedChoice\non Start {\n  let firstTrue as :number be 10 when false, or 20 when true, or 30 when true, otherwise 40\n  let otherwiseValue as :number be 10 when false, or 20 when missing, otherwise 40\n  emit Done(firstTrue: firstTrue, otherwiseValue: otherwiseValue)\n}",
+      "script": "module AtomicControlGuardedChoice\non Start {\n  let firstTrue as :number be 10 when false, or 20 when true, or 30 when true, otherwise 40\n  let otherwiseValue as :number be 10 when false, or 20 when nothing, otherwise 40\n  emit Done(firstTrue: firstTrue, otherwiseValue: otherwiseValue)\n}",
       "steps": [
         {
           "input": {
@@ -286,7 +286,7 @@
     {
       "kind": "scriptApi",
       "name": "for loops skip empty and non iterable sources",
-      "script": "module AtomicControlForEmptySources\non Start {\n  for item in [] {\n    emit Item(kind: 'empty-list', value: item)\n  }\n\n  for item in '' {\n    emit Item(kind: 'empty-text', value: item)\n  }\n\n  for item in missing {\n    emit Item(kind: 'missing', value: item)\n  }\n\n  for item in 123 {\n    emit Item(kind: 'number', value: item)\n  }\n\n  emit Done\n}",
+      "script": "module AtomicControlForEmptySources\non Start {\n  for item in [] {\n    emit Item(kind: 'empty-list', value: item)\n  }\n\n  for item in '' {\n    emit Item(kind: 'empty-text', value: item)\n  }\n\n  for item in nothing {\n    emit Item(kind: 'missing', value: item)\n  }\n\n  for item in 123 {\n    emit Item(kind: 'number', value: item)\n  }\n\n  emit Done\n}",
       "steps": [
         {
           "input": {

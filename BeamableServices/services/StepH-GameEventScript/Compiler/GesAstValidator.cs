@@ -614,6 +614,9 @@ internal static class GesAstValidator
             case ExtensionPredicateExpressionNode:
                 return StaticExpressionInfo.Boolean;
 
+            case IdentifierExpressionNode { Name: "nothing" }:
+                return StaticExpressionInfo.Nothing;
+
             case IdentifierExpressionNode identifier:
                 return declaredTypes.TryGetValue(identifier.Name, out var declaredType)
                     ? FromDeclaredType(declaredType)

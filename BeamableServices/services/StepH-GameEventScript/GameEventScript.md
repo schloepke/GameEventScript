@@ -73,6 +73,9 @@ Names are intentionally narrow:
   final numeric suffix written as `_` followed by digits, such as `target_2`.
   Underscores are otherwise not part of identifiers: `target2` and
   `target_name` are invalid identifiers.
+- Identifiers must resolve to a local, parameter, capture, or callable visible
+  at compile time. Unknown identifiers are compile errors; they do not evaluate
+  to `nothing`.
 - Message names start uppercase and contain letters.
 - Tags start with `:` and a lowercase tag name.
 - Type names are tags. Built-in type tags are reserved by the language.

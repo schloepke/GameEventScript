@@ -293,7 +293,7 @@
     {
       "kind": "scriptApi",
       "name": "else runs when condition is not true",
-      "script": "on Start {\n  let unknown be missing > 0\n  if unknown {\n    emit TrueBranch\n  } else {\n    emit FalseBranch\n  }\n\n  let explicitFalse be unknown as :boolean\n  if explicitFalse {\n    emit ExplicitTrue\n  } else {\n    emit ExplicitFalse\n  }\n\n  emit Done(unknown: unknown)\n}",
+      "script": "on Start {\n  let unknown be nothing > 0\n  if unknown {\n    emit TrueBranch\n  } else {\n    emit FalseBranch\n  }\n\n  let explicitFalse be unknown as :boolean\n  if explicitFalse {\n    emit ExplicitTrue\n  } else {\n    emit ExplicitFalse\n  }\n\n  emit Done(unknown: unknown)\n}",
       "steps": [
         {
           "input": {
@@ -324,7 +324,7 @@
     {
       "kind": "scriptApi",
       "name": "logical operators use tri state truth tables",
-      "script": "on Start {\n  emit Done(notUnknown: not missing, falseAndUnknown: false and missing, unknownAndFalse: missing and false, trueAndUnknown: true and missing, unknownAndTrue: missing and true, unknownAndUnknown: missing and missing, trueOrUnknown: true or missing, unknownOrTrue: missing or true, falseOrUnknown: false or missing, unknownOrFalse: missing or false, unknownOrUnknown: missing or missing, trueXorFalse: true xor false, trueXorTrue: true xor true, unknownXorTrue: missing xor true, unknownXorUnknown: missing xor missing)\n}",
+      "script": "on Start {\n  emit Done(notUnknown: not nothing, falseAndUnknown: false and nothing, unknownAndFalse: nothing and false, trueAndUnknown: true and nothing, unknownAndTrue: nothing and true, unknownAndUnknown: nothing and nothing, trueOrUnknown: true or nothing, unknownOrTrue: nothing or true, falseOrUnknown: false or nothing, unknownOrFalse: nothing or false, unknownOrUnknown: nothing or nothing, trueXorFalse: true xor false, trueXorTrue: true xor true, unknownXorTrue: nothing xor true, unknownXorUnknown: nothing xor nothing)\n}",
       "steps": [
         {
           "input": {
@@ -431,7 +431,7 @@
     {
       "kind": "scriptApi",
       "name": "implication is right associative tri state and short circuiting",
-      "script": "function handleDamage(_ wasHit, _ absorbed, _ applied) means wasHit -> !absorbed -> applied\n\non Start {\n  let skipped be false -> :test.fail()\n  let unicodeSkipped be false⇒:test.fail()\n  let unicodeEvaluated be true⇒true\n  let unicodeSingleSkipped be false→:test.fail()\n  let unicodeSingleEvaluated be true→true\n  let rightAssoc be false -> false -> :test.fail()\n  let absorbedChain be true -> !true -> :test.fail()\n  let notHit be handleDamage(false, false, false)\n  let absorbed be handleDamage(true, true, false)\n  let applied be handleDamage(true, false, true)\n  let failed be handleDamage(true, false, false)\n  let unknownResolved be missing -> true\n  let unknownBlocked be missing -> false\n  emit Done(skipped: skipped, unicodeSkipped: unicodeSkipped, unicodeEvaluated: unicodeEvaluated, unicodeSingleSkipped: unicodeSingleSkipped, unicodeSingleEvaluated: unicodeSingleEvaluated, rightAssoc: rightAssoc, absorbedChain: absorbedChain, notHit: notHit, absorbed: absorbed, applied: applied, failed: failed, unknownResolved: unknownResolved, unknownBlocked: unknownBlocked)\n}",
+      "script": "function handleDamage(_ wasHit, _ absorbed, _ applied) means wasHit -> !absorbed -> applied\n\non Start {\n  let skipped be false -> :test.fail()\n  let unicodeSkipped be false⇒:test.fail()\n  let unicodeEvaluated be true⇒true\n  let unicodeSingleSkipped be false→:test.fail()\n  let unicodeSingleEvaluated be true→true\n  let rightAssoc be false -> false -> :test.fail()\n  let absorbedChain be true -> !true -> :test.fail()\n  let notHit be handleDamage(false, false, false)\n  let absorbed be handleDamage(true, true, false)\n  let applied be handleDamage(true, false, true)\n  let failed be handleDamage(true, false, false)\n  let unknownResolved be nothing -> true\n  let unknownBlocked be nothing -> false\n  emit Done(skipped: skipped, unicodeSkipped: unicodeSkipped, unicodeEvaluated: unicodeEvaluated, unicodeSingleSkipped: unicodeSingleSkipped, unicodeSingleEvaluated: unicodeSingleEvaluated, rightAssoc: rightAssoc, absorbedChain: absorbedChain, notHit: notHit, absorbed: absorbed, applied: applied, failed: failed, unknownResolved: unknownResolved, unknownBlocked: unknownBlocked)\n}",
       "steps": [
         {
           "input": {
@@ -492,48 +492,6 @@
                 },
                 "unknownBlocked": {
                   "type": ":nothing"
-                }
-              }
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "kind": "scriptApi",
-      "name": "block scopes do not leak variables",
-      "script": "on Start(items, seed as :number) {\n  if true {\n    let fromIf be 10\n  }\n\n  for item in items {\n    let fromLoop be item\n  }\n\n  :random with seed {\n    let fromRandom be :random from 1 to 6\n    emit Inner(valuePresent: fromRandom has value)\n  }\n\n  if fromIf has value emit IfLeak\n  if fromLoop has value emit LoopLeak\n  if fromRandom has value emit RandomLeak\n}",
-      "steps": [
-        {
-          "input": {
-            "name": "Start",
-            "args": {
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  }
-                ]
-              },
-              "seed": {
-                "type": ":integer",
-                "value": "7"
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Inner",
-              "args": {
-                "valuePresent": {
-                  "type": ":boolean",
-                  "value": true
                 }
               }
             }

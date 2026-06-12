@@ -6,7 +6,7 @@
     {
       "kind": "scriptApi",
       "name": "load primitive values",
-      "script": "module AtomicLoadPrimitiveValues\non Start {\n  let nothingValue be missing\n  let trueValue be true\n  let falseValue be false\n  let integerValue be 42\n  let floatValue be 12.5\n  let meterValue be 7m\n  let percentageValue be 25%\n  let textValue be 'hello'\n  let tagValue be :boss\n  emit Done(nothingValue: nothingValue, trueValue: trueValue, falseValue: falseValue, integerValue: integerValue, floatValue: floatValue, meterValue: meterValue, percentageValue: percentageValue, textValue: textValue, tagValue: tagValue)\n}",
+      "script": "module AtomicLoadPrimitiveValues\non Start {\n  let nothingValue be nothing\n  let trueValue be true\n  let falseValue be false\n  let integerValue be 42\n  let floatValue be 12.5\n  let meterValue be 7m\n  let percentageValue be 25%\n  let textValue be 'hello'\n  let tagValue be :boss\n  emit Done(nothingValue: nothingValue, trueValue: trueValue, falseValue: falseValue, integerValue: integerValue, floatValue: floatValue, meterValue: meterValue, percentageValue: percentageValue, textValue: textValue, tagValue: tagValue)\n}",
       "steps": [
         {
           "input": {

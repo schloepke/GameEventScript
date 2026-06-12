@@ -24,6 +24,24 @@
     },
     {
       "kind": "compileError",
+      "name": "unknown identifier fails compilation",
+      "script": "on Start {\n  let x be missing\n}",
+      "expectedError": {
+        "phase": "compilation",
+        "messageContains": "missing"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "block scopes do not leak variables",
+      "script": "on Start(items, seed as :number) {\n  if true {\n    let fromIf be 10\n  }\n\n  for item in items {\n    let fromLoop be item\n  }\n\n  :random with seed {\n    let fromRandom be :random from 1 to 6\n    emit Inner(valuePresent: fromRandom has value)\n  }\n\n  if fromIf has value emit IfLeak\n  if fromLoop has value emit LoopLeak\n  if fromRandom has value emit RandomLeak\n}",
+      "expectedError": {
+        "phase": "compilation",
+        "messageContains": "fromIf"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "quantity rejects unknown unit names",
       "script": "on Start {\n  let x be 100 as :quantity(foo)\n}",
       "expectedError": {

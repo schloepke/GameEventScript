@@ -56,7 +56,7 @@
     {
       "kind": "bytecode",
       "name": "implication lowers to branching tri-state shape",
-      "script": "module ShortCircuit\n\non Start(missing) {\n  let skipped be false -> missing\n  let resolved be missing -> true\n  emit Done(skipped: skipped, resolved: resolved)\n}\n",
+      "script": "module ShortCircuit\n\non Start {\n  let skipped be false -> nothing\n  let resolved be nothing -> true\n  emit Done(skipped: skipped, resolved: resolved)\n}\n",
       "expectedOpcodes": {
         "contains": [
           "JumpIfFalse"

@@ -1709,7 +1709,7 @@
     {
       "kind": "scriptApi",
       "name": "lookup and empty checks are runtime-visible",
-      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :number be 'abc'\n  emit Done(second: items[2], missing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
+      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :number be 'abc'\n  emit Done(second: items[2], nothing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
       "steps": [
         {
           "input": {
@@ -1736,7 +1736,7 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "missing": {
+                "nothing": {
                   "type": ":nothing"
                 },
                 "second": {
@@ -2893,7 +2893,7 @@
     {
       "kind": "scriptApi",
       "name": "missing invalid and large values remain lenient",
-      "script": "on Start(item) {\n  let nanValue as :number be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be missing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
+      "script": "on Start(item) {\n  let nanValue as :number be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be nothing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
       "steps": [
         {
           "input": {
@@ -3002,7 +3002,7 @@
     {
       "kind": "scriptApi",
       "name": "type checks identify primitive custom and first class values",
-      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: missing is :nothing)\n}",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: nothing is :nothing)\n}",
       "steps": [
         {
           "input": {

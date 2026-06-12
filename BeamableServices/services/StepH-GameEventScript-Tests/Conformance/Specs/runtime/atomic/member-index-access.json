@@ -6,7 +6,7 @@
     {
       "kind": "scriptApi",
       "name": "nothing member and index access",
-      "script": "module AtomicNothingAccess\non Start {\n  let value be missing\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
+      "script": "module AtomicNothingAccess\non Start {\n  let value be nothing\n  emit Done(member: value.missing, index: value[1], indexOut: value[0])\n}",
       "steps": [
         {
           "input": { "name": "Start", "args": {} },

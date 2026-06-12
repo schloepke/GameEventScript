@@ -314,6 +314,9 @@ internal static class GesBinaryCompiler
                 case TagLiteralExpressionNode tag:
                     _builder.LoadTag(destination, tag.Name);
                     return true;
+                case IdentifierExpressionNode { Name: "nothing" }:
+                    _builder.LoadNothing(destination);
+                    return true;
                 case IdentifierExpressionNode identifier:
                 {
                     var source = context.Require(identifier.Name);
@@ -1156,7 +1159,8 @@ internal static class GesBinaryCompiler
                 UnitFloatLiteralExpressionNode or
                 PercentageLiteralExpressionNode or
                 TextLiteralExpressionNode or
-                TagLiteralExpressionNode;
+                TagLiteralExpressionNode or
+                IdentifierExpressionNode { Name: "nothing" };
 
         private void EmitStageConstant(ExpressionNode expression)
         {
@@ -1186,6 +1190,9 @@ internal static class GesBinaryCompiler
                     return;
                 case TagLiteralExpressionNode tag:
                     _builder.StageTag(tag.Name);
+                    return;
+                case IdentifierExpressionNode { Name: "nothing" }:
+                    _builder.StageNothing();
                     return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot stage non-constant expression '{expression.GetType().Name}' without preparing it first.");
@@ -1780,6 +1787,8 @@ internal static class GesBinaryCompiler
         {
             switch (expression)
             {
+                case IdentifierExpressionNode { Name: "nothing" }:
+                    break;
                 case IdentifierExpressionNode identifier:
                     if (!bound.Contains(identifier.Name)) identifiers.Add(identifier.Name);
                     break;

@@ -199,7 +199,7 @@
     {
       "kind": "scriptApi",
       "name": "create record with positional constructor and computed field",
-      "script": "module AtomicCreateRecordConstructor\nrecord :stat as {\n  _ base: :number clamped between 0 and cap,\n  cap: :number clamped between 1 and 99,\n  bonus: :number,\n  total: :number computed by base + bonus,\n  label: :text\n}\n\non Start {\n  let stat be :stat(15, cap: 10, bonus: 3, label: 'hp')\n  let statMap as :map be stat\n  let statList as :list be stat\n  emit Done(stat: stat, base: stat.base, cap: stat.cap, bonus: stat.bonus, total: stat.total, label: stat.label, map: statMap, mapTotal: statMap.total, listLen: :len statList, keys: :keys stat, values: :values stat, entries: :entries stat, isStat: stat is :stat, isGauge: stat is :gauge, missing: stat.missing)\n}",
+      "script": "module AtomicCreateRecordConstructor\nrecord :stat as {\n  _ base: :number clamped between 0 and cap,\n  cap: :number clamped between 1 and 99,\n  bonus: :number,\n  total: :number computed by base + bonus,\n  label: :text\n}\n\non Start {\n  let stat be :stat(15, cap: 10, bonus: 3, label: 'hp')\n  let statMap as :map be stat\n  let statList as :list be stat\n  emit Done(stat: stat, base: stat.base, cap: stat.cap, bonus: stat.bonus, total: stat.total, label: stat.label, map: statMap, mapTotal: statMap.total, listLen: :len statList, keys: :keys stat, values: :values stat, entries: :entries stat, isStat: stat is :stat, isGauge: stat is :gauge, nothing: stat.missing)\n}",
       "steps": [
         {
           "input": {
@@ -362,7 +362,7 @@
                   "type": ":integer",
                   "value": "13"
                 },
-                "missing": {
+                "nothing": {
                   "type": ":nothing"
                 },
                 "stat": {

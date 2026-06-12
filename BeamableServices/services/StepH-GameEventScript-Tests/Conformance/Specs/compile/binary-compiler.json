@@ -1,0 +1,275 @@
+{
+  "version": 1,
+  "name": "CompileBinaryCompiler",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "simple handler compiles to runnable binary",
+      "script": "module BinaryCompilerSmoke\n\non Start(value) {\n  let doubled be value * 2\n  emit Done(result: doubled, text: 'ok')\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": { "value": { "type": ":integer", "value": "6" } } },
+          "expectedPublished": [
+            { "name": "Done", "args": { "result": { "type": ":integer", "value": "12" }, "text": { "type": ":text", "value": "ok" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "function call and branch compile to runnable binary",
+      "script": "module BinaryCompilerFunction\n\nfunction double(value) means value * 2\n\non Start(value) {\n  let result be double(value: value)\n  if result > 10 {\n    emit Done(result: result, status: :high)\n  } else {\n    emit Done(result: result, status: :low)\n  }\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": { "value": { "type": ":integer", "value": "7" } } },
+          "expectedPublished": [
+            { "name": "Done", "args": { "result": { "type": ":integer", "value": "14" }, "status": { "type": ":tag", "value": "high" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "record constructor compiles to runnable binary",
+      "script": "module BinaryCompilerRecord\n\nrecord :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(current: hp.current, maximum: hp.maximum, percentage: hp.percentage, isGauge: hp is :gauge)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "current": { "type": ":integer", "value": "100" }, "maximum": { "type": ":integer", "value": "100" }, "percentage": { "type": ":percentage", "value": "0.01" }, "isGauge": { "type": ":boolean", "value": true } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "external type constructor compiles to runnable binary",
+      "script": "module BinaryCompilerExternalType\n\non Start {\n  let aim be :aim(range: 12m, bearing: 90°, steps: 4m, direction: :vector(1m, 2m, 3m))\n  emit Done(isAim: aim is :aim, bearing: aim.bearing, range: aim.range, steps: aim.steps, directionZ: aim.direction.z, checksum: aim.checksum)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "isAim": { "type": ":boolean", "value": true }, "bearing": { "type": ":integer", "value": "90", "unit": ":degree" }, "range": { "type": ":integer", "value": "12", "unit": ":meter" }, "steps": { "type": ":integer", "value": "4", "unit": ":meter" }, "directionZ": { "type": ":integer", "value": "3", "unit": ":meter" }, "checksum": { "type": ":integer", "value": "106" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "standard and external calls compile to runnable binary",
+      "script": "module BinaryCompilerExtensionCalls\n\non Start {\n  let direction be :vector(1m, 2m, 3m)\n  let floored be :integer.floor 10.75\n  let vectorTotal be :test.vectorSum direction\n  let turn be :nav.shortestTurn from: 350° to: 10°\n  let normalizedPredicate be 0° is :nav.isNorth\n  emit Done(floored: floored, vectorTotal: vectorTotal, turn: turn, normalizedPredicate: normalizedPredicate)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "floored": { "type": ":integer", "value": "10" }, "vectorTotal": { "type": ":integer", "value": "6", "unit": ":meter" }, "turn": { "type": ":integer", "value": "20", "unit": ":degree" }, "normalizedPredicate": { "type": ":boolean", "value": true } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "handler literal binding compiles to runnable binary",
+      "script": "module BinaryCompilerHandlerBinding\n\non Start(unit, target, hp) {\n  let shoot be Shoot(unit, target)\n  let msg be shoot(unit: unit, target: target)\n  let invalid be shoot(unit: unit, hp: hp)\n  emit msg\n  emit invalid\n  emit Done\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": { "unit": { "type": ":text", "value": "u_1" }, "target": { "type": ":text", "value": "t_1" }, "hp": { "type": ":integer", "value": "10" } } },
+          "expectedPublished": [
+            { "name": "Shoot", "args": { "unit": { "type": ":text", "value": "u_1" }, "target": { "type": ":text", "value": "t_1" } } },
+            { "name": "Done", "args": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "message name handler and tags compile to runnable binary",
+      "script": "module BinaryCompilerMessageNameHandler\n\non Start {\n  emit Ping(amount: 7, kind: :fire) with :radio, :urgent\n}\n\non Ping as message {\n  emit Done(name: message.name, signature: message.signature, amount: message.arguments.amount, kind: message.arguments.kind, tagCount: :len message.tags, firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Ping", "args": { "amount": { "type": ":integer", "value": "7" }, "kind": { "type": ":tag", "value": "fire" } }, "tags": [":radio", ":urgent"] },
+            { "name": "Done", "args": { "name": { "type": ":text", "value": "Ping" }, "signature": { "type": ":text", "value": "Ping(amount,kind)" }, "amount": { "type": ":integer", "value": "7" }, "kind": { "type": ":tag", "value": "fire" }, "tagCount": { "type": ":integer", "value": "2" }, "firstTag": { "type": ":tag", "value": "radio" }, "secondTag": { "type": ":tag", "value": "urgent" }, "isMessage": { "type": ":boolean", "value": true } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "publish and message value tags compile to runnable binary",
+      "script": "module BinaryCompilerPublish\n\non Start {\n  let dynamicTags be [:radio, :relay]\n  let relay be Relay(amount: 5)\n  emit relay with dynamicTags\n  publish Remote(amount: 6) with :network\n  publish relay with :copy\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Relay", "args": { "amount": { "type": ":integer", "value": "5" } }, "tags": [":radio", ":relay"] },
+            { "name": "Remote", "args": { "amount": { "type": ":integer", "value": "6" } }, "tags": [":network"] },
+            { "name": "Relay", "args": { "amount": { "type": ":integer", "value": "5" } }, "tags": [":copy"] }
+          ],
+          "expectedOutboundPublished": [
+            { "name": "Remote", "args": { "amount": { "type": ":integer", "value": "6" } }, "tags": [":network"] },
+            { "name": "Relay", "args": { "amount": { "type": ":integer", "value": "5" } }, "tags": [":copy"] }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "for loops compile to runnable binary",
+      "script": "module BinaryCompilerFor\n\non Start {\n  for item in [1, 2] {\n    emit Item(kind: 'list', value: item)\n  }\n\n  for item from 3 to 5 step 2 {\n    emit Item(kind: 'range', value: item)\n  }\n\n  emit Done\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Item", "args": { "kind": { "type": ":text", "value": "list" }, "value": { "type": ":integer", "value": "1" } } },
+            { "name": "Item", "args": { "kind": { "type": ":text", "value": "list" }, "value": { "type": ":integer", "value": "2" } } },
+            { "name": "Item", "args": { "kind": { "type": ":text", "value": "range" }, "value": { "type": ":integer", "value": "3" } } },
+            { "name": "Item", "args": { "kind": { "type": ":text", "value": "range" }, "value": { "type": ":integer", "value": "5" } } },
+            { "name": "Done", "args": {} }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "generated lists compile to runnable binary",
+      "script": "module BinaryCompilerGeneratedList\n\non Start {\n  let values be :list[:select item from 1 to 5 where item mod 2 = 1 => item * 10]\n  emit Done(count: :len values, first: values[1], second: values[2], third: values[3])\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "count": { "type": ":integer", "value": "3" }, "first": { "type": ":integer", "value": "10" }, "second": { "type": ":integer", "value": "30" }, "third": { "type": ":integer", "value": "50" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "guarded choices compile to runnable binary",
+      "script": "module BinaryCompilerGuardedChoice\n\non Start(value) {\n  let result be :large when value > 10, :medium when value > 5 otherwise :small\n  emit Done(result: result)\n}\n",
+      "steps": [
+        { "input": { "name": "Start", "args": { "value": { "type": ":integer", "value": "12" } } }, "expectedPublished": [ { "name": "Done", "args": { "result": { "type": ":tag", "value": "large" } } } ] },
+        { "input": { "name": "Start", "args": { "value": { "type": ":integer", "value": "7" } } }, "expectedPublished": [ { "name": "Done", "args": { "result": { "type": ":tag", "value": "medium" } } } ] },
+        { "input": { "name": "Start", "args": { "value": { "type": ":integer", "value": "3" } } }, "expectedPublished": [ { "name": "Done", "args": { "result": { "type": ":tag", "value": "small" } } } ] }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "direct draw and choose selectors compile to runnable binary",
+      "script": "module BinaryCompilerDirectChoose\n\non Start {\n  let values be [1, 2, 3]\n  let oneValue be values[:draw 1]\n  let drawnValues be values[:draw 2]\n  let chosenOne be values[:choose 1]\n  let chosenValues be values[:choose 2]\n  let randomOne be [42][:choose 1 at random]\n  let randomValues be [7, 8][:choose 2 at random]\n  emit Done(oneValue: oneValue, drawnLen: :len drawnValues, drawnSecond: drawnValues[2], chosenOne: chosenOne, chosenLen: :len chosenValues, randomOne: randomOne, randomLen: :len randomValues)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "oneValue": { "type": ":integer", "value": "1" }, "drawnLen": { "type": ":integer", "value": "2" }, "drawnSecond": { "type": ":integer", "value": "2" }, "chosenOne": { "type": ":integer", "value": "1" }, "chosenLen": { "type": ":integer", "value": "2" }, "randomOne": { "type": ":integer", "value": "42" }, "randomLen": { "type": ":integer", "value": "2" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "direct pattern selectors compile to runnable binary",
+      "script": "module BinaryCompilerDirectPatterns\n\non Start {\n  let dice as :dice be [6, 6, 5, 5, 5]\n  let straight as :dice be [6, 5, 4, 3, 2]\n  let list be ['a', 'b', 'a']\n  let dicePair be dice[:take pair]\n  let diceFull be dice[:take full house]\n  let straightTaken be straight[:take straight]\n  let listPair be list[:take pair]\n  let tags be [:fire, :ice, :fire]\n  let dicePairOfSix be dice[:take pair of 6]\n  let listPairOfA be list[:take pair of 'a']\n  let tagPairOfFire be tags[:take pair of :fire]\n  emit Done(hasDicePair: dice[:has pair], hasListPair: list[:has pair], hasPairOfSix: dice[:has pair of 6], hasPairOfFour: dice[:has pair of 4], pairLen: :len dicePair, fullLen: :len diceFull, straightLen: :len straightTaken, listPairLen: :len listPair, pairOfSixLen: :len dicePairOfSix, pairOfAFirst: listPairOfA[1], tagPairSecond: tagPairOfFire[2])\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "hasDicePair": { "type": ":boolean", "value": true }, "hasListPair": { "type": ":boolean", "value": true }, "hasPairOfSix": { "type": ":boolean", "value": true }, "hasPairOfFour": { "type": ":boolean", "value": false }, "pairLen": { "type": ":integer", "value": "2" }, "fullLen": { "type": ":integer", "value": "5" }, "straightLen": { "type": ":integer", "value": "5" }, "listPairLen": { "type": ":integer", "value": "2" }, "pairOfSixLen": { "type": ":integer", "value": "2" }, "pairOfAFirst": { "type": ":text", "value": "a" }, "tagPairSecond": { "type": ":tag", "value": "fire" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "direct sort group distinct selectors compile to runnable binary",
+      "script": "module BinaryCompilerDirectSortGroupDistinct\n\non Start {\n  let units be [[name: 'Knight', faction: :melee, hp: 10], [name: 'Rook', faction: :melee, hp: 8], [name: 'Archer', faction: :ranged, hp: 6]]\n  let firstFaction be units[1].faction\n  let thirdFaction be units[3].faction\n  let distinctFactions be units[:distinct by unit => unit.faction]\n  let groups be units[:group by unit => unit.faction]\n  let orderedAscending be units[:order by unit => unit.hp ascending]\n  let orderedDescending be units[:order by unit => unit.hp descending]\n  emit Done(firstFaction: firstFaction, thirdFaction: thirdFaction, distinctLen: :len distinctFactions, distinctFirst: distinctFactions[1].name, distinctSecond: distinctFactions[2].name, meleeLen: :len groups[:melee], rangedFirst: groups[:ranged][1].name, ascFirst: orderedAscending[1].name, descFirst: orderedDescending[1].name)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "firstFaction": { "type": ":tag", "value": "melee" }, "thirdFaction": { "type": ":tag", "value": "ranged" }, "distinctLen": { "type": ":integer", "value": "2" }, "distinctFirst": { "type": ":text", "value": "Knight" }, "distinctSecond": { "type": ":text", "value": "Archer" }, "meleeLen": { "type": ":integer", "value": "2" }, "rangedFirst": { "type": ":text", "value": "Archer" }, "ascFirst": { "type": ":text", "value": "Archer" }, "descFirst": { "type": ":text", "value": "Knight" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "filter and select selectors compile to runnable binary",
+      "script": "module BinaryCompilerFilterSelect\n\non Start {\n  let values be [1, 2, 3, 4]\n  let threshold be 2\n  let base be 100\n  let filtered be values[:filter value where value > 2]\n  let selected be values[:select value => value * 10]\n  let capturedFilter be values[:filter value where value > threshold]\n  let capturedSelect be values[:select value => value + base]\n  let chained be values[:filter value where value > 1][:select value => value + 5]\n  emit Done(filteredLen: :len filtered, filteredFirst: filtered[1], selectedSecond: selected[2], capturedFilterFirst: capturedFilter[1], capturedSelectThird: capturedSelect[3], chainedLen: :len chained, chainedFirst: chained[1], chainedThird: chained[3])\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "filteredLen": { "type": ":integer", "value": "2" }, "filteredFirst": { "type": ":integer", "value": "3" }, "selectedSecond": { "type": ":integer", "value": "20" }, "capturedFilterFirst": { "type": ":integer", "value": "3" }, "capturedSelectThird": { "type": ":integer", "value": "103" }, "chainedLen": { "type": ":integer", "value": "3" }, "chainedFirst": { "type": ":integer", "value": "7" }, "chainedThird": { "type": ":integer", "value": "9" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "stream terminal selectors compile to runnable binary",
+      "script": "module BinaryCompilerStreamTerminals\n\non Start {\n  let values be [1, 2, 3, 4]\n  let threshold be 2\n  let offset be 10\n  let units be [[name: 'Knight', hp: 10], [name: 'Mage', hp: 6], [name: 'Guard', hp: 8]]\n  let counted be values[:count value where value > threshold]\n  let summed be values[:sum value => value + offset]\n  let averaged be values[:average value => value]\n  let chainedSum be values[:filter value where value > 1][:sum value => value]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp + offset]\n  emit Done(counted: counted, summed: summed, averaged: averaged, chainedSum: chainedSum, weakest: weakest.name, strongest: strongest.name)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "counted": { "type": ":integer", "value": "2" }, "summed": { "type": ":integer", "value": "50" }, "averaged": { "type": ":float", "value": "2.5" }, "chainedSum": { "type": ":integer", "value": "9" }, "weakest": { "type": ":text", "value": "Mage" }, "strongest": { "type": ":text", "value": "Knight" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "predicate and filtered edge selectors compile to runnable binary",
+      "script": "module BinaryCompilerPredicateEdges\n\non Start {\n  let values be [1, 2, 3, 4]\n  let threshold be 2\n  let units be [[name: 'Knight', alive: true, role: :fighter], [name: 'Mage', alive: false, role: :boss], [name: 'Guard', alive: true, role: :fighter]]\n  let hasHigh be values[:any value where value > threshold]\n  let allPositive be values[:all value where value > 0]\n  let firstAlive be units[:first unit where unit.alive]\n  let lastAlive be units[:last unit where unit.alive]\n  let boss be units[:single unit where unit.role = :boss]\n  emit Done(hasHigh: hasHigh, allPositive: allPositive, firstAlive: firstAlive.name, lastAlive: lastAlive.name, boss: boss.name)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "hasHigh": { "type": ":boolean", "value": true }, "allPositive": { "type": ":boolean", "value": true }, "firstAlive": { "type": ":text", "value": "Knight" }, "lastAlive": { "type": ":text", "value": "Guard" }, "boss": { "type": ":text", "value": "Mage" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "object match selector compiles to runnable binary",
+      "script": "module BinaryCompilerObjectMatch\n\non Start {\n  let targetRole be :boss\n  let units be [[name: 'Knight', role: :fighter, stats: [hp: 10]], [name: 'Mage', role: :boss, stats: [hp: 6]], [name: 'Guard', role: :fighter, stats: [hp: 8]]]\n  let hasBoss be units[:has [role: targetRole]]\n  let hasNestedHp be units[:has [stats: [hp: 8]]]\n  let hasMissing be units[:has [role: :healer]]\n  emit Done(hasBoss: hasBoss, hasNestedHp: hasNestedHp, hasMissing: hasMissing)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "hasBoss": { "type": ":boolean", "value": true }, "hasNestedHp": { "type": ":boolean", "value": true }, "hasMissing": { "type": ":boolean", "value": false } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "map selector compiles to runnable binary",
+      "script": "module BinaryCompilerMapSelector\n\non Start {\n  let units be [[id: :rook, hp: 10, team: :blue], [id: :mage, hp: 6, team: :red], [id: :guard, hp: 8, team: :blue]]\n  let byId be units[:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let blueById be units[:filter unit where unit.team = :blue][:map unit by unit.id => unit.hp]\n  emit Done(byIdLen: :len byId, rookTeam: byId[:rook].team, mageHp: byId[:mage].hp, hpRook: hpById[:rook], hpMage: hpById[:mage], blueLen: :len blueById, blueGuard: blueById[:guard])\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "byIdLen": { "type": ":integer", "value": "3" }, "rookTeam": { "type": ":tag", "value": "blue" }, "mageHp": { "type": ":integer", "value": "6" }, "hpRook": { "type": ":integer", "value": "10" }, "hpMage": { "type": ":integer", "value": "6" }, "blueLen": { "type": ":integer", "value": "2" }, "blueGuard": { "type": ":integer", "value": "8" } } }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "filtered and weighted choose selectors compile to runnable binary",
+      "script": "module BinaryCompilerChooseSelectors\n\non Start {\n  let scale be 2\n  let units be [[name: 'Low', weight: 0, team: :red], [name: 'High', weight: 3, team: :blue], [name: 'Zero', weight: 0, team: :blue]]\n  let chosenBlue be units[:choose 1 unit where unit.team = :blue]\n  let chosenRandomBlue be units[:choose 1 at random unit where unit.weight > 0]\n  let weightedOne be units[:choose 1 weighted by unit => unit.weight * scale]\n  let weightedMany be units[:choose 2 weighted by unit => unit.weight * scale]\n  let weightedFiltered be units[:choose 2 unit where unit.team = :blue weighted by unit => unit.weight * scale]\n  emit Done(chosenBlue: chosenBlue.name, chosenRandomBlue: chosenRandomBlue.name, weightedOne: weightedOne.name, weightedManyLen: :len weightedMany, weightedManyFirst: weightedMany[1].name, weightedFilteredLen: :len weightedFiltered, weightedFilteredFirst: weightedFiltered[1].name)\n}\n",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            { "name": "Done", "args": { "chosenBlue": { "type": ":text", "value": "High" }, "chosenRandomBlue": { "type": ":text", "value": "High" }, "weightedOne": { "type": ":text", "value": "High" }, "weightedManyLen": { "type": ":integer", "value": "1" }, "weightedManyFirst": { "type": ":text", "value": "High" }, "weightedFilteredLen": { "type": ":integer", "value": "1" }, "weightedFilteredFirst": { "type": ":text", "value": "High" } } }
+          ]
+        }
+      ]
+    }
+  ]
+}

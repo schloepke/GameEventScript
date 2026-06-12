@@ -36,6 +36,11 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(CompileBinaryCompilerCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void CompileBinaryCompiler(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicMathMatrixCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicMathMatrix(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -618,6 +623,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> CompileBytecodeLoweringCases()
         => Cases("compile/bytecode-lowering.json");
+
+    public static IEnumerable<object[]> CompileBinaryCompilerCases()
+        => Cases("compile/binary-compiler.json");
 
     public static IEnumerable<object[]> RuntimeAtomicMathMatrixCases()
         => Cases("runtime/atomic/math-matrix.json");

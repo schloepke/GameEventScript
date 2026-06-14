@@ -42,6 +42,30 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "seeded random uses full int64 seed",
+      "script": "module AtomicSeededRandomLong\non Start {\n  let value be :random with 4294967297 (:random from 1 to 1000000000000)\n  emit Done(value: value)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "979054413168"
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

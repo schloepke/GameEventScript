@@ -620,6 +620,30 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "large staged list grows register storage",
+      "script": "module AtomicLargeStagedList\non Start {\n  let values be [\n    1, 2, 3, 4, 5, 6, 7, 8,\n    9, 10, 11, 12, 13, 14, 15, 16,\n    17, 18, 19, 20, 21, 22, 23, 24,\n    25, 26, 27, 28, 29, 30, 31, 32,\n    33, 34, 35, 36, 37, 38, 39, 40\n  ]\n  emit Done(count: :len values)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "count": {
+                  "type": ":integer",
+                  "value": "40"
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

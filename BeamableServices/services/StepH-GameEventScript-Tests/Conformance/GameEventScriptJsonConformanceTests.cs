@@ -182,7 +182,7 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
 [TestClass]
 public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonConformanceTestBase
 {
-    private static readonly bool RunPerformanceReport = true;
+    private static readonly bool RunPerformanceReport = false;
     private static readonly bool ComparePerformanceReportToReference = true;
     private static readonly double PerformanceElapsedRegressionTolerance = 0.15d;
     private static readonly double PerformanceElapsedMinimumToleranceMilliseconds = 1d;
@@ -463,20 +463,23 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
         var iterations = ResolveIterationCount(PerformanceIterations, testCase.Test.Iterations, DefaultIterations);
         var warmupIterations = ResolveIterationCount(PerformanceWarmupIterations, testCase.Test.WarmupIterations, DefaultWarmupIterations);
-        var compiled = Measure("ges compile", () => GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test));
-        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, compiled.Value);
-        var newBuild = Measure<IGameEventScriptModule>("new vm build", () => GameEventScriptVirtualMaschine.Create(compiled.Value, 4096, 256));
+        var compiled = Measure("compile", () =>
+        {
+            var binary = GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test);
+            return new CompiledPerformanceModule(binary, GameEventScriptManager.CreateModule(binary, 4096, 256));
+        });
+        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, compiled.Value.Binary);
         if (testCase.Test.DumpBinary)
         {
             TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
-            TestContext.WriteLine(StableBinaryDump(compiled.Value, GetScriptSourceForDump(testCase)));
+            TestContext.WriteLine(StableBinaryDump(compiled.Value.Binary, GetScriptSourceForDump(testCase)));
         }
 
-        AssertPerformanceCorrectness(testCase, "new vm", newBuild.Value);
+        AssertPerformanceCorrectness(testCase, "new vm", compiled.Value.Module);
 
-        var newRun = MeasurePerformanceRun(testCase, newBuild.Value, iterations, warmupIterations);
+        var newRun = MeasurePerformanceRun(testCase, compiled.Value.Module, iterations, warmupIterations);
 
-        AppendPerformanceCase(report, testCase, iterations, warmupIterations, compiled, newBuild, newRun);
+        AppendPerformanceCase(report, testCase, iterations, warmupIterations, compiled, newRun);
     }
 
     private static void AppendPerformanceBinaryDumpCase(
@@ -512,8 +515,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         GameEventScriptConformanceCase testCase,
         int iterations,
         int warmupIterations,
-        Measured<GameEventScriptBinary> compiled,
-        Measured<IGameEventScriptModule> build,
+        Measured<CompiledPerformanceModule> compiled,
         PerformanceRunMetrics run)
     {
         report.AppendLine($"## {testCase.SuiteName}/{testCase.Test.Name}");
@@ -522,7 +524,6 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.AppendLine($"warmupIterations={warmupIterations}");
         report.AppendLine($"steps={testCase.Test.Steps!.Count}");
         AppendMeasured(report, "compile", compiled);
-        AppendMeasured(report, "build", build);
         AppendRun(report, "run", run, iterations);
         report.AppendLine();
     }
@@ -706,6 +707,8 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     }
 
     private sealed record Measured<T>(string Name, T Value, TimeSpan Elapsed, long AllocatedBytes);
+
+    private sealed record CompiledPerformanceModule(GameEventScriptBinary Binary, IGameEventScriptModule Module);
 
     private sealed record PerformanceRunMetrics(
         TimeSpan Elapsed,

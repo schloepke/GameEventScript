@@ -117,7 +117,7 @@ view instead of exposing the overlapping runtime fields:
 - **64-bit float view:** `LoadFloat` reads `F64` directly. This keeps IEEE-754
   `NaN`, `Infinity`, and `-Infinity` portable as raw double bits.
 - **Unsigned payload view:** `Payload` exposes the raw payload bits for transport
-  and diagnostics. Portable opcodes that use signed numeric payloads read `I64`
+  and debug tooling. Portable opcodes that use signed numeric payloads read `I64`
   instead.
 - **32-bit views:** no portable bytecode shape currently depends on a 32-bit
   immediate view.

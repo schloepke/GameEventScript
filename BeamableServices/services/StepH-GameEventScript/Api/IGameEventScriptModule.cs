@@ -9,7 +9,7 @@ namespace StepH.GameEventScript.Api;
 public interface IGameEventScriptModule
 {
     /// <summary>
-    /// Gets the module name used for diagnostics and debug output.
+    /// Gets the module name used for debug output.
     /// </summary>
     string ModuleName { get; }
 

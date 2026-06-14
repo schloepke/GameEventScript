@@ -1093,7 +1093,8 @@ Core host concepts:
   it owns the active queue, context, random stream, runtime budget and active
   fibers.
 - `GameEventScriptRuntimeLimits`: execution, loop, range, dice, and queue limits.
-- `GameEventScriptDiagnosticTraceCollector`: optional diagnostics collector.
+- `IGameEventScriptRuntimeObserver`: optional host observer for message output,
+  dispatch lifecycle, and runtime-limit events.
 
 The runtime resolves handlers by signature/name and tag filters. Exact-signature
 handlers and message-name handlers can both observe the same message. A loaded host

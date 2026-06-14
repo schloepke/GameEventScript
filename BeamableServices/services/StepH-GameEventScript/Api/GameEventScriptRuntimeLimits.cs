@@ -37,8 +37,8 @@ public sealed class GameEventScriptRuntimeLimits
     /// </summary>
     /// <remarks>
     /// A value less than or equal to zero disables the queue-length limit. When the limit is
-    /// reached, the newest message is discarded, the publish call returns false, and a
-    /// runtime-limit diagnostic is recorded when diagnostics are available.
+    /// reached, the newest message is discarded, the publish call returns false, and
+    /// the runtime observer is notified when one is configured.
     /// </remarks>
     public int MaxQueuedMessagesPerRun { get; init; }
 
@@ -92,7 +92,7 @@ public sealed class GameEventScriptRuntimeLimits
     /// This property is commonly used to enforce bounds on script-driven operations that
     /// involve ranges, such as generating collections or iterating over sequences. If a range
     /// exceeds the specified limit, the script runtime may terminate execution, or the
-    /// relevant operation could fail with a diagnostic error.
+    /// relevant operation could fail as a runtime-limit condition.
     /// </remarks>
     public int MaxRangeItems { get; init; } = 10_000;
 
@@ -115,8 +115,8 @@ public sealed class GameEventScriptRuntimeLimits
     /// <remarks>
     /// The value of this property represents the upper bound on the allowable
     /// number of dice rolls in a single script execution. Exceeding this limit during
-    /// runtime will result in a diagnostic event being reported and the operation
-    /// being disallowed. This safeguard prevents excessive resource consumption
+    /// runtime will report a runtime-limit condition and the operation being
+    /// disallowed. This safeguard prevents excessive resource consumption
     /// caused by handling an unreasonably high number of dice rolls.
     /// </remarks>
     public int MaxDiceCount { get; init; } = 1_000;

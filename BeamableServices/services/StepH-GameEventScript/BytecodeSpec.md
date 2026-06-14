@@ -47,7 +47,7 @@ expressions are layout-free direct instructions.
 ## Non-Goals
 
 - No public exposure of bytecode runtime implementation types.
-- No requirement that the diagnostic dump format matches the binary `.gesb`
+- No requirement that the debug dump format matches the binary `.gesb`
   encoding.
 - No requirement to split every DSL operation into primitive opcodes.
 - No operand stack for expression evaluation.
@@ -347,7 +347,7 @@ payload carries `I64`, raw `Payload`, or the IEEE-754 `F64` bit pattern.
 
 Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/register lists, `StringPool`
-names, bind tables, and optional debug/diagnostic layouts.
+names, bind tables, and optional debug layouts.
 
 An instruction that produces a `nothing` value writes it to `DestinationSlot`. Returning
 without a value uses `ReturnVoid`; returning a register value uses
@@ -1244,47 +1244,13 @@ At runtime, collection builders are VM-internal values and are not visible as DS
 values. `ListBuilderAdd` applies `MaxGeneratedCollectionItems` while
 materializing the result.
 
-### Diagnostics
-
-Diagnostics are execution instrumentation, not bytecode. The bytecode stream
-does not contain diagnostic-only instructions. Diagnostic-only metadata is
-carried by the optional `DebugSegment`, linked to instruction addresses and
-registers. Runtime collectors read the executable diagnostic sites derived from that
-segment; production bytecode side tables must not carry diagnostic-only fields.
-If debug info is disabled, the debug segment may be empty. Diagnostics are not a
-bytecode feature; host/runtime diagnostics should use observer or collector APIs
-and optional debug metadata when source/register lookup is needed.
-
-```text
-DebugSegment
-  DiagnosticSites[]
-
-DebugDiagnosticSite
-  Kind: LetEvaluated | ExpressionEvaluatedToNothing
-  Timing: BeforeInstruction | AfterInstruction
-  Address
-  Slot
-  Name
-```
-
-The VM records diagnostic events while executing normal instructions:
-
-- Handler and parameter events are derived from handler metadata and
-  preloaded argument registers plus optional parameter-cast execution.
-- Function and predicate call events are derived from callable metadata and
-  direct call entry addresses.
-- Let and expression-to-nothing events are derived from debug diagnostic sites.
-- Publish argument events are derived from outbound-message bind metadata and
-  register-list metadata.
-
 ## Debug Segment
 
 Debug metadata is optional and may be generated for deterministic dumps,
-diagnostic correlation, or debugger UIs.
+source/register lookup, or debugger UIs.
 
 ```text
 DebugSegment
-  DiagnosticSites[]
   Labels[]
   AddressToSource[]
   AddressToLogicalNode[]
@@ -1343,7 +1309,7 @@ A grouped view may still be offered, but it must keep global addresses visible.
 ## Format Invariants
 
 - New bytecode format changes must increment `FormatVersion`.
-- Bytecode dumps are diagnostic only and are not a stable wire format.
+- Bytecode dumps are debug tooling output and are not a stable wire format.
 - Public bytecode must remain deterministic for the same script/options.
 - Host dynamic linking remains separate from compilation.
 - Runtime extension binding is not serialized into portable bytecode.

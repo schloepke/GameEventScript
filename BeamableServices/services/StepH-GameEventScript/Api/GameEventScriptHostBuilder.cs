@@ -5,13 +5,12 @@ namespace StepH.GameEventScript.Api;
 
 /// <summary>
 /// Provides a builder for creating and configuring instances of <see cref="GameEventScriptHost"/>.
-/// This builder enables customization of components such as random generators, diagnostic collection,
+/// This builder enables customization of components such as random generators,
 /// message observers, extension registries, and runtime limits for the <see cref="GameEventScriptHost"/>.
 /// </summary>
 public sealed class GameEventScriptHostBuilder
 {
     private GameEventScriptRandomGenerator? _random;
-    private IGameEventScriptDiagnosticCollector? _diagnosticCollector;
     private IGameEventScriptRuntimeObserver? _runtimeObserver;
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
@@ -36,26 +35,6 @@ public sealed class GameEventScriptHostBuilder
     public GameEventScriptHostBuilder WithRandom(GameEventScriptRandomGenerator random)
     {
         _random = random ?? throw new ArgumentNullException(nameof(random));
-        return this;
-    }
-
-    /// <summary>
-    /// Configures the <see cref="GameEventScriptHostBuilder"/> to use the provided
-    /// <see cref="IGameEventScriptDiagnosticCollector"/> for collecting diagnostic information
-    /// during script execution.
-    /// </summary>
-    /// <param name="diagnosticCollector">
-    /// An instance of <see cref="IGameEventScriptDiagnosticCollector"/> to be used for gathering diagnostics.
-    /// </param>
-    /// <returns>
-    /// The current instance of <see cref="GameEventScriptHostBuilder"/>, allowing further configuration chaining.
-    /// </returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="diagnosticCollector"/> parameter is null.
-    /// </exception>
-    public GameEventScriptHostBuilder WithDiagnosticCollector(IGameEventScriptDiagnosticCollector diagnosticCollector)
-    {
-        _diagnosticCollector = diagnosticCollector ?? throw new ArgumentNullException(nameof(diagnosticCollector));
         return this;
     }
 
@@ -186,11 +165,10 @@ public sealed class GameEventScriptHostBuilder
     /// </summary>
     /// <returns>
     /// A new instance of <see cref="GameEventScriptHost"/> configured with the specified
-    /// random generator, diagnostic collector, message observer, extension registry, and runtime limits.
+    /// random generator, message observer, extension registry, and runtime limits.
     /// </returns>
     public GameEventScriptHost Build() => new(
         _random ?? GameEventScriptRandomGenerator.Create(),
-        _diagnosticCollector,
         _runtimeObserver,
         _extensionRegistry,
         _externalTypeRegistry,

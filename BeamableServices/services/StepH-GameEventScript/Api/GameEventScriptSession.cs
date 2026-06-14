@@ -18,28 +18,27 @@ public sealed class GameEventScriptSession
     private readonly object _pumpGate = new();
     private bool _automaticDispatchScheduled;
 
-    public GameEventScriptSession(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit, IGameEventScriptDiagnosticCollector? diagnosticCollector = null, GameEventScriptRuntimeLimits? runtimeLimits = null,
+    public GameEventScriptSession(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit, GameEventScriptRuntimeLimits? runtimeLimits = null,
         IGameEventScriptExtensionRegistry? extensionRegistry = null, Func<GameEventScriptMessage, bool>? publish = null)
-        : this(random, emit, diagnosticCollector, runtimeLimits, extensionRegistry, publish, null)
+        : this(random, emit, runtimeLimits, extensionRegistry, publish, null)
     {
     }
 
-    private GameEventScriptSession(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit, IGameEventScriptDiagnosticCollector? diagnosticCollector,
+    private GameEventScriptSession(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit,
         GameEventScriptRuntimeLimits? runtimeLimits, IGameEventScriptExtensionRegistry? extensionRegistry, Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver)
     {
         Random = random ?? throw new ArgumentNullException(nameof(random));
         _emit = emit ?? throw new ArgumentNullException(nameof(emit));
         _publish = publish ?? _emit;
         _runtimeObserver = runtimeObserver;
-        DiagnosticCollector = diagnosticCollector;
         RuntimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
         RuntimeBudget = new GesRuntimeBudget(this, RuntimeLimits);
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
     internal GameEventScriptSession(GameEventScriptHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, GameEventScriptDispatcher dispatcher, GameEventScriptRandomGenerator random,
-        Func<GameEventScriptMessage, bool> emit, IGameEventScriptDiagnosticCollector? diagnosticCollector, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
-        Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver) : this(random, emit, diagnosticCollector, runtimeLimits, extensionRegistry, publish, runtimeObserver)
+        Func<GameEventScriptMessage, bool> emit, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
+        Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver) : this(random, emit, runtimeLimits, extensionRegistry, publish, runtimeObserver)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         State = state ?? throw new ArgumentNullException(nameof(state));
@@ -48,8 +47,6 @@ public sealed class GameEventScriptSession
     }
 
     public GameEventScriptRandomGenerator Random { get; }
-
-    public IGameEventScriptDiagnosticCollector? DiagnosticCollector { get; }
 
     public GameEventScriptRuntimeLimits RuntimeLimits { get; }
 
@@ -81,18 +78,8 @@ public sealed class GameEventScriptSession
 
     public bool Publish(string message, params (string name, GameEventScriptValue value)[] args) => Publish(GameEventScriptMessage.Create(message, args));
 
-    public void RecordDiagnostic(GameEventScriptDiagnosticEventKind kind, string name, IReadOnlyDictionary<string, GameEventScriptValue> arguments, string? detail = null)
-        => DiagnosticCollector?.Record(kind, name, arguments, detail);
-
     internal void RecordRuntimeLimitReached(string limitName, string detail, int limit)
-    {
-        _runtimeObserver?.RuntimeLimitReached(limitName, detail, limit);
-        RecordDiagnostic(
-            GameEventScriptDiagnosticEventKind.RuntimeLimitReached,
-            limitName,
-            GameEventScriptNamedArguments.Empty,
-            $"{detail} Limit: {limit}.");
-    }
+        => _runtimeObserver?.RuntimeLimitReached(limitName, detail, limit);
 
     public bool Dispatch(GameEventScriptMessage message)
     {

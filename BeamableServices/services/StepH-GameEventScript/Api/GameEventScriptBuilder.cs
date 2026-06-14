@@ -42,7 +42,7 @@ public sealed class GameEventScriptBuilder
     }
 
     /// <summary>
-    /// Enables or disables debug metadata generation for bytecode diagnostics, dumps, and tooling.
+    /// Enables or disables debug metadata generation for bytecode dumps and tooling.
     /// </summary>
     /// <param name="enabled">A boolean value indicating whether debug metadata should be generated. Defaults to true.</param>
     /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified debug setting applied.</returns>

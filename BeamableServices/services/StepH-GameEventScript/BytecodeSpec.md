@@ -1,7 +1,7 @@
 # GameEventScript Bytecode Spec
 
-This document defines the intended portable bytecode shape for
-`GameEventScriptCompiled` and the `GameEventScriptBinary` container.
+This document defines the intended portable bytecode shape for the
+`GameEventScriptBinary` container.
 The goal is a compact, portable, high-level bytecode for the GameEventScript DSL
 that is naturally executable by a linear program-counter VM.
 
@@ -96,61 +96,11 @@ not serialized into the script binary. Export bind kinds occupy `0x10` through
 names are currently stored as `extension.function`; external-type import names
 are stored as the type name.
 
-The public `GameEventScriptCompiled` model is shaped around a single code
-segment and side tables:
-
-```text
-GameEventScriptCompiled
-  ModuleName
-  FormatVersion
-  StringPool
-  UShortListPool
-  OutboundMessageSignatures
-  ExternalReferences
-  ExternalTypeConstructorReferences
-  Code: Instruction[]
-  Handlers: HandlerEntry[]
-  Callables: CallableEntry[]
-  TypeDefinitions: TypeDefinitionEntry[]
-  DebugSegment
-  MaxFrameSlots
-  MaxCallStackDepth
-```
-
 Existing string and compact list pools remain important. Constants that fit the
 linear instruction shape are encoded directly in typed load instructions:
 booleans and `nothing` have dedicated opcodes; integer and float payloads use
 raw 64-bit bits split over `A`/`B`; text, tags, and handler message names point
 into `StringPool`.
-
-Current C# public surface:
-
-```text
-GameEventScriptCompiled
-  StringPool
-  UShortListPool
-  OutboundMessageSignatures
-  ExternalReferences
-  ExternalTypeConstructorReferences
-  Code: IReadOnlyList<GameEventScriptBytecodeInstruction>
-  Handlers
-  Callables
-  TypeDefinitions
-  MaxFrameSlots
-  DebugSegment
-
-GameEventScriptBytecodeInstruction
-  OpCode
-  UnitAndFlags
-  DestinationSlot
-  XSlot/YSlot
-  ConditionSlot/TargetAddress/EntryAddress
-  StringIndex/ListIndex/SecondaryListIndex/ExternalReferenceIndex/TypeOperand
-  ImmediateX/ImmediateY/Index/Count
-  AU, BU, CU, DU
-  AS, BS, CS, DS
-  I64/Payload/F64
-```
 
 `MaxFrameSlots` is the maximum local register count needed by any handler or
 callable frame, including parameters, user `let` bindings, compiler temporaries,

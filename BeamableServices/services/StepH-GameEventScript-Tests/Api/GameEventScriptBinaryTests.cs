@@ -1,4 +1,3 @@
-using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Extensions;
@@ -9,7 +8,7 @@ namespace StepH_GameEventScript_Tests.Api;
 public sealed class GameEventScriptBinaryTests
 {
     [TestMethod]
-    public void FromCompiledBuildsCompactBindTable()
+    public void CompileBuildsCompactBindTable()
     {
         const string script =
             """
@@ -24,10 +23,8 @@ public sealed class GameEventScriptBinaryTests
             }
             """;
 
-        var compiled = GameEventScriptManager.Compile(script);
-        var binary = compiled;
+        var binary = GameEventScriptManager.Compile(script);
 
-        Assert.AreEqual("BinaryShape", compiled.ModuleName);
         Assert.AreEqual("BinaryShape", binary.ModuleName);
         Assert.AreEqual((ushort)1, binary.Header.Version);
 
@@ -36,7 +33,7 @@ public sealed class GameEventScriptBinaryTests
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Function && Resolve(binary, entry.Name) == "score"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Predicate && Resolve(binary, entry.Name) == "high"));
-        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < compiled.InstructionTable.Length));
+        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < binary.InstructionTable.Length));
 
         var start = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler);
         CollectionAssert.AreEqual(new[] { "value" }, start.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
@@ -51,7 +48,7 @@ public sealed class GameEventScriptBinaryTests
     }
 
     [TestMethod]
-    public void FromCompiledExportsMessageNameHandlersWithDedicatedBindKind()
+    public void CompileExportsMessageNameHandlersWithDedicatedBindKind()
     {
         const string script =
             """
@@ -107,57 +104,6 @@ public sealed class GameEventScriptBinaryTests
         StringAssert.Contains(dump, "//\t\tmodule BinarySourceDump");
         StringAssert.Contains(dump, "//\t\ton Start {");
         StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n\n.gesb ");
-    }
-
-    [TestMethod]
-    public void BytecodeInstructionSerializesAsPortableHexWord()
-    {
-        var instruction = new GameEventScriptBytecodeInstruction
-        {
-            OpCode = GameEventScriptBytecodeOpCode.LoadInteger,
-            DestinationSlot = 7,
-            UnitAndFlags = (byte)GameEventScriptBytecodeInstructionUnit.UnitMeter,
-            I64 = 42
-        };
-
-        var json = JsonSerializer.Serialize(instruction);
-
-        Assert.AreEqual(
-            """{"Opcode":"LoadInteger","Flags":"0x02","Dst":"0x0007","X":"0x0000","Y":"0x0000","Parameter":"0x000000000000002A"}""",
-            json);
-
-        var decoded = JsonSerializer.Deserialize<GameEventScriptBytecodeInstruction>(json);
-
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, decoded.OpCode);
-        Assert.AreEqual((byte)GameEventScriptBytecodeInstructionUnit.UnitMeter, decoded.UnitAndFlags);
-        Assert.AreEqual((ushort)7, decoded.DestinationSlot);
-        Assert.AreEqual(42L, decoded.I64);
-    }
-
-    [TestMethod]
-    public void BinaryJsonUsesPortableInstructionShape()
-    {
-        const string script =
-            """
-            module BinaryJson
-
-            on Start {
-              emit Done(value: 1)
-            }
-            """;
-
-        var binary = GameEventScriptManager.Compile(script);
-
-        var json = JsonSerializer.Serialize(binary);
-
-        StringAssert.Contains(json, "\"InstructionTable\":[{");
-        StringAssert.Contains(json, "\"Opcode\":");
-        StringAssert.Contains(json, "\"Flags\":");
-        StringAssert.Contains(json, "\"Dst\":");
-        StringAssert.Contains(json, "\"X\":");
-        StringAssert.Contains(json, "\"Y\":");
-        StringAssert.Contains(json, "\"Parameter\":");
-        Assert.IsFalse(json.Contains("A_U16", StringComparison.Ordinal), "Instruction JSON must not expose overlapped typed fields.");
     }
 
     private static string Resolve(GameEventScriptBinary binary, ushort index) => binary.TextConstantTable.Resolve(index);

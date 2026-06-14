@@ -42,8 +42,6 @@ class StepH.GameEventScript.Api.GameEventScriptBinaryBuilder
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFlag(StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinaryFlags flag, System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithModuleName(System.String moduleName)
   method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithVersion(System.UInt16 version)
-static class StepH.GameEventScript.Api.GameEventScriptBinaryExtensions
-  method static StepH.GameEventScript.Api.GameEventScriptBinary ToGameEventScriptBinary(StepH.GameEventScript.Api.GameEventScriptCompiled compiled)
 struct StepH.GameEventScript.Api.GameEventScriptBinaryHeader
   field static System.UInt32 HeaderSize
   field static System.UInt32 Magic
@@ -66,49 +64,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithOptimization(System.Boolean enabled)
   method StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeCallable
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind Kind { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> ParameterTypes { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
-  property System.Int32 EntryAddress { get set }
-  property System.Int32 ReturnSlot { get set }
-  property System.String Name { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeCallableKind
-  enum-field Predicate = 0
-  enum-field Function = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDebugDiagnosticSite
-  ctor GameEventScriptBytecodeDebugDiagnosticSite(StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming timing, System.Int32 address, System.Int32 slot, System.String name)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind Kind { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming Timing { get }
-  property System.Int32 Address { get }
-  property System.Int32 Slot { get }
-  property System.String Name { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeDebugSegment
-  ctor GameEventScriptBytecodeDebugSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDebugDiagnosticSite> diagnosticSites)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeDebugSegment Empty { get }
-  property System.Boolean IsEmpty { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeDebugDiagnosticSite> DiagnosticSites { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticKind
-  enum-field LetEvaluated = 0
-  enum-field ExpressionEvaluatedToNothing = 1
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeDiagnosticTiming
-  enum-field BeforeInstruction = 0
-  enum-field AfterInstruction = 1
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeHandler
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind DispatchKind { get }
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Int32> Slots { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> ExcludedTags { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> ParameterTypes { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> RequiredTags { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
-  property System.Int32 DeclarationOrder { get }
-  property System.Int32 EntryAddress { get set }
-  property System.String Message { get }
-enum StepH.GameEventScript.Api.GameEventScriptBytecodeHandlerDispatchKind
-  enum-field ExactSignature = 0
-  enum-field MessageName = 1
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
   field StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind TypeKind
@@ -150,10 +105,8 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
 static class StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits
   method static System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static System.Boolean IsQuantityTypeName(System.String typeName)
-  method static System.Boolean TryParseQuantityName(System.String quantityName, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
   method static System.Boolean TryParseQuantityTypeName(System.String typeName, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
   method static System.Boolean TryParseTypeName(System.String typeName, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
-  method static System.String ToQuantityTypeName(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static System.String ToSuffix(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static System.String ToTypeName(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
@@ -319,19 +272,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountFace = 1
   enum-field FullHouse = 2
   enum-field Straight = 3
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition
-  ctor GameEventScriptBytecodeTypeDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition[] fields)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition> Fields { get }
-  property System.Int32 ConstructorEntryAddress { get set }
-  property System.String Name { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptBytecodeTypeFieldDefinition
-  property System.Boolean IsConstructorParameter { get }
-  property System.Int32 ComputedEntryAddress { get set }
-  property System.Int32 MaximumEntryAddress { get set }
-  property System.Int32 MinimumEntryAddress { get set }
-  property System.String ConstructorLabel { get }
-  property System.String Name { get }
-  property System.String TypeName { get }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field Invalid = 0
   enum-field Nothing = 1
@@ -395,20 +335,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
   property System.Boolean EnableDebugInfo { get set }
   property System.Boolean EnableDiagnostics { get set }
   property System.Boolean Optimize { get set }
-sealed class StepH.GameEventScript.Api.GameEventScriptCompiled
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeDebugSegment DebugSegment { get }
-  property StepH.GameEventScript.Api.GameEventScriptCompileOptions Options { get }
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeCallable> Callables { get }
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeDefinition> TypeDefinitions { get }
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeHandler>> Handlers { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Code { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageSignature> OutboundMessageSignatures { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExtensionReference> ExternalReferences { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference> ExternalTypeConstructorReferences { get }
-  property System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> UShortListPool { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> StringPool { get }
-  property System.Int32 MaxFrameSlots { get }
-  property System.String ModuleName { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException
   ctor GameEventScriptDynamicLinkException(System.String message)
 abstract class StepH.GameEventScript.Api.GameEventScriptFatalRuntimeException
@@ -613,8 +539,6 @@ static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses, System.String scriptSource)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.String scriptSource)
-static class StepH.GameEventScript.Extensions.GameEventScriptBytecodeDumper
-  method static System.String DumpBytecode(StepH.GameEventScript.Api.GameEventScriptCompiled module)
 static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter
   method static StepH.GameEventScript.Types.GameEventScriptValue ToGameEventScriptValue(System.Object value)
 class StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter
@@ -625,7 +549,6 @@ static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
   method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.IGameEventScriptModule CreateModule(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
-  property System.Boolean UseNewCompiler { get set }
 sealed class StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent
   ctor GameEventScriptDiagnosticEvent(System.Int32 Sequence, StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEventKind Kind, System.String Name, StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments, System.String Detail)
   method StepH.GameEventScript.Runtime.GameEventScriptDiagnosticEvent <Clone>$()

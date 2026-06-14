@@ -6,7 +6,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.Json.Serialization;
 
 namespace StepH.GameEventScript.Api;
 
@@ -185,7 +184,6 @@ public enum GameEventScriptBytecodePatternKind : ushort
     Straight = 0x03,
 }
 
-[JsonConverter(typeof(GameEventScriptBytecodeInstructionJsonConverter))]
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GameEventScriptBytecodeInstruction
 {

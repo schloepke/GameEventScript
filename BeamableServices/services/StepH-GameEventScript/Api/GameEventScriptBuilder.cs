@@ -133,9 +133,7 @@ public sealed class GameEventScriptBuilder
     public GameEventScriptBinary Compile(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = (options ?? _options).NormalizeDebugInfo();
-        return GameEventScriptManager.UseNewCompiler ?
-            GesBinaryCompiler.Compile(BuildModule(compileOptions)) :
-            GesBytecodeCompiler.Compile(BuildModule(compileOptions), compileOptions).ToGameEventScriptBinary();
+        return GesBinaryCompiler.Compile(BuildModule(compileOptions));
     }
 
     /// <summary>

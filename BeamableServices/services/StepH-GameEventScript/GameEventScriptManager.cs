@@ -2,15 +2,12 @@
 
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.VirtualMachine;
-using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript;
 
 public static class GameEventScriptManager
 {
-    public static bool UseNewCompiler { get; set; } = true;
-    
     public static GameEventScriptBuilder CreateScriptBuilder()
         => GameEventScriptBuilder.Create();
 

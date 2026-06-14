@@ -1085,7 +1085,6 @@ messages to completion.
 
 Core host concepts:
 
-- `GameEventScriptCompiled`: compiled module data.
 - `GameEventScriptBinary`: portable binary-oriented representation.
 - `GameEventScriptHost`: dispatch host with local queue and publish hook.
 - `GameEventScriptSession`: mutable runtime state created from a loaded host;

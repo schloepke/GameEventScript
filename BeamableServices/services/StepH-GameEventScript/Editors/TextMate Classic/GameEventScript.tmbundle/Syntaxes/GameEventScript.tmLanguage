@@ -51,6 +51,10 @@
 		</dict>
 		<dict>
 			<key>include</key>
+			<string>#key-phrases</string>
+		</dict>
+		<dict>
+			<key>include</key>
 			<string>#keywords</string>
 		</dict>
 		<dict>
@@ -129,7 +133,7 @@
 						<key>1</key>
 						<dict>
 							<key>name</key>
-							<string>storage.type.record.gameeventscript</string>
+							<string>keyword.other.definition.gameeventscript</string>
 						</dict>
 						<key>2</key>
 						<dict>
@@ -138,7 +142,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>\b(record)\s+([A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(record)\s+(:[a-z][A-Za-z]*|[a-z][A-Za-z]*(?:_[0-9]+)?)\b</string>
 					<key>name</key>
 					<string>meta.record.gameeventscript</string>
 				</dict>
@@ -148,7 +152,7 @@
 						<key>1</key>
 						<dict>
 							<key>name</key>
-							<string>storage.type.function.gameeventscript</string>
+							<string>keyword.other.definition.gameeventscript</string>
 						</dict>
 						<key>2</key>
 						<dict>
@@ -167,7 +171,7 @@
 						<key>1</key>
 						<dict>
 							<key>name</key>
-							<string>storage.type.predicate.gameeventscript</string>
+							<string>keyword.other.definition.gameeventscript</string>
 						</dict>
 						<key>2</key>
 						<dict>
@@ -205,7 +209,7 @@
 						<key>1</key>
 						<dict>
 							<key>name</key>
-							<string>storage.type.variable.gameeventscript</string>
+							<string>keyword.other.definition.gameeventscript</string>
 						</dict>
 						<key>2</key>
 						<dict>
@@ -232,19 +236,42 @@
 					</dict>
 					<dict>
 						<key>match</key>
-						<string>:(?:meter|second|seconds|degree)(?=$|[^A-Za-z0-9_.])</string>
-						<key>name</key>
-						<string>entity.other.attribute-name.tag.gameeventscript</string>
-					</dict>
-					<dict>
-						<key>match</key>
 							<string>(?&lt;!:)\b(?:numeric|integer|fractional)\b</string>
 						<key>name</key>
 						<string>support.type.primitive.gameeventscript</string>
 					</dict>
 					<dict>
+						<key>captures</key>
+						<dict>
+							<key>1</key>
+							<dict>
+								<key>name</key>
+								<string>support.type.primitive.gameeventscript</string>
+							</dict>
+							<key>2</key>
+							<dict>
+								<key>name</key>
+								<string>punctuation.bracket.gameeventscript</string>
+							</dict>
+							<key>3</key>
+							<dict>
+								<key>name</key>
+								<string>entity.other.attribute-name.unit.gameeventscript</string>
+							</dict>
+							<key>4</key>
+							<dict>
+								<key>name</key>
+								<string>punctuation.bracket.gameeventscript</string>
+							</dict>
+						</dict>
 						<key>match</key>
-						<string>:(?:quantity\((?:m|meter|s|second|degree|°)\)|nothing|text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
+						<string>:(quantity)(\()((?:m|meter|s|second|degree|°))(\))(?=$|[^A-Za-z0-9_])</string>
+						<key>name</key>
+						<string>support.type.primitive.quantity.gameeventscript</string>
+					</dict>
+					<dict>
+						<key>match</key>
+						<string>:(?:text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])</string>
 						<key>name</key>
 						<string>support.type.primitive.gameeventscript</string>
 					</dict>
@@ -268,6 +295,347 @@
 				</dict>
 			</array>
 		</dict>
+		<key>key-phrases</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(has)([ \t]+)(value)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>7</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(is)([ \t]+)(not)([ \t]+)(less|more)([ \t]+)(than)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(is)([ \t]+)(less|more)([ \t]+)(than)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(in)([ \t]+)(values)([ \t]+)(of)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(starts|ends)([ \t]+)(with)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(is)([ \t]+)(not)([ \t]+)(empty|nothing|numeric|integer|fractional)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(is)([ \t]+)(empty|nothing|numeric|integer|fractional)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>7</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(is)([ \t]+)(not)([ \t]+)(at)([ \t]+)(least|most)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(is)([ \t]+)(at)([ \t]+)(least|most)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(or)([ \t]+)(less|more)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(clamped|computed|weighted|order|group|distinct)([ \t]+)(between|by)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(sort)([ \t]+)(ascending|descending)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(take|drop)([ \t]+)(first|last|highest|lowest)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(at|pair|full)([ \t]+)(random|of|house)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>5</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+						<key>7</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.other.definition.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(three|four|five|six|seven)([ \t]+)(of)([ \t]+)(a)([ \t]+)(kind)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+			</array>
+		</dict>
 		<key>keywords</key>
 		<dict>
 			<key>patterns</key>
@@ -280,13 +648,13 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:as|be|means|computed|by|clamped|between|of|weighted|ascending|descending|first|last|highest|lowest|pair|straight|full|house|at|where|value|random)\b</string>
+					<string>\b(?:as|be|where|nothing)\b</string>
 					<key>name</key>
 					<string>keyword.other.definition.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:or|xor|and|not|is|has|empty|starts|ends|div|mod|rem)\b</string>
+					<string>\b(?:or|xor|and|not|is|empty|div|mod|rem)\b</string>
 					<key>name</key>
 					<string>keyword.operator.word.gameeventscript</string>
 				</dict>
@@ -371,7 +739,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?(?:m|s|°)\b?</string>
+					<string>\b\d(?:[\d_]*\d)?(?:\.\d(?:[\d_]*\d)?)?(?:m|s|°)(?=$|[^A-Za-z0-9_])</string>
 					<key>name</key>
 					<string>constant.numeric.unit.gameeventscript</string>
 				</dict>
@@ -435,6 +803,100 @@
 		<dict>
 			<key>patterns</key>
 			<array>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(take|drop)([ \t]+)(first|last|highest|lowest)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(sort)([ \t]+)(ascending|descending)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(order|group|distinct)([ \t]+)(by)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+						<key>5</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(choose|draw)([ \t]+)(at)([ \t]+)(random)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+						<key>5</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(has|take)([ \t]+)(full)([ \t]+)(house)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+						<key>5</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+						<key>7</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+						<key>9</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(has|take)([ \t]+)(three|four|five|six|seven)([ \t]+)(of)([ \t]+)(a)([ \t]+)(kind)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+						<key>5</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(has|take)([ \t]+)(pair)([ \t]+)(of)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>support.function.selector.pipeline.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.other.definition.gameeventscript</string></dict>
+					</dict>
+					<key>match</key>
+					<string>:(has|take)([ \t]+)(pair|straight)\b</string>
+					<key>name</key>
+					<string>meta.selector-phrase.gameeventscript</string>
+				</dict>
 				<dict>
 					<key>match</key>
 					<string>:(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term)\b</string>

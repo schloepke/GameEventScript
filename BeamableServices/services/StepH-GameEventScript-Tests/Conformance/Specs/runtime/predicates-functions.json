@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates and functions are reusable in expressions and collections",
-      "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList, first: woundedList[1].name, second: woundedList[2].name)\n}",
+      "script": "predicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList, first: woundedList[1].name, second: woundedList[2].name)\n}",
       "steps": [
         {
           "input": {
@@ -119,7 +119,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates and functions are lenient when expected keys are missing",
-      "script": "predicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList)\n}",
+      "script": "predicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList)\n}",
       "steps": [
         {
           "input": {
@@ -190,7 +190,7 @@
     {
       "kind": "scriptApi",
       "name": "is operations support inline negation",
-      "script": "predicate high(_ value) means value > 3\n\non Start(value) {\n  emit Done(byWord: value is not high, byBang: value is !high, byType: value is not :text, byEmpty: value is not empty, byCompare: value is not 3 or less)\n}",
+      "script": "predicate high(_ value) be value > 3\n\non Start(value) {\n  emit Done(byWord: value is not high, byBang: value is !high, byType: value is not :text, byEmpty: value is not empty, byCompare: value is not 3 or less)\n}",
       "steps": [
         {
           "input": {
@@ -234,8 +234,57 @@
     },
     {
       "kind": "scriptApi",
+      "name": "comparison phrases cover strict and inclusive bounds",
+      "script": "on Start(value) {\n  emit Done(lessThan: value is less than 10, moreThan: value is more than 10, orLess: value is 9 or less, orMore: value is 9 or more, atMost: value is at most 9, atLeast: value is at least 9)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "value": {
+                "type": ":integer",
+                "value": "9"
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "lessThan": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "moreThan": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "orLess": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "orMore": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "atMost": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "atLeast": {
+                  "type": ":boolean",
+                  "value": true
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
       "name": "predicates accept typed boolean record fields",
-      "script": "record :unit as {\n  alive: :boolean,\n  hidden: :boolean\n}\n\npredicate targetable(_ unit as :unit) means unit.alive and not unit.hidden\n\non Start(unit) {\n  emit Done(targetable: unit is targetable)\n}",
+      "script": "record :unit as {\n  alive: :boolean,\n  hidden: :boolean\n}\n\npredicate targetable(_ unit as :unit) be unit.alive and not unit.hidden\n\non Start(unit) {\n  emit Done(targetable: unit is targetable)\n}",
       "steps": [
         {
           "input": {
@@ -273,7 +322,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates allow explicit boolean coercion while functions keep original value",
-      "script": "predicate numericPredicate(_ value) means value * 2 as :boolean\nfunction numericSelect(_ value) means value * 2\n\non Start {\n  let byPredicateCallTwo be numericPredicate(2)\n  let byPredicateCallZero be numericPredicate(0)\n  let byFunction be numericSelect(2)\n  let byPredicateOperator be 2 is numericPredicate\n  emit Done(byPredicateCallTwo: byPredicateCallTwo, byPredicateCallZero: byPredicateCallZero, byFunction: byFunction, byPredicateOperator: byPredicateOperator)\n}",
+      "script": "predicate numericPredicate(_ value) be value * 2 as :boolean\nfunction numericSelect(_ value) be value * 2\n\non Start {\n  let byPredicateCallTwo be numericPredicate(2)\n  let byPredicateCallZero be numericPredicate(0)\n  let byFunction be numericSelect(2)\n  let byPredicateOperator be 2 is numericPredicate\n  emit Done(byPredicateCallTwo: byPredicateCallTwo, byPredicateCallZero: byPredicateCallZero, byFunction: byFunction, byPredicateOperator: byPredicateOperator)\n}",
       "steps": [
         {
           "input": {
@@ -309,7 +358,7 @@
     {
       "kind": "scriptApi",
       "name": "multi argument predicates can be called directly",
-      "script": "predicate higher(left, right) means left > right\n\non Start(left, right) {\n  emit Done(ok: higher(left: left, right: right), reversed: higher(left: right, right: left))\n}",
+      "script": "predicate higher(left, right) be left > right\n\non Start(left, right) {\n  emit Done(ok: higher(left: left, right: right), reversed: higher(left: right, right: left))\n}",
       "steps": [
         {
           "input": {
@@ -346,7 +395,7 @@
     {
       "kind": "scriptApi",
       "name": "typed handler callable and record parameters coerce inputs",
-      "script": "record :gauge as {\n  current: :number\n}\n\npredicate high(value as :number) means value > 2\nfunction boosted(_ value as :number) means value + 1\n\non Start(value as :number, hp as :gauge) {\n  emit Done(handlerValue: value + 1, ok: value is high, boosted: boosted(value), current: hp.current)\n}",
+      "script": "record :gauge as {\n  current: :number\n}\n\npredicate high(value as :number) be value > 2\nfunction boosted(_ value as :number) be value + 1\n\non Start(value as :number, hp as :gauge) {\n  emit Done(handlerValue: value + 1, ok: value is high, boosted: boosted(value), current: hp.current)\n}",
       "steps": [
         {
           "input": {
@@ -399,7 +448,7 @@
       "scripts": [
         {
           "sourceName": "shared.es",
-          "text": "module Shared\nrecord :gauge as {\n  current: :number,\n  maximum: :number\n}\n\npredicate wounded(_ unit) means unit.hp < unit.maxHp\nfunction woundedUnits(_ units) means units[:filter unit where unit is wounded]"
+          "text": "module Shared\nrecord :gauge as {\n  current: :number,\n  maximum: :number\n}\n\npredicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]"
         },
         {
           "sourceName": "runtime.es",

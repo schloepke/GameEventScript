@@ -307,7 +307,7 @@ internal sealed class GesParser
         var startToken = Previous;
         var name = ExpectIdentifier();
         var parameters = ParseDefinitionParameters();
-        Expect(Means);
+        Expect(Be);
         SkipNewLines();
         var expression = ParseExpression();
         return WithRange(new PredicateDefinitionNode(name, parameters, expression), startToken);
@@ -318,7 +318,7 @@ internal sealed class GesParser
         var startToken = Previous;
         var name = ExpectIdentifier();
         var parameters = ParseDefinitionParameters();
-        Expect(Means);
+        Expect(Be);
         SkipNewLines();
         var expression = ParseExpression();
         return WithRange(new FunctionDefinitionNode(name, parameters, expression), startToken);
@@ -946,6 +946,17 @@ internal sealed class GesParser
             if (Match(In))
             {
                 SkipNewLines();
+                if (IsValuesOfOperator())
+                {
+                    ExpectWord("values");
+                    SkipNewLines();
+                    ExpectWord("of");
+                    SkipNewLines();
+                    var container = ParseTypeOperationExpression();
+                    expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.ContainsValue, container), expression, container);
+                    continue;
+                }
+
                 var right = ParseTypeOperationExpression();
                 expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Contains, right), expression, right);
                 continue;
@@ -957,17 +968,6 @@ internal sealed class GesParser
                 var right = ParseTypeOperationExpression();
                 var membership = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Contains, right), expression, right);
                 expression = WithRange(new UnaryExpressionNode(GesUnaryOperator.Not, membership), membership);
-                continue;
-            }
-
-            if (IsValueInOperator())
-            {
-                Advance();
-                SkipNewLines();
-                Expect(In);
-                SkipNewLines();
-                var right = ParseTypeOperationExpression();
-                expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.ContainsValue, right), expression, right);
                 continue;
             }
 
@@ -995,6 +995,32 @@ internal sealed class GesParser
         }
 
         return expression;
+    }
+
+    private bool IsValuesOfOperator()
+    {
+        var lookahead = _index;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        if (lookahead >= _tokens.Count
+            || _tokens[lookahead].Kind != Identifier
+            || !string.Equals(_tokens[lookahead].Text, "values", StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        lookahead++;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count
+            && _tokens[lookahead].Kind == Identifier
+            && string.Equals(_tokens[lookahead].Text, "of", StringComparison.Ordinal);
     }
 
     private DicePatternNode ParseDicePattern()
@@ -1113,7 +1139,7 @@ internal sealed class GesParser
                     continue;
                 }
 
-                if (Is(Tag))
+                if (Is(Nothing) || Is(Tag))
                 {
                     var typeName = ParseTypeName();
                     expression = ApplyIsNegation(WithRange(new TypeCheckExpressionNode(expression, typeName), expression), negated);
@@ -1149,6 +1175,26 @@ internal sealed class GesParser
                     throw new GameEventScriptParseException($"Expected least or most but found {token.Text}", token.Line, token.Column);
                 }
 
+                if (MatchWord("less"))
+                {
+                    SkipNewLines();
+                    ExpectWord("than");
+                    SkipNewLines();
+                    var right = ParseRelationalComparisonOperand();
+                    expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Less, right), expression, right), negated);
+                    continue;
+                }
+
+                if (MatchWord("more"))
+                {
+                    SkipNewLines();
+                    ExpectWord("than");
+                    SkipNewLines();
+                    var right = ParseRelationalComparisonOperand();
+                    expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Greater, right), expression, right), negated);
+                    continue;
+                }
+
                 if (Current.Kind == Identifier)
                 {
                     var predicateName = Advance().Text;
@@ -1167,14 +1213,14 @@ internal sealed class GesParser
                         continue;
                     }
 
-                    if (MatchWord("more") || MatchWord("greater"))
+                    if (MatchWord("more"))
                     {
                         expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.GreaterOrEqual, threshold), expression, threshold), negated);
                         continue;
                     }
 
                     var token = Current;
-                    throw new GameEventScriptParseException($"Expected less, more or greater but found {token.Text}", token.Line, token.Column);
+                    throw new GameEventScriptParseException($"Expected less or more but found {token.Text}", token.Line, token.Column);
                 }
 
                 expression = ApplyIsNegation(WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Equal, threshold), expression, threshold), negated);
@@ -1313,16 +1359,6 @@ internal sealed class GesParser
             SkipNewLines();
             var negativeOperand = ParseUnaryExpression();
             return WithRange(new UnaryExpressionNode(GesUnaryOperator.Negate, negativeOperand), opToken, Previous);
-        }
-
-        if (Match(Has))
-        {
-            var opToken = Previous;
-            SkipNewLines();
-            ExpectValueWord();
-            SkipNewLines();
-            var hasValueOperand = ParseUnaryExpression();
-            return WithRange(new UnaryExpressionNode(GesUnaryOperator.HasValue, hasValueOperand), opToken, Previous);
         }
 
         if (Match(Empty))
@@ -1908,6 +1944,11 @@ internal sealed class GesParser
         if (Match(False))
         {
             return WithRange(new BooleanLiteralExpressionNode(false), Previous);
+        }
+
+        if (Match(Nothing))
+        {
+            return WithRange(new NothingLiteralExpressionNode(), Previous);
         }
 
         if (Current.Kind == Tag)
@@ -2654,11 +2695,11 @@ internal sealed class GesParser
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
+        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()
     {
-        if (Current.Kind is not (Identifier or To))
+        if (Current.Kind is not (Identifier or To or Nothing))
         {
             return false;
         }
@@ -2674,7 +2715,7 @@ internal sealed class GesParser
 
     private string ExpectArgumentLabel()
     {
-        if (Current.Kind is Identifier or To)
+        if (Current.Kind is Identifier or To or Nothing)
         {
             return Advance().Text;
         }
@@ -2685,6 +2726,11 @@ internal sealed class GesParser
 
     private string ParseTypeName()
     {
+        if (Match(Nothing))
+        {
+            return "nothing";
+        }
+
         if (!Is(Tag))
         {
             var token = Current;
@@ -2693,6 +2739,11 @@ internal sealed class GesParser
 
         var typeToken = Advance();
         var typeName = typeToken.Text[1..];
+        if (string.Equals(typeName, "nothing", StringComparison.Ordinal))
+        {
+            throw new GameEventScriptParseException("The absence type is a keyword; use nothing without ':'.", typeToken);
+        }
+
         if (string.Equals(typeName, "numeric", StringComparison.Ordinal))
         {
             throw new GameEventScriptParseException("The numeric type helper is a keyword; use numeric without ':'.", typeToken);
@@ -2782,12 +2833,6 @@ internal sealed class GesParser
             $"Expected {word} but found {Current.Text}",
             Current);
     }
-
-    private bool IsValueInOperator()
-        => Current.Kind == Identifier &&
-           string.Equals(Current.Text, "value", StringComparison.Ordinal) &&
-           _index + 1 < _tokens.Count &&
-           _tokens[_index + 1].Kind == In;
 
     private void SkipNewLines()
     {

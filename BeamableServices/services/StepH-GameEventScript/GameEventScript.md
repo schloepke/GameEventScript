@@ -34,8 +34,8 @@ record :unit as {
   maxHp: :number
 }
 
-predicate alive(_ unit) means unit.hp > 0
-function missingHp(_ unit) means unit.maxHp - unit.hp
+predicate alive(_ unit) be unit.hp > 0
+function missingHp(_ unit) be unit.maxHp - unit.hp
 
 on Damage(unit, amount) {
   if unit is alive {
@@ -47,8 +47,8 @@ on Damage(unit, amount) {
 Top-level declarations are:
 
 - `record :name as { ... }`
-- `predicate name(...) means expression`
-- `function name(...) means expression`
+- `predicate name(...) be expression`
+- `function name(...) be expression`
 - `on Message(...) { ... }`
 - `on Message as message { ... }`
 - `on initialization { ... }`
@@ -248,12 +248,12 @@ From high to low precedence:
 
 1. Postfix: member access `x.y`, lookup/selector `x[...]`
 2. Power: `^`, `²`, `³`
-3. Unary: `-`, `not`, `!`, `~`, `¬`, `has value`, `empty`, tagged unary helpers
+3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, tagged unary helpers
 4. Multiplicative: `*`, `/`, `div`, `mod`, `rem`
 5. Additive: `+`, `-`
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
 7. Type and predicate operations: `is`, `is not`, `as`
-8. Membership and text boundaries: `in`, `∈`, `∉`, `value in`, `starts with`, `ends with`
+8. Membership and text boundaries: `in`, `∈`, `∉`, `in values of`, `starts with`, `ends with`
 9. Equality: `=`, `<>`, `≠`
 10. `and`, `xor`, `or`
 11. `:default`
@@ -262,7 +262,7 @@ From high to low precedence:
 
 ### Boolean Logic
 
-Predicates must evaluate to `:boolean` or `:nothing`. Use `as :boolean` when a
+Predicates must evaluate to `:boolean` or `nothing`. Use `as :boolean` when a
 coercion is intentional.
 
 Logical operators use tri-state logic over true, false, and `nothing`.
@@ -298,7 +298,7 @@ let status be
 Unary predicates can be used with `is`:
 
 ```ges
-predicate high(_ value) means value > 50
+predicate high(_ value) be value > 50
 
 let ok be value is high
 let notOk be value is not high
@@ -317,6 +317,8 @@ The parser accepts several readable comparison forms:
 ```ges
 value is at least 10
 value is at most 10
+value is less than 10
+value is more than 10
 value is 10 or less
 value is 10 or more
 value is empty
@@ -370,9 +372,9 @@ Numeric constants are tag-like literals:
 
 ### Built-in Types
 
-The source language recognizes these built-in type tags:
+The source language recognizes these built-in types:
 
-- `:nothing`
+- `nothing`
 - `:boolean`
 - `:number`
 - `:percentage`
@@ -477,7 +479,7 @@ parse text as described below.
 
 | Runtime value | `is numeric` | `is integer` | `is fractional` | Numeric view |
 | --- | --- | --- | --- | --- |
-| `:nothing` | false | false | false | none |
+| `nothing` | false | false | false | none |
 | `:boolean` | true | true | false | `false` = `0`, `true` = `1` |
 | integer number | true | true | false | integer value, including quantity unit |
 | float number | true | true when finite and exactly integral; otherwise false | true when finite and non-integral | float value, including quantity unit |
@@ -728,7 +730,7 @@ indexes are 1-based.
 let firstItem be items[1]
 let hp be unit[:hp]
 let hasEnemyFlag be :enemy in flags
-let containsUnit be unit value in units
+let containsUnit be unit in values of units
 ```
 
 `x in y` checks membership in `y`. Text and tags use ordinal substring
@@ -738,11 +740,11 @@ the range terms. Maps and map-like values check whether text/tag `x` is a
 visible key; non-text keys are false. Vector and point values check their
 numeric components.
 
-`x value in y` checks visible values of map-like `y`. It is defined for maps,
+`x in values of y` checks visible values of map-like `y`. It is defined for maps,
 records/custom values, external map-like values, vectors, and points. For maps
 and records it compares only visible, non-hidden fields. For vectors and points
-it compares the `x`, `y`, and `z` components. `nothing value in y` follows the
-same comparison rule; `x value in nothing` is `nothing`. Lists, dice, ranges,
+it compares the `x`, `y`, and `z` components. `nothing in values of y` follows the
+same comparison rule; `x in values of nothing` is `nothing`. Lists, dice, ranges,
 text, tags, and scalar values are not value-membership containers and return
 `false`.
 
@@ -1106,7 +1108,7 @@ Compilation validates:
 - naming conventions
 - duplicate definitions and duplicate parameters
 - callable arity
-- predicate return type (`:boolean` or `:nothing`)
+- predicate return type (`:boolean` or `nothing`)
 - handler message-name shape
 - record field definitions
 - seeded random seed type
@@ -1137,8 +1139,8 @@ record :scan as {
   strength: :percentage
 }
 
-predicate close(_ scan) means scan.distance < 30m
-predicate strong(_ scan) means scan.strength > 50%
+predicate close(_ scan) be scan.distance < 30m
+predicate strong(_ scan) be scan.strength > 50%
 
 on Tick {
   publish Scan

@@ -1,7 +1,4 @@
 GameEventScript ::= Separators [ ModuleDeclaration Separators ] { TopLevelDeclaration Separators } EndOfFile
-
-(* Lexical convention: spaces, tabs, and line comments are skipped before tokens.
-   Line breaks are preserved as NewLine tokens because they may separate statements. *)
 Separators ::= { StatementSeparator }
 StatementSeparator ::= NewLine | ";"
 NewLine ::= "\n" | "\r\n"
@@ -14,18 +11,16 @@ RecordDefinition ::= "record" TypeTag "as" "{" Separators [ RecordField { Record
 RecordFieldSeparator ::= "," Separators | Separators
 RecordField ::= Identifier ":" TypeTag [ "clamped" "between" Expression "and" Expression ] [ "computed" "by" Expression ]
 
-PredicateDefinition ::= "predicate" Identifier "(" [ ParameterList ] ")" "means" Expression
-FunctionDefinition ::= "function" Identifier "(" [ ParameterList ] ")" "means" Expression
+PredicateDefinition ::= "predicate" Identifier "(" [ ParameterList ] ")" "be" Expression
+FunctionDefinition ::= "function" Identifier "(" [ ParameterList ] ")" "be" Expression
 
 EventHandler ::= "on" HandlerEndpoint [ HandlerBinding ] { HandlerTagFilter } "{" Separators [ Statement { StatementSeparator Statement } ] Separators "}"
 HandlerEndpoint ::= Message | "initialization" | "undeliverable"
-HandlerBinding ::= "(" [ ParameterList ] ")"
-                 | "as" Identifier
+HandlerBinding ::= "(" [ ParameterList ] ")" | "as" Identifier
 HandlerTagFilter ::= ( "matching" | "without" ) TagLiteral { "," TagLiteral }
 
 ParameterList ::= Parameter { "," Parameter }
-Parameter ::= Identifier [ "as" TypeReference ]
-            | "_" Identifier [ "as" TypeReference ]
+Parameter ::= Identifier [ "as" TypeReference ] | "_" Identifier [ "as" TypeReference ]
 HandlerLiteralParameterList ::= HandlerLiteralParameter { "," HandlerLiteralParameter }
 HandlerLiteralParameter ::= Identifier | "_" Identifier
 
@@ -70,7 +65,7 @@ MembershipOperator ::= "in"
                      | "∈"
                      | "∉"
                      | "has" "value"
-                     | "value" "in"
+                     | "in" "values" "of"
                      | "starts" "with"
                      | "ends" "with"
 
@@ -79,7 +74,9 @@ TypeOperation ::= "is" [ NotOperator ] ( TypeReference | NumericCheck )
                 | "is" [ NotOperator ] "empty"
                 | "is" [ NotOperator ] "at" "least" AdditiveExpression
                 | "is" [ NotOperator ] "at" "most" AdditiveExpression
-                | "is" [ NotOperator ] AdditiveExpression "or" ( "less" | "more" | "greater" )
+                | "is" [ NotOperator ] "less" "than" AdditiveExpression
+                | "is" [ NotOperator ] "more" "than" AdditiveExpression
+                | "is" [ NotOperator ] AdditiveExpression "or" ( "less" | "more" )
                 | "is" [ NotOperator ] ExtensionReference
                 | "is" [ NotOperator ] Identifier
                 | "is" [ NotOperator ] AdditiveExpression
@@ -93,7 +90,6 @@ ImplicitNumberIdentifierMultiply ::= Number IdentifierWithoutWhitespace
 
 UnaryExpression ::= ( "-" | "−" ) UnaryExpression
                   | NotOperator UnaryExpression
-                  | "has" "value" UnaryExpression
                   | "empty" UnaryExpression
                   | UnaryTag UnaryExpression
                   | PowerExpression
@@ -143,7 +139,7 @@ UngroupedLabeledArgumentList ::= LabeledArgument { LabeledArgument }
 OfArgumentList ::= "of" Expression { "and" Expression }
 ArgumentLabel ::= Identifier | "to"
 
-Literal ::= Number | Percentage | UnitNumber | TextLiteral | "true" | "false"
+Literal ::= Number | Percentage | UnitNumber | TextLiteral | "true" | "false" | "nothing"
 TagLiteral ::= ":" TagName | ":infinity" | ":negativeinfinity" | ":pi" | ":e" | ":euler" | ":tau" | ":phi" | "∞" | "∏" | "ℇ" | "τ" | "φ"
 
 BracketLiteral ::= ListLiteral | MapLiteral
@@ -225,10 +221,10 @@ DiceCountWord ::= "three" | "four" | "five" | "six" | "seven"
 ObjectMatchPattern ::= "[" [ ObjectMatchEntry { "," ObjectMatchEntry } ] "]"
 ObjectMatchEntry ::= Identifier ":" ( Expression | ObjectMatchPattern )
 
-TypeReference ::= TypeTag
+TypeReference ::= NothingType | TypeTag
+NothingType ::= "nothing"
 TypeTag ::= BuiltinTypeTag | CustomTypeTag
-BuiltinTypeTag ::= ":nothing"
-                 | ":boolean"
+BuiltinTypeTag ::= ":boolean"
                  | ":number"
                  | ":percentage"
                  | ":quantity" "(" UnitName ")"
@@ -249,8 +245,6 @@ NumericCheck ::= "numeric" | "integer" | "fractional"
 
 ModuleName ::= Identifier | Message
 Message ::= UpperLetter { NameLetter }
-(* Identifiers may contain one underscore only as the separator before a final
-   numeric suffix, e.g. target_2. Underscores are otherwise invalid. *)
 Identifier ::= LowerLetter { NameLetter } [ "_" NumericSuffix ]
 IdentifierWithoutWhitespace ::= Identifier
 TagName ::= LowerLetter { NameLetter }

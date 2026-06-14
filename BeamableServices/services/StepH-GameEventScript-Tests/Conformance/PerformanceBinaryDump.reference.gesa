@@ -457,7 +457,7 @@ Start_60:			SlotLocals #1
 //
 //		module EnginePerformance
 //		
-//		predicate high(value as :number) means value >= 10
+//		predicate high(value as :number) be value >= 10
 //		
 //		on Start(values) {
 //		  let total be values[:filter value where value is high][:select value => value + 5%][:sum value => :integer.floor value]

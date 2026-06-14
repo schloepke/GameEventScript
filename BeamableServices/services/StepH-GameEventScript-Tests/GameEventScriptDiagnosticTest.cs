@@ -15,7 +15,7 @@ public class GameEventScriptDiagnosticTest
         """
         module EnginePerformance
 
-        predicate high(value) means value >= 10
+        predicate high(value) be value >= 10
 
         on Start(startPosition) {
           let x be startPosition[:x]

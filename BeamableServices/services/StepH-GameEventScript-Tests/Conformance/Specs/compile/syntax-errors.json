@@ -13,7 +13,7 @@
     {
       "kind": "compileError",
       "name": "malformed predicate parameter fails syntax analysis",
-      "script": "module BrokenCombat\npredicate unitIsDead(un%it) means unit[hp] <= 0\non FireAtUnit(unit) {\n  emit Done\n}",
+      "script": "module BrokenCombat\npredicate unitIsDead(un%it) be unit[hp] <= 0\non FireAtUnit(unit) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -190,7 +190,7 @@
     {
       "kind": "compileError",
       "name": "predicate function and handler identifiers enforce casing",
-      "script": "predicate Wounded(unit) means unit.hp < unit.maxHp\nfunction filter(Units) means Units\non Start(Target) {\n  emit Done\n}",
+      "script": "predicate Wounded(unit) be unit.hp < unit.maxHp\nfunction filter(Units) be Units\non Start(Target) {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }

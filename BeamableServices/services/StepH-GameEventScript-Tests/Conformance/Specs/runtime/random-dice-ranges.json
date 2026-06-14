@@ -317,7 +317,7 @@
     {
       "kind": "scriptApi",
       "name": "dynamic invalid seeded random seed still restores outer random scope",
-      "script": "on Start {\n  let bad as :number be :nothing\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
+      "script": "on Start {\n  let bad as :number be nothing\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
       "steps": [
         {
           "input": {
@@ -341,7 +341,7 @@
     {
       "kind": "scriptApi",
       "name": "reversed random bounds and invalid collection draws stay lenient",
-      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let none as :number be :nothing\n  let nothingValue be :random from none to max\n  let invalidValue be :random from 'hello' to max\n  let tags be 123\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, nothingValue: nothingValue, invalidValue: invalidValue, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
+      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let none as :number be nothing\n  let nothingValue be :random from none to max\n  let invalidValue be :random from 'hello' to max\n  let tags be 123\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, nothingValue: nothingValue, invalidValue: invalidValue, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
       "steps": [
         {
           "input": {

@@ -12,7 +12,7 @@ public class GesOptimizerTests
     {
         const string script =
             """
-            predicate high(value) means value > 3
+            predicate high(value) be value > 3
             """;
 
         var module = GameEventScriptBuilder.Create()

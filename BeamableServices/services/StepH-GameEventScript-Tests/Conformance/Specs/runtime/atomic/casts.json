@@ -6,7 +6,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from nothing",
-      "script": "module AtomicCastFromNothing\non Start {\n  let source be nothing\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromNothing\non Start {\n  let source be nothing\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -76,7 +76,7 @@
     {
       "kind": "scriptApi",
       "name": "check from nothing",
-      "script": "module AtomicCheckFromNothing\non Start {\n  let source be nothing\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromNothing\non Start {\n  let source be nothing\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -168,7 +168,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from boolean",
-      "script": "module AtomicCastFromBoolean\non Start {\n  let source be true\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromBoolean\non Start {\n  let source be true\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -247,7 +247,7 @@
     {
       "kind": "scriptApi",
       "name": "check from boolean",
-      "script": "module AtomicCheckFromBoolean\non Start {\n  let source be true\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromBoolean\non Start {\n  let source be true\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -339,7 +339,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from integer",
-      "script": "module AtomicCastFromInteger\non Start {\n  let source be 12\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromInteger\non Start {\n  let source be 12\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -419,7 +419,7 @@
     {
       "kind": "scriptApi",
       "name": "check from integer",
-      "script": "module AtomicCheckFromInteger\non Start {\n  let source be 12\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromInteger\non Start {\n  let source be 12\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -511,7 +511,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from float",
-      "script": "module AtomicCastFromFloat\non Start {\n  let source be 12.5\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromFloat\non Start {\n  let source be 12.5\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -591,7 +591,7 @@
     {
       "kind": "scriptApi",
       "name": "check from float",
-      "script": "module AtomicCheckFromFloat\non Start {\n  let source be 12.5\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromFloat\non Start {\n  let source be 12.5\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -683,7 +683,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from meter",
-      "script": "module AtomicCastFromMeter\non Start {\n  let source be 12m\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromMeter\non Start {\n  let source be 12m\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -765,7 +765,7 @@
     {
       "kind": "scriptApi",
       "name": "check from meter",
-      "script": "module AtomicCheckFromMeter\non Start {\n  let source be 12m\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromMeter\non Start {\n  let source be 12m\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -857,7 +857,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from percentage",
-      "script": "module AtomicCastFromPercentage\non Start {\n  let source be 25%\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromPercentage\non Start {\n  let source be 25%\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -935,7 +935,7 @@
     {
       "kind": "scriptApi",
       "name": "check from percentage",
-      "script": "module AtomicCheckFromPercentage\non Start {\n  let source be 25%\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromPercentage\non Start {\n  let source be 25%\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -1027,7 +1027,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from numeric text",
-      "script": "module AtomicCastFromNumericText\non Start {\n  let source be '12.5'\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromNumericText\non Start {\n  let source be '12.5'\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -1115,7 +1115,7 @@
     {
       "kind": "scriptApi",
       "name": "check from numeric text",
-      "script": "module AtomicCheckFromNumericText\non Start {\n  let source be '12.5'\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromNumericText\non Start {\n  let source be '12.5'\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -1207,7 +1207,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from invalid text",
-      "script": "module AtomicCastFromInvalidText\non Start {\n  let source be 'hello'\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromInvalidText\non Start {\n  let source be 'hello'\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -1299,7 +1299,7 @@
     {
       "kind": "scriptApi",
       "name": "check from invalid text",
-      "script": "module AtomicCheckFromInvalidText\non Start {\n  let source be 'hello'\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromInvalidText\non Start {\n  let source be 'hello'\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -1391,7 +1391,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from pi tag",
-      "script": "module AtomicCastFromPiTag\non Start {\n  let source be :pi\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromPiTag\non Start {\n  let source be :pi\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -1479,7 +1479,7 @@
     {
       "kind": "scriptApi",
       "name": "check from pi tag",
-      "script": "module AtomicCheckFromPiTag\non Start {\n  let source be :pi\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromPiTag\non Start {\n  let source be :pi\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -1571,7 +1571,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from custom tag",
-      "script": "module AtomicCastFromCustomTag\non Start {\n  let source be :custom\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromCustomTag\non Start {\n  let source be :custom\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -1667,7 +1667,7 @@
     {
       "kind": "scriptApi",
       "name": "check from custom tag",
-      "script": "module AtomicCheckFromCustomTag\non Start {\n  let source be :custom\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromCustomTag\non Start {\n  let source be :custom\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -1759,7 +1759,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from vector",
-      "script": "module AtomicCastFromVector\non Start {\n  let source be :vector(1, 2, 3)\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromVector\non Start {\n  let source be :vector(1, 2, 3)\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -1865,7 +1865,7 @@
     {
       "kind": "scriptApi",
       "name": "check from vector",
-      "script": "module AtomicCheckFromVector\non Start {\n  let source be :vector(1, 2, 3)\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromVector\non Start {\n  let source be :vector(1, 2, 3)\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -1957,7 +1957,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from point",
-      "script": "module AtomicCastFromPoint\non Start {\n  let source be :point(4, 5, 6)\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromPoint\non Start {\n  let source be :point(4, 5, 6)\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -2063,7 +2063,7 @@
     {
       "kind": "scriptApi",
       "name": "check from point",
-      "script": "module AtomicCheckFromPoint\non Start {\n  let source be :point(4, 5, 6)\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromPoint\non Start {\n  let source be :point(4, 5, 6)\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -2155,7 +2155,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from list",
-      "script": "module AtomicCastFromList\non Start {\n  let source be [1, 2, 3]\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromList\non Start {\n  let source be [1, 2, 3]\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -2248,7 +2248,7 @@
     {
       "kind": "scriptApi",
       "name": "check from list",
-      "script": "module AtomicCheckFromList\non Start {\n  let source be [1, 2, 3]\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromList\non Start {\n  let source be [1, 2, 3]\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -2340,7 +2340,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from map",
-      "script": "module AtomicCastFromMap\non Start {\n  let source be [x: 1, y: 2, z: 3]\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromMap\non Start {\n  let source be [x: 1, y: 2, z: 3]\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -2429,7 +2429,7 @@
     {
       "kind": "scriptApi",
       "name": "check from map",
-      "script": "module AtomicCheckFromMap\non Start {\n  let source be [x: 1, y: 2, z: 3]\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromMap\non Start {\n  let source be [x: 1, y: 2, z: 3]\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -2521,7 +2521,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from dice",
-      "script": "module AtomicCastFromDice\non Start {\n  let source as :dice be [3, 2, 1]\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromDice\non Start {\n  let source as :dice be [3, 2, 1]\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -2616,7 +2616,7 @@
     {
       "kind": "scriptApi",
       "name": "check from dice",
-      "script": "module AtomicCheckFromDice\non Start {\n  let source as :dice be [3, 2, 1]\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromDice\non Start {\n  let source as :dice be [3, 2, 1]\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {
@@ -2708,7 +2708,7 @@
     {
       "kind": "scriptApi",
       "name": "cast from range",
-      "script": "module AtomicCastFromRange\non Start {\n  let source as :range be from 1 to 3\n  let toNothing as :nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
+      "script": "module AtomicCastFromRange\non Start {\n  let source as :range be from 1 to 3\n  let toNothing as nothing be source\n  let toBoolean as :boolean be source\n  let toNumber as :number be source\n  let toPercentage as :percentage be source\n  let toText as :text be source\n  let toTag as :tag be source\n  let toMeter as :quantity(m) be source\n  let toVector as :vector be source\n  let toPoint as :point be source\n  let toList as :list be source\n  let toMap as :map be source\n  let toDice as :dice be source\n  let toRange as :range be source\n  let toMessage as :message be source\n  let toSeries as :series be source\n  emit Done(toNothing: toNothing, toBoolean: toBoolean, toNumber: toNumber, toPercentage: toPercentage, toText: toText, toTag: toTag, toMeter: toMeter, toVector: toVector, toPoint: toPoint, toList: toList, toMap: toMap, toDice: toDice, toRange: toRange, toMessage: toMessage, toSeries: toSeries)\n}",
       "steps": [
         {
           "input": {
@@ -2800,7 +2800,7 @@
     {
       "kind": "scriptApi",
       "name": "check from range",
-      "script": "module AtomicCheckFromRange\non Start {\n  let source as :range be from 1 to 3\n  emit Done(isNothing: source is :nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
+      "script": "module AtomicCheckFromRange\non Start {\n  let source as :range be from 1 to 3\n  emit Done(isNothing: source is nothing, isBoolean: source is :boolean, isNumeric: source is numeric, isInteger: source is integer, isFractional: source is fractional, isPercentage: source is :percentage, isText: source is :text, isTag: source is :tag, isMeter: source is :quantity(m), isVector: source is :vector, isPoint: source is :point, isList: source is :list, isMap: source is :map, isDice: source is :dice, isRange: source is :range, isMessage: source is :message, isHandler: source is :handler, isSeries: source is :series)\n}",
       "steps": [
         {
           "input": {

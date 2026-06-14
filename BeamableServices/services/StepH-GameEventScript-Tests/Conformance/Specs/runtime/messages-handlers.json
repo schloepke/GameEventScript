@@ -154,7 +154,7 @@
     {
       "kind": "scriptApi",
       "name": "untyped handler literal and bind create first class values",
-      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  emit Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signature, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signature, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is :nothing)\n}",
+      "script": "module UntypedHandlerBinding\non Start(success) {\n  let myHandler be Success(message, value)\n  let myMessage be myHandler(message: 'hello', value: success)\n  let invalidMessage be myHandler(message: 'hello', other: success)\n  emit Done(handlerIsHandler: myHandler is :handler, handlerName: myHandler.name, handlerSignature: myHandler.signature, secondParameter: myHandler.parameters[2], messageIsMessage: myMessage is :message, messageName: myMessage.name, messageSignature: myMessage.signature, text: myMessage.arguments.message, value: myMessage.arguments.value, invalidIsNothing: invalidMessage is nothing)\n}",
       "steps": [
         {
           "input": {
@@ -219,7 +219,7 @@
     {
       "kind": "scriptApi",
       "name": "invalid handler binding and non message emit are lenient no ops",
-      "script": "module MessageBindingNoOp\non Start(unit, hp) {\n  let shoot as :handler be Shoot(unit, target)\n  let invalid as :message be shoot(unit: unit, hp: hp)\n  emit invalid\n  emit unit\n  emit Done(isMessage: invalid is :message, isNothing: invalid is :nothing)\n}",
+      "script": "module MessageBindingNoOp\non Start(unit, hp) {\n  let shoot as :handler be Shoot(unit, target)\n  let invalid as :message be shoot(unit: unit, hp: hp)\n  emit invalid\n  emit unit\n  emit Done(isMessage: invalid is :message, isNothing: invalid is nothing)\n}",
       "steps": [
         {
           "input": {

@@ -525,7 +525,7 @@ internal static class GesAstValidator
 
         errors.Add(
             parsedScriptContext,
-            $"Predicate '{predicateDefinition.Name}' must return :boolean or :nothing; use 'as :boolean' for explicit boolean coercion.",
+            $"Predicate '{predicateDefinition.Name}' must return :boolean or nothing; use 'as :boolean' for explicit boolean coercion.",
             predicateDefinition.Name,
             GameEventScriptSymbolKind.Predicate,
             GameEventScriptCompileErrorKind.InvalidPredicate,
@@ -614,7 +614,7 @@ internal static class GesAstValidator
             case ExtensionPredicateExpressionNode:
                 return StaticExpressionInfo.Boolean;
 
-            case IdentifierExpressionNode { Name: "nothing" }:
+            case NothingLiteralExpressionNode:
                 return StaticExpressionInfo.Nothing;
 
             case IdentifierExpressionNode identifier:
@@ -828,6 +828,9 @@ internal static class GesAstValidator
         {
             switch (expression)
             {
+                case NothingLiteralExpressionNode:
+                    return;
+
                 case IdentifierExpressionNode identifierExpression:
                     ValidateIdentifierCase(
                         parsedScriptContext,
@@ -1540,7 +1543,7 @@ internal static class GesAstValidator
         {
             errors.Add(
                 parsedScriptContext,
-                "Type ':optional' has been removed; use ':nothing' to represent absence.",
+                "Type ':optional' has been removed; use nothing to represent absence.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
                 GameEventScriptCompileErrorKind.InvalidTypeConstructor,

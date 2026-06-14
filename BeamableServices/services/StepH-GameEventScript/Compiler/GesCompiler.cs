@@ -313,7 +313,7 @@ internal static class GesCompiler
                 case TagLiteralExpressionNode tag:
                     _builder.LoadTag(destination, tag.Name);
                     return true;
-                case IdentifierExpressionNode { Name: "nothing" }:
+                case NothingLiteralExpressionNode:
                     _builder.LoadNothing(destination);
                     return true;
                 case IdentifierExpressionNode identifier:
@@ -475,7 +475,7 @@ internal static class GesCompiler
 
         private GesRegisterRef EmitExpressionForRead(ExpressionNode expression, LoweringContext context, ExpressionState state)
         {
-            return expression is IdentifierExpressionNode { Name: not "nothing" } identifier
+            return expression is IdentifierExpressionNode identifier
                 ? context.Require(identifier.Name)
                 : EmitExpression(expression, context, state);
         }
@@ -1404,7 +1404,7 @@ internal static class GesCompiler
                 PercentageLiteralExpressionNode or
                 TextLiteralExpressionNode or
                 TagLiteralExpressionNode or
-                IdentifierExpressionNode { Name: "nothing" };
+                NothingLiteralExpressionNode;
 
         private void EmitStageConstant(ExpressionNode expression)
         {
@@ -1435,7 +1435,7 @@ internal static class GesCompiler
                 case TagLiteralExpressionNode tag:
                     _builder.StageTag(tag.Name);
                     return;
-                case IdentifierExpressionNode { Name: "nothing" }:
+                case NothingLiteralExpressionNode:
                     _builder.StageNothing();
                     return;
                 default:
@@ -2027,7 +2027,7 @@ internal static class GesCompiler
         {
             switch (expression)
             {
-                case IdentifierExpressionNode { Name: "nothing" }:
+                case NothingLiteralExpressionNode:
                     break;
                 case IdentifierExpressionNode identifier:
                     if (!bound.Contains(identifier.Name)) identifiers.Add(identifier.Name);

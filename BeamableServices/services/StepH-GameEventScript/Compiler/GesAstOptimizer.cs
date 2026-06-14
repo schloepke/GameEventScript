@@ -443,6 +443,9 @@ internal static class GesAstOptimizer
             case BooleanLiteralExpressionNode booleanLiteral:
                 value = GameEventScriptValueFactory.GesBoolean(booleanLiteral.Value);
                 return true;
+            case NothingLiteralExpressionNode:
+                value = GameEventScriptNothingValue.Instance;
+                return true;
             case IntegerLiteralExpressionNode integerLiteral:
                 value = GameEventScriptValueFactory.GesInteger(integerLiteral.Value);
                 return true;
@@ -1928,6 +1931,9 @@ internal static class GesAstOptimizer
     {
         switch (value.Kind)
         {
+            case GameEventScriptValueKind.Nothing:
+                expression = new NothingLiteralExpressionNode();
+                return true;
             case GameEventScriptValueKind.Boolean:
                 expression = new BooleanLiteralExpressionNode(value.AsBoolean());
                 return true;

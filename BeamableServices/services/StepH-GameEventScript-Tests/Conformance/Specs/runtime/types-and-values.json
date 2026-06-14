@@ -1969,7 +1969,7 @@
     {
       "kind": "scriptApi",
       "name": "value checks defaults and presence",
-      "script": "on Start(opt, emptyText, emptyList, emptyDict, zeroValue, falseValue, diceValue, nanValue, infinityValue) {\n  emit Done(hasOpt: has value opt, hasEmptyText: has value emptyText, hasEmptyList: has value emptyList, hasEmptyDict: has value emptyDict, hasZero: has value zeroValue, hasFalse: has value falseValue, hasNaN: has value nanValue, hasInfinity: has value infinityValue, isEmptyOpt: empty opt, isEmptyText: empty emptyText, isEmptyList: empty emptyList, isEmptyDict: empty emptyDict, isEmptyDice: empty diceValue, isEmptyNaN: empty nanValue, isEmptyInfinity: empty infinityValue, nanIsNothing: nanValue is :nothing, notEmptyList: not empty [1], notFalse: not falseValue, optValue: opt :default 10, listValue: (emptyList :default [1, 2])[1], textValue: emptyText :default 'fallback', dictValue: (emptyDict :default [name: 'default']).name, missingTextValue: emptyDict['name'] :default 'fallback')\n}",
+      "script": "on Start(opt, emptyText, emptyList, emptyDict, zeroValue, falseValue, diceValue, nanValue, infinityValue) {\n  emit Done(hasOpt: opt has value, hasEmptyText: emptyText has value, hasEmptyList: emptyList has value, hasEmptyDict: emptyDict has value, hasZero: zeroValue has value, hasFalse: falseValue has value, hasNaN: nanValue has value, hasInfinity: infinityValue has value, isEmptyOpt: empty opt, isEmptyText: empty emptyText, isEmptyList: empty emptyList, isEmptyDict: empty emptyDict, isEmptyDice: empty diceValue, isEmptyNaN: empty nanValue, isEmptyInfinity: empty infinityValue, nanIsNothing: nanValue is nothing, notEmptyList: not empty [1], notFalse: not falseValue, optValue: opt :default 10, listValue: (emptyList :default [1, 2])[1], textValue: emptyText :default 'fallback', dictValue: (emptyDict :default [name: 'default']).name, missingTextValue: emptyDict['name'] :default 'fallback')\n}",
       "steps": [
         {
           "input": {
@@ -2118,7 +2118,7 @@
     {
       "kind": "scriptApi",
       "name": "type conversions length checks and type tags",
-      "script": "on Start(valueForLen, a, b, c, d, e, f, g) {\n  let tagOk as :tag be :name\n  let numberOk as :number be '12.2'\n  let numberFail as :number be 'abc'\n  let integerOk as :number be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], valueForLenLen: :len valueForLen, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :number, cIsInteger: c is :number, dIsText: d is :text, eIsList: e is :list, fIsMap: f is :map, gIsNothing: g is :nothing)\n}",
+      "script": "on Start(valueForLen, a, b, c, d, e, f, g) {\n  let tagOk as :tag be :name\n  let numberOk as :number be '12.2'\n  let numberFail as :number be 'abc'\n  let integerOk as :number be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], valueForLenLen: :len valueForLen, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :number, cIsInteger: c is :number, dIsText: d is :text, eIsList: e is :list, fIsMap: f is :map, gIsNothing: g is nothing)\n}",
       "randomSequence": [
         "2",
         "6",
@@ -2263,7 +2263,7 @@
     {
       "kind": "scriptApi",
       "name": "unary domain conditional and standard integer rounding forms",
-      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :number be 12 when age is :boolean, or 15 when age is :number, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: has value target, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
+      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :number be 12 when age is :boolean, or 15 when age is :number, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: target has value, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
       "steps": [
         {
           "input": {
@@ -2893,7 +2893,7 @@
     {
       "kind": "scriptApi",
       "name": "missing invalid and large values remain lenient",
-      "script": "on Start(item) {\n  let nanValue as :number be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothing be nothing\n  let nothingPropagated be nothing + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothing, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
+      "script": "on Start(item) {\n  let nanValue as :number be 'abc'\n  let nanPropagated be nanValue + 5\n  let nothingValue be nothing\n  let nothingPropagated be nothingValue + 5\n  let pos be 79228162514264337593543950335 + 1\n  let neg be 0 - 79228162514264337593543950335 - 1\n  emit Done(nanValue: nanValue, nanPropagated: nanPropagated, nothing: nothingValue, nothingPropagated: nothingPropagated, propertyFromNothing: item.name, pos: pos, neg: neg)\n}",
       "steps": [
         {
           "input": {
@@ -3002,7 +3002,7 @@
     {
       "kind": "scriptApi",
       "name": "type checks identify primitive custom and first class values",
-      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: nothing is :nothing)\n}",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: nothing is nothing)\n}",
       "steps": [
         {
           "input": {

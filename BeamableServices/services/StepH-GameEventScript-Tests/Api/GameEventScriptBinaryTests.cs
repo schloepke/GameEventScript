@@ -14,8 +14,8 @@ public sealed class GameEventScriptBinaryTests
             """
             module BinaryShape
 
-            function score(value) means value + 1
-            predicate high(value) means value > 3
+            function score(value) be value + 1
+            predicate high(value) be value > 3
 
             on Start(value) {
               let rounded be :math.floor value

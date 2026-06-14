@@ -191,7 +191,7 @@ internal static class GesOperatorText
             GesBinaryOperator.Power => "^",
             GesBinaryOperator.Default => "default",
             GesBinaryOperator.Contains => "in",
-            GesBinaryOperator.ContainsValue => "value in",
+            GesBinaryOperator.ContainsValue => "in values of",
             GesBinaryOperator.StartsWith => "starts with",
             GesBinaryOperator.EndsWith => "ends with",
             GesBinaryOperator.Union => "|",
@@ -231,6 +231,7 @@ internal sealed record TypeConstructorExpressionNode(string TypeName, ArgumentLi
 }
 
 internal sealed record BooleanLiteralExpressionNode(bool Value) : ExpressionNode;
+internal sealed record NothingLiteralExpressionNode : ExpressionNode;
 internal sealed record IntegerLiteralExpressionNode(long Value) : ExpressionNode;
 internal sealed record FloatLiteralExpressionNode(double Value) : ExpressionNode;
 internal sealed record PercentageLiteralExpressionNode(double PercentValue) : ExpressionNode;

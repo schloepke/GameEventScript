@@ -119,7 +119,7 @@ instruction word are encoded by typed load opcodes:
   are represented by their IEEE bit patterns. `NaN` may still exist internally
   as a failed mathematical result, but the DSL surface normalizes it to
   `nothing`: presence checks treat it as empty and type checks treat it as
-  `:nothing`.
+  DSL `nothing`.
 - `LoadPercentage` stores a percentage ratio in `F64` and must not carry unit
   flags. Percentage is a dedicated value kind, not a bytecode unit.
 - `LoadText` and `LoadTag` store a `StringPool` index in the primary `X`
@@ -184,9 +184,9 @@ on DamageTaken(unit as :unit, amount as :number) {
     publish DamageApplied(unit: unit, amount: amount)
 }
 
-predicate wounded(_ unit as :unit) means unit.hp < unit.maxHp
+predicate wounded(_ unit as :unit) be unit.hp < unit.maxHp
 
-function livingUnits(_ units as :list) means
+function livingUnits(_ units as :list) be
     units[:filter unit where not (unit is wounded)]
 ```
 
@@ -866,7 +866,7 @@ ScopeMark
 RandomMark
 ```
 
-Predicate bodies must compile as `:boolean` or `:nothing`; an explicit
+Predicate bodies must compile as `:boolean` or DSL `nothing`; an explicit
 `as :boolean` marks intentional boolean coercion. Predicate calls preserve
 `nothing` so missing information remains "no statement" instead of becoming
 `false`. Functions preserve the expression result.
@@ -965,7 +965,7 @@ an explicit `as :number` cast.
 
 Required portable value families:
 
-- primitives: `:nothing`, `:tag`, `:text`, `:boolean`
+- primitives: DSL `nothing`, `:tag`, `:text`, `:boolean`
 - numeric: `:number`, `:percentage`
 - numeric quantities: `:quantity(degree)`/`:quantity(°)`, `:quantity(m)`, `:quantity(s)`
 - vectors: `:vector`

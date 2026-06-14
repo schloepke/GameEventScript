@@ -305,7 +305,7 @@
     {
       "kind": "scriptApi",
       "name": "function and predicate calls return values",
-      "script": "module AtomicControlReturns\nfunction addOne(_ value) means value + 1\npredicate isLarge(_ value) means value > 2\n\non Start {\n  let a be addOne(2)\n  if isLarge(a) {\n    emit Done(value: a, matched: true)\n  } else {\n    emit Done(value: a, matched: false)\n  }\n}",
+      "script": "module AtomicControlReturns\nfunction addOne(_ value) be value + 1\npredicate isLarge(_ value) be value > 2\n\non Start {\n  let a be addOne(2)\n  if isLarge(a) {\n    emit Done(value: a, matched: true)\n  } else {\n    emit Done(value: a, matched: false)\n  }\n}",
       "steps": [
         {
           "input": {

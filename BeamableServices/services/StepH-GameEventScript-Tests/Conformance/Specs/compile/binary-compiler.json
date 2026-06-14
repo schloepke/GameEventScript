@@ -18,7 +18,7 @@
     {
       "kind": "scriptApi",
       "name": "function call and branch compile to runnable binary",
-      "script": "module BinaryCompilerFunction\n\nfunction double(value) means value * 2\n\non Start(value) {\n  let result be double(value: value)\n  if result > 10 {\n    emit Done(result: result, status: :high)\n  } else {\n    emit Done(result: result, status: :low)\n  }\n}\n",
+      "script": "module BinaryCompilerFunction\n\nfunction double(value) be value * 2\n\non Start(value) {\n  let result be double(value: value)\n  if result > 10 {\n    emit Done(result: result, status: :high)\n  } else {\n    emit Done(result: result, status: :low)\n  }\n}\n",
       "steps": [
         {
           "input": { "name": "Start", "args": { "value": { "type": ":integer", "value": "7" } } },

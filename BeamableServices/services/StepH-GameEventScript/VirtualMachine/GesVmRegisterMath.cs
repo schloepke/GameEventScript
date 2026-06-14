@@ -55,19 +55,19 @@ internal static class GesVmRegisterMath
             case not Nothing when b.Kind is Text:
                 dst.SetText(a.ConvertToText() + b.ReadTextOrTag());
                 break;
-            case List when b.Kind is not Nothing && a.ObjectValue is GesVmListObject aList:
+            case List when b.Kind is not Nothing && a.ObjectValue is GesVmValue[] aList:
             {
-                var list = new GesVmListObject(dst.OwningState, aList.Length + 1);
-                for (var i = 0; i < aList.Length; i++) list.Items[i] = aList.Items[i];
-                list.Items[aList.Length] = b;
+                var list = dst.OwningState.CreateList(aList.Length + 1);
+                for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
+                list[aList.Length] = b;
                 dst.SetList(list);
                 break;
             }
-            case not List and not Nothing when b.Kind is List && b.ObjectValue is GesVmListObject rightList:
+            case not List and not Nothing when b.Kind is List && b.ObjectValue is GesVmValue[] rightList:
             {
-                var list = new GesVmListObject(dst.OwningState, rightList.Length + 1);
-                list.Items[0] = a;
-                for (var i = 0; i < rightList.Length; i++) list.Items[i + 1] = rightList.Items[i];
+                var list = dst.OwningState.CreateList(rightList.Length + 1);
+                list[0] = a;
+                for (var i = 0; i < rightList.Length; i++) list[i + 1] = rightList[i];
                 dst.SetList(list);
                 break;
             }
@@ -176,9 +176,9 @@ internal static class GesVmRegisterMath
             case Integer or Float or Percentage when b.Kind is Vector or Point:
                 dst.SetFloat(double.NaN);
                 return;
-            case List when b.Kind is List or Dice and not Nothing or not Map && a.ObjectValue is GesVmListObject aList:
+            case List when b.Kind is List or Dice and not Nothing or not Map && a.ObjectValue is GesVmValue[] aList:
             {
-                var removeList = b.Kind is List && b.ObjectValue is GesVmListObject bList ? bList : null;
+                var removeList = b.Kind is List && b.ObjectValue is GesVmValue[] bList ? bList : null;
                 var removeDice = b.Kind is Dice && b.ObjectValue is int[] bDice ? bDice : null;
                 var removeCount = removeList?.Length ?? removeDice?.Length ?? 1;
                 var removed = new bool[removeCount];
@@ -189,8 +189,8 @@ internal static class GesVmRegisterMath
                     for (var j = 0; j < removeCount; j++)
                     {
                         if (removed[j]) continue;
-                        var candidate = removeList is not null ? removeList.Items[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
-                        if (!candidate.EqualsValue(ref aList.Items[i])) continue;
+                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
+                        if (!candidate.EqualsValue(ref aList[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -199,7 +199,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = new GesVmListObject(dst.OwningState, resultLength);
+                var list = dst.OwningState.CreateList(resultLength);
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aList.Length; i++)
@@ -208,14 +208,14 @@ internal static class GesVmRegisterMath
                     for (var j = 0; j < removeCount; j++)
                     {
                         if (removed[j]) continue;
-                        var candidate = removeList is not null ? removeList.Items[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
-                        if (!candidate.EqualsValue(ref aList.Items[i])) continue;
+                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
+                        if (!candidate.EqualsValue(ref aList[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
                     }
 
-                    if (!shouldRemove) list.Items[index++] = aList.Items[i];
+                    if (!shouldRemove) list[index++] = aList[i];
                 }
 
                 dst.SetList(list);
@@ -259,7 +259,7 @@ internal static class GesVmRegisterMath
                 dst.SetDice(dice);
                 return;
             }
-            case Dice when b.Kind is List && a.ObjectValue is int[] aDice && b.ObjectValue is GesVmListObject removeList:
+            case Dice when b.Kind is List && a.ObjectValue is int[] aDice && b.ObjectValue is GesVmValue[] removeList:
             {
                 var removed = new bool[removeList.Length];
                 var resultLength = 0;
@@ -269,7 +269,7 @@ internal static class GesVmRegisterMath
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
-                        if (removed[j] || !item.EqualsValue(ref removeList.Items[j])) continue;
+                        if (removed[j] || !item.EqualsValue(ref removeList[j])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -278,7 +278,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = new GesVmListObject(dst.OwningState, resultLength);
+                var list = dst.OwningState.CreateList(resultLength);
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aDice.Length; i++)
@@ -287,13 +287,13 @@ internal static class GesVmRegisterMath
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
-                        if (removed[j] || !item.EqualsValue(ref removeList.Items[j])) continue;
+                        if (removed[j] || !item.EqualsValue(ref removeList[j])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
                     }
 
-                    if (!shouldRemove) list.Items[index++].SetInteger(aDice[i]);
+                    if (!shouldRemove) list[index++].SetInteger(aDice[i]);
                 }
 
                 dst.SetList(list);
@@ -346,11 +346,11 @@ internal static class GesVmRegisterMath
                 {
                     keys.Add(b.ReadTextOrTag());
                 }
-                else if (b.Kind is List && b.ObjectValue is GesVmListObject keyList)
+                else if (b.Kind is List && b.ObjectValue is GesVmValue[] keyList)
                 {
                     for (var i = 0; i < keyList.Length; i++)
                     {
-                        var keyValue = keyList.Items[i];
+                        var keyValue = keyList[i];
                         if (keyValue.Kind is not (Text or Tag))
                         {
                             dst.SetNothing();

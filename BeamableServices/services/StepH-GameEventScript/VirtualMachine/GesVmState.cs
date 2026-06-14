@@ -32,7 +32,7 @@ internal class GesVmState
         internal bool NormalizeResultAsPredicate;
     }
 
-    internal GesVmListObject EmptyList { get; init; }
+    internal GesVmValue[] EmptyList { get; init; }
 
     internal GameEventScriptBinary Binary { get; init; }
 
@@ -64,7 +64,7 @@ internal class GesVmState
     internal GesVmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         MaxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
-        EmptyList = new GesVmListObject(this, 0);
+        EmptyList = CreateRegisterArray(0);
         Binary = binary;
         CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
@@ -118,7 +118,7 @@ internal class GesVmState
         for (var i = 0; i < values.Length; i++) values[i].InitRegister(this);
         return values;
     }
-    internal GesVmListObject CreateList(int size) => size == 0 ? EmptyList : new GesVmListObject(this, size);
+    internal GesVmValue[] CreateList(int size) => size == 0 ? EmptyList : CreateRegisterArray(size);
     internal GesVmMapObject CreateMap(IReadOnlyDictionary<string, GesVmValue> entries) => new(this, entries);
     internal GesVmValue CreateNothing()
     {

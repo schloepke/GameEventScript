@@ -17,40 +17,21 @@ internal interface IGesVmKeyAccess<T>
     internal bool TryGet(string key, out T value);
 }
 
-internal class GesVmListObject(GesVmState ownerState, int size) : IGesVmIndexAccess<GesVmValue>
-{
-    internal readonly GesVmValue[] Items = ownerState.CreateRegisterArray(size);
-    public int Length => Items.Length;
-
-    public bool TryGet(int index, out GesVmValue value)
-    {
-        if (index < 0 || index >= Length)
-        {
-            value = default;
-            return false;
-        }
-
-        value = Items[index];
-        return true;
-    }
-    
-}
-
 internal class GesVmMapObject(GesVmState ownerState, IReadOnlyDictionary<string, GesVmValue> entries) : IGesVmKeyAccess<GesVmValue>
 {
     internal const string HiddenRecordTypeField = "__type";
 
     private readonly int _length = entries.Keys.Count(key => !key.StartsWith("_"));
-    private GesVmListObject? _keys;
-    private GesVmListObject? _values;
-    private GesVmListObject? _entries;
+    private GesVmValue[]? _keys;
+    private GesVmValue[]? _values;
+    private GesVmValue[]? _entries;
     
     public int Length => _length;
     public IReadOnlyDictionary<string, GesVmValue> Entries => entries;
     
-    internal GesVmListObject KeyList => _keys ??= CreateListOfKeys();
-    internal GesVmListObject ValueList => _values ??= CreateListOfValues();
-    internal GesVmListObject EntryList => _entries ??= CreateListOfEntries();
+    internal GesVmValue[] KeyList => _keys ??= CreateListOfKeys();
+    internal GesVmValue[] ValueList => _values ??= CreateListOfValues();
+    internal GesVmValue[] EntryList => _entries ??= CreateListOfEntries();
 
     public bool TryGet(string key, out GesVmValue value)
     {
@@ -63,38 +44,38 @@ internal class GesVmMapObject(GesVmState ownerState, IReadOnlyDictionary<string,
         return false;
     }
 
-    private GesVmListObject CreateListOfKeys()
+    private GesVmValue[] CreateListOfKeys()
     {
-        var list = new GesVmListObject(ownerState, _length);
+        var list = ownerState.CreateList(_length);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
             if (key.StartsWith("_")) continue;
-            list.Items[i++].SetTag(key);
+            list[i++].SetTag(key);
         }
         return list;
     }
 
-    private GesVmListObject CreateListOfValues()
+    private GesVmValue[] CreateListOfValues()
     {
-        var list = new GesVmListObject(ownerState, _length);
+        var list = ownerState.CreateList(_length);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
             if (key.StartsWith("_")) continue;
-            list.Items[i++] = entries[key];
+            list[i++] = entries[key];
         }
         return list;
     }
 
-    private GesVmListObject CreateListOfEntries()
+    private GesVmValue[] CreateListOfEntries()
     {
-        var list = new GesVmListObject(ownerState, _length);
+        var list = ownerState.CreateList(_length);
         var i = 0;
         foreach (var key in entries.Keys.OrderBy(x => x, StringComparer.Ordinal))
         {
             if (key.StartsWith("_")) continue;
-            list.Items[i++].SetMap(new GesVmMapObject(ownerState, new Dictionary<string, GesVmValue> { ["key"] = ownerState.CreateTag(key), ["value"] = entries[key] }));
+            list[i++].SetMap(new GesVmMapObject(ownerState, new Dictionary<string, GesVmValue> { ["key"] = ownerState.CreateTag(key), ["value"] = entries[key] }));
         }
 
         return list;

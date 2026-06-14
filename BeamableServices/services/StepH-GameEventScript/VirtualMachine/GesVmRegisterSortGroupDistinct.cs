@@ -16,7 +16,7 @@ internal static class GesVmRegisterSortGroupDistinct
             case Nothing:
                 dst.SetNothing();
                 return;
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -28,17 +28,17 @@ internal static class GesVmRegisterSortGroupDistinct
                 var resultLength = 0;
                 for (var i = 0; i < list.Length; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     var found = false;
                     for (var j = 0; j < resultLength; j++)
                     {
-                        if (!result.Items[j].EqualsValue(ref item)) continue;
+                        if (!result[j].EqualsValue(ref item)) continue;
                         found = true;
                         break;
                     }
 
                     if (found) continue;
-                    result.Items[resultLength++] = item;
+                    result[resultLength++] = item;
                 }
 
                 if (resultLength == list.Length)
@@ -48,7 +48,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var compact = dst.OwningState.CreateList(resultLength);
-                for (var i = 0; i < resultLength; i++) compact.Items[i] = result.Items[i];
+                for (var i = 0; i < resultLength; i++) compact[i] = result[i];
                 dst.SetList(compact);
                 return;
             }
@@ -116,7 +116,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var result = dst.OwningState.CreateList(count);
-                for (var i = 0; i < count; i++) result.Items[i] = values[i];
+                for (var i = 0; i < count; i++) result[i] = values[i];
                 dst.SetList(result);
                 return;
             }
@@ -130,7 +130,7 @@ internal static class GesVmRegisterSortGroupDistinct
         var state = dst.OwningState;
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -144,7 +144,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 var count = 0;
                 for (var i = 0; i < list.Length; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
                     {
                         state.Register(destinationSlot).SetNothing();
@@ -160,7 +160,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     }
 
                     if (found) continue;
-                    values.Items[count] = item;
+                    values[count] = item;
                     keys[count] = key;
                     count++;
                 }
@@ -172,7 +172,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var compact = state.CreateList(count);
-                for (var i = 0; i < count; i++) compact.Items[i] = values.Items[i];
+                for (var i = 0; i < count; i++) compact[i] = values[i];
                 state.Register(destinationSlot).SetList(compact);
                 return;
             }
@@ -223,7 +223,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var result = state.CreateList(count);
-                for (var i = 0; i < count; i++) result.Items[i] = values[i];
+                for (var i = 0; i < count; i++) result[i] = values[i];
                 state.Register(destinationSlot).SetList(result);
                 return;
             }
@@ -237,14 +237,14 @@ internal static class GesVmRegisterSortGroupDistinct
         var state = dst.OwningState;
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
             {
                 var groups = new Dictionary<string, GesVmValue[]>(StringComparer.Ordinal);
                 var counts = new Dictionary<string, int>(StringComparer.Ordinal);
                 var key = state.CreateNothing();
                 for (var i = 0; i < list.Length; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
                     {
                         state.Register(destinationSlot).SetNothing();
@@ -277,7 +277,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 {
                     var count = counts[pair.Key];
                     var groupedList = state.CreateList(count);
-                    for (var i = 0; i < count; i++) groupedList.Items[i] = pair.Value[i];
+                    for (var i = 0; i < count; i++) groupedList[i] = pair.Value[i];
                     var groupedValue = state.CreateNothing();
                     groupedValue.SetList(groupedList);
                     map[pair.Key] = groupedValue;
@@ -294,7 +294,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 var key = state.CreateNothing();
                 for (var i = 0; i < values.Length; i++)
                 {
-                    var item = values.Items[i];
+                    var item = values[i];
                     if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
                     {
                         state.Register(destinationSlot).SetNothing();
@@ -327,7 +327,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 {
                     var count = counts[pair.Key];
                     var groupedList = state.CreateList(count);
-                    for (var i = 0; i < count; i++) groupedList.Items[i] = pair.Value[i];
+                    for (var i = 0; i < count; i++) groupedList[i] = pair.Value[i];
                     var groupedValue = state.CreateNothing();
                     groupedValue.SetList(groupedList);
                     map[pair.Key] = groupedValue;
@@ -383,7 +383,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 {
                     var count = counts[pair.Key];
                     var groupedList = state.CreateList(count);
-                    for (var i = 0; i < count; i++) groupedList.Items[i] = pair.Value[i];
+                    for (var i = 0; i < count; i++) groupedList[i] = pair.Value[i];
                     var groupedValue = state.CreateNothing();
                     groupedValue.SetList(groupedList);
                     map[pair.Key] = groupedValue;
@@ -419,7 +419,7 @@ internal static class GesVmRegisterSortGroupDistinct
         var state = dst.OwningState;
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -428,8 +428,8 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var result = state.CreateList(list.Length);
-                for (var i = 0; i < list.Length; i++) result.Items[i] = list.Items[i];
-                if (!SortValues(result.Items, list.Length, descending))
+                for (var i = 0; i < list.Length; i++) result[i] = list[i];
+                if (!SortValues(result, list.Length, descending))
                 {
                     dst.SetNothing();
                     return;
@@ -443,11 +443,11 @@ internal static class GesVmRegisterSortGroupDistinct
                 var result = state.CreateList(dice.Length);
                 if (descending)
                 {
-                    for (var i = 0; i < dice.Length; i++) result.Items[i].SetInteger(dice[i]);
+                    for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[i]);
                 }
                 else
                 {
-                    for (var i = 0; i < dice.Length; i++) result.Items[i].SetInteger(dice[dice.Length - i - 1]);
+                    for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[dice.Length - i - 1]);
                 }
 
                 dst.SetList(result);
@@ -534,7 +534,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var result = state.CreateList(count);
-                for (var i = 0; i < count; i++) result.Items[i] = values[i];
+                for (var i = 0; i < count; i++) result[i] = values[i];
                 dst.SetList(result);
                 return;
             }
@@ -549,7 +549,7 @@ internal static class GesVmRegisterSortGroupDistinct
         var state = dst.OwningState;
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -562,7 +562,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 var key = state.CreateNothing();
                 for (var i = 0; i < list.Length; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
                     {
                         state.Register(destinationSlot).SetNothing();
@@ -580,7 +580,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var result = state.CreateList(list.Length);
-                for (var i = 0; i < list.Length; i++) result.Items[i] = values[i];
+                for (var i = 0; i < list.Length; i++) result[i] = values[i];
                 state.Register(destinationSlot).SetList(result);
                 return;
             }
@@ -628,7 +628,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
 
                 var result = state.CreateList(count);
-                for (var i = 0; i < count; i++) result.Items[i] = values[i];
+                for (var i = 0; i < count; i++) result[i] = values[i];
                 state.Register(destinationSlot).SetList(result);
                 return;
             }

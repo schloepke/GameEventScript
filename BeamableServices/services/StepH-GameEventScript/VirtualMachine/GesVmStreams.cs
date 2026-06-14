@@ -73,10 +73,10 @@ internal class GesVmFloatRangeStream(double from, double to, double step) : IGes
     }
 }
 
-internal class GesVmListStream(GesVmListObject list) : IGesVmStream, IDisposable
+internal class GesVmListStream(GesVmValue[] list) : IGesVmStream, IDisposable
 {
     private int _current;
-    private GesVmListObject? _list = list;
+    private GesVmValue[]? _list = list;
     public bool IsPatternSequence => true;
 
     public bool TryNext(ref GesVmValue value)
@@ -88,7 +88,7 @@ internal class GesVmListStream(GesVmListObject list) : IGesVmStream, IDisposable
             return false;
         }
 
-        value = _list.Items[_current++];
+        value = _list[_current++];
         return true;
     }
 

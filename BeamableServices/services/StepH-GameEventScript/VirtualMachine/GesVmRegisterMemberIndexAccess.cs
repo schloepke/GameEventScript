@@ -42,7 +42,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         return;
                     case "tags":
                         var tagList = dst.OwningState.CreateList(message.Tags.Count);
-                        for(var i = 0; i < tagList.Length; i++) tagList.Items[i].SetTag(message.Tags[i]);
+                        for(var i = 0; i < tagList.Length; i++) tagList[i].SetTag(message.Tags[i]);
                         dst.SetList(tagList);
                         return;
                     case "signature":
@@ -60,7 +60,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         return;
                     case "parameters":
                         var list = dst.OwningState.CreateList(signature.Parameters.Count);
-                        for (var i = 0; i < list.Length; i++) list.Items[i].SetText(signature.Parameters[i]);
+                        for (var i = 0; i < list.Length; i++) list[i].SetText(signature.Parameters[i]);
                         dst.SetList(list);
                         return;
                     case "signature":
@@ -86,8 +86,9 @@ internal static class GesVmRegisterMemberIndexAccess
         var index = (int)indexIn - 1;
         switch (obj.Kind)
         {
-            case List when obj.ObjectValue is GesVmListObject map && map.TryGet(index, out var value):
-                dst = value;
+            case List when obj.ObjectValue is GesVmValue[] list:
+                if (index < list.Length) dst = list[index];
+                else dst.SetNothing();
                 return;
             case Dice when obj.ObjectValue is int[] dices:
                 if (index < dices.Length) dst.SetInteger(dices[index]);

@@ -41,11 +41,11 @@ internal static class GesVmRegisterCompare
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
                 return amsg.Equals(bmsg);
-            case List when b.Kind is List && a.ObjectValue is GesVmListObject av && b.ObjectValue is GesVmListObject bv:
+            case List when b.Kind is List && a.ObjectValue is GesVmValue[] av && b.ObjectValue is GesVmValue[] bv:
                 if (av.Length != bv.Length) return false;
                 for (var i = 0; i < av.Length; i++)
                 {
-                    if (av.Items[i].Equ(ref bv.Items[i])) continue;
+                    if (av[i].Equ(ref bv[i])) continue;
                     return false;
                 }
 
@@ -62,7 +62,7 @@ internal static class GesVmRegisterCompare
                 var bKeys = bm.KeyList;
                 for (var i = 0; i < aKeys.Length; i++)
                 {
-                    if (aKeys.Items[i].Equ(ref bKeys.Items[i])) continue;
+                    if (aKeys[i].Equ(ref bKeys[i])) continue;
                     return false;
                 }
 
@@ -70,7 +70,7 @@ internal static class GesVmRegisterCompare
                 var bValues = bm.ValueList;
                 for (var i = 0; i < aValues.Length; i++)
                 {
-                    if (aValues.Items[i].Equ(ref bValues.Items[i])) continue;
+                    if (aValues[i].Equ(ref bValues[i])) continue;
                     return false;
                 }
 

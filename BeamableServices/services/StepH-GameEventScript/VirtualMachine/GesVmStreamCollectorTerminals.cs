@@ -32,7 +32,7 @@ internal static class GesVmStreamCollectorTerminals
             }
 
             var list = dst.OwningState.CreateList(count);
-            Array.Copy(buffer, list.Items, count);
+            Array.Copy(buffer, list, count);
             dst.SetList(list);
         }
         finally
@@ -128,8 +128,8 @@ internal static class GesVmStreamCollectorTerminals
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
-                dst = list.Length > 0 ? list.Items[0] : dst.OwningState.CreateNothing();
+            case List when source.ObjectValue is GesVmValue[] list:
+                dst = list.Length > 0 ? list[0] : dst.OwningState.CreateNothing();
                 return;
             case Dice when source.ObjectValue is int[] dice:
                 if (dice.Length > 0) dst.SetInteger(dice[0]);
@@ -144,7 +144,7 @@ internal static class GesVmStreamCollectorTerminals
                 else dst.SetNothing();
                 return;
             case Map or Custom when source.ObjectValue is GesVmMapObject map:
-                dst = map.ValueList.Length > 0 ? map.ValueList.Items[0] : dst.OwningState.CreateNothing();
+                dst = map.ValueList.Length > 0 ? map.ValueList[0] : dst.OwningState.CreateNothing();
                 return;
             case Vector or Point when source.ObjectValue is GesVmFloatTriplet triplet:
                 dst.SetFloat(triplet.X);
@@ -164,8 +164,8 @@ internal static class GesVmStreamCollectorTerminals
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
-                dst = list.Length > 0 ? list.Items[list.Length - 1] : dst.OwningState.CreateNothing();
+            case List when source.ObjectValue is GesVmValue[] list:
+                dst = list.Length > 0 ? list[list.Length - 1] : dst.OwningState.CreateNothing();
                 return;
             case Dice when source.ObjectValue is int[] dice:
                 if (dice.Length > 0) dst.SetInteger(dice[^1]);
@@ -180,7 +180,7 @@ internal static class GesVmStreamCollectorTerminals
                 else dst.SetNothing();
                 return;
             case Map or Custom when source.ObjectValue is GesVmMapObject map:
-                dst = map.ValueList.Length > 0 ? map.ValueList.Items[map.ValueList.Length - 1] : dst.OwningState.CreateNothing();
+                dst = map.ValueList.Length > 0 ? map.ValueList[map.ValueList.Length - 1] : dst.OwningState.CreateNothing();
                 return;
             case Vector or Point when source.ObjectValue is GesVmFloatTriplet triplet:
                 dst.SetFloat(triplet.Z);
@@ -200,8 +200,8 @@ internal static class GesVmStreamCollectorTerminals
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
-                dst = list.Length == 1 ? list.Items[0] : dst.OwningState.CreateNothing();
+            case List when source.ObjectValue is GesVmValue[] list:
+                dst = list.Length == 1 ? list[0] : dst.OwningState.CreateNothing();
                 return;
             case Dice when source.ObjectValue is int[] dice:
                 if (dice.Length == 1) dst.SetInteger(dice[0]);
@@ -216,7 +216,7 @@ internal static class GesVmStreamCollectorTerminals
                 else dst.SetNothing();
                 return;
             case Map or Custom when source.ObjectValue is GesVmMapObject map:
-                dst = map.ValueList.Length == 1 ? map.ValueList.Items[0] : dst.OwningState.CreateNothing();
+                dst = map.ValueList.Length == 1 ? map.ValueList[0] : dst.OwningState.CreateNothing();
                 return;
             case Text or Tag:
                 SingleFromText(ref dst, ref source);

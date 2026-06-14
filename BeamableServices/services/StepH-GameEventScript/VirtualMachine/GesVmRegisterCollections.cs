@@ -8,8 +8,8 @@ internal static class GesVmRegisterCollections
     internal static void GesVmCreateList(ref this GesVmValue dst)
     {
         var state = dst.OwningState;
-        var list = new GesVmListObject(dst.OwningState, state.StageLength);
-        for (ushort i = 0; i < state.StageLength; i++) list.Items[i] = state.RegisterStaged(i);
+        var list = dst.OwningState.CreateList(state.StageLength);
+        for (ushort i = 0; i < state.StageLength; i++) list[i] = state.RegisterStaged(i);
         dst.SetList(list);
     }
     internal static void GesVmCreateMap(ref this GesVmValue dst, ushort keyNamesIndex)
@@ -40,10 +40,10 @@ internal static class GesVmRegisterCollections
     {
         if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is List<GesVmValue> builder)
         {
-            var list = new GesVmListObject(dst.OwningState, builder.Count);
+            var list = dst.OwningState.CreateList(builder.Count);
             for (var i = 0; i < builder.Count; i++)
             {
-                list.Items[i] = builder[i];
+                list[i] = builder[i];
             }
             dst.SetList(list);
             return;

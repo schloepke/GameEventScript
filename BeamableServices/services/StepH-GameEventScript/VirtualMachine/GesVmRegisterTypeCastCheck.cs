@@ -87,12 +87,12 @@ internal static class GesVmRegisterTypeCastCheck
                     case Dice:
                         dst = xSlot;
                         return;
-                    case List when xSlot.ObjectValue is GesVmListObject list:
+                    case List when xSlot.ObjectValue is GesVmValue[] list:
                     {
                         var dice = new int[list.Length];
                         for (var i = 0; i < list.Length; i++)
                         {
-                            var item = list.Items[i];
+                            var item = list[i];
                             if (item.Kind is not Integer || item.IntegerValue <= 0 || item.IntegerValue > int.MaxValue)
                             {
                                 dst.SetNothing();
@@ -268,24 +268,24 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var list = new GesVmListObject(dst.OwningState, text.Length);
-                for (var i = 0; i < text.Length; i++) list.Items[i].SetText(text[i].ToString());
+                var list = dst.OwningState.CreateList(text.Length);
+                for (var i = 0; i < text.Length; i++) list[i].SetText(text[i].ToString());
                 dst.SetList(list);
                 return;
             }
             case Vector or Point when xSlot.ObjectValue is GesVmFloatTriplet triplet:
             {
-                var list = new GesVmListObject(dst.OwningState, 3);
-                list.Items[0].SetFloat(triplet.X, xSlot.Unit);
-                list.Items[1].SetFloat(triplet.Y, xSlot.Unit);
-                list.Items[2].SetFloat(triplet.Z, xSlot.Unit);
+                var list = dst.OwningState.CreateList(3);
+                list[0].SetFloat(triplet.X, xSlot.Unit);
+                list[1].SetFloat(triplet.Y, xSlot.Unit);
+                list[2].SetFloat(triplet.Z, xSlot.Unit);
                 dst.SetList(list);
                 return;
             }
             case Dice when xSlot.ObjectValue is int[] dice:
             {
-                var list = new GesVmListObject(dst.OwningState, dice.Length);
-                for (var i = 0; i < dice.Length; i++) list.Items[i].SetInteger(dice[i]);
+                var list = dst.OwningState.CreateList(dice.Length);
+                for (var i = 0; i < dice.Length; i++) list[i].SetInteger(dice[i]);
                 dst.SetList(list);
                 return;
             }
@@ -303,11 +303,11 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var list = new GesVmListObject(dst.OwningState, (int)xSlot.IntegerValue);
+                var list = dst.OwningState.CreateList((int)xSlot.IntegerValue);
                 var current = range.from;
                 for (var i = 0; i < list.Length; i++)
                 {
-                    list.Items[i].SetInteger(current);
+                    list[i].SetInteger(current);
                     current += range.step;
                 }
 
@@ -328,11 +328,11 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var list = new GesVmListObject(dst.OwningState, (int)xSlot.IntegerValue);
+                var list = dst.OwningState.CreateList((int)xSlot.IntegerValue);
                 var current = range.from;
                 for (var i = 0; i < list.Length; i++)
                 {
-                    list.Items[i].SetFloat(current);
+                    list[i].SetFloat(current);
                     current += range.step;
                 }
 
@@ -449,10 +449,10 @@ internal static class GesVmRegisterTypeCastCheck
                 x = number;
                 unit = xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone;
                 break;
-            case List when xSlot.ObjectValue is GesVmListObject list:
+            case List when xSlot.ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length && i < 3; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     if (!item.IsNumeric && item.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
                         dst.SetNothing();

@@ -10,7 +10,7 @@ internal static class GesVmRegisterStreamTerminals
     {
         switch (iterator.Kind)
         {
-            case List when iterator.ObjectValue is GesVmListObject list:
+            case List when iterator.ObjectValue is GesVmValue[] list:
                 dst.SetInteger(list.Length);
                 return;
             case Map when iterator.ObjectValue is GesVmMapObject map:
@@ -57,7 +57,7 @@ internal static class GesVmRegisterStreamTerminals
     {
         switch (iterator.Kind)
         {
-            case List when iterator.ObjectValue is GesVmListObject list:
+            case List when iterator.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -65,11 +65,11 @@ internal static class GesVmRegisterStreamTerminals
                     return;
                 }
 
-                var listSum = list.Items[0];
+                var listSum = list[0];
                 var listNext = dst.OwningState.CreateNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
-                    listNext.GesVmAdd(ref listSum, ref list.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    listNext.GesVmAdd(ref listSum, ref list[i], ref dst.OwningState.Binary.TextConstantTable);
                     listSum = listNext;
                 }
 
@@ -85,11 +85,11 @@ internal static class GesVmRegisterStreamTerminals
                     return;
                 }
 
-                var mapSum = values.Items[0];
+                var mapSum = values[0];
                 var mapNext = dst.OwningState.CreateNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
-                    mapNext.GesVmAdd(ref mapSum, ref values.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    mapNext.GesVmAdd(ref mapSum, ref values[i], ref dst.OwningState.Binary.TextConstantTable);
                     mapSum = mapNext;
                 }
 
@@ -181,7 +181,7 @@ internal static class GesVmRegisterStreamTerminals
     {
         switch (iterator.Kind)
         {
-            case List when iterator.ObjectValue is GesVmListObject list:
+            case List when iterator.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -189,11 +189,11 @@ internal static class GesVmRegisterStreamTerminals
                     return;
                 }
 
-                var listSum = list.Items[0];
+                var listSum = list[0];
                 var listNext = dst.OwningState.CreateNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
-                    listNext.GesVmAdd(ref listSum, ref list.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    listNext.GesVmAdd(ref listSum, ref list[i], ref dst.OwningState.Binary.TextConstantTable);
                     listSum = listNext;
                 }
 
@@ -211,11 +211,11 @@ internal static class GesVmRegisterStreamTerminals
                     return;
                 }
 
-                var mapSum = values.Items[0];
+                var mapSum = values[0];
                 var mapNext = dst.OwningState.CreateNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
-                    mapNext.GesVmAdd(ref mapSum, ref values.Items[i], ref dst.OwningState.Binary.TextConstantTable);
+                    mapNext.GesVmAdd(ref mapSum, ref values[i], ref dst.OwningState.Binary.TextConstantTable);
                     mapSum = mapNext;
                 }
 
@@ -464,7 +464,7 @@ internal static class GesVmRegisterStreamTerminals
                     }
                 }
 
-                list.Items[target] = items[selected];
+                list[target] = items[selected];
                 totalWeight -= weights[selected];
                 if (selected < remainingCount - 1)
                 {

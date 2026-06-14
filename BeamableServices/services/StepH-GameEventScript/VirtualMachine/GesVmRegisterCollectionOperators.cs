@@ -50,8 +50,8 @@ internal static class GesVmRegisterCollectionOperators
             return;
         }
 
-        GesVmListObject? leftList = null;
-        GesVmListObject? rightList = null;
+        GesVmValue[]? leftList = null;
+        GesVmValue[]? rightList = null;
         int[]? leftDice = null;
         int[]? rightDice = null;
         GesVmRange? leftRange = null;
@@ -61,7 +61,7 @@ internal static class GesVmRegisterCollectionOperators
 
         switch (a.Kind)
         {
-            case List when a.ObjectValue is GesVmListObject value:
+            case List when a.ObjectValue is GesVmValue[] value:
                 leftList = value;
                 break;
             case Dice when a.ObjectValue is int[] value:
@@ -80,7 +80,7 @@ internal static class GesVmRegisterCollectionOperators
 
         switch (b.Kind)
         {
-            case List when b.ObjectValue is GesVmListObject value:
+            case List when b.ObjectValue is GesVmValue[] value:
                 rightList = value;
                 break;
             case Dice when b.ObjectValue is int[] value:
@@ -111,7 +111,7 @@ internal static class GesVmRegisterCollectionOperators
         for (var i = 0; i < b.IntegerValue; i++)
         {
             var left = dst.OwningState.CreateNothing();
-            if (leftList is not null) left = leftList.Items[i];
+            if (leftList is not null) left = leftList[i];
             else if (leftDice is not null) left.SetInteger(leftDice[i]);
             else if (leftRange is not null)
             {
@@ -125,7 +125,7 @@ internal static class GesVmRegisterCollectionOperators
             }
 
             var right = dst.OwningState.CreateNothing();
-            if (rightList is not null) right = rightList.Items[i];
+            if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
             {
@@ -166,8 +166,8 @@ internal static class GesVmRegisterCollectionOperators
             return;
         }
 
-        GesVmListObject? leftList = null;
-        GesVmListObject? rightList = null;
+        GesVmValue[]? leftList = null;
+        GesVmValue[]? rightList = null;
         int[]? leftDice = null;
         int[]? rightDice = null;
         GesVmRange? leftRange = null;
@@ -177,7 +177,7 @@ internal static class GesVmRegisterCollectionOperators
 
         switch (a.Kind)
         {
-            case List when a.ObjectValue is GesVmListObject value:
+            case List when a.ObjectValue is GesVmValue[] value:
                 leftList = value;
                 break;
             case Dice when a.ObjectValue is int[] value:
@@ -196,7 +196,7 @@ internal static class GesVmRegisterCollectionOperators
 
         switch (b.Kind)
         {
-            case List when b.ObjectValue is GesVmListObject value:
+            case List when b.ObjectValue is GesVmValue[] value:
                 rightList = value;
                 break;
             case Dice when b.ObjectValue is int[] value:
@@ -229,7 +229,7 @@ internal static class GesVmRegisterCollectionOperators
         {
             var leftIndex = leftOffset + i;
             var left = dst.OwningState.CreateNothing();
-            if (leftList is not null) left = leftList.Items[leftIndex];
+            if (leftList is not null) left = leftList[leftIndex];
             else if (leftDice is not null) left.SetInteger(leftDice[leftIndex]);
             else if (leftRange is not null)
             {
@@ -243,7 +243,7 @@ internal static class GesVmRegisterCollectionOperators
             }
 
             var right = dst.OwningState.CreateNothing();
-            if (rightList is not null) right = rightList.Items[i];
+            if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
             {
@@ -273,10 +273,10 @@ internal static class GesVmRegisterCollectionOperators
             case Text or Tag:
                 dst.SetBoolean(false);
                 return;
-            case List when b.ObjectValue is GesVmListObject list:
+            case List when b.ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length; i++)
                 {
-                    if (!list.Items[i].EqualsValue(ref a)) continue;
+                    if (!list[i].EqualsValue(ref a)) continue;
                     dst.SetBoolean(true);
                     return;
                 }
@@ -441,10 +441,10 @@ internal static class GesVmRegisterCollectionOperators
                     if (stream is IDisposable disposable) disposable.Dispose();
                 }
             }
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
                     if (item.IsTrue)
                     {
@@ -497,7 +497,7 @@ internal static class GesVmRegisterCollectionOperators
                 var list = map.ValueList;
                 for (var i = 0; i < list.Length; i++)
                 {
-                    var item = list.Items[i];
+                    var item = list[i];
                     if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
                     if (item.IsTrue)
                     {
@@ -662,10 +662,10 @@ internal static class GesVmRegisterCollectionOperators
 
         switch (a.Kind)
         {
-            case List when a.ObjectValue is GesVmListObject list:
+            case List when a.ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length; i++)
                 {
-                    candidate = list.Items[i];
+                    candidate = list[i];
                     probe.GesVmContains(ref candidate, ref b, ref textTable);
                     if (probe.IsTrue)
                     {
@@ -809,8 +809,8 @@ internal static class GesVmRegisterCollectionOperators
         var candidate = dst.OwningState.CreateNothing();
         switch (a.Kind)
         {
-            case List when a.ObjectValue is GesVmListObject list:
-                for (var i = 0; i < list.Length; i++) AddCandidate(list.Items[i]);
+            case List when a.ObjectValue is GesVmValue[] list:
+                for (var i = 0; i < list.Length; i++) AddCandidate(list[i]);
                 break;
             case Dice when a.ObjectValue is int[] dice:
                 for (var i = 0; i < dice.Length; i++)
@@ -975,12 +975,12 @@ internal static class GesVmRegisterCollectionOperators
                         dst.SetMap(new GesVmMapObject(dst.OwningState, map));
                         return;
                     }
-                    case List when b.ObjectValue is GesVmListObject keys:
+                    case List when b.ObjectValue is GesVmValue[] keys:
                     {
                         var map = new Dictionary<string, GesVmValue>(aMap.Entries, StringComparer.Ordinal);
                         for (var i = 0; i < keys.Length; i++)
                         {
-                            var keyValue = keys.Items[i];
+                            var keyValue = keys[i];
                             if (keyValue.Kind is not (Text or Tag))
                             {
                                 dst.SetNothing();
@@ -1000,23 +1000,23 @@ internal static class GesVmRegisterCollectionOperators
 
                 break;
             }
-            case List when a.ObjectValue is GesVmListObject aList:
+            case List when a.ObjectValue is GesVmValue[] aList:
             {
                 switch (b.Kind)
                 {
-                    case List when b.ObjectValue is GesVmListObject bList:
+                    case List when b.ObjectValue is GesVmValue[] bList:
                     {
-                        var list = new GesVmListObject(dst.OwningState, aList.Length + bList.Length);
-                        for (var i = 0; i < aList.Length; i++) list.Items[i] = aList.Items[i];
-                        for (var i = 0; i < bList.Length; i++) list.Items[aList.Length + i] = bList.Items[i];
+                        var list = dst.OwningState.CreateList(aList.Length + bList.Length);
+                        for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
+                        for (var i = 0; i < bList.Length; i++) list[aList.Length + i] = bList[i];
                         dst.SetList(list);
                         return;
                     }
                     case Dice when b.ObjectValue is int[] bDice:
                     {
-                        var list = new GesVmListObject(dst.OwningState, aList.Length + bDice.Length);
-                        for (var i = 0; i < aList.Length; i++) list.Items[i] = aList.Items[i];
-                        for (var i = 0; i < bDice.Length; i++) list.Items[aList.Length + i].SetInteger(bDice[i]);
+                        var list = dst.OwningState.CreateList(aList.Length + bDice.Length);
+                        for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
+                        for (var i = 0; i < bDice.Length; i++) list[aList.Length + i].SetInteger(bDice[i]);
                         dst.SetList(list);
                         return;
                     }
@@ -1036,11 +1036,11 @@ internal static class GesVmRegisterCollectionOperators
                         dst.SetDice(dice);
                         return;
                     }
-                    case List when b.ObjectValue is GesVmListObject bList:
+                    case List when b.ObjectValue is GesVmValue[] bList:
                     {
-                        var list = new GesVmListObject(dst.OwningState, aDice.Length + bList.Length);
-                        for (var i = 0; i < aDice.Length; i++) list.Items[i].SetInteger(aDice[i]);
-                        for (var i = 0; i < bList.Length; i++) list.Items[aDice.Length + i] = bList.Items[i];
+                        var list = dst.OwningState.CreateList(aDice.Length + bList.Length);
+                        for (var i = 0; i < aDice.Length; i++) list[i].SetInteger(aDice[i]);
+                        for (var i = 0; i < bList.Length; i++) list[aDice.Length + i] = bList[i];
                         dst.SetList(list);
                         return;
                     }
@@ -1072,11 +1072,11 @@ internal static class GesVmRegisterCollectionOperators
                         foreach (var key in bMap.Entries.Keys) keys.Add(key);
                         break;
                     }
-                    case List when b.ObjectValue is GesVmListObject keyList:
+                    case List when b.ObjectValue is GesVmValue[] keyList:
                     {
                         for (var i = 0; i < keyList.Length; i++)
                         {
-                            var keyValue = keyList.Items[i];
+                            var keyValue = keyList[i];
                             if (keyValue.Kind is not (Text or Tag))
                             {
                                 dst.SetNothing();
@@ -1096,11 +1096,11 @@ internal static class GesVmRegisterCollectionOperators
                 dst.SetMap(new GesVmMapObject(dst.OwningState, map));
                 return;
             }
-            case List when a.ObjectValue is GesVmListObject leftList:
+            case List when a.ObjectValue is GesVmValue[] leftList:
             {
                 switch (b.Kind)
                 {
-                    case List when b.ObjectValue is GesVmListObject rightList:
+                    case List when b.ObjectValue is GesVmValue[] rightList:
                     {
                         var removed = new bool[rightList.Length];
                         var resultLength = 0;
@@ -1108,22 +1108,22 @@ internal static class GesVmRegisterCollectionOperators
                         {
                             for (var j = 0; j < rightList.Length; j++)
                             {
-                                if (removed[j] || !leftList.Items[i].EqualsValue(ref rightList.Items[j])) continue;
+                                if (removed[j] || !leftList[i].EqualsValue(ref rightList[j])) continue;
                                 removed[j] = true;
                                 resultLength++;
                                 break;
                             }
                         }
-                        var list = new GesVmListObject(dst.OwningState, resultLength);
+                        var list = dst.OwningState.CreateList(resultLength);
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
                         for (var i = 0; i < leftList.Length; i++)
                         {
                             for (var j = 0; j < rightList.Length; j++)
                             {
-                                if (removed[j] || !leftList.Items[i].EqualsValue(ref rightList.Items[j])) continue;
+                                if (removed[j] || !leftList[i].EqualsValue(ref rightList[j])) continue;
                                 removed[j] = true;
-                                list.Items[index++] = leftList.Items[i];
+                                list[index++] = leftList[i];
                                 break;
                             }
                         }
@@ -1136,7 +1136,7 @@ internal static class GesVmRegisterCollectionOperators
                         var resultLength = 0;
                         for (var i = 0; i < leftList.Length; i++)
                         {
-                            ref var item = ref leftList.Items[i];
+                            ref var item = ref leftList[i];
                             if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
                             for (var j = 0; j < rightDice.Length; j++)
                             {
@@ -1146,18 +1146,18 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
-                        var list = new GesVmListObject(dst.OwningState, resultLength);
+                        var list = dst.OwningState.CreateList(resultLength);
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
                         for (var i = 0; i < leftList.Length; i++)
                         {
-                            ref var item = ref leftList.Items[i];
+                            ref var item = ref leftList[i];
                             if (item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) continue;
                             for (var j = 0; j < rightDice.Length; j++)
                             {
                                 if (removed[j] || item.IntegerValue != rightDice[j]) continue;
                                 removed[j] = true;
-                                list.Items[index++] = item;
+                                list[index++] = item;
                                 break;
                             }
                         }
@@ -1200,31 +1200,31 @@ internal static class GesVmRegisterCollectionOperators
                         }
                         dst.SetDice(dice);
                         return;
-                    case List when b.ObjectValue is GesVmListObject rightList:
+                    case List when b.ObjectValue is GesVmValue[] rightList:
                         var removed1 = new bool[rightList.Length];
                         var resultLength1 = 0;
                         for (var i = 0; i < leftDice.Length; i++)
                         {
                             for (var j = 0; j < rightList.Length; j++)
                             {
-                                ref var item = ref rightList.Items[j];
+                                ref var item = ref rightList[j];
                                 if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
                                 removed1[j] = true;
                                 resultLength1++;
                                 break;
                             }
                         }
-                        var list = new GesVmListObject(dst.OwningState, resultLength1);
+                        var list = dst.OwningState.CreateList(resultLength1);
                         var index1 = 0;
                         Array.Clear(removed1, 0, removed1.Length);
                         for (var i = 0; i < leftDice.Length; i++)
                         {
                             for (var j = 0; j < rightList.Length; j++)
                             {
-                                ref var item = ref rightList.Items[j];
+                                ref var item = ref rightList[j];
                                 if (removed1[j] || item.Kind is not Integer || item.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || item.IntegerValue != leftDice[i]) continue;
                                 removed1[j] = true;
-                                list.Items[index1++].SetInteger(leftDice[i]);
+                                list[index1++].SetInteger(leftDice[i]);
                                 break;
                             }
                         }
@@ -1239,20 +1239,20 @@ internal static class GesVmRegisterCollectionOperators
     }
     internal static void GesVmZip(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
     {
-        if (a.Kind is not List || b.Kind is not List || a.ObjectValue is not GesVmListObject aList || b.ObjectValue is not GesVmListObject bList)
+        if (a.Kind is not List || b.Kind is not List || a.ObjectValue is not GesVmValue[] aList || b.ObjectValue is not GesVmValue[] bList)
         {
             dst.SetNothing();
             return;
         }
 
         var length = Math.Min(aList.Length, bList.Length);
-        var list = new GesVmListObject(dst.OwningState, length);
+        var list = dst.OwningState.CreateList(length);
         for (var i = 0; i < length; i++)
         {
-            list.Items[i].SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue>
+            list[i].SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue>
             {
-                ["left"] = aList.Items[i],
-                ["right"] = bList.Items[i]
+                ["left"] = aList[i],
+                ["right"] = bList[i]
             }));
         }
 
@@ -1276,8 +1276,8 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(valueKeys, 0, valueKeyCount, StringComparer.Ordinal);
-                var values = new GesVmListObject(dst.OwningState, valueKeyCount);
-                for (var i = 0; i < valueKeyCount; i++) values.Items[i].BindArguments(valueEntries[valueKeys[i]]);
+                var values = dst.OwningState.CreateList(valueKeyCount);
+                for (var i = 0; i < valueKeyCount; i++) values[i].BindArguments(valueEntries[valueKeys[i]]);
                 dst.SetList(values);
                 break;
             default:
@@ -1303,8 +1303,8 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(keyKeys, 0, keyCount, StringComparer.Ordinal);
-                var keys = new GesVmListObject(dst.OwningState, keyCount);
-                for (var i = 0; i < keyCount; i++) keys.Items[i].SetTag(keyKeys[i]);
+                var keys = dst.OwningState.CreateList(keyCount);
+                for (var i = 0; i < keyCount; i++) keys[i].SetTag(keyKeys[i]);
                 dst.SetList(keys);
                 break;
             default:
@@ -1330,12 +1330,12 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(entryKeys, 0, entryKeyCount, StringComparer.Ordinal);
-                var entries = new GesVmListObject(dst.OwningState, entryKeyCount);
+                var entries = dst.OwningState.CreateList(entryKeyCount);
                 for (var i = 0; i < entryKeyCount; i++)
                 {
                     var value = dst.OwningState.CreateNothing();
                     value.BindArguments(entryEntries[entryKeys[i]]);
-                    entries.Items[i].SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue> { ["key"] = dst.OwningState.CreateTag(entryKeys[i]), ["value"] = value }));
+                    entries[i].SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue> { ["key"] = dst.OwningState.CreateTag(entryKeys[i]), ["value"] = value }));
                 }
 
                 dst.SetList(entries);

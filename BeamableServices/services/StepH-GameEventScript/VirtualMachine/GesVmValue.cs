@@ -261,7 +261,7 @@ internal struct GesVmValue
         ObjectValue = values;
     }
 
-    internal void SetList(GesVmListObject list)
+    internal void SetList(GesVmValue[] list)
     {
         Kind = List;
         Flags = list.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
@@ -439,7 +439,7 @@ internal struct GesVmValue
             case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmFloatRange range:
                 stream = new GesVmFloatRangeStream(range.from, range.to, range.step);
                 return true;
-            case List when ObjectValue is GesVmListObject list:
+            case List when ObjectValue is GesVmValue[] list:
                 stream = new GesVmListStream(list);
                 return true;
             case Dice when ObjectValue is int[] dices:
@@ -477,7 +477,7 @@ internal struct GesVmValue
             Vector when ObjectValue is GesVmFloatTriplet vector => FormatTriplet("vector", vector, Unit),
             Point when ObjectValue is GesVmFloatTriplet point => FormatTriplet("point", point, Unit),
             Dice when ObjectValue is int[] dice => FormatDice(dice),
-            List when ObjectValue is GesVmListObject list => FormatList(list),
+            List when ObjectValue is GesVmValue[] list => FormatList(list),
             Map when ObjectValue is GesVmMapObject map => FormatMap(map),
             GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmRange range => FormatRange(range.from, range.to, range.step),
             GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmFloatRange range => FormatRange(range.from, range.to, range.step),
@@ -512,13 +512,13 @@ internal struct GesVmValue
         builder.Append(']');
         return builder.ToString();
     }
-    private static string FormatList(GesVmListObject list)
+    private static string FormatList(GesVmValue[] list)
     {
         var builder = new StringBuilder("[");
         for (var i = 0; i < list.Length; i++)
         {
             if (i > 0) builder.Append(", ");
-            builder.Append(list.Items[i].ConvertToText());
+            builder.Append(list[i].ConvertToText());
         }
 
         builder.Append(']');

@@ -14,7 +14,7 @@ internal static class GesVmRegisterTakeDrop
             case Series when source.ObjectValue is GameEventScriptSeriesValue series:
                 TakeFirstSeries(ref dst, series, count);
                 return;
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 TakeFirstList(ref dst, list, count);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -38,8 +38,8 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
-                if (list.Length > 0) dst = list.Items[randomGenerator.NextInclusiveInt(0, list.Length - 1)];
+            case List when source.ObjectValue is GesVmValue[] list:
+                if (list.Length > 0) dst = list[randomGenerator.NextInclusiveInt(0, list.Length - 1)];
                 else dst.SetNothing();
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -64,7 +64,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 TakeRandomList(ref dst, list, count, randomGenerator);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -91,7 +91,7 @@ internal static class GesVmRegisterTakeDrop
             case Series when source.ObjectValue is GameEventScriptSeriesValue series:
                 dst.SetSeries(count <= 0 ? series : series.Drop(count));
                 return;
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 DropFirstList(ref dst, list, count);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -115,7 +115,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 TakeLastList(ref dst, list, count);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -139,7 +139,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 DropLastList(ref dst, list, count);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -163,7 +163,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 TakeExtremeList(ref dst, list, count, true);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -187,7 +187,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 TakeExtremeList(ref dst, list, count, false);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -211,7 +211,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 DropExtremeList(ref dst, list, count, true);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -235,7 +235,7 @@ internal static class GesVmRegisterTakeDrop
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmListObject list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 DropExtremeList(ref dst, list, count, false);
                 return;
             case Dice when source.ObjectValue is int[] dice:
@@ -264,10 +264,10 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var list = dst.OwningState.CreateList(count);
-        for (var i = 0; i < count; i++) list.Items[i].BindArguments(series.GetTerm(i));
+        for (var i = 0; i < count; i++) list[i].BindArguments(series.GetTerm(i));
         dst.SetList(list);
     }
-    private static void TakeFirstList(ref GesVmValue dst, GesVmListObject source, short count)
+    private static void TakeFirstList(ref GesVmValue dst, GesVmValue[] source, short count)
     {
         if (count <= 0)
         {
@@ -277,10 +277,10 @@ internal static class GesVmRegisterTakeDrop
 
         var length = count < source.Length ? count : source.Length;
         var list = dst.OwningState.CreateList(length);
-        for (var i = 0; i < length; i++) list.Items[i] = source.Items[i];
+        for (var i = 0; i < length; i++) list[i] = source[i];
         dst.SetList(list);
     }
-    private static void DropFirstList(ref GesVmValue dst, GesVmListObject source, short count)
+    private static void DropFirstList(ref GesVmValue dst, GesVmValue[] source, short count)
     {
         if (count <= 0)
         {
@@ -291,10 +291,10 @@ internal static class GesVmRegisterTakeDrop
         var start = count < source.Length ? count : source.Length;
         var length = source.Length - start;
         var list = dst.OwningState.CreateList(length);
-        for (var i = 0; i < length; i++) list.Items[i] = source.Items[start + i];
+        for (var i = 0; i < length; i++) list[i] = source[start + i];
         dst.SetList(list);
     }
-    private static void TakeLastList(ref GesVmValue dst, GesVmListObject source, short count)
+    private static void TakeLastList(ref GesVmValue dst, GesVmValue[] source, short count)
     {
         if (count <= 0)
         {
@@ -305,10 +305,10 @@ internal static class GesVmRegisterTakeDrop
         var length = count < source.Length ? count : source.Length;
         var start = source.Length - length;
         var list = dst.OwningState.CreateList(length);
-        for (var i = 0; i < length; i++) list.Items[i] = source.Items[start + i];
+        for (var i = 0; i < length; i++) list[i] = source[start + i];
         dst.SetList(list);
     }
-    private static void DropLastList(ref GesVmValue dst, GesVmListObject source, short count)
+    private static void DropLastList(ref GesVmValue dst, GesVmValue[] source, short count)
     {
         if (count <= 0)
         {
@@ -318,7 +318,7 @@ internal static class GesVmRegisterTakeDrop
 
         var length = count < source.Length ? source.Length - count : 0;
         var list = dst.OwningState.CreateList(length);
-        for (var i = 0; i < length; i++) list.Items[i] = source.Items[i];
+        for (var i = 0; i < length; i++) list[i] = source[i];
         dst.SetList(list);
     }
     private static void TakeFirstDice(ref GesVmValue dst, int[] source, short count)
@@ -375,7 +375,7 @@ internal static class GesVmRegisterTakeDrop
         for (var i = 0; i < length; i++) dice[i] = source[i];
         dst.SetDice(dice);
     }
-    private static void TakeExtremeList(ref GesVmValue dst, GesVmListObject source, short count, bool highest)
+    private static void TakeExtremeList(ref GesVmValue dst, GesVmValue[] source, short count, bool highest)
     {
         if (count <= 0 || source.Length == 0)
         {
@@ -398,17 +398,17 @@ internal static class GesVmRegisterTakeDrop
                     continue;
                 }
 
-                var comparison = CompareForOrdering(ref source.Items[j], ref source.Items[best]);
+                var comparison = CompareForOrdering(ref source[j], ref source[best]);
                 if (highest ? comparison > 0 : comparison < 0) best = j;
             }
 
             selected[best] = true;
-            list.Items[i] = source.Items[best];
+            list[i] = source[best];
         }
 
         dst.SetList(list);
     }
-    private static void DropExtremeList(ref GesVmValue dst, GesVmListObject source, short count, bool highest)
+    private static void DropExtremeList(ref GesVmValue dst, GesVmValue[] source, short count, bool highest)
     {
         if (count <= 0)
         {
@@ -424,13 +424,13 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var selected = new bool[source.Length];
-        SelectExtremeSlots(source.Items, source.Length, selected, selectedCount, highest);
+        SelectExtremeSlots(source, source.Length, selected, selectedCount, highest);
         var list = dst.OwningState.CreateList(source.Length - selectedCount);
         var target = 0;
         for (var i = 0; i < source.Length; i++)
         {
             if (selected[i]) continue;
-            list.Items[target++] = source.Items[i];
+            list[target++] = source[i];
         }
 
         dst.SetList(list);
@@ -534,7 +534,7 @@ internal static class GesVmRegisterTakeDrop
             }
 
             var list = dst.OwningState.CreateList(length);
-            Array.Copy(buffer, start, list.Items, 0, length);
+            Array.Copy(buffer, start, list, 0, length);
             dst.SetList(list);
         }
         finally
@@ -633,7 +633,7 @@ internal static class GesVmRegisterTakeDrop
             for (var i = 0; i < itemCount; i++)
             {
                 if (selected[i]) continue;
-                list.Items[target++] = buffer[i];
+                list[target++] = buffer[i];
             }
 
             dst.SetList(list);
@@ -690,7 +690,7 @@ internal static class GesVmRegisterTakeDrop
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeRandomList(ref GesVmValue dst, GesVmListObject source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static void TakeRandomList(ref GesVmValue dst, GesVmValue[] source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
         if (count <= 0 || source.Length == 0)
         {
@@ -701,7 +701,7 @@ internal static class GesVmRegisterTakeDrop
         var length = count < source.Length ? count : source.Length;
         var indices = CreateShuffledPrefix(source.Length, length, randomGenerator);
         var list = dst.OwningState.CreateList(length);
-        for (var i = 0; i < length; i++) list.Items[i] = source.Items[indices[i]];
+        for (var i = 0; i < length; i++) list[i] = source[indices[i]];
         dst.SetList(list);
     }
     private static void TakeRandomDice(ref GesVmValue dst, int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
@@ -734,8 +734,8 @@ internal static class GesVmRegisterTakeDrop
             var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
             for (var i = 0; i < length; i++)
             {
-                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, indices[i] + 1L, out var value)) list.Items[i].SetInteger(value);
-                else list.Items[i].SetNothing();
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, indices[i] + 1L, out var value)) list[i].SetInteger(value);
+                else list[i].SetNothing();
             }
 
             dst.SetList(list);
@@ -762,8 +762,8 @@ internal static class GesVmRegisterTakeDrop
             } while (duplicate);
 
             terms[i] = index;
-            if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) list.Items[i].SetInteger(value);
-            else list.Items[i].SetNothing();
+            if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) list[i].SetInteger(value);
+            else list[i].SetNothing();
         }
 
         dst.SetList(list);
@@ -784,8 +784,8 @@ internal static class GesVmRegisterTakeDrop
             var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
             for (var i = 0; i < length; i++)
             {
-                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, indices[i] + 1L, out var value)) list.Items[i].SetFloat(value);
-                else list.Items[i].SetNothing();
+                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, indices[i] + 1L, out var value)) list[i].SetFloat(value);
+                else list[i].SetNothing();
             }
 
             dst.SetList(list);
@@ -812,8 +812,8 @@ internal static class GesVmRegisterTakeDrop
             } while (duplicate);
 
             terms[i] = index;
-            if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) list.Items[i].SetFloat(value);
-            else list.Items[i].SetNothing();
+            if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, index + 1L, out var value)) list[i].SetFloat(value);
+            else list[i].SetNothing();
         }
 
         dst.SetList(list);
@@ -847,7 +847,7 @@ internal static class GesVmRegisterTakeDrop
             var length = count < itemCount ? count : itemCount;
             var indices = CreateShuffledPrefix(itemCount, length, randomGenerator);
             var list = dst.OwningState.CreateList(length);
-            for (var i = 0; i < length; i++) list.Items[i] = buffer[indices[i]];
+            for (var i = 0; i < length; i++) list[i] = buffer[indices[i]];
             dst.SetList(list);
         }
         finally
@@ -899,7 +899,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var list = dst.OwningState.CreateList(length);
-        Array.Copy(buffer, list.Items, length);
+        Array.Copy(buffer, list, length);
         dst.SetList(list);
     }
     private static void TakeFirstRange(ref GesVmValue dst, GesVmRange range, short count)

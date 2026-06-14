@@ -211,8 +211,8 @@ internal static class GesVmRegisterCallExternal
                 break;
             case GameEventScriptValueKind.List:
                 var sourceItems = argument.AsList();
-                var list = new GesVmListObject(destination.OwningState, sourceItems.Count);
-                for (var index = 0; index < sourceItems.Count; index++) list.Items[index].BindArguments(sourceItems[index]);
+                var list = destination.OwningState.CreateList(sourceItems.Count);
+                for (var index = 0; index < sourceItems.Count; index++) list[index].BindArguments(sourceItems[index]);
                 destination.SetList(list);
                 break;
             case GameEventScriptValueKind.Map:
@@ -294,7 +294,7 @@ internal static class GesVmRegisterCallExternal
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
         Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
         Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
-        List when a.ObjectValue is GesVmListObject list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
+        List when a.ObjectValue is GesVmValue[] list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
         Map when a.ObjectValue is GesVmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
         Custom when a.ObjectValue is GameEventScriptValue custom => custom,
         Custom when a.ObjectValue is GesVmMapObject map => map.ToGameEventScriptCustomTypeValue(a.OwningState),
@@ -306,12 +306,12 @@ internal static class GesVmRegisterCallExternal
         Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
         _ => GameEventScriptValueFactory.GesNothing(),
     };
-    private static List<GameEventScriptValue> ToGameEventScriptValues(this GesVmListObject list)
+    private static List<GameEventScriptValue> ToGameEventScriptValues(this GesVmValue[] list)
     {
-        var result = new List<GameEventScriptValue>(list.Items.Length);
-        for (var i = 0; i < list.Items.Length; i++)
+        var result = new List<GameEventScriptValue>(list.Length);
+        for (var i = 0; i < list.Length; i++)
         {
-            result.Add(list.Items[i].ToGameEventScriptValue());
+            result.Add(list[i].ToGameEventScriptValue());
         }
 
         return result;

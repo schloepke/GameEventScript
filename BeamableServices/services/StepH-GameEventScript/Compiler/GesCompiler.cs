@@ -6,12 +6,11 @@ using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 
 namespace StepH.GameEventScript.Compiler;
 
-internal static class GesBinaryCompiler
+internal static class GesCompiler
 {
     public static GameEventScriptBinary Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
     {
@@ -329,7 +328,7 @@ internal static class GesBinaryCompiler
                     EmitUnary(destination, unary.Operator, operand);
                     return true;
                 }
-                case BinaryExpressionNode binary when binary.Operator is not (GesBinaryOperator.Or or GesBinaryOperator.And or GesBinaryOperator.Implies):
+                case BinaryExpressionNode { Operator: not (GesBinaryOperator.Or or GesBinaryOperator.And or GesBinaryOperator.Implies) } binary:
                 {
                     var left = EmitExpressionForRead(binary.Left, context, state);
                     var right = EmitExpressionForRead(binary.Right, context, state);
@@ -560,7 +559,7 @@ internal static class GesBinaryCompiler
             var target = EmitExpressionForRead(access.Target, context, state);
             switch (access.Selector)
             {
-                case ExpressionSelectorNode { Expression: IntegerLiteralExpressionNode integer } when integer.Value is >= 0 and <= ushort.MaxValue:
+                case ExpressionSelectorNode { Expression: IntegerLiteralExpressionNode { Value: >= 0 and <= ushort.MaxValue } integer }:
                     _builder.IndexAccess(destination, (ushort)integer.Value, target);
                     return;
                 case ExpressionSelectorNode { Expression: TextLiteralExpressionNode text }:
@@ -1189,9 +1188,8 @@ internal static class GesBinaryCompiler
         {
             var result = state.AllocateTemporary(_builder, context);
             _builder.LoadTrue(result);
-            for (var index = 0; index < pattern.Entries.Count; index++)
+            foreach (var entry in pattern.Entries)
             {
-                var entry = pattern.Entries[index];
                 var member = state.AllocateTemporary(_builder, context);
                 _builder.MemberAccess(member, entry.Key, target);
                 GesRegisterRef entryMatch;
@@ -1550,8 +1548,7 @@ internal static class GesBinaryCompiler
                     if (!field.IsConstructorParameter) continue;
                     if (field.ConstructorLabel == GameEventScriptMessageSignature.UnlabeledParameterName)
                     {
-                        if (unlabeledIndex < unlabeled.Length) stagedArguments.Add(PrepareStageArgument(unlabeled[unlabeledIndex++].Expression, context, state));
-                        else stagedArguments.Add(StageArgumentPlan.Nothing);
+                        stagedArguments.Add(unlabeledIndex < unlabeled.Length ? PrepareStageArgument(unlabeled[unlabeledIndex++].Expression, context, state) : StageArgumentPlan.Nothing);
                     }
                     else if (labeled.TryGetValue(field.ConstructorLabel!, out var argument))
                     {
@@ -1891,7 +1888,7 @@ internal static class GesBinaryCompiler
                 return true;
             }
 
-            seed = default;
+            seed = 0;
             return false;
         }
 
@@ -1913,9 +1910,7 @@ internal static class GesBinaryCompiler
 
         private static bool TryGetShortIntegerLiteral(ExpressionNode expression, out short value)
         {
-            if (expression is IntegerLiteralExpressionNode integer &&
-                integer.Value >= short.MinValue &&
-                integer.Value <= short.MaxValue)
+            if (expression is IntegerLiteralExpressionNode { Value: >= short.MinValue and <= short.MaxValue } integer)
             {
                 value = (short)integer.Value;
                 return true;
@@ -2019,9 +2014,8 @@ internal static class GesBinaryCompiler
         {
             var captures = new List<StreamCapture>();
             var seen = new HashSet<string>(StringComparer.Ordinal);
-            for (var index = 0; index < identifiers.Count; index++)
+            foreach (var identifier in identifiers)
             {
-                var identifier = identifiers[index];
                 if (!seen.Add(identifier)) continue;
                 captures.Add(new StreamCapture(identifier, context.Require(identifier)));
             }
@@ -2148,7 +2142,7 @@ internal static class GesBinaryCompiler
                 case PredicateSelectorNode predicate:
                     CollectReferencedIdentifiers(predicate.Predicate, identifiers, WithBound(bound, predicate.Identifier));
                     break;
-                case EdgeSelectorNode edge when edge.Predicate is not null && !string.IsNullOrEmpty(edge.Identifier):
+                case EdgeSelectorNode { Predicate: not null } edge when !string.IsNullOrEmpty(edge.Identifier):
                     CollectReferencedIdentifiers(edge.Predicate, identifiers, WithBound(bound, edge.Identifier!));
                     break;
                 case MinSelectorNode min:
@@ -2179,7 +2173,7 @@ internal static class GesBinaryCompiler
                     }
 
                     break;
-                case DistinctSelectorNode distinct when distinct.Projection is not null && !string.IsNullOrEmpty(distinct.Identifier):
+                case DistinctSelectorNode { Projection: not null } distinct when !string.IsNullOrEmpty(distinct.Identifier):
                     CollectReferencedIdentifiers(distinct.Projection, identifiers, WithBound(bound, distinct.Identifier!));
                     break;
                 case GroupBySelectorNode groupBy:

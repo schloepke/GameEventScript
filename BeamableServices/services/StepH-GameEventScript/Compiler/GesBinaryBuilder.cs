@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
@@ -188,7 +189,7 @@ internal sealed partial class GesBinaryBuilder
         var labelAddresses = ResolveLabelAddresses(optimizedItems);
         var registerMap = AllocateRegisters(optimizedItems);
         var items = PatchRoutineSlotLocals(optimizedItems, registerMap);
-        var builder = new GameEventScriptBinaryBuilder()
+        var builder = new BinaryMaterializer()
             .WithVersion(_version)
             .WithModuleName(_moduleName)
             .WithFlag(GameEventScriptBinaryFlags.Optimization, (_flags & GameEventScriptBinaryFlags.Optimization) != 0)
@@ -198,7 +199,7 @@ internal sealed partial class GesBinaryBuilder
 
         ushort ResolveText(string text)
         {
-            builder.AddStringPoolElement(text, out var index);
+            builder.AddText(text, out var index);
             return index;
         }
 
@@ -212,7 +213,7 @@ internal sealed partial class GesBinaryBuilder
 
             var key = string.Join(",", values.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             if (listIndexes.TryGetValue(key, out var existing)) return existing;
-            builder.AddUint16TableEntry(values, out var listIndex);
+            builder.AddUInt16Slice(values, out var listIndex);
             listIndexes.Add(key, listIndex);
             return listIndex;
         }
@@ -227,7 +228,7 @@ internal sealed partial class GesBinaryBuilder
 
             var key = "t:" + string.Join(",", indexes.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             if (listIndexes.TryGetValue(key, out var existing)) return existing;
-            builder.AddUint16TableEntry(indexes, out var listIndex);
+            builder.AddUInt16Slice(indexes, out var listIndex);
             listIndexes.Add(key, listIndex);
             return listIndex;
         }
@@ -236,14 +237,14 @@ internal sealed partial class GesBinaryBuilder
         foreach (var item in items)
         {
             if (item.Instruction is null) continue;
-            builder.AddBytecodeInstruction(EncodeInstruction(item.Instruction, registerMap, labelAddresses, bindIds, ResolveText, ResolveList, ResolveTextList));
+            builder.AddInstruction(EncodeInstruction(item.Instruction, registerMap, labelAddresses, bindIds, ResolveText, ResolveList, ResolveTextList));
         }
 
         return builder.Build();
     }
 
     private ushort[] ResolveBinds(
-        GameEventScriptBinaryBuilder builder,
+        BinaryMaterializer builder,
         Func<string, ushort> resolveText,
         IReadOnlyDictionary<int, ushort> labelAddresses)
     {
@@ -266,6 +267,115 @@ internal sealed partial class GesBinaryBuilder
         }
 
         return result;
+    }
+
+    private sealed class BinaryMaterializer
+    {
+        private ushort _version = 1;
+        private string _moduleName = "Unknown";
+        private GameEventScriptBinaryFlags _flags = GameEventScriptBinaryFlags.None;
+        private readonly List<string> _textConstants = [];
+        private readonly Dictionary<string, ushort> _textIndexes = [];
+        private readonly List<IReadOnlyList<ushort>> _uint16Slices = [];
+        private readonly List<GameEventScriptBinaryBindEntry> _binds = [];
+        private readonly List<GameEventScriptBytecodeInstruction> _instructions = [];
+
+        public BinaryMaterializer WithVersion(ushort version)
+        {
+            _version = version;
+            return this;
+        }
+
+        public BinaryMaterializer WithModuleName(string moduleName)
+        {
+            _moduleName = string.IsNullOrWhiteSpace(moduleName)
+                ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
+                : moduleName;
+            return this;
+        }
+
+        public BinaryMaterializer WithFlag(GameEventScriptBinaryFlags flag, bool enabled = true)
+        {
+            _flags = enabled ? _flags | flag : _flags & ~flag;
+            return this;
+        }
+
+        public BinaryMaterializer AddText(string text, out ushort index)
+        {
+            _ = text ?? throw new ArgumentNullException(nameof(text));
+            if (_textIndexes.TryGetValue(text, out index))
+            {
+                return this;
+            }
+
+            index = checked((ushort)_textConstants.Count);
+            _textConstants.Add(text);
+            _textIndexes.Add(text, index);
+            return this;
+        }
+
+        public BinaryMaterializer AddUInt16Slice(IReadOnlyList<ushort> value, out ushort index)
+        {
+            index = checked((ushort)_uint16Slices.Count);
+            _uint16Slices.Add(value.ToArray());
+            return this;
+        }
+
+        public BinaryMaterializer AddBind(GameEventScriptBinaryBindEntry bind)
+        {
+            _binds.Add(bind);
+            return this;
+        }
+
+        public BinaryMaterializer AddInstruction(GameEventScriptBytecodeInstruction instruction)
+        {
+            _instructions.Add(instruction);
+            return this;
+        }
+
+        public GameEventScriptBinary Build()
+            => new(
+                new GameEventScriptBinaryHeader { Version = _version, Flags = _flags },
+                _moduleName,
+                BuildTextTable(_textConstants),
+                BuildUInt16Table(_uint16Slices),
+                new GameEventScriptBinaryBindTable(_binds),
+                _instructions.ToArray());
+
+        private static GameEventScriptTextTable BuildTextTable(IReadOnlyList<string> values)
+        {
+            var data = new List<byte>();
+            var slices = new List<GameEventScriptTextTable.SliceEntry>();
+            foreach (var value in values)
+            {
+                var bytes = Encoding.UTF8.GetBytes(value);
+                slices.Add(new GameEventScriptTextTable.SliceEntry
+                {
+                    Start = checked((ushort)data.Count),
+                    Length = checked((ushort)bytes.Length)
+                });
+                data.AddRange(bytes);
+            }
+
+            return new GameEventScriptTextTable { Slices = slices.ToArray(), Data = data.ToArray() };
+        }
+
+        private static GameEventScriptUInt16Table BuildUInt16Table(IReadOnlyList<IReadOnlyList<ushort>> values)
+        {
+            var data = new List<ushort>();
+            var slices = new List<GameEventScriptUInt16Table.SliceEntry>();
+            foreach (var value in values)
+            {
+                slices.Add(new GameEventScriptUInt16Table.SliceEntry
+                {
+                    Start = checked((ushort)data.Count),
+                    Length = checked((ushort)value.Count)
+                });
+                data.AddRange(value);
+            }
+
+            return new GameEventScriptUInt16Table { Slices = slices.ToArray(), Data = data.ToArray() };
+        }
     }
 
     private static int BindKindOrder(GameEventScriptBinaryBindKind kind)

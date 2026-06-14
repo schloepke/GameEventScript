@@ -1,5 +1,3 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter.OperandPart;
@@ -7,7 +5,7 @@ using static StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter.Opera
 namespace StepH.GameEventScript.Extensions;
 
 // ReSharper disable InconsistentNaming
-public class GameEventScriptOpcodePrinter
+internal static class GameEventScriptOpcodePrinter
 {
     internal enum OperandPart
     {

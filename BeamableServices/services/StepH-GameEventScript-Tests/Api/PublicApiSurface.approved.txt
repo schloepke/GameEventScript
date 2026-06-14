@@ -28,20 +28,6 @@ struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptB
   property System.UInt16 EntryAddress { get }
   property System.UInt16 Id { get }
   property System.UInt16 Name { get }
-class StepH.GameEventScript.Api.GameEventScriptBinaryBuilder
-  ctor GameEventScriptBinaryBuilder()
-  method StepH.GameEventScript.Api.GameEventScriptBinary Build()
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBind(StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry bind)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBytecodeInstruction(StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction instruction)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddBytecodeInstructions(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> instructions)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElement(System.String stringPoolElement, System.UInt16& index)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddStringPoolElements(System.Collections.Generic.IReadOnlyList<System.String> values, System.UInt16[]& indexes)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddUint16TableEntries(System.Collections.Generic.IReadOnlyList<System.Collections.Generic.IReadOnlyList<System.UInt16>> values, System.UInt16[]& indexes)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder AddUint16TableEntry(System.Collections.Generic.IReadOnlyList<System.UInt16> value, System.UInt16& index)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFileSize(System.UInt32 fileSize)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithFlag(StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinaryFlags flag, System.Boolean enabled)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithModuleName(System.String moduleName)
-  method StepH.GameEventScript.Api.GameEventScriptBinaryBuilder WithVersion(System.UInt16 version)
 struct StepH.GameEventScript.Api.GameEventScriptBinaryHeader
   field static System.UInt32 HeaderSize
   field static System.UInt32 Magic
@@ -539,8 +525,6 @@ static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.String scriptSource)
 static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter
   method static StepH.GameEventScript.Types.GameEventScriptValue ToGameEventScriptValue(System.Object value)
-class StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter
-  ctor GameEventScriptOpcodePrinter()
 static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptBinary Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()

@@ -36,23 +36,6 @@ public sealed class GameEventScriptBuilder
         _options = new GameEventScriptCompileOptions
         {
             Optimize = enabled,
-            EnableDiagnostics = _options.EnableDiagnostics,
-            EnableDebugInfo = _options.EnableDebugInfo
-        };
-        return this;
-    }
-
-    /// <summary>
-    /// Enables or disables diagnostic information generation during the compilation process in order to add trace generation into the compiled code.
-    /// </summary>
-    /// <param name="enabled">A boolean value indicating whether diagnostic information should be enabled. Defaults to true.</param>
-    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified diagnostic setting applied.</returns>
-    public GameEventScriptBuilder WithEnableDiagnostic(bool enabled = true)
-    {
-        _options = new GameEventScriptCompileOptions
-        {
-            Optimize = _options.Optimize,
-            EnableDiagnostics = enabled,
             EnableDebugInfo = _options.EnableDebugInfo
         };
         return this;
@@ -68,7 +51,6 @@ public sealed class GameEventScriptBuilder
         _options = new GameEventScriptCompileOptions
         {
             Optimize = _options.Optimize,
-            EnableDiagnostics = _options.EnableDiagnostics,
             EnableDebugInfo = enabled
         };
         return this;
@@ -132,7 +114,7 @@ public sealed class GameEventScriptBuilder
     /// <returns>The generated GameEventScript bytecode.</returns>
     public GameEventScriptBinary Compile(GameEventScriptCompileOptions? options = null)
     {
-        var compileOptions = (options ?? _options).NormalizeDebugInfo();
+        var compileOptions = options ?? _options;
         return GesBinaryCompiler.Compile(BuildModule(compileOptions));
     }
 

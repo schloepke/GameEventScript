@@ -16,7 +16,7 @@ internal static class GesBinaryCompiler
     public static GameEventScriptBinary Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
-        var compileOptions = (options ?? new GameEventScriptCompileOptions()).NormalizeDebugInfo();
+        var compileOptions = options ?? new GameEventScriptCompileOptions();
         return new BinaryCompiler(module, compileOptions).Build();
     }
 

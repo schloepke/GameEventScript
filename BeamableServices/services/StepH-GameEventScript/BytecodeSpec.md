@@ -1251,9 +1251,9 @@ does not contain diagnostic-only instructions. Diagnostic-only metadata is
 carried by the optional `DebugSegment`, linked to instruction addresses and
 registers. Runtime collectors read the executable diagnostic sites derived from that
 segment; production bytecode side tables must not carry diagnostic-only fields.
-If debug info is disabled, the debug segment may be empty. Compile diagnostics
-request debug info so trace collectors can resolve instruction addresses and
-registers.
+If debug info is disabled, the debug segment may be empty. Diagnostics are not a
+bytecode feature; host/runtime diagnostics should use observer or collector APIs
+and optional debug metadata when source/register lookup is needed.
 
 ```text
 DebugSegment
@@ -1279,8 +1279,8 @@ The VM records diagnostic events while executing normal instructions:
 
 ## Debug Segment
 
-Debug metadata is optional and should be generated when compile diagnostics are
-enabled, and may also be generated for deterministic dumps or debugger UIs.
+Debug metadata is optional and may be generated for deterministic dumps,
+diagnostic correlation, or debugger UIs.
 
 ```text
 DebugSegment

@@ -58,7 +58,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddScript(System.String text, System.String sourceName)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithDebugInfo(System.Boolean enabled)
-  method StepH.GameEventScript.Api.GameEventScriptBuilder WithEnableDiagnostic(System.Boolean enabled)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(System.Type[] types)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithOptimization(System.Boolean enabled)
@@ -333,7 +332,6 @@ class StepH.GameEventScript.Api.GameEventScriptCompileException
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
   ctor GameEventScriptCompileOptions()
   property System.Boolean EnableDebugInfo { get set }
-  property System.Boolean EnableDiagnostics { get set }
   property System.Boolean Optimize { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException
   ctor GameEventScriptDynamicLinkException(System.String message)

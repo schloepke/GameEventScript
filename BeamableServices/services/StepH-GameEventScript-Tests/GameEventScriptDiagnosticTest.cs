@@ -48,7 +48,7 @@ public class GameEventScriptDiagnosticTest
     {
         var bytecode = GameEventScriptBuilder.Create()
             .AddScript(script)
-            .Compile(new GameEventScriptCompileOptions { EnableDiagnostics = true });
+            .Compile(new GameEventScriptCompileOptions { EnableDebugInfo = true });
         
         var input = Create("Start", ("startPosition", GameEventScriptValueFactory.GesVector(20, 15)));
         

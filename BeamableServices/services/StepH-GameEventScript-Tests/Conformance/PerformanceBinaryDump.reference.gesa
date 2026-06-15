@@ -41,36 +41,15 @@ cases=5
 
 .segment text
 
-T_Start:			.text "Start"
 T_value:			.text "value"
-T_aim:				.text "aim"
-T_bearing:			.text "bearing"
-T_degree:			.text "degree"
-T_range:			.text "range"
-T_meter:			.text "meter"
-T_steps:			.text "steps"
-T_direction:		.text "direction"
-T_vector:			.text "vector"
-T_checksum:			.text "checksum"
-T_number:			.text "number"
-T_a:				.text "a"
-T_b:				.text "b"
-T_c:				.text "c"
-T_d:				.text "d"
-T_e:				.text "e"
-T_f:				.text "f"
-T_g:				.text "g"
-T_h:				.text "h"
-T_i:				.text "i"
-T_j:				.text "j"
-T_Done:				.text "Done"
+T_Start:			.text "Start"
 T_result:			.text "result"
+T_Done:				.text "Done"
 
 
 .segment lists
 
-U16_0:				.u16 []
-Args_1:				.registers [r10]
+Args_0:				.registers [r10]
 
 
 .segment bind
@@ -102,7 +81,7 @@ Start:				 // handler Start(value)
 					Subtract r9, r8, r11
 					LoadInteger r11, #5
 					IntegerDivide r10, r9, r11
-					EmitMessage Outbound_Done, Args_1 // "Done(result)"
+					EmitMessage Outbound_Done, Args_0 // "Done(result)"
 					ReturnVoid
 
 
@@ -139,30 +118,14 @@ Start:				 // handler Start(value)
 .segment text
 
 T_Start:			.text "Start"
-T_aim:				.text "aim"
-T_bearing:			.text "bearing"
-T_degree:			.text "degree"
-T_range:			.text "range"
-T_meter:			.text "meter"
-T_steps:			.text "steps"
-T_direction:		.text "direction"
-T_vector:			.text "vector"
-T_checksum:			.text "checksum"
-T_number:			.text "number"
-T_values:			.text "values"
-T_list:				.text "list"
-T_item:				.text "item"
 T_total:			.text "total"
-T_value:			.text "value"
 T_count:			.text "count"
-T_len:				.text "len"
 T_Done:				.text "Done"
 
 
 .segment lists
 
-Captures_0:			.registers []
-Args_1:				.registers [r2, r3]
+Args_0:				.registers [r2, r3]
 
 
 .segment bind
@@ -174,31 +137,20 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_count] /
 .segment code
 
 Start:				 // handler Start()
-					SlotLocals #11
+					SlotLocals #8
 					ListBuilderCreate r4
-					Nop
-					CreateRangeIteratorShort r6, #1, #100, #1
-Start_4:			StreamNext r7, r6, Start_12
-					SlotLocals #2
-					Move r5, r7
-					LoadInteger r8, #2
-					Multiply r9, r5, r8
-					ListBuilderAdd r4, r9
-					SlotLocals #-2
-					Jump Start_4
-Start_12:			StreamClose r6
-					Nop
-					ListBuilderFinish r10, r4
-					Move r0, r10
-					StreamCreate r4, r0
-					StreamMap r5, r4, Start_23, r0, Captures_0
-					Sum r6, r5
-					Move r2, r6
+					CreateRangeIteratorShort r5, #1, #100, #1
+Start_3:			StreamNext r1, r5, Start_8
+					LoadInteger r6, #2
+					Multiply r7, r1, r6
+					ListBuilderAdd r4, r7
+					Jump Start_3
+Start_8:			StreamClose r5
+					ListBuilderFinish r0, r4
+					Sum r2, r0
 					Length r3, r0
-					EmitMessage Outbound_Done, Args_1 // "Done(total, count)"
+					EmitMessage Outbound_Done, Args_0 // "Done(total, count)"
 					ReturnVoid
-Start_23:			SlotLocals #0
-					ReturnValue r0
 
 
 // -------------------------------------------------------------------------------
@@ -238,43 +190,30 @@ Start_23:			SlotLocals #0
 
 .segment text
 
-T_sample:			.text "sample"
-T_value:			.text "value"
-T_number:			.text "number"
-T_label:			.text "label"
-T_text:				.text "text"
-T_doubled:			.text "doubled"
 T_Start:			.text "Start"
-T_aim:				.text "aim"
-T_bearing:			.text "bearing"
-T_degree:			.text "degree"
-T_range:			.text "range"
-T_meter:			.text "meter"
-T_steps:			.text "steps"
-T_direction:		.text "direction"
-T_vector:			.text "vector"
-T_checksum:			.text "checksum"
-T_rec:				.text "rec"
-T_17:				.text "_"
-T_ok:				.text "ok"
+T_1:				.text "_"
+T_label:			.text "label"
+T_sample:			.text "sample"
+T_doubled:			.text "doubled"
 T_textNumber:		.text "textNumber"
-T_Done:				.text "Done"
 T_isSample:			.text "isSample"
+T_Done:				.text "Done"
+T_ok:				.text "ok"
+T_value:			.text "value"
 T___type:			.text "__type"
 
 
 .segment lists
 
-U16_0:				.u16 []
-Args_1:				.registers [r2, r3, r1, r4]
-Keys_2:				.texts [T_value, T_label, T_doubled, T___type] // "value", "label", "doubled", "__type"
+Args_0:				.registers [r2, r3, r1, r4]
+Keys_1:				.texts [T_value, T_label, T_doubled, T___type] // "value", "label", "doubled", "__type"
 
 
 .segment bind
 
 Handler_Start:		.bind MessageHandler id=0 name=T_Start args=[] entry=Start // "Start()"
+Record_sample:		.bind Record id=0 name=T_sample args=[T_1, T_label] entry=record_sample // "sample(_, label)"
 Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_doubled, T_label, T_textNumber, T_isSample] // "Done(doubled, label, textNumber, isSample)"
-Record_sample:		.bind Record id=0 name=T_sample args=[T_17, T_label] entry=record_sample // "sample(_, label)"
 
 
 .segment code
@@ -283,17 +222,16 @@ Start:				 // handler Start()
 					SlotLocals #5
 					StageInteger #21
 					StageText T_ok // "ok"
-					CreateRecord r2, Record_sample // "sample(_, label)"
-					Move r0, r2
+					CreateRecord r0, Record_sample // "sample(_, label)"
 					LoadInteger r1, #42
 					MemberAccess r2, T_doubled, r0 // "doubled"
 					MemberAccess r3, T_label, r0 // "label"
 					CheckCustomType r4, r0, T_sample // "sample"
-					EmitMessage Outbound_Done, Args_1 // "Done(doubled, label, textNumber, isSample)"
+					EmitMessage Outbound_Done, Args_0 // "Done(doubled, label, textNumber, isSample)"
 					ReturnVoid
 
 record_sample:		 // record sample(_, label)
-					SlotLocals #5
+					SlotLocals #3
 					CastNumeric r0, r0
 					Cast r1, r1, Text
 					LoadInteger r3, #2
@@ -303,9 +241,9 @@ record_sample:		 // record sample(_, label)
 					StageRegister r1
 					StageRegister r2
 					StageTag T_sample // "sample"
-					CreateMap r5, Keys_2 // "value", "label", "doubled", "__type"
-					CastCustom r6, r5, T_sample // "sample"
-					ReturnValue r6
+					CreateMap r3, Keys_1 // "value", "label", "doubled", "__type"
+					CastCustom r4, r3, T_sample // "sample"
+					ReturnValue r4
 
 
 // -------------------------------------------------------------------------------
@@ -343,20 +281,7 @@ record_sample:		 // record sample(_, label)
 .segment text
 
 T_Start:			.text "Start"
-T_aim:				.text "aim"
-T_bearing:			.text "bearing"
-T_degree:			.text "degree"
-T_range:			.text "range"
-T_meter:			.text "meter"
-T_steps:			.text "steps"
-T_direction:		.text "direction"
-T_vector:			.text "vector"
-T_checksum:			.text "checksum"
-T_number:			.text "number"
-T_values:			.text "values"
-T_firstTen:			.text "firstTen"
 T_directTotal:		.text "directTotal"
-T_value:			.text "value"
 T_streamTotal:		.text "streamTotal"
 T_streamCount:		.text "streamCount"
 T_Done:				.text "Done"
@@ -365,7 +290,7 @@ T_Done:				.text "Done"
 .segment lists
 
 Captures_0:			.registers []
-Args_1:				.registers [r3, r4, r5]
+Args_1:				.registers [r2, r3, r4]
 
 
 .segment bind
@@ -377,7 +302,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 .segment code
 
 Start:				 // handler Start()
-					SlotLocals #11
+					SlotLocals #7
 					StageInteger #1
 					StageInteger #2
 					StageInteger #3
@@ -398,48 +323,32 @@ Start:				 // handler Start()
 					StageInteger #18
 					StageInteger #19
 					StageInteger #20
-					CreateList r6
-					Move r0, r6
-					TakeFirst r6, r0, #10
-					Move r1, r6
-					StreamCreate r6, r1
-					StreamMap r7, r6, Start_42, r0, Captures_0
-					Sum r8, r7
-					Move r3, r8
+					CreateList r0
+					TakeFirst r1, r0, #10
+					Sum r2, r1
+					StreamCreate r5, r0
+					StreamFilter r6, r5, Start_33, r0, Captures_0
+					StreamMap r5, r6, Start_39, r0, Captures_0
+					Sum r3, r5
 					StreamCreate r6, r0
-					StreamFilter r7, r6, Start_44, r0, Captures_0
-					StreamMap r8, r7, Start_50, r0, Captures_0
-					StreamMap r9, r8, Start_54, r0, Captures_0
-					Sum r10, r9
-					Move r4, r10
-					StreamCreate r6, r0
-					StreamFilter r7, r6, Start_56, r0, Captures_0
-					StreamFilter r8, r7, Start_60, r0, Captures_0
-					Count r9, r8
-					Move r5, r9
+					StreamFilter r5, r6, Start_43, r0, Captures_0
+					Count r4, r5
 					EmitMessage Outbound_Done, Args_1 // "Done(directTotal, streamTotal, streamCount)"
 					ReturnVoid
-Start_42:			SlotLocals #0
-					ReturnValue r0
-Start_44:			SlotLocals #4
+Start_33:			SlotLocals #3
 					LoadInteger r1, #2
 					Modulo r2, r0, r1
-					LoadInteger r3, #0
-					Equal r4, r2, r3
-					ReturnValue r4
-Start_50:			SlotLocals #2
+					LoadInteger r1, #0
+					Equal r3, r2, r1
+					ReturnValue r3
+Start_39:			SlotLocals #2
 					LoadInteger r1, #2
 					Multiply r2, r0, r1
 					ReturnValue r2
-Start_54:			SlotLocals #0
-					ReturnValue r0
-Start_56:			SlotLocals #2
+Start_43:			SlotLocals #2
 					LoadInteger r1, #10
 					Greater r2, r0, r1
 					ReturnValue r2
-Start_60:			SlotLocals #1
-					LoadTrue r1
-					ReturnValue r1
 
 
 // -------------------------------------------------------------------------------
@@ -491,57 +400,38 @@ Start_60:			SlotLocals #1
 
 .segment text
 
-T_high:				.text "high"
-T_value:			.text "value"
-T_number:			.text "number"
-T_Start:			.text "Start"
 T_values:			.text "values"
-T_aim:				.text "aim"
-T_bearing:			.text "bearing"
-T_degree:			.text "degree"
-T_range:			.text "range"
-T_meter:			.text "meter"
-T_steps:			.text "steps"
-T_direction:		.text "direction"
-T_vector:			.text "vector"
-T_checksum:			.text "checksum"
+T_Start:			.text "Start"
+T_value:			.text "value"
+T_high:				.text "high"
 T_total:			.text "total"
 T_average:			.text "average"
 T_oddCount:			.text "oddCount"
-T_firstBoosted:		.text "firstBoosted"
+T_directOddScaled:	.text "directOddScaled"
 T_first:			.text "first"
 T_scaled:			.text "scaled"
-T_quantity_m:		.text "quantity:m"
 T_folded:			.text "folded"
-T_directOddScaled:	.text "directOddScaled"
-T_success:			.text "success"
-T_divis:			.text "divis"
-T_myHandler:		.text "myHandler"
-T_Success:			.text "Success"
-T_message:			.text "message"
-T_myMessage:		.text "myMessage"
-T_hello:			.text "hello"
-T_myMessageDirect:	.text "myMessageDirect"
-T_world:			.text "world"
-T_item:				.text "item"
-T_foldedBucket:		.text "foldedBucket"
 T_workTotal:		.text "workTotal"
 T_Done:				.text "Done"
+T_Success:			.text "Success"
+T_message:			.text "message"
+T_hello:			.text "hello"
+T_world:			.text "world"
 T_integer:			.text "integer"
 T_floor:			.text "floor"
-T_38:				.text "_"
+T_19:				.text "_"
 
 
 .segment lists
 
 Captures_0:			.registers []
 Shape_1:			.texts [T_Success, T_message, T_value] // "Success", "message", "value"
-Args_2:				.registers [r14, r10]
-Args_3:				.registers [r15, r6]
-Captures_4:			.registers [r10]
-Args_5:				.registers [r2, r3, r4, r8, r5, r6, r7, r9]
-Args_6:				.registers [r0]
-StdExt_7:			.texts [T_integer, T_floor, T_38] // "integer", "floor", "_"
+Args_2:				.registers [r17, r8]
+Args_3:				.registers [r17, r5]
+Captures_4:			.registers [r13]
+Args_5:				.registers [r1, r2, r3, r7, r4, r5, r6, r15]
+StdExt_6:			.texts [T_integer, T_floor, T_19] // "integer", "floor", "_"
+Args_7:				.registers [r0]
 
 
 .segment bind
@@ -554,157 +444,132 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 .segment code
 
 Start:				 // handler Start(values)
-					SlotLocals #15
-					StreamCreate r10, r0
-					StreamFilter r11, r10, Start_70, r0, Captures_0
-					StreamMap r12, r11, Start_74, r0, Captures_0
-					StreamMap r13, r12, Start_78, r0, Captures_0
-					Sum r14, r13
-					Move r2, r14
-					StreamCreate r10, r0
-					StreamFilter r11, r10, Start_81, r0, Captures_0
-					StreamMap r12, r11, Start_85, r0, Captures_0
-					StreamMap r13, r12, Start_89, r0, Captures_0
-					Average r14, r13
-					Move r3, r14
-					StreamCreate r10, r0
-					StreamFilter r11, r10, Start_92, r0, Captures_0
-					StreamFilter r12, r11, Start_98, r0, Captures_0
-					Count r13, r12
-					Move r4, r13
-					StreamCreate r10, r0
-					StreamFilter r11, r10, Start_101, r0, Captures_0
-					StreamMap r12, r11, Start_105, r0, Captures_0
-					First r13, r12
-					Move r5, r13
-					LoadInteger r6, #105, unit:meter
-					CastUnit r6, r6, unit:meter
-					LoadFloat r7, #0.6
-					StreamCreate r10, r0
-					StreamFilter r11, r10, Start_109, r0, Captures_0
-					StreamMap r12, r11, Start_115, r0, Captures_0
-					StreamFilter r13, r12, Start_119, r0, Captures_0
-					Count r14, r13
-					Move r8, r14
-					LoadInteger r10, #100, unit:meter
-					Greater r11, r6, r10
-					JumpIfNotTrue r11, Start_47
-					SlotLocals #1
-					Add r10, r6, r7
-					Divide r11, r6, r7
-					LoadHandler r13, Shape_1 // "Success", "message", "value"
-					Move r12, r13
-					LoadText r14, T_hello // "hello"
-					BindHandler r15, r12, Args_2
-					Move r13, r15
-					LoadText r15, T_world // "world"
-					LoadMessage r16, Shape_1, Args_3 // "Success", "message", "value"
-					Move r14, r16
-					SlotLocals #-1
-Start_47:			Nop
-					CreateRangeIteratorShort r11, #1, #16, #1
-Start_49:			StreamNext r10, r11, Start_59
-					SlotLocals #6
-					StreamCreate r13, r0
-					StreamFilter r14, r13, Start_123, r0, Captures_4
-					StreamMap r15, r14, Start_130, r0, Captures_4
-					StreamMap r16, r15, Start_135, r0, Captures_0
-					Sum r17, r16
-					Move r12, r17
-					SlotLocals #-6
-					Jump Start_49
-Start_59:			StreamClose r11
-					Nop
-					StreamCreate r10, r0
-					StreamFilter r11, r10, Start_137, r0, Captures_0
-					StreamMap r12, r11, Start_141, r0, Captures_0
-					StreamMap r13, r12, Start_145, r0, Captures_0
-					StreamMap r14, r13, Start_149, r0, Captures_0
-					Sum r15, r14
-					Move r9, r15
+					SlotLocals #18
+					StreamCreate r16, r0
+					StreamFilter r17, r16, Start_52, r0, Captures_0
+					StreamMap r16, r17, Start_56, r0, Captures_0
+					StreamMap r17, r16, Start_60, r0, Captures_0
+					Sum r1, r17
+					StreamCreate r16, r0
+					StreamFilter r17, r16, Start_63, r0, Captures_0
+					StreamMap r16, r17, Start_67, r0, Captures_0
+					StreamMap r17, r16, Start_71, r0, Captures_0
+					Average r2, r17
+					StreamCreate r16, r0
+					StreamFilter r17, r16, Start_74, r0, Captures_0
+					Count r3, r17
+					StreamCreate r16, r0
+					StreamFilter r17, r16, Start_80, r0, Captures_0
+					StreamMap r16, r17, Start_84, r0, Captures_0
+					First r4, r16
+					LoadInteger r5, #105, unit:meter
+					CastUnit r5, r5, unit:meter
+					LoadFloat r6, #0.6
+					StreamCreate r17, r0
+					StreamFilter r16, r17, Start_88, r0, Captures_0
+					StreamMap r17, r16, Start_94, r0, Captures_0
+					StreamFilter r16, r17, Start_98, r0, Captures_0
+					Count r7, r16
+					LoadInteger r17, #100, unit:meter
+					Greater r16, r5, r17
+					JumpIfNotTrue r16, Start_37
+					Add r8, r5, r6
+					Divide r9, r5, r6
+					LoadHandler r10, Shape_1 // "Success", "message", "value"
+					LoadText r17, T_hello // "hello"
+					BindHandler r11, r10, Args_2
+					LoadText r17, T_world // "world"
+					LoadMessage r12, Shape_1, Args_3 // "Success", "message", "value"
+					Jump Start_37
+Start_37:			CreateRangeIteratorShort r17, #1, #16, #1
+Start_38:			StreamNext r13, r17, Start_44
+					StreamCreate r16, r0
+					StreamFilter r18, r16, Start_102, r0, Captures_4
+					StreamMap r16, r18, Start_109, r0, Captures_4
+					Sum r14, r16
+					Jump Start_38
+Start_44:			StreamClose r17
+					StreamCreate r17, r0
+					StreamFilter r18, r17, Start_114, r0, Captures_0
+					StreamMap r17, r18, Start_118, r0, Captures_0
+					StreamMap r18, r17, Start_122, r0, Captures_0
+					Sum r15, r18
 					EmitMessage Outbound_Done, Args_5 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
 					ReturnVoid
-Start_70:			SlotLocals #1
+Start_52:			SlotLocals #1
 					StageRegister r0
 					Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
 					ReturnValue r1
-Start_74:			SlotLocals #2
+Start_56:			SlotLocals #2
 					LoadPercentage r1, #0.05
 					Add r2, r0, r1
 					ReturnValue r2
-Start_78:			SlotLocals #1
-					CallStandard r1, StdExt_7, Args_6 // "integer", "floor", "_"
+Start_60:			SlotLocals #1
+					CallStandard r1, StdExt_6, Args_7 // "integer", "floor", "_"
 					ReturnValue r1
-Start_81:			SlotLocals #1
+Start_63:			SlotLocals #1
 					StageRegister r0
 					Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
 					ReturnValue r1
-Start_85:			SlotLocals #2
+Start_67:			SlotLocals #2
 					LoadPercentage r1, #0.05
 					Add r2, r0, r1
 					ReturnValue r2
-Start_89:			SlotLocals #1
-					CallStandard r1, StdExt_7, Args_6 // "integer", "floor", "_"
+Start_71:			SlotLocals #1
+					CallStandard r1, StdExt_6, Args_7 // "integer", "floor", "_"
 					ReturnValue r1
-Start_92:			SlotLocals #4
+Start_74:			SlotLocals #3
 					LoadInteger r1, #2
 					Modulo r2, r0, r1
-					LoadInteger r3, #1
-					Equal r4, r2, r3
-					ReturnValue r4
-Start_98:			SlotLocals #1
-					LoadTrue r1
-					ReturnValue r1
-Start_101:			SlotLocals #1
+					LoadInteger r1, #1
+					Equal r3, r2, r1
+					ReturnValue r3
+Start_80:			SlotLocals #1
 					StageRegister r0
 					Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
 					ReturnValue r1
-Start_105:			SlotLocals #2
+Start_84:			SlotLocals #2
 					LoadPercentage r1, #0.05
 					Add r2, r0, r1
 					ReturnValue r2
-Start_109:			SlotLocals #4
+Start_88:			SlotLocals #3
 					LoadInteger r1, #2
 					Modulo r2, r0, r1
-					LoadInteger r3, #1
-					Equal r4, r2, r3
-					ReturnValue r4
-Start_115:			SlotLocals #2
+					LoadInteger r1, #1
+					Equal r3, r2, r1
+					ReturnValue r3
+Start_94:			SlotLocals #2
 					LoadInteger r1, #2
 					Multiply r2, r0, r1
 					ReturnValue r2
-Start_119:			SlotLocals #2
+Start_98:			SlotLocals #2
 					LoadInteger r1, #10
 					Greater r2, r0, r1
 					ReturnValue r2
-Start_123:			SlotLocals #5
+Start_102:			SlotLocals #3
 					Add r2, r0, r1
 					LoadInteger r3, #7
 					Modulo r4, r2, r3
-					LoadInteger r5, #0
-					Greater r6, r4, r5
-					ReturnValue r6
-Start_130:			SlotLocals #3
+					LoadInteger r2, #0
+					Greater r3, r4, r2
+					ReturnValue r3
+Start_109:			SlotLocals #3
 					Add r2, r0, r1
 					LoadInteger r3, #2
 					Multiply r4, r2, r3
 					ReturnValue r4
-Start_135:			SlotLocals #0
-					ReturnValue r0
-Start_137:			SlotLocals #2
+Start_114:			SlotLocals #2
 					LoadInteger r1, #10
 					GreaterOrEqual r2, r0, r1
 					ReturnValue r2
-Start_141:			SlotLocals #2
+Start_118:			SlotLocals #2
 					LoadPercentage r1, #0.05
 					Add r2, r0, r1
 					ReturnValue r2
-Start_145:			SlotLocals #2
+Start_122:			SlotLocals #2
 					LoadInteger r1, #2
 					Multiply r2, r0, r1
 					ReturnValue r2
-Start_149:			SlotLocals #0
-					ReturnValue r0
 
 predicate_high:		 // predicate high(value)
 					SlotLocals #2

@@ -8,12 +8,12 @@ namespace StepH.GameEventScript.Types;
 
 public sealed class GameEventScriptNumberValue : GameEventScriptValue
 {
-    public static readonly GameEventScriptNumberValue NaN = new(0, 0d, null, isInteger: false, isNaN: true, isInfinity: false, isNegativeInfinity: false);
-    public static readonly GameEventScriptNumberValue Infinity = new(0, 0d, null, isInteger: false, isNaN: false, isInfinity: true, isNegativeInfinity: false);
-    public static readonly GameEventScriptNumberValue NegativeInfinity = new(0, 0d, null, isInteger: false, isNaN: false, isInfinity: true, isNegativeInfinity: true);
+    public static readonly GameEventScriptNumberValue NaN = new(GameEventScriptValueKind.Number, 0, 0d, null, isInteger: false, isNaN: true, isInfinity: false, isNegativeInfinity: false);
+    public static readonly GameEventScriptNumberValue Infinity = new(GameEventScriptValueKind.Number, 0, 0d, null, isInteger: false, isNaN: false, isInfinity: true, isNegativeInfinity: false);
+    public static readonly GameEventScriptNumberValue NegativeInfinity = new(GameEventScriptValueKind.Number, 0, 0d, null, isInteger: false, isNaN: false, isInfinity: true, isNegativeInfinity: true);
 
     public static GameEventScriptNumberValue CreateInteger(long value, GameEventScriptBytecodeInstructionUnit? unit = null)
-        => new(value, value, unit, isInteger: true, isNaN: false, isInfinity: false, isNegativeInfinity: false);
+        => new(GameEventScriptValueKind.Number, value, value, unit, isInteger: true, isNaN: false, isInfinity: false, isNegativeInfinity: false);
 
     public static GameEventScriptNumberValue CreateFloat(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
     {
@@ -26,10 +26,14 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
                value <= long.MaxValue &&
                value == Math.Truncate(value)
             ? CreateInteger((long)value, unit)
-            : new GameEventScriptNumberValue(ToIntegerSaturated(value), value, unit, isInteger: false, isNaN: false, isInfinity: false, isNegativeInfinity: false);
+            : new GameEventScriptNumberValue(GameEventScriptValueKind.Number, ToIntegerSaturated(value), value, unit, isInteger: false, isNaN: false, isInfinity: false, isNegativeInfinity: false);
     }
 
+    public static GameEventScriptNumberValue CreatePercentage(double ratio)
+        => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, null, isInteger: false, isNaN: double.IsNaN(ratio), isInfinity: double.IsInfinity(ratio), isNegativeInfinity: double.IsNegativeInfinity(ratio));
+
     private GameEventScriptNumberValue(
+        GameEventScriptValueKind kind,
         long integerValue,
         double numberValue,
         GameEventScriptBytecodeInstructionUnit? unit,
@@ -38,9 +42,10 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
         bool isInfinity,
         bool isNegativeInfinity)
     {
+        Kind = kind;
         IntegerValue = integerValue;
         NumberValue = numberValue;
-        Unit = isNaN || isInfinity ? GameEventScriptBytecodeInstructionUnit.UnitNone : unit.ToStoredUnit();
+        Unit = kind == GameEventScriptValueKind.Percentage || isNaN || isInfinity ? GameEventScriptBytecodeInstructionUnit.UnitNone : unit.ToStoredUnit();
         IsIntegerValue = isInteger;
         IsNaNValue = isNaN;
         IsInfinityValue = isInfinity;
@@ -55,7 +60,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
     public bool IsNaNValue { get; }
     public bool IsInfinityValue { get; }
     public bool IsNegativeInfinityValue { get; }
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Number;
+    public override GameEventScriptValueKind Kind { get; }
 
     public override string AsText() => ToString();
 
@@ -64,12 +69,14 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
     public override long AsInteger()
     {
         if (IsNaNValue) return 0;
+        if (Kind == GameEventScriptValueKind.Percentage) return ToIntegerPercentage(NumberValue);
         if (IsInfinityValue) return IsNegativeInfinityValue ? long.MinValue : long.MaxValue;
         return IsIntegerValue ? IntegerValue : ToIntegerSaturated(NumberValue);
     }
 
     public override double AsNumber()
-        => IsNaNValue ? 0d :
+        => Kind == GameEventScriptValueKind.Percentage ? NumberValue :
+            IsNaNValue ? 0d :
             IsInfinityValue ? IsNegativeInfinityValue ? double.MinValue : double.MaxValue :
             IsIntegerValue ? IntegerValue : NumberValue;
 
@@ -77,7 +84,9 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)
     {
-        value = Unit.IsNumericUnit()
+        value = Kind == GameEventScriptValueKind.Percentage
+            ? GesFloat(NumberValue)
+            : Unit.IsNumericUnit()
             ? IsIntegerValue ? GesInteger(IntegerValue) : GesFloat(NumberValue)
             : this;
         return true;
@@ -97,7 +106,7 @@ public sealed class GameEventScriptNumberValue : GameEventScriptValue
 
     internal override bool TryConvertToText(out GameEventScriptValue value)
     {
-        value = GesText(ToString());
+        value = GesText(Kind == GameEventScriptValueKind.Percentage ? FormatPercentage(NumberValue) : ToString());
         return true;
     }
 }

@@ -225,7 +225,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Nothing => "Nothing",
             GameEventScriptValueKind.Tag => $":{AsText()}",
             GameEventScriptValueKind.Text => AsText(),
-            GameEventScriptValueKind.Percentage => FormatPercentage(((GameEventScriptPercentageValue)this).Ratio),
+            GameEventScriptValueKind.Percentage => FormatPercentage(AsNumber()),
             GameEventScriptValueKind.Vector => FormatVector((GameEventScriptVectorValue)this),
             GameEventScriptValueKind.Point => FormatPoint((GameEventScriptPointValue)this),
             GameEventScriptValueKind.Number => FormatNumberValue((GameEventScriptNumberValue)this),
@@ -268,7 +268,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Nothing => true,
             GameEventScriptValueKind.Tag => AsText() == other.AsText(),
             GameEventScriptValueKind.Text => AsText() == other.AsText(),
-            GameEventScriptValueKind.Percentage => ((GameEventScriptPercentageValue)this).Ratio == ((GameEventScriptPercentageValue)other).Ratio,
+            GameEventScriptValueKind.Percentage => AsNumber() == other.AsNumber(),
             GameEventScriptValueKind.Vector => ((GameEventScriptVectorValue)this).X == ((GameEventScriptVectorValue)other).X &&
                                                ((GameEventScriptVectorValue)this).Y == ((GameEventScriptVectorValue)other).Y &&
                                                ((GameEventScriptVectorValue)this).Z == ((GameEventScriptVectorValue)other).Z &&
@@ -328,7 +328,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 hash.Add(AsBoolean());
                 break;
             case GameEventScriptValueKind.Percentage:
-                hash.Add(((GameEventScriptPercentageValue)this).Ratio);
+                hash.Add(AsNumber());
                 break;
             case GameEventScriptValueKind.Vector:
                 hash.Add(((GameEventScriptVectorValue)this).X);
@@ -600,7 +600,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Nothing => 0,
                 GameEventScriptValueKind.Tag => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
                 GameEventScriptValueKind.Text => StringComparer.Ordinal.Compare(left.AsText(), right.AsText()),
-                GameEventScriptValueKind.Percentage => ((GameEventScriptPercentageValue)left).Ratio.CompareTo(((GameEventScriptPercentageValue)right).Ratio),
+                GameEventScriptValueKind.Percentage => left.AsNumber().CompareTo(right.AsNumber()),
                 GameEventScriptValueKind.Vector => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Point => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),

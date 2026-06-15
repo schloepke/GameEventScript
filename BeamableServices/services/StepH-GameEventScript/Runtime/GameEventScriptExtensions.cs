@@ -155,7 +155,7 @@ public readonly struct GameEventScriptFastValue
         GameEventScriptBooleanValue boolean => FromBoolean(boolean.Value),
         GameEventScriptNumberValue { IsIntegerValue: true } integer => FromInteger(integer.IntegerValue, integer.Unit),
         GameEventScriptNumberValue numberValue when numberValue.HasSemanticValue() => FromFloat(numberValue.NumberValue, numberValue.Unit),
-        GameEventScriptPercentageValue percentage => FromPercentage(percentage.Ratio),
+        { Kind: GameEventScriptValueKind.Percentage } => FromPercentage(value.AsNumber()),
         GameEventScriptVectorValue vector => FromVector(vector.X, vector.Y, vector.Z, vector.Unit),
         GameEventScriptPointValue point => FromPoint(point.X, point.Y, point.Z, point.Unit),
         _ => new GameEventScriptFastValue(value.Kind, 0, 0d, 0d, 0d, 0d, value.AsBoolean(), false, null, value)

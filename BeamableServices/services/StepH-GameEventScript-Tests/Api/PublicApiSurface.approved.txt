@@ -797,6 +797,7 @@ sealed class StepH.GameEventScript.Types.GameEventScriptNumberValue
   method System.String AsText()
   method static StepH.GameEventScript.Types.GameEventScriptNumberValue CreateFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? unit)
   method static StepH.GameEventScript.Types.GameEventScriptNumberValue CreateInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? unit)
+  method static StepH.GameEventScript.Types.GameEventScriptNumberValue CreatePercentage(System.Double ratio)
   property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Boolean IsFractionalValue { get }
@@ -806,14 +807,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptNumberValue
   property System.Boolean IsNegativeInfinityValue { get }
   property System.Double NumberValue { get }
   property System.Int64 IntegerValue { get }
-sealed class StepH.GameEventScript.Types.GameEventScriptPercentageValue
-  method System.Boolean AsBoolean()
-  method System.Double AsNumber()
-  method System.Int64 AsInteger()
-  method System.String AsText()
-  method static StepH.GameEventScript.Types.GameEventScriptPercentageValue Create(System.Double ratio)
-  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
-  property System.Double Ratio { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptPointValue
   field static StepH.GameEventScript.Types.GameEventScriptPointValue Zero
   method System.Boolean AsBoolean()

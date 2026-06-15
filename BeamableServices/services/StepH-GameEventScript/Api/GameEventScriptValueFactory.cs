@@ -65,7 +65,7 @@ public static class GameEventScriptValueFactory
     /// <param name="ratio">The percentage value to encapsulate. Must be a valid double value representing a ratio.</param>
     /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the percentage value.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesPercentage(double ratio) => GameEventScriptPercentageValue.Create(ratio);
+    public static GameEventScriptValue GesPercentage(double ratio) => GameEventScriptNumberValue.CreatePercentage(ratio);
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a degree value.

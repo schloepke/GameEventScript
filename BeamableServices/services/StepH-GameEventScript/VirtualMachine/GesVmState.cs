@@ -1,7 +1,10 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Types;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
+using static StepH.GameEventScript.VirtualMachine.GesVmValue.GesVmValueFlags;
 using static StepH.GameEventScript.VirtualMachine.GesVmState.StateValue;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -103,12 +106,79 @@ internal class GesVmState
         return true;
     }
     internal ref GesVmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
-    internal ref GesVmValue ConditionalRegister(ushort index)
+    internal ref GesVmValue RegisterWithTruthinessEvaluated(ushort index)
     {
-        RegisterSlots[index + RegisterFrameStart].UpdatedTextTruthinessCache();
-        return ref RegisterSlots[index + RegisterFrameStart];
-    } 
+        var absoluteIndex = index + RegisterFrameStart;
+        UpdateRegisterTruthinessCache(absoluteIndex);
+        return ref RegisterSlots[absoluteIndex];
+    }
+    internal bool IsRegisterTrue(ushort index)
+    {
+        ref var value = ref RegisterWithTruthinessEvaluated(index);
+        return value.IsTrue;
+    }
+    internal bool IsRegisterFalse(ushort index)
+    {
+        ref var value = ref RegisterWithTruthinessEvaluated(index);
+        return value.IsFalse;
+    }
+    internal bool IsRegisterNotTrue(ushort index)
+    {
+        ref var value = ref RegisterWithTruthinessEvaluated(index);
+        return value.IsNotTrue;
+    }
     internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
+    internal void SetNothing(ushort index) => Register(index).SetNothing();
+    internal void SetBoolean(ushort index, bool value) => Register(index).SetBoolean(value);
+    internal void SetInteger(ushort index, long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetInteger(value, unit);
+    internal void SetFloat(ushort index, double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetFloat(value, unit);
+    internal void SetPercentage(ushort index, double ratio) => Register(index).SetPercentage(ratio);
+    internal void SetTextPointer(ushort index, ushort pointer) => Register(index).SetTextPointer(pointer);
+    internal void SetText(ushort index, string text) => Register(index).SetText(text);
+    internal void SetTagPointer(ushort index, ushort pointer) => Register(index).SetTagPointer(pointer);
+    internal void SetTag(ushort index, string tag) => Register(index).SetTag(tag);
+    internal void SetVector(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(x, y, z, unit);
+    internal void SetVector(ushort index, GesVmValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(vector, unit);
+    internal void SetPoint(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetPoint(x, y, z, unit);
+    internal void SetPoint(ushort index, GesVmValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetPoint(point, unit);
+    internal void SetDice(ushort index, int[] values) => Register(index).SetDice(values);
+    internal void SetList(ushort index, GesVmValue[] list) => Register(index).SetList(list);
+    internal void SetMap(ushort index, GesVmValueMap valueMap) => Register(index).SetMap(valueMap);
+    internal void SetRecord(ushort index, GesVmValueMap record) => Register(index).SetRecord(record);
+    internal void SetExternalCustomType(ushort index, GameEventScriptValue value) => Register(index).SetExternalCustomType(value);
+    internal void SetRange(ushort index, long from, long to, long step) => Register(index).SetRange(from, to, step);
+    internal void SetRange(ushort index, double from, double to, double step) => Register(index).SetRange(from, to, step);
+    internal void SetMessageHandler(ushort index, GameEventScriptMessageSignature handler) => Register(index).SetMessageHandler(handler);
+    internal void SetMessage(ushort index, GameEventScriptMessage message) => Register(index).SetMessage(message);
+    internal void SetSeries(ushort index, GameEventScriptSeriesValue series) => Register(index).SetSeries(series);
+    internal void SetStream(ushort index, IGesVmStream value) => Register(index).SetStream(value);
+    internal void CreateListBuilder(ushort index) => Register(index).CreateListBuilder();
+    private void UpdateRegisterTruthinessCache(int absoluteIndex)
+    {
+        ref var value = ref RegisterSlots[absoluteIndex];
+        if (value.IsTruthDeterminate) return;
+        switch (value.Kind)
+        {
+            case Text:
+                var resolvedText = value.IsStoragePointer ? Binary.TextConstantTable.Resolve((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
+                value.Flags |= resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1" ? IsTrueFlag : IsFalseFlag;
+                break;
+            case Tag:
+                var resolvedTag = value.IsStoragePointer ? Binary.TextConstantTable.Resolve((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
+                value.Flags |= resolvedTag switch
+                {
+                    "true" => IsTrueFlag,
+                    "infinity" => IsTrueFlag,
+                    "negativeinfinity" => IsTrueFlag,
+                    "pi" => IsTrueFlag,
+                    "e" => IsTrueFlag,
+                    "tau" => IsTrueFlag,
+                    "phi" => IsTrueFlag,
+                    _ => IsFalseFlag
+                };
+                break;
+        }
+    }
     internal GesVmValue[] CreateRegisterArray(int size)
     {
         var values = new GesVmValue[size];

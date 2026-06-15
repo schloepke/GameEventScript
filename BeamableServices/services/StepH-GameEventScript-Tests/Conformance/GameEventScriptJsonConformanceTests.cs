@@ -361,9 +361,10 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         }
 
         var key = referenceLine[..referenceSeparator];
-        if (!string.Equals(key, currentLine[..currentSeparator], StringComparison.Ordinal))
+        var currentKey = currentLine[..currentSeparator];
+        if (!string.Equals(key, currentKey, StringComparison.Ordinal))
         {
-            return false;
+            return TryCompareRenamedPerformanceMetric(key, referenceLine[(referenceSeparator + 1)..], currentKey, currentLine[(currentSeparator + 1)..], out diff);
         }
 
         var referenceValue = referenceLine[(referenceSeparator + 1)..];
@@ -382,33 +383,101 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
                 PerformanceElapsedMinimumToleranceMilliseconds);
             if (currentMs > allowed)
             {
-                diff = $"{key} regressed: reference={referenceMs.ToString("0.0000", CultureInfo.InvariantCulture)} ms, " +
-                       $"current={currentMs.ToString("0.0000", CultureInfo.InvariantCulture)} ms, " +
-                       $"allowed={allowed.ToString("0.0000", CultureInfo.InvariantCulture)} ms";
+                diff = $"{key} regressed: reference={FormatMilliseconds(referenceMs)} ms, " +
+                       $"current={FormatMilliseconds(currentMs)} ms, " +
+                       $"allowed={FormatMilliseconds(allowed)} ms";
             }
 
             return true;
         }
 
-        if (key.EndsWith(".allocatedBytes", StringComparison.Ordinal) ||
-            key.EndsWith(".perInvokeAllocatedBytes", StringComparison.Ordinal))
+        if (key.EndsWith(".allocatedKb", StringComparison.Ordinal) ||
+            key.EndsWith(".perInvokeAllocatedKb", StringComparison.Ordinal))
         {
-            if (!long.TryParse(referenceValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var referenceBytes) ||
-                !long.TryParse(currentValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var currentBytes))
+            if (!double.TryParse(referenceValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var referenceKb) ||
+                !double.TryParse(currentValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var currentKb))
             {
                 return false;
             }
 
-            if (currentBytes > referenceBytes)
+            if (currentKb > referenceKb)
             {
-                diff = $"{key} allocated more: reference={referenceBytes.ToString(CultureInfo.InvariantCulture)}, " +
-                       $"current={currentBytes.ToString(CultureInfo.InvariantCulture)}";
+                diff = $"{key} allocated more: reference={FormatKilobytes(referenceKb)} KB, " +
+                       $"current={FormatKilobytes(currentKb)} KB";
             }
 
             return true;
         }
 
         return false;
+    }
+
+    private static bool TryCompareRenamedPerformanceMetric(string referenceKey, string referenceValue, string currentKey, string currentValue, out string diff)
+    {
+        diff = string.Empty;
+        if (!TryNormalizeAllocationKey(referenceKey, out var normalizedReferenceKey) ||
+            !TryNormalizeAllocationKey(currentKey, out var normalizedCurrentKey) ||
+            !string.Equals(normalizedReferenceKey, normalizedCurrentKey, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        if (!TryParseAllocationKilobytes(referenceKey, referenceValue, out var referenceKb) ||
+            !TryParseAllocationKilobytes(currentKey, currentValue, out var currentKb))
+        {
+            return false;
+        }
+
+        if (currentKb > referenceKb)
+        {
+            diff = $"{normalizedReferenceKey} allocated more: reference={FormatKilobytes(referenceKb)} KB, " +
+                   $"current={FormatKilobytes(currentKb)} KB";
+        }
+
+        return true;
+    }
+
+    private static bool TryNormalizeAllocationKey(string key, out string normalizedKey)
+    {
+        if (key.EndsWith(".allocatedBytes", StringComparison.Ordinal))
+        {
+            normalizedKey = key[..^".allocatedBytes".Length] + ".allocatedKb";
+            return true;
+        }
+
+        if (key.EndsWith(".perInvokeAllocatedBytes", StringComparison.Ordinal))
+        {
+            normalizedKey = key[..^".perInvokeAllocatedBytes".Length] + ".perInvokeAllocatedKb";
+            return true;
+        }
+
+        if (key.EndsWith(".allocatedKb", StringComparison.Ordinal) ||
+            key.EndsWith(".perInvokeAllocatedKb", StringComparison.Ordinal))
+        {
+            normalizedKey = key;
+            return true;
+        }
+
+        normalizedKey = string.Empty;
+        return false;
+    }
+
+    private static bool TryParseAllocationKilobytes(string key, string value, out double kilobytes)
+    {
+        kilobytes = 0d;
+        if (key.EndsWith(".allocatedBytes", StringComparison.Ordinal) ||
+            key.EndsWith(".perInvokeAllocatedBytes", StringComparison.Ordinal))
+        {
+            if (!long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var bytes))
+            {
+                return false;
+            }
+
+            kilobytes = bytes / 1024d;
+            return true;
+        }
+
+        return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out kilobytes);
     }
 
     private static string BinaryDumpDiff(string reference, string current)
@@ -669,8 +738,8 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.Append(".elapsedMs=");
         report.AppendLine(FormatMilliseconds(measured.Elapsed.TotalMilliseconds));
         report.Append(label);
-        report.Append(".allocatedBytes=");
-        report.AppendLine(measured.AllocatedBytes.ToString(CultureInfo.InvariantCulture));
+        report.Append(".allocatedKb=");
+        report.AppendLine(FormatAllocatedKilobytes(measured.AllocatedBytes));
     }
 
     private static void AppendRun(StringBuilder report, string label, PerformanceRunMetrics run, int iterations)
@@ -680,14 +749,14 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.Append(".elapsedMs=");
         report.AppendLine(FormatMilliseconds(run.Elapsed.TotalMilliseconds));
         report.Append(label);
-        report.Append(".allocatedBytes=");
-        report.AppendLine(run.AllocatedBytes.ToString(CultureInfo.InvariantCulture));
+        report.Append(".allocatedKb=");
+        report.AppendLine(FormatAllocatedKilobytes(run.AllocatedBytes));
         report.Append(label);
         report.Append(".perInvokeElapsedMs=");
         report.AppendLine(FormatMilliseconds(run.Elapsed.TotalMilliseconds / safeIterations));
         report.Append(label);
-        report.Append(".perInvokeAllocatedBytes=");
-        report.AppendLine((run.AllocatedBytes / safeIterations).ToString(CultureInfo.InvariantCulture));
+        report.Append(".perInvokeAllocatedKb=");
+        report.AppendLine(FormatAllocatedKilobytes((double)run.AllocatedBytes / safeIterations));
         report.Append(label);
         report.Append(".emittedMessages=");
         report.AppendLine(run.EmittedMessages.ToString(CultureInfo.InvariantCulture));
@@ -697,7 +766,16 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     }
 
     private static string FormatMilliseconds(double milliseconds)
-        => milliseconds.ToString("0.0000", CultureInfo.InvariantCulture);
+        => milliseconds.ToString("0.######", CultureInfo.InvariantCulture);
+
+    private static string FormatAllocatedKilobytes(long bytes)
+        => FormatKilobytes(bytes / 1024d);
+
+    private static string FormatAllocatedKilobytes(double bytes)
+        => FormatKilobytes(bytes / 1024d);
+
+    private static string FormatKilobytes(double kilobytes)
+        => kilobytes.ToString("0.###", CultureInfo.InvariantCulture);
 
     private static void ForceFullCollection()
     {

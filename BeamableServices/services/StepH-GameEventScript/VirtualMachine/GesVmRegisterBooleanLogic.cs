@@ -4,48 +4,49 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterBooleanLogic
 {
-    internal static void GesVmOr(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmOr(this GesVmState vmState, ushort dstRegister, ushort aRegister, ushort bRegister)
     {
-        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
-        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
-        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue || b.IsTrue);
-        else if (a.IsTruthIndeterminate && b.IsTrue || a.IsTrue && b.IsTruthIndeterminate) dst.SetBoolean(true);
-        else dst.SetNothing();
+        ref var a = ref vmState.RegisterWithTruthinessEvaluated(aRegister);
+        ref var b = ref vmState.RegisterWithTruthinessEvaluated(bRegister);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, a.IsTrue || b.IsTrue);
+        else if (a.IsTruthIndeterminate && b.IsTrue || a.IsTrue && b.IsTruthIndeterminate) vmState.SetBoolean(dstRegister, true);
+        else vmState.SetNothing(dstRegister);
     }
-    internal static void GesVmAnd(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmAnd(this GesVmState vmState, ushort dstRegister, ushort aRegister, ushort bRegister)
     {
-        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
-        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
-        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue && b.IsTrue);
-        else if (a.IsTruthIndeterminate && b.IsFalse || a.IsFalse && b.IsTruthIndeterminate) dst.SetBoolean(false);
-        else dst.SetNothing();
+        ref var a = ref vmState.RegisterWithTruthinessEvaluated(aRegister);
+        ref var b = ref vmState.RegisterWithTruthinessEvaluated(bRegister);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, a.IsTrue && b.IsTrue);
+        else if (a.IsTruthIndeterminate && b.IsFalse || a.IsFalse && b.IsTruthIndeterminate) vmState.SetBoolean(dstRegister, false);
+        else vmState.SetNothing(dstRegister);
     }
-    internal static void GesVmImplies(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmImplies(this GesVmState vmState, ushort dstRegister, ushort aRegister, ushort bRegister)
     {
-        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
-        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
-        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(!a.IsTrue || b.IsTrue);
-        else if (a.IsFalse && b.IsTruthIndeterminate || a.IsTruthIndeterminate && b.IsTrue) dst.SetBoolean(true);
-        else dst.SetNothing();
+        ref var a = ref vmState.RegisterWithTruthinessEvaluated(aRegister);
+        ref var b = ref vmState.RegisterWithTruthinessEvaluated(bRegister);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, !a.IsTrue || b.IsTrue);
+        else if (a.IsFalse && b.IsTruthIndeterminate || a.IsTruthIndeterminate && b.IsTrue) vmState.SetBoolean(dstRegister, true);
+        else vmState.SetNothing(dstRegister);
     }
-    internal static void GesVmXor(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b)
+    internal static void GesVmXor(this GesVmState vmState, ushort dstRegister, ushort aRegister, ushort bRegister)
     {
-        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
-        if(b.Kind is Text or Tag) b.UpdatedTextTruthinessCache();
-        if (a.IsTruthDeterminate && b.IsTruthDeterminate) dst.SetBoolean(a.IsTrue ^ b.IsTrue);
-        else dst.SetNothing();
+        ref var a = ref vmState.RegisterWithTruthinessEvaluated(aRegister);
+        ref var b = ref vmState.RegisterWithTruthinessEvaluated(bRegister);
+        if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, a.IsTrue ^ b.IsTrue);
+        else vmState.SetNothing(dstRegister);
     }
-    internal static void GesVmNot(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmNot(this GesVmState vmState, ushort dstRegister, ushort aRegister)
     {
-        if(a.Kind is Text or Tag) a.UpdatedTextTruthinessCache();
-        if (a.IsTruthDeterminate) dst.SetBoolean(!a.IsTrue);
-        else dst.SetNothing();
+        ref var a = ref vmState.RegisterWithTruthinessEvaluated(aRegister);
+        if (a.IsTruthDeterminate) vmState.SetBoolean(dstRegister, !a.IsTrue);
+        else vmState.SetNothing(dstRegister);
     }
-    internal static void GesVmChance(ref this GesVmValue dst, ref GesVmValue a)
+    internal static void GesVmChance(this GesVmState vmState, ushort dstRegister, ushort aRegister)
     {
+        ref var a = ref vmState.Register(aRegister);
         if (a.IsNothing || a.HasUnit)
         {
-            dst.SetNothing();
+            vmState.SetNothing(dstRegister);
             return;
         }
 
@@ -66,25 +67,25 @@ internal static class GesVmRegisterBooleanLogic
                 ratio = ratio is > 1d or < -1d ? ratio / 100d : ratio;
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(dstRegister);
                 return;
         }
 
         if (double.IsNaN(ratio) || double.IsInfinity(ratio))
         {
-            dst.SetNothing();
+            vmState.SetNothing(dstRegister);
         }
         else if (ratio <= 0d)
         {
-            dst.SetBoolean(false);
+            vmState.SetBoolean(dstRegister, false);
         }
         else if (ratio >= 1d)
         {
-            dst.SetBoolean(true);
+            vmState.SetBoolean(dstRegister, true);
         }
         else
         {
-            dst.SetBoolean(dst.OwningState.RandomGenerator.NextInclusiveFloat(0, 1.0) < ratio);
+            vmState.SetBoolean(dstRegister, vmState.RandomGenerator.NextInclusiveFloat(0, 1.0) < ratio);
         }
     }
 }

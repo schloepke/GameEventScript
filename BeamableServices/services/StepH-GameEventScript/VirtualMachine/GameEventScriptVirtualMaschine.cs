@@ -161,13 +161,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfTrue:
-                            if (vmState.ConditionalRegister(instruction.ConditionSlot).IsTrue) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterTrue(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfFalse:
-                            if (vmState.ConditionalRegister(instruction.ConditionSlot).IsFalse) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterFalse(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfNotTrue:
-                            if (vmState.ConditionalRegister(instruction.ConditionSlot).IsNotTrue) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterNotTrue(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
 
                         case Call:
@@ -386,19 +386,19 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         #region Group 2 - boolean algebra, comparison, math and random
 
                         case Or:
-                            vmState.Register(instruction.DestinationSlot).GesVmOr(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmOr(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
                             break;
                         case And:
-                            vmState.Register(instruction.DestinationSlot).GesVmAnd(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmAnd(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
                             break;
                         case Xor:
-                            vmState.Register(instruction.DestinationSlot).GesVmXor(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmXor(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
                             break;
                         case Implies:
-                            vmState.Register(instruction.DestinationSlot).GesVmImplies(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmImplies(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
                             break;
                         case Not:
-                            vmState.Register(instruction.DestinationSlot).GesVmNot(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmNot(instruction.DestinationSlot, instruction.XSlot);
                             break;
                         case Equal:
                             vmState.Register(instruction.DestinationSlot).GesVmEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
@@ -458,7 +458,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).GesVmNaturalLog(ref vmState.Register(instruction.XSlot), ref vmState.Binary.TextConstantTable);
                             break;
                         case Chance:
-                            vmState.Register(instruction.DestinationSlot).GesVmChance(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmChance(instruction.DestinationSlot, instruction.XSlot);
                             break;
                         case Clamp:
                             vmState.Register(instruction.DestinationSlot).GesVmClamp(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU), ref vmState.Binary.TextConstantTable);

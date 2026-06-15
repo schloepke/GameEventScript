@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterRandom
 {
-    internal static void GesVmRandom(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, GameEventScriptRandomGenerator randomGenerator, ref GameEventScriptTextTable textTable)
+    internal static void GesVmRandom(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, GesVmXoshiroRandom randomGenerator, ref GameEventScriptTextTable textTable)
     {
         switch (from.Kind)
         {
@@ -87,7 +87,7 @@ internal static class GesVmRegisterRandom
                 return;
         }
     }
-    internal static void GesVmRandomFloat(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmRandomFloat(ref this GesVmValue dst, ref GesVmValue from, ref GesVmValue to, GesVmXoshiroRandom randomGenerator)
     {
         if (from.Kind is Nothing || to.Kind is Nothing)
         {

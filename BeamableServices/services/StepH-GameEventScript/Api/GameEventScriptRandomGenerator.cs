@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using StepH.GameEventScript.VirtualMachine;
 
 namespace StepH.GameEventScript.Api;
 
@@ -13,13 +13,12 @@ public sealed class GameEventScriptRandomGenerator
 {
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c> using
-    /// a default <c>System.Random</c> instance for generating random values.
+    /// a default portable random generator for generating random values.
     /// </summary>
     /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized with a default
-    /// <c>System.Random</c> instance.
+    /// A new <c>GameEventScriptRandomGenerator</c> initialized with a default generator seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator Create() => new(new Random());
+    public static GameEventScriptRandomGenerator Create() => new(CreateDefaultSeed());
 
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c> using
@@ -36,17 +35,15 @@ public sealed class GameEventScriptRandomGenerator
 
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
-    /// initialized with a <c>System.Random</c> instance seeded with the specified value.
+    /// initialized with the specified deterministic seed.
     /// </summary>
     /// <param name="seed">
-    /// The seed value used to initialize the <c>System.Random</c> instance for deterministic
-    /// random value generation.
+    /// The seed value used for deterministic random value generation.
     /// </param>
     /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized with a <c>System.Random</c> instance
-    /// seeded with the specified value.
+    /// A new <c>GameEventScriptRandomGenerator</c> initialized with the specified seed.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSeed(int seed) => new(new Random(seed));
+    public static GameEventScriptRandomGenerator FromSeed(int seed) => FromSeed((long)seed);
 
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
@@ -60,7 +57,6 @@ public sealed class GameEventScriptRandomGenerator
     /// </returns>
     public static GameEventScriptRandomGenerator FromSeed(long seed)
     {
-        if (seed is >= int.MinValue and <= int.MaxValue) return FromSeed((int)seed);
         return new GameEventScriptRandomGenerator(seed);
     }
 
@@ -76,7 +72,7 @@ public sealed class GameEventScriptRandomGenerator
     /// A new <c>GameEventScriptRandomGenerator</c> initialized to use the specified
     /// sequence of random values.
     /// </returns>
-    public static GameEventScriptRandomGenerator FromSequence(params double[] values) => new(new Random(), values);
+    public static GameEventScriptRandomGenerator FromSequence(params double[] values) => new(values);
 
     /// <summary>
     /// Generates a random integer between the specified minimum and maximum values, inclusive.
@@ -116,6 +112,7 @@ public sealed class GameEventScriptRandomGenerator
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
+        if (_xoshiro != null) return _xoshiro.NextInclusiveInteger(minInclusive, maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
         var span = unchecked((ulong)(maxInclusive - minInclusive) + 1UL);
         var offset = NextUInt64Below(span);
@@ -137,39 +134,46 @@ public sealed class GameEventScriptRandomGenerator
     /// </returns>
     public double NextInclusiveFloat(double minInclusive, double maxInclusive)
     {
+        if (double.IsNaN(minInclusive) || double.IsNaN(maxInclusive)) return double.NaN;
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
         if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
+        if (_xoshiro != null) return _xoshiro.NextInclusiveFloat(minInclusive, maxInclusive);
         if (minInclusive == maxInclusive) return minInclusive;
         var sample = NextUnitFloat();
         return minInclusive + (maxInclusive - minInclusive) * sample;
     }
 
-    private GameEventScriptRandomGenerator(Random random, IEnumerable<double>? sequence = null)
+    private GameEventScriptRandomGenerator(Random random)
     {
         _random = random;
-        _sequence = sequence == null ? null : new Queue<double>(sequence);
     }
 
     private GameEventScriptRandomGenerator(long seed)
     {
-        _random = null;
-        _seed64State = (ulong)seed;
+        _xoshiro = new GesVmXoshiroRandom(seed);
     }
 
+    private GameEventScriptRandomGenerator(double[] sequence)
+    {
+        _sequence = sequence;
+        _xoshiro = new GesVmXoshiroRandom(CreateDefaultSeed());
+    }
+
+    private readonly GesVmXoshiroRandom? _xoshiro;
     private readonly Random? _random;
-    private readonly Queue<double>? _sequence;
+    private readonly double[]? _sequence;
     private readonly byte[] _uint64Buffer = new byte[8];
-    private ulong _seed64State;
+    private int _sequenceIndex;
 
     private bool TryDequeueSequenceValue(out double value)
     {
-        if (_sequence == null || _sequence.Count == 0)
+        if (_sequence == null || _sequenceIndex >= _sequence.Length)
         {
             value = 0;
             return false;
         }
 
-        value = _sequence.Dequeue();
+        value = _sequence[_sequenceIndex++];
         return true;
     }
 
@@ -193,26 +197,16 @@ public sealed class GameEventScriptRandomGenerator
 
     private ulong NextUInt64()
     {
-        if (_random == null) return NextSeededUInt64();
+        if (_xoshiro != null) return _xoshiro.NextUInt64();
+        if (_random == null) return 0;
         _random.NextBytes(_uint64Buffer);
         return BitConverter.ToUInt64(_uint64Buffer, 0);
     }
 
     private double NextUnitFloat()
     {
-        if (_random != null) return _random.NextDouble();
-        return (NextSeededUInt64() >> 11) * (1.0 / (1UL << 53));
-    }
-
-    private ulong NextSeededUInt64()
-    {
-        unchecked
-        {
-            var value = _seed64State += 0x9E3779B97F4A7C15UL;
-            value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9UL;
-            value = (value ^ (value >> 27)) * 0x94D049BB133111EBUL;
-            return value ^ (value >> 31);
-        }
+        if (_xoshiro != null) return _xoshiro.NextInclusiveFloat(0, 1);
+        return _random?.NextDouble() ?? 0;
     }
 
     private static long ToLongSaturated(double value) => value switch
@@ -222,4 +216,10 @@ public sealed class GameEventScriptRandomGenerator
         >= long.MaxValue => long.MaxValue,
         _ => (long)Math.Truncate(value)
     };
+
+    private static long CreateDefaultSeed()
+    {
+        var bytes = Guid.NewGuid().ToByteArray();
+        return BitConverter.ToInt64(bytes, 0) ^ DateTime.UtcNow.Ticks;
+    }
 }

@@ -43,8 +43,8 @@ internal class GesVmState
     private GesVmValue _overflowRegister;
 
     internal ushort RandomGeneratorsPointer { get; private set; } = 0;
-    internal GameEventScriptRandomGenerator[] RandomGenerators { get; init; }
-    internal GameEventScriptRandomGenerator RandomGenerator { get; private set; }
+    internal GesVmXoshiroRandom[] RandomGenerators { get; init; }
+    internal GesVmXoshiroRandom RandomGenerator { get; private set; }
 
     internal ushort RegisterFrameStart = 0;
     internal ushort RegisterFrameLength = 0;
@@ -69,9 +69,9 @@ internal class GesVmState
         CallStack = new CallFrame[stackSize];
         RegisterSlots = CreateRegisterArray(InitialRegisterCapacity);
         _overflowRegister.InitRegister(this);
-        RandomGenerators = new GameEventScriptRandomGenerator[16];
+        RandomGenerators = new GesVmXoshiroRandom[16];
         RandomGeneratorsPointer = 0;
-        RandomGenerator = GameEventScriptRandomGenerator.Create(); // INFO: We create one here so that we always have one. but it should be set for the message from the context!
+        RandomGenerator = new GesVmXoshiroRandom(0);
         OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
         RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
     }
@@ -83,7 +83,7 @@ internal class GesVmState
         InstructionPointer = entryAddress;
         RegisterFrameStart = 0;
         StageLength = 0;
-        RandomGenerator = session.Random;
+        RandomGenerator = new GesVmXoshiroRandom(session.Random);
         RandomGeneratorsPointer = 0;
         if (callAsArguments)
         {
@@ -152,10 +152,10 @@ internal class GesVmState
         value.SetTag(tag);
         return value;
     }
-    internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
+    internal bool PushRandom(GesVmXoshiroRandom randomGenerator)
     {
         if (RandomGeneratorsPointer >= RandomGenerators.Length) return RaiseError("Random generator stack overflow");
-        RandomGenerators[RandomGeneratorsPointer++] = randomGenerator;
+        RandomGenerators[RandomGeneratorsPointer++] = RandomGenerator;
         RandomGenerator = randomGenerator;
         return true;
     }

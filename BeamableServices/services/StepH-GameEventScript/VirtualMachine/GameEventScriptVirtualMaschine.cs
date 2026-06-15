@@ -471,10 +471,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case RandomPush:
                             var seed = vmState.Register(instruction.XSlot);
-                            vmState.PushRandom(seed.Kind == Integer ? GameEventScriptRandomGenerator.FromSeed(seed.IntegerValue) : vmState.RandomGenerator);
+                            vmState.PushRandom(seed.Kind == Integer ? new GesVmXoshiroRandom(seed.IntegerValue) : vmState.RandomGenerator);
                             break;
                         case RandomPushConstant:
-                            vmState.PushRandom(GameEventScriptRandomGenerator.FromSeed(instruction.I64));
+                            vmState.PushRandom(new GesVmXoshiroRandom(instruction.I64));
                             break;
                         case RandomPop:
                             vmState.PopRandom();

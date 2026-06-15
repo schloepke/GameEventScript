@@ -332,7 +332,7 @@ internal static class GesVmRegisterStreamTerminals
     }
 
     internal static void GesVmStreamOneWeighted(ref GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
-        GameEventScriptRandomGenerator randomGenerator)
+        GesVmXoshiroRandom randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
@@ -401,7 +401,7 @@ internal static class GesVmRegisterStreamTerminals
     }
 
     internal static void GesVmStreamTakeWeighted(ref GesVmValue dst, ref GesVmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
-        GameEventScriptRandomGenerator randomGenerator)
+        GesVmXoshiroRandom randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {

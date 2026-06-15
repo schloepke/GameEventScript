@@ -34,7 +34,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void GesVmOneRandom(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmOneRandom(ref this GesVmValue dst, ref GesVmValue source, GesVmXoshiroRandom randomGenerator)
     {
         switch (source.Kind)
         {
@@ -60,7 +60,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
         }
     }
-    internal static void GesVmTakeRandom(ref this GesVmValue dst, ref GesVmValue source, short count, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmTakeRandom(ref this GesVmValue dst, ref GesVmValue source, short count, GesVmXoshiroRandom randomGenerator)
     {
         switch (source.Kind)
         {
@@ -643,7 +643,7 @@ internal static class GesVmRegisterTakeDrop
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void OneRandomRange(ref GesVmValue dst, GesVmValueRangeInteger valueRangeInteger, GameEventScriptRandomGenerator randomGenerator)
+    private static void OneRandomRange(ref GesVmValue dst, GesVmValueRangeInteger valueRangeInteger, GesVmXoshiroRandom randomGenerator)
     {
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (length <= 0)
@@ -656,7 +656,7 @@ internal static class GesVmRegisterTakeDrop
         if (GameEventScriptRangeMath.TryGetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, index + 1L, out var value)) dst.SetInteger(value);
         else dst.SetNothing();
     }
-    private static void OneRandomRange(ref GesVmValue dst, GesVmValueRangeFloat range, GameEventScriptRandomGenerator randomGenerator)
+    private static void OneRandomRange(ref GesVmValue dst, GesVmValueRangeFloat range, GesVmXoshiroRandom randomGenerator)
     {
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (length <= 0)
@@ -669,7 +669,7 @@ internal static class GesVmRegisterTakeDrop
         if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, index + 1L, out var value)) dst.SetFloat(value);
         else dst.SetNothing();
     }
-    private static void OneRandomStream(ref GesVmValue dst, IGesVmStream stream, GameEventScriptRandomGenerator randomGenerator)
+    private static void OneRandomStream(ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
     {
         var item = dst.OwningState.CreateNothing();
         var chosen = dst.OwningState.CreateNothing();
@@ -690,7 +690,7 @@ internal static class GesVmRegisterTakeDrop
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeRandomList(ref GesVmValue dst, GesVmValue[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static void TakeRandomList(ref GesVmValue dst, GesVmValue[] source, short count, GesVmXoshiroRandom randomGenerator)
     {
         if (count <= 0 || source.Length == 0)
         {
@@ -704,7 +704,7 @@ internal static class GesVmRegisterTakeDrop
         for (var i = 0; i < length; i++) list[i] = source[indices[i]];
         dst.SetList(list);
     }
-    private static void TakeRandomDice(ref GesVmValue dst, int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static void TakeRandomDice(ref GesVmValue dst, int[] source, short count, GesVmXoshiroRandom randomGenerator)
     {
         if (count <= 0 || source.Length == 0)
         {
@@ -718,7 +718,7 @@ internal static class GesVmRegisterTakeDrop
         for (var i = 0; i < length; i++) dice[i] = source[indices[i]];
         dst.SetDice(dice);
     }
-    private static void TakeRandomRange(ref GesVmValue dst, GesVmValueRangeInteger valueRangeInteger, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static void TakeRandomRange(ref GesVmValue dst, GesVmValueRangeInteger valueRangeInteger, short count, GesVmXoshiroRandom randomGenerator)
     {
         var sourceLength = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || sourceLength <= 0)
@@ -768,7 +768,7 @@ internal static class GesVmRegisterTakeDrop
 
         dst.SetList(list);
     }
-    private static void TakeRandomRange(ref GesVmValue dst, GesVmValueRangeFloat range, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static void TakeRandomRange(ref GesVmValue dst, GesVmValueRangeFloat range, short count, GesVmXoshiroRandom randomGenerator)
     {
         var sourceLength = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || sourceLength <= 0)
@@ -818,7 +818,7 @@ internal static class GesVmRegisterTakeDrop
 
         dst.SetList(list);
     }
-    private static void TakeRandomStream(ref GesVmValue dst, IGesVmStream stream, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static void TakeRandomStream(ref GesVmValue dst, IGesVmStream stream, short count, GesVmXoshiroRandom randomGenerator)
     {
         if (count <= 0)
         {
@@ -855,7 +855,7 @@ internal static class GesVmRegisterTakeDrop
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GameEventScriptRandomGenerator randomGenerator)
+    private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GesVmXoshiroRandom randomGenerator)
     {
         var indices = new int[sourceLength];
         for (var i = 0; i < sourceLength; i++) indices[i] = i;

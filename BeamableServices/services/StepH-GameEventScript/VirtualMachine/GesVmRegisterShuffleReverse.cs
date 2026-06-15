@@ -59,7 +59,7 @@ internal static class GesVmRegisterShuffleReverse
                 return;
         }
     }
-    internal static void GesVmShuffle(ref this GesVmValue dst, ref GesVmValue source, GameEventScriptRandomGenerator randomGenerator)
+    internal static void GesVmShuffle(ref this GesVmValue dst, ref GesVmValue source, GesVmXoshiroRandom randomGenerator)
     {
         switch (source.Kind)
         {
@@ -167,7 +167,7 @@ internal static class GesVmRegisterShuffleReverse
         for (var i = 0; i < count; i++) result[i] = values[count - i - 1];
         dst.SetList(result);
     }
-    private static void ShuffleStream(ref GesVmValue dst, IGesVmStream stream, GameEventScriptRandomGenerator randomGenerator)
+    private static void ShuffleStream(ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
     {
         var item = dst.OwningState.CreateNothing();
         var values = dst.OwningState.CreateRegisterArray(16);
@@ -196,7 +196,7 @@ internal static class GesVmRegisterShuffleReverse
         ShuffleList(result, randomGenerator);
         dst.SetList(result);
     }
-    private static void ShuffleList(GesVmValue[] list, GameEventScriptRandomGenerator randomGenerator)
+    private static void ShuffleList(GesVmValue[] list, GesVmXoshiroRandom randomGenerator)
     {
         for (var i = list.Length - 1; i > 0; i--)
         {

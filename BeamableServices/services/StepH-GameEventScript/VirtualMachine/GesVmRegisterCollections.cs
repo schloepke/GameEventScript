@@ -26,7 +26,7 @@ internal static class GesVmRegisterCollections
         {
             map[dst.OwningState.Binary.TextConstantTable.Resolve(keyNames[i])] = state.RegisterStaged(i);
         }
-        dst.SetMap(new GesVmMapObject(dst.OwningState, map));
+        dst.SetMap(new GesVmValueMap(dst.OwningState, map));
     }
     internal static void GesVmCreateListBuilder(ref this GesVmValue dst)
     {

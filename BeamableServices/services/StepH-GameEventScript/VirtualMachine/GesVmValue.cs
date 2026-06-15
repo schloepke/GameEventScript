@@ -220,10 +220,10 @@ internal struct GesVmValue
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
         IntegerValue = 0;
-        ObjectValue = new GesVmFloatTriplet(x, y, z);
+        ObjectValue = new GesVmValueVectorPoint(x, y, z);
     }
 
-    internal void SetVector(GesVmFloatTriplet vector, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetVector(GesVmValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Vector;
         Flags = StorageObjectFlag | HasValueFlag | (vector.X is 0 or double.NaN && vector.Y is 0 or double.NaN && vector.Z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
@@ -238,10 +238,10 @@ internal struct GesVmValue
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
         IntegerValue = 0;
-        ObjectValue = new GesVmFloatTriplet(x, y, z);
+        ObjectValue = new GesVmValueVectorPoint(x, y, z);
     }
 
-    internal void SetPoint(GesVmFloatTriplet point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetPoint(GesVmValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Point;
         Flags = StorageObjectFlag | HasValueFlag | (point.X is 0 or double.NaN && point.Y is 0 or double.NaN && point.Z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
@@ -270,16 +270,16 @@ internal struct GesVmValue
         ObjectValue = list;
     }
 
-    internal void SetMap(GesVmMapObject map)
+    internal void SetMap(GesVmValueMap valueMap)
     {
         Kind = Map;
-        Flags = map.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
+        Flags = valueMap.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
-        IntegerValue = map.Length;
-        ObjectValue = map;
+        IntegerValue = valueMap.Length;
+        ObjectValue = valueMap;
     }
 
-    internal void SetRecord(GesVmMapObject record)
+    internal void SetRecord(GesVmValueMap record)
     {
         Kind = Custom;
         Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
@@ -303,12 +303,12 @@ internal struct GesVmValue
         Unit = UnitNone;
         if (step == 0 || (step > 0 && from > to) || (step < 0 && from < to))
         {
-            ObjectValue = EmptyRange;
+            ObjectValue = _emptyValueRangeInteger;
             IntegerValue = 0;
         }
         else
         {
-            ObjectValue = new GesVmRange(from, to, step);
+            ObjectValue = new GesVmValueRangeInteger(from, to, step);
             if (step > 0) IntegerValue = unchecked((ulong)to - (ulong)from) / (ulong)step >= long.MaxValue ? long.MaxValue : (long)(unchecked((ulong)to - (ulong)from) / (ulong)step + 1UL);
             else IntegerValue = unchecked((ulong)from - (ulong)to) / unchecked(0UL - (ulong)step) >= long.MaxValue ? long.MaxValue : (long)(unchecked((ulong)from - (ulong)to) / unchecked(0UL - (ulong)step) + 1UL);
         }
@@ -328,19 +328,19 @@ internal struct GesVmValue
         Unit = UnitNone;
         if (step == 0 || (step > 0 && from > to) || (step < 0 && from < to))
         {
-            ObjectValue = EmptyRange;
+            ObjectValue = _emptyValueRangeInteger;
             IntegerValue = 0;
         }
         else
         {
-            ObjectValue = new GesVmFloatRange(from, to, step);
+            ObjectValue = new GesVmValueRangeFloat(from, to, step);
             IntegerValue = (long)Math.Floor(Math.Abs(to - from) / Math.Abs(step)) + 1;
         }
 
         Flags = IntegerValue > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
     }
 
-    private static GesVmRange EmptyRange = new(0, 0, 0);
+    private static GesVmValueRangeInteger _emptyValueRangeInteger = new(0, 0, 0);
 
     internal void SetMessageHandler(GameEventScriptMessageSignature handler)
     {
@@ -433,11 +433,11 @@ internal struct GesVmValue
     {
         switch (Kind)
         {
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmRange range:
-                stream = new GesVmIntegerRangeStream(range.from, range.to, range.step);
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range:
+                stream = new GesVmIntegerRangeStream(range.From, range.To, range.Step);
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmFloatRange range:
-                stream = new GesVmFloatRangeStream(range.from, range.to, range.step);
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range:
+                stream = new GesVmFloatRangeStream(range.From, range.To, range.Step);
                 return true;
             case List when ObjectValue is GesVmValue[] list:
                 stream = new GesVmListStream(list);
@@ -445,11 +445,11 @@ internal struct GesVmValue
             case Dice when ObjectValue is int[] dices:
                 stream = new GesVmIntStream(dices);
                 return true;
-            case Map when ObjectValue is GesVmMapObject map:
+            case Map when ObjectValue is GesVmValueMap map:
                 stream = new GesVmListStream(map.ValueList);
                 return true;
-            case Vector or Point when ObjectValue is GesVmFloatTriplet vp:
-                stream = new GesVmIndexAccessStream(vp);
+            case Vector or Point when ObjectValue is GesVmValueVectorPoint vp:
+                stream = new GesVmTripletStream(vp);
                 return true;
             case Text or Tag when IsStoragePointer:
                 stream = new GesVmStringStream(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue));
@@ -474,13 +474,13 @@ internal struct GesVmValue
             GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
             Text => ReadTextOrTag(),
             Tag => ":" + ReadTextOrTag(),
-            Vector when ObjectValue is GesVmFloatTriplet vector => FormatTriplet("vector", vector, Unit),
-            Point when ObjectValue is GesVmFloatTriplet point => FormatTriplet("point", point, Unit),
+            Vector when ObjectValue is GesVmValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
+            Point when ObjectValue is GesVmValueVectorPoint point => FormatTriplet("point", point, Unit),
             Dice when ObjectValue is int[] dice => FormatDice(dice),
             List when ObjectValue is GesVmValue[] list => FormatList(list),
-            Map when ObjectValue is GesVmMapObject map => FormatMap(map),
-            GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmRange range => FormatRange(range.from, range.to, range.step),
-            GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmFloatRange range => FormatRange(range.from, range.to, range.step),
+            Map when ObjectValue is GesVmValueMap map => FormatMap(map),
+            GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
+            GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
             Series when ObjectValue is GameEventScriptSeriesValue series => $"series[{series.SignatureId} offset {series.Offset}]",
             Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
             Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
@@ -496,7 +496,7 @@ internal struct GesVmValue
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
         return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
     }
-    private static string FormatTriplet(string typeName, GesVmFloatTriplet triplet, GameEventScriptBytecodeInstructionUnit unit)
+    private static string FormatTriplet(string typeName, GesVmValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
         => $"{typeName}[x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)}]";
     private static string FormatDice(int[] dice)
     {
@@ -524,17 +524,17 @@ internal struct GesVmValue
         builder.Append(']');
         return builder.ToString();
     }
-    private static string FormatMap(GesVmMapObject map)
+    private static string FormatMap(GesVmValueMap valueMap)
     {
         var builder = new StringBuilder("map[");
         var first = true;
-        foreach (var pair in map.Entries)
+        for (var i = 0; i < valueMap.StorageLength; i++)
         {
             if (!first) builder.Append(", ");
             first = false;
-            builder.Append(pair.Key);
+            builder.Append(valueMap.KeyAt(i));
             builder.Append(": ");
-            builder.Append(pair.Value.ConvertToText());
+            builder.Append(valueMap.ValueAt(i).ConvertToText());
         }
 
         builder.Append(']');

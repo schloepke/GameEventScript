@@ -119,7 +119,7 @@ internal class GesVmState
         return values;
     }
     internal GesVmValue[] CreateList(int size) => size == 0 ? EmptyList : CreateRegisterArray(size);
-    internal GesVmMapObject CreateMap(IReadOnlyDictionary<string, GesVmValue> entries) => new(this, entries);
+    internal GesVmValueMap CreateMap(IReadOnlyDictionary<string, GesVmValue> entries) => new(this, entries);
     internal GesVmValue CreateNothing()
     {
         var value = new GesVmValue();

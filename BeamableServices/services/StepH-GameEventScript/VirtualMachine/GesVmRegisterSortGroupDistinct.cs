@@ -283,10 +283,10 @@ internal static class GesVmRegisterSortGroupDistinct
                     map[pair.Key] = groupedValue;
                 }
 
-                state.Register(destinationSlot).SetMap(new GesVmMapObject(state, map));
+                state.Register(destinationSlot).SetMap(new GesVmValueMap(state, map));
                 return;
             }
-            case Map or Custom when source.ObjectValue is GesVmMapObject mapSource:
+            case Map or Custom when source.ObjectValue is GesVmValueMap mapSource:
             {
                 var values = mapSource.ValueList;
                 var groups = new Dictionary<string, GesVmValue[]>(StringComparer.Ordinal);
@@ -333,7 +333,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     map[pair.Key] = groupedValue;
                 }
 
-                state.Register(destinationSlot).SetMap(new GesVmMapObject(state, map));
+                state.Register(destinationSlot).SetMap(new GesVmValueMap(state, map));
                 return;
             }
             case Stream when source.ObjectValue is IGesVmStream stream:
@@ -389,7 +389,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     map[pair.Key] = groupedValue;
                 }
 
-                state.Register(destinationSlot).SetMap(new GesVmMapObject(state, map));
+                state.Register(destinationSlot).SetMap(new GesVmValueMap(state, map));
                 return;
             }
             default:
@@ -453,50 +453,50 @@ internal static class GesVmRegisterSortGroupDistinct
                 dst.SetList(result);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
                     dst.SetRange(0, 0, 0);
                     return;
                 }
 
-                var sourceDescending = range.step < 0;
+                var sourceDescending = range.Step < 0;
                 if (sourceDescending == descending)
                 {
-                    dst.SetRange(range.from, range.to, range.step);
+                    dst.SetRange(range.From, range.To, range.Step);
                     return;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length, out var last))
+                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last))
                 {
-                    dst.SetRange(last, range.from, -range.step);
+                    dst.SetRange(last, range.From, -range.Step);
                     return;
                 }
 
                 dst.SetNothing();
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
                 {
                     dst.SetRange(0, 0, 0);
                     return;
                 }
 
-                var sourceDescending = range.step < 0d;
+                var sourceDescending = range.Step < 0d;
                 if (sourceDescending == descending)
                 {
-                    dst.SetRange(range.from, range.to, range.step);
+                    dst.SetRange(range.From, range.To, range.Step);
                     return;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length, out var last))
+                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last))
                 {
-                    dst.SetRange(last, range.from, -range.step);
+                    dst.SetRange(last, range.From, -range.Step);
                     return;
                 }
 
@@ -724,8 +724,8 @@ internal static class GesVmRegisterSortGroupDistinct
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
                 if (a.Unit != b.Unit ||
-                    a.ObjectValue is not GesVmFloatTriplet leftTriplet ||
-                    b.ObjectValue is not GesVmFloatTriplet rightTriplet)
+                    a.ObjectValue is not GesVmValueVectorPoint leftTriplet ||
+                    b.ObjectValue is not GesVmValueVectorPoint rightTriplet)
                 {
                     return false;
                 }

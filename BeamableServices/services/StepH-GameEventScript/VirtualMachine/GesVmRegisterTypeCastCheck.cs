@@ -23,11 +23,11 @@ internal static class GesVmRegisterTypeCastCheck
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector:
-                if (xSlot.ObjectValue is GesVmFloatTriplet vector && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetVector(vector, unit);
+                if (xSlot.ObjectValue is GesVmValueVectorPoint vector && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetVector(vector, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Point:
-                if (xSlot.ObjectValue is GesVmFloatTriplet point && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetPoint(point, unit);
+                if (xSlot.ObjectValue is GesVmValueVectorPoint point && (unit is UnitNone || xSlot.Unit is UnitNone || xSlot.Unit == unit)) dst.SetPoint(point, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             default:
@@ -160,7 +160,7 @@ internal static class GesVmRegisterTypeCastCheck
         var typeName = state.Binary.TextConstantTable.Resolve(typeTextPointer);
         if (IsCustomType(ref xSlot, typeName, ref state.Binary.TextConstantTable))
         {
-            if (xSlot.ObjectValue is GesVmMapObject typedMap)
+            if (xSlot.ObjectValue is GesVmValueMap typedMap)
             {
                 dst.SetRecord(typedMap);
                 return;
@@ -176,7 +176,7 @@ internal static class GesVmRegisterTypeCastCheck
             return;
         }
 
-        if (xSlot.Kind is Map && xSlot.ObjectValue is GesVmMapObject map)
+        if (xSlot.Kind is Map && xSlot.ObjectValue is GesVmValueMap map)
         {
             for (ushort recordId = 0; recordId < state.RecordConstructors.Length; recordId++)
             {
@@ -273,7 +273,7 @@ internal static class GesVmRegisterTypeCastCheck
                 dst.SetList(list);
                 return;
             }
-            case Vector or Point when xSlot.ObjectValue is GesVmFloatTriplet triplet:
+            case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
                 var list = dst.OwningState.CreateList(3);
                 list[0].SetFloat(triplet.X, xSlot.Unit);
@@ -289,7 +289,7 @@ internal static class GesVmRegisterTypeCastCheck
                 dst.SetList(list);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmValueRangeInteger range:
             {
                 if (xSlot.IntegerValue > int.MaxValue)
                 {
@@ -304,17 +304,17 @@ internal static class GesVmRegisterTypeCastCheck
                 }
 
                 var list = dst.OwningState.CreateList((int)xSlot.IntegerValue);
-                var current = range.from;
+                var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
                     list[i].SetInteger(current);
-                    current += range.step;
+                    current += range.Step;
                 }
 
                 dst.SetList(list);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmValueRangeFloat range:
             {
                 if (xSlot.IntegerValue > int.MaxValue)
                 {
@@ -329,11 +329,11 @@ internal static class GesVmRegisterTypeCastCheck
                 }
 
                 var list = dst.OwningState.CreateList((int)xSlot.IntegerValue);
-                var current = range.from;
+                var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
                     list[i].SetFloat(current);
-                    current += range.step;
+                    current += range.Step;
                 }
 
                 dst.SetList(list);
@@ -348,27 +348,21 @@ internal static class GesVmRegisterTypeCastCheck
     {
         switch (xSlot.Kind)
         {
-            case Map or Custom when xSlot.ObjectValue is GesVmMapObject map:
+            case Map or Custom when xSlot.ObjectValue is GesVmValueMap map:
             {
-                var visibleCount = 0;
-                foreach (var key in map.Entries.Keys)
-                {
-                    if (!key.StartsWith("_", StringComparison.Ordinal)) visibleCount++;
-                }
-
-                if (visibleCount == map.Entries.Count)
+                if (!map.HasHiddenEntries)
                 {
                     dst = xSlot;
                     return;
                 }
 
-                var visibleEntries = new Dictionary<string, GesVmValue>(visibleCount, StringComparer.Ordinal);
-                foreach (var (key, value) in map.Entries)
+                var visibleEntries = new Dictionary<string, GesVmValue>(map.Length, StringComparer.Ordinal);
+                for (var i = 0; i < map.StorageLength; i++)
                 {
-                    if (!key.StartsWith("_", StringComparison.Ordinal)) visibleEntries[key] = value;
+                    if (map.IsVisibleAt(i)) visibleEntries[map.KeyAt(i)] = map.ValueAt(i);
                 }
 
-                dst.SetMap(new GesVmMapObject(dst.OwningState, visibleEntries));
+                dst.SetMap(new GesVmValueMap(dst.OwningState, visibleEntries));
                 return;
             }
             case Custom when xSlot.ObjectValue is GameEventScriptValue externalValue:
@@ -383,10 +377,10 @@ internal static class GesVmRegisterTypeCastCheck
                     entries[key] = value;
                 }
 
-                dst.SetMap(new GesVmMapObject(dst.OwningState, entries));
+                dst.SetMap(new GesVmValueMap(dst.OwningState, entries));
                 return;
             }
-            case Vector or Point when xSlot.ObjectValue is GesVmFloatTriplet triplet:
+            case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
                 var x = dst.OwningState.CreateNothing();
                 x.SetFloat(triplet.X, xSlot.Unit);
@@ -394,7 +388,7 @@ internal static class GesVmRegisterTypeCastCheck
                 y.SetFloat(triplet.Y, xSlot.Unit);
                 var z = dst.OwningState.CreateNothing();
                 z.SetFloat(triplet.Z, xSlot.Unit);
-                dst.SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue>(StringComparer.Ordinal)
+                dst.SetMap(new GesVmValueMap(dst.OwningState, new Dictionary<string, GesVmValue>(StringComparer.Ordinal)
                 {
                     ["x"] = x,
                     ["y"] = y,
@@ -403,7 +397,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
             }
             default:
-                dst.SetMap(new GesVmMapObject(dst.OwningState, new Dictionary<string, GesVmValue>(StringComparer.Ordinal)));
+                dst.SetMap(new GesVmValueMap(dst.OwningState, new Dictionary<string, GesVmValue>(StringComparer.Ordinal)));
                 return;
         }
     }
@@ -416,11 +410,11 @@ internal static class GesVmRegisterTypeCastCheck
 
         switch (xSlot.Kind)
         {
-            case Vector when xSlot.ObjectValue is GesVmFloatTriplet vector:
+            case Vector when xSlot.ObjectValue is GesVmValueVectorPoint vector:
                 if (asPoint) dst.SetPoint(vector, xSlot.Unit);
                 else dst = xSlot;
                 return;
-            case Point when xSlot.ObjectValue is GesVmFloatTriplet point:
+            case Point when xSlot.ObjectValue is GesVmValueVectorPoint point:
                 if (asPoint) dst = xSlot;
                 else dst.SetVector(point, xSlot.Unit);
                 return;
@@ -472,7 +466,7 @@ internal static class GesVmRegisterTypeCastCheck
                 }
 
                 break;
-            case Map or Custom when xSlot.ObjectValue is GesVmMapObject map:
+            case Map or Custom when xSlot.ObjectValue is GesVmValueMap map:
             {
                 if (map.TryGet("x", out var xValue))
                 {
@@ -515,28 +509,28 @@ internal static class GesVmRegisterTypeCastCheck
 
                 break;
             }
-            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmValueRangeInteger range:
             {
-                var current = range.from;
+                var current = range.From;
                 for (var i = 0; i < xSlot.IntegerValue && i < 3; i++)
                 {
                     if (i == 0) x = current;
                     else if (i == 1) y = current;
                     else z = current;
-                    current += range.step;
+                    current += range.Step;
                 }
 
                 break;
             }
-            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when xSlot.ObjectValue is GesVmValueRangeFloat range:
             {
-                var current = range.from;
+                var current = range.From;
                 for (var i = 0; i < xSlot.IntegerValue && i < 3; i++)
                 {
                     if (i == 0) x = current;
                     else if (i == 1) y = current;
                     else z = current;
-                    current += range.step;
+                    current += range.Step;
                 }
 
                 break;
@@ -584,7 +578,7 @@ internal static class GesVmRegisterTypeCastCheck
         return value.Kind switch
         {
             Custom when value.ObjectValue is string customTypeName => string.Equals(customTypeName, typeName, StringComparison.Ordinal),
-            Map or Custom when value.ObjectValue is IGesVmKeyAccess<GesVmValue> map && map.TryGet(GameEventScriptValue.HiddenTypeKey, out var marker) => marker.Kind switch
+            Map or Custom when value.ObjectValue is GesVmValueMap map && map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) => marker.Kind switch
             {
                 Tag when marker.IsStoragePointer => string.Equals(textTable.Resolve((ushort)marker.IntegerValue), typeName, StringComparison.Ordinal),
                 Tag when marker.ObjectValue is string markerTypeName => string.Equals(markerTypeName, typeName, StringComparison.Ordinal),

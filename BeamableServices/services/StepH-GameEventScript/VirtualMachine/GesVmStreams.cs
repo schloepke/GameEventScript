@@ -147,28 +147,32 @@ internal class GesVmStringStream(string stringValue) : IGesVmStream, IDisposable
     }
 }
 
-internal class GesVmIndexAccessStream(IGesVmIndexAccess<double> indexAccess) : IGesVmStream, IDisposable
+internal class GesVmTripletStream(GesVmValueVectorPoint triplet) : IGesVmStream, IDisposable
 {
     private int _current;
-    private IGesVmIndexAccess<double>? _values = indexAccess;
+    private GesVmValueVectorPoint? _triplet = triplet;
 
     public bool TryNext(ref GesVmValue value)
     {
-        if (_values == null || _current >= _values.Length || !_values.TryGet(_current, out var x))
+        if (_triplet == null || _current >= 3)
         {
-            _values = null;
+            _triplet = null;
             value.SetNothing();
             return false;
         }
 
-        value.SetFloat(x);
-        _current++;
+        value.SetFloat(_current++ switch
+        {
+            0 => _triplet.X,
+            1 => _triplet.Y,
+            _ => _triplet.Z
+        });
         return true;
     }
 
     public void Dispose()
     {
-        _values = null;
+        _triplet = null;
     }
 }
 

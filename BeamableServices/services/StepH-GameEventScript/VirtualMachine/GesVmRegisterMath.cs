@@ -39,11 +39,11 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(a.FloatValue + b.FloatValue);
                 break;
             case Vector when b.Kind is Vector:
-                if (a.ObjectValue is GesVmFloatTriplet av && b.ObjectValue is GesVmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z, vectorUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Point when b.Kind is Vector:
-                if (a.ObjectValue is GesVmFloatTriplet ap && b.ObjectValue is GesVmFloatTriplet bvv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetPoint(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z, pointUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bvv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetPoint(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
@@ -149,7 +149,7 @@ internal static class GesVmRegisterMath
                 break;
             case Vector when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmFloatTriplet av && b.ObjectValue is GesVmFloatTriplet bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
@@ -159,13 +159,13 @@ internal static class GesVmRegisterMath
                 return;
             case Point when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmFloatTriplet ap && b.ObjectValue is GesVmFloatTriplet bv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetPoint(ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetPoint(ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
             case Point when b.Kind is Point:
             {
-                if (a.ObjectValue is GesVmFloatTriplet ap && b.ObjectValue is GesVmFloatTriplet bp && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetVector(ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bp && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetVector(ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
@@ -332,14 +332,14 @@ internal static class GesVmRegisterMath
                 dst.SetDice(dice);
                 return;
             }
-            case Map when b.Kind is not Nothing && a.ObjectValue is GesVmMapObject aMap:
+            case Map when b.Kind is not Nothing && a.ObjectValue is GesVmValueMap aMap:
             {
                 var keys = new HashSet<string>(StringComparer.Ordinal);
-                if (b.Kind is Map && b.ObjectValue is GesVmMapObject bMap)
+                if (b.Kind is Map && b.ObjectValue is GesVmValueMap bMap)
                 {
-                    foreach (var key in bMap.Entries.Keys)
+                    for (var i = 0; i < bMap.StorageLength; i++)
                     {
-                        keys.Add(key);
+                        keys.Add(bMap.KeyAt(i));
                     }
                 }
                 else if (b.Kind is Text or Tag)
@@ -367,15 +367,16 @@ internal static class GesVmRegisterMath
                 }
 
                 var map = new Dictionary<string, GesVmValue>(StringComparer.Ordinal);
-                foreach (var pair in aMap.Entries)
+                for (var i = 0; i < aMap.StorageLength; i++)
                 {
-                    if (!keys.Contains(pair.Key))
+                    var key = aMap.KeyAt(i);
+                    if (!keys.Contains(key))
                     {
-                        map[pair.Key] = pair.Value;
+                        map[key] = aMap.ValueAt(i);
                     }
                 }
 
-                dst.SetMap(new GesVmMapObject(dst.OwningState, map));
+                dst.SetMap(new GesVmValueMap(dst.OwningState, map));
                 return;
             }
             case not List and not Map and not Nothing when b.Kind is List or Map:
@@ -450,22 +451,22 @@ internal static class GesVmRegisterMath
                 dst.SetFloat(percentageFloatResult, b.Unit);
                 return;
             case Percentage when b.Kind is Vector:
-                if (b.ObjectValue is GesVmFloatTriplet percentageVector) dst.SetVector(a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
+                if (b.ObjectValue is GesVmValueVectorPoint percentageVector) dst.SetVector(a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Percentage when b.Kind is Point:
                 dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmFloatTriplet vectorInt && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmFloatTriplet vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesVmFloatTriplet vectorPercent) dst.SetVector(vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorPercent) dst.SetVector(vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Nothing:
@@ -473,7 +474,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector:
                 var vectorScalar = b.AsNumeric;
-                if (a.ObjectValue is GesVmFloatTriplet vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(ref a, ref b, out unit))
+                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(ref a, ref b, out unit))
                     dst.SetVector(vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -485,7 +486,7 @@ internal static class GesVmRegisterMath
                 return;
             case Integer or Float when b.Kind is Vector:
                 var scalar = a.AsNumeric;
-                if (b.ObjectValue is GesVmFloatTriplet rightVector && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
+                if (b.ObjectValue is GesVmValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Integer or Float when b.Kind is Point:
@@ -531,7 +532,7 @@ internal static class GesVmRegisterMath
         {
             case Vector:
             {
-                if (b.ObjectValue is GesVmFloatTriplet vector && double.IsFinite(fallbackLeft) && TryProductUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
+                if (b.ObjectValue is GesVmValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
@@ -584,16 +585,16 @@ internal static class GesVmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmFloatTriplet vectorInt && b.IntegerValue != 0 && TryQuotientUnit(ref a, ref b, out unit)) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && b.IntegerValue != 0 && TryQuotientUnit(ref a, ref b, out unit)) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmFloatTriplet vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(ref a, ref b, out unit))
+                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(ref a, ref b, out unit))
                     dst.SetVector(vectorFloat.X / b.FloatValue, vectorFloat.Y / b.FloatValue, vectorFloat.Z / b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesVmFloatTriplet vectorPercent && b.FloatValue != 0d) dst.SetVector(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue, a.Unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorPercent && b.FloatValue != 0d) dst.SetVector(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue, a.Unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Nothing:
@@ -601,7 +602,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector:
                 var vectorDivisor = b.AsNumeric;
-                if (a.ObjectValue is GesVmFloatTriplet vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit))
+                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit))
                     dst.SetVector(vector.X / vectorDivisor, vector.Y / vectorDivisor, vector.Z / vectorDivisor, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -1282,7 +1283,7 @@ internal static class GesVmRegisterMath
                     break;
                 }
 
-                if (a.ObjectValue is GesVmFloatTriplet leftTriplet && b.ObjectValue is GesVmFloatTriplet rightTriplet)
+                if (a.ObjectValue is GesVmValueVectorPoint leftTriplet && b.ObjectValue is GesVmValueVectorPoint rightTriplet)
                 {
                     comparison = rightTriplet.X.CompareTo(leftTriplet.X);
                     if (comparison == 0) comparison = rightTriplet.Y.CompareTo(leftTriplet.Y);
@@ -1499,7 +1500,7 @@ internal static class GesVmRegisterMath
                     break;
                 }
 
-                if (a.ObjectValue is GesVmFloatTriplet leftTriplet && b.ObjectValue is GesVmFloatTriplet rightTriplet)
+                if (a.ObjectValue is GesVmValueVectorPoint leftTriplet && b.ObjectValue is GesVmValueVectorPoint rightTriplet)
                 {
                     comparison = rightTriplet.X.CompareTo(leftTriplet.X);
                     if (comparison == 0) comparison = rightTriplet.Y.CompareTo(leftTriplet.Y);
@@ -1532,7 +1533,7 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(-a.FloatValue);
                 return;
             case Vector:
-                if (a.ObjectValue is GesVmFloatTriplet vector)
+                if (a.ObjectValue is GesVmValueVectorPoint vector)
                 {
                     dst.SetVector(-vector.X, -vector.Y, -vector.Z, a.Unit);
                 }
@@ -1567,7 +1568,7 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(Math.Abs(a.FloatValue));
                 return;
             case Vector:
-                if (a.ObjectValue is not GesVmFloatTriplet vector)
+                if (a.ObjectValue is not GesVmValueVectorPoint vector)
                 {
                     dst.SetFloat(double.NaN);
                     return;

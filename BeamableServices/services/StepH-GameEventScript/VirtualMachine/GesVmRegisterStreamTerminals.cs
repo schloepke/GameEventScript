@@ -13,20 +13,20 @@ internal static class GesVmRegisterStreamTerminals
             case List when iterator.ObjectValue is GesVmValue[] list:
                 dst.SetInteger(list.Length);
                 return;
-            case Map when iterator.ObjectValue is GesVmMapObject map:
+            case Map when iterator.ObjectValue is GesVmValueMap map:
                 dst.SetInteger(map.Length);
                 return;
             case Dice when iterator.ObjectValue is int[] dice:
                 dst.SetInteger(dice.Length);
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmRange range:
-                dst.SetInteger(GameEventScriptRangeMath.GetLength(range.from, range.to, range.step));
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
+                dst.SetInteger(GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmFloatRange range:
-                dst.SetInteger(GameEventScriptRangeMath.GetLength(range.from, range.to, range.step));
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
+                dst.SetInteger(GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case Vector or Point when iterator.ObjectValue is IGesVmIndexAccess<double> indexAccess:
-                dst.SetInteger(indexAccess.Length);
+            case Vector or Point when iterator.ObjectValue is GesVmValueVectorPoint:
+                dst.SetInteger(3);
                 return;
             case Text or Tag:
                 dst.SetInteger(iterator.ReadTextOrTag().Length);
@@ -76,7 +76,7 @@ internal static class GesVmRegisterStreamTerminals
                 dst = listSum;
                 return;
             }
-            case Map when iterator.ObjectValue is GesVmMapObject map:
+            case Map when iterator.ObjectValue is GesVmValueMap map:
             {
                 var values = map.ValueList;
                 if (values.Length == 0)
@@ -109,9 +109,9 @@ internal static class GesVmRegisterStreamTerminals
                 dst.SetInteger(diceSum);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetFloat(0d);
@@ -121,15 +121,15 @@ internal static class GesVmRegisterStreamTerminals
                 long rangeSum = 0;
                 for (long i = 1; i <= length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) rangeSum += value;
+                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) rangeSum += value;
                 }
 
                 dst.SetInteger(rangeSum);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetFloat(0d);
@@ -139,7 +139,7 @@ internal static class GesVmRegisterStreamTerminals
                 var floatRangeSum = 0d;
                 for (long i = 1; i <= length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) floatRangeSum += value;
+                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) floatRangeSum += value;
                 }
 
                 dst.SetFloat(floatRangeSum);
@@ -202,7 +202,7 @@ internal static class GesVmRegisterStreamTerminals
                 dst = listNext;
                 return;
             }
-            case Map when iterator.ObjectValue is GesVmMapObject map:
+            case Map when iterator.ObjectValue is GesVmValueMap map:
             {
                 var values = map.ValueList;
                 if (values.Length == 0)
@@ -237,9 +237,9 @@ internal static class GesVmRegisterStreamTerminals
                 dst.SetFloat((double)diceSum / dice.Length);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetNothing();
@@ -249,15 +249,15 @@ internal static class GesVmRegisterStreamTerminals
                 long rangeSum = 0;
                 for (long i = 1; i <= length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) rangeSum += value;
+                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) rangeSum += value;
                 }
 
                 dst.SetFloat((double)rangeSum / length);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetNothing();
@@ -267,7 +267,7 @@ internal static class GesVmRegisterStreamTerminals
                 var floatRangeSum = 0d;
                 for (long i = 1; i <= length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i, out var value)) floatRangeSum += value;
+                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) floatRangeSum += value;
                 }
 
                 dst.SetFloat(floatRangeSum / length);

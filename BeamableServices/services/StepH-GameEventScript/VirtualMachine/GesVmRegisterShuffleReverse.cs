@@ -25,29 +25,29 @@ internal static class GesVmRegisterShuffleReverse
                 dst.SetList(result);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetRange(0, 0, 0);
                     return;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length, out var last)) dst.SetRange(last, range.from, -range.step);
+                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)) dst.SetRange(last, range.From, -range.Step);
                 else dst.SetNothing();
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetRange(0d, 0d, 0d);
                     return;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, length, out var last)) dst.SetRange(last, range.from, -range.step);
+                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)) dst.SetRange(last, range.From, -range.Step);
                 else dst.SetNothing();
                 return;
             }
@@ -79,9 +79,9 @@ internal static class GesVmRegisterShuffleReverse
                 dst.SetList(result);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetList(dst.OwningState.EmptyList);
@@ -97,7 +97,7 @@ internal static class GesVmRegisterShuffleReverse
                 var result = dst.OwningState.CreateList((int)length);
                 for (var i = 0; i < result.Length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i + 1L, out var value)) result[i].SetInteger(value);
+                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i + 1L, out var value)) result[i].SetInteger(value);
                     else result[i].SetNothing();
                 }
 
@@ -105,9 +105,9 @@ internal static class GesVmRegisterShuffleReverse
                 dst.SetList(result);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmFloatRange range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = GameEventScriptRangeMath.GetLength(range.from, range.to, range.step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
                     dst.SetList(dst.OwningState.EmptyList);
@@ -123,7 +123,7 @@ internal static class GesVmRegisterShuffleReverse
                 var result = dst.OwningState.CreateList((int)length);
                 for (var i = 0; i < result.Length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.from, range.to, range.step, i + 1L, out var value)) result[i].SetFloat(value);
+                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i + 1L, out var value)) result[i].SetFloat(value);
                     else result[i].SetNothing();
                 }
 

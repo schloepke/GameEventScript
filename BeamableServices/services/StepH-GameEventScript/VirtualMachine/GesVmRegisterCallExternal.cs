@@ -227,7 +227,7 @@ internal static class GesVmRegisterCallExternal
                 var entries = new Dictionary<string, GesVmValue>(sourceEntries.Count + (isCustomType ? 1 : 0), StringComparer.Ordinal);
                 if (isCustomType)
                 {
-                    entries[GameEventScriptValue.HiddenTypeKey] = destination.OwningState.CreateTag(customTypeName);
+                    entries[GesVmValueMap.HiddenRecordTypeField] = destination.OwningState.CreateTag(customTypeName);
                 }
 
                 foreach (var (key, sourceValue) in sourceEntries)
@@ -237,8 +237,8 @@ internal static class GesVmRegisterCallExternal
                     entries[key] = value;
                 }
 
-                if (isCustomType) destination.SetRecord(new GesVmMapObject(destination.OwningState, entries));
-                else destination.SetMap(new GesVmMapObject(destination.OwningState, entries));
+                if (isCustomType) destination.SetRecord(new GesVmValueMap(destination.OwningState, entries));
+                else destination.SetMap(new GesVmValueMap(destination.OwningState, entries));
                 break;
             case GameEventScriptValueKind.Dice:
                 var sourceDice = argument.AsDice().Rolls;
@@ -274,9 +274,9 @@ internal static class GesVmRegisterCallExternal
                 return double.IsNaN(value.FloatValue) ? GameEventScriptFastValue.Nothing : GameEventScriptFastValue.FromFloat(value.FloatValue, value.Unit);
             case Percentage:
                 return GameEventScriptFastValue.FromPercentage(value.FloatValue);
-            case Vector when value.ObjectValue is GesVmFloatTriplet vector:
+            case Vector when value.ObjectValue is GesVmValueVectorPoint vector:
                 return GameEventScriptFastValue.FromVector(vector.X, vector.Y, vector.Z, value.Unit);
-            case Point when value.ObjectValue is GesVmFloatTriplet point:
+            case Point when value.ObjectValue is GesVmValueVectorPoint point:
                 return GameEventScriptFastValue.FromPoint(point.X, point.Y, point.Z, value.Unit);
             case Text:
                 return GameEventScriptFastValue.FromText(value.IsStorageObject ? value.ObjectValue as string ?? string.Empty : value.OwningState.Binary.TextConstantTable.Resolve((ushort)value.IntegerValue));
@@ -289,18 +289,18 @@ internal static class GesVmRegisterCallExternal
         Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
         Float => double.IsNaN(a.FloatValue) ? GameEventScriptValueFactory.GesNothing() : GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
         Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
-        Vector when a.ObjectValue is GesVmFloatTriplet vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
-        Point when a.ObjectValue is GesVmFloatTriplet point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
+        Vector when a.ObjectValue is GesVmValueVectorPoint vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
+        Point when a.ObjectValue is GesVmValueVectorPoint point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
         Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
         Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
         List when a.ObjectValue is GesVmValue[] list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
-        Map when a.ObjectValue is GesVmMapObject map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
+        Map when a.ObjectValue is GesVmValueMap map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
         Custom when a.ObjectValue is GameEventScriptValue custom => custom,
-        Custom when a.ObjectValue is GesVmMapObject map => map.ToGameEventScriptCustomTypeValue(a.OwningState),
+        Custom when a.ObjectValue is GesVmValueMap map => map.ToGameEventScriptCustomTypeValue(a.OwningState),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
-        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
-        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmFloatRange r => GameEventScriptValueFactory.GesRange(r.from, r.to, r.step),
+        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
+        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
         Series when a.ObjectValue is GameEventScriptSeriesValue series => series,
         Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
         Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
@@ -316,22 +316,24 @@ internal static class GesVmRegisterCallExternal
 
         return result;
     }
-    private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this GesVmMapObject map)
+    private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this GesVmValueMap valueMap)
     {
-        var result = new Dictionary<string, GameEventScriptValue>(map.Length, StringComparer.Ordinal);
-        foreach (var (key, value) in map.Entries)
+        var result = new Dictionary<string, GameEventScriptValue>(valueMap.Length, StringComparer.Ordinal);
+        for (var i = 0; i < valueMap.StorageLength; i++)
         {
-            if (key.StartsWith("_", StringComparison.Ordinal)) continue;
+            var key = valueMap.KeyAt(i);
+            if (!valueMap.IsVisibleAt(i)) continue;
+            var value = valueMap.ValueAt(i);
             var x = value;
             result.Add(key, x.ToGameEventScriptValue());
         }
 
         return result;
     }
-    private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this GesVmMapObject map, GesVmState state)
+    private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this GesVmValueMap valueMap, GesVmState state)
     {
         var typeName = string.Empty;
-        if (map.TryGet(GameEventScriptValue.HiddenTypeKey, out var marker) && marker.Kind is Tag)
+        if (valueMap.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) && marker.Kind is Tag)
         {
             typeName = marker.IsStoragePointer
                 ? state.Binary.TextConstantTable.Resolve((ushort)marker.IntegerValue)
@@ -340,6 +342,6 @@ internal static class GesVmRegisterCallExternal
 
         return string.IsNullOrEmpty(typeName)
             ? GameEventScriptValueFactory.GesNothing()
-            : GameEventScriptValueFactory.GesCustomType(typeName, map.ToGameEventScriptValues());
+            : GameEventScriptValueFactory.GesCustomType(typeName, valueMap.ToGameEventScriptValues());
     }
 }

@@ -21,7 +21,7 @@ internal static class GesVmRegisterVectorPoint
                         return;
                     }
 
-                    if (first.ObjectValue is not GesVmFloatTriplet triplet)
+                    if (first.ObjectValue is not GesVmValueVectorPoint triplet)
                     {
                         dst.SetNothing();
                         return;
@@ -89,7 +89,7 @@ internal static class GesVmRegisterVectorPoint
                         return;
                     }
 
-                    if (first.ObjectValue is not GesVmFloatTriplet triplet)
+                    if (first.ObjectValue is not GesVmValueVectorPoint triplet)
                     {
                         dst.SetNothing();
                         return;

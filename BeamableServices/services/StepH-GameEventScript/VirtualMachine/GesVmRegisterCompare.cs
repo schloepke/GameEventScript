@@ -27,7 +27,7 @@ internal static class GesVmRegisterCompare
             case Text or Tag when b.Kind is Text or Tag:
                 if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
                 return string.Equals(a.ReadTextOrTag(), b.ReadTextOrTag(), StringComparison.Ordinal);
-            case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesVmFloatTriplet av && b.ObjectValue is GesVmFloatTriplet bv:
+            case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv:
                 return a.Unit == b.Unit && a.Kind == b.Kind && DoubleEqualsUlp(av.X, bv.X) && DoubleEqualsUlp(av.Y, bv.Y) && DoubleEqualsUlp(av.Z, bv.Z);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:
                 return Sum(al) == Sum(bl);
@@ -50,13 +50,13 @@ internal static class GesVmRegisterCompare
                 }
 
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmRange ar && b.ObjectValue is GesVmRange br:
-                return ar.from == br.from && ar.to == br.to && ar.step == br.step;
-            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmFloatRange ar && b.ObjectValue is GesVmFloatRange br:
-                return DoubleEqualsUlp(ar.from, br.from) && DoubleEqualsUlp(ar.to, br.to) && DoubleEqualsUlp(ar.step, br.step);
+            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmValueRangeInteger ar && b.ObjectValue is GesVmValueRangeInteger br:
+                return ar.From == br.From && ar.To == br.To && ar.Step == br.Step;
+            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmValueRangeFloat ar && b.ObjectValue is GesVmValueRangeFloat br:
+                return DoubleEqualsUlp(ar.From, br.From) && DoubleEqualsUlp(ar.To, br.To) && DoubleEqualsUlp(ar.Step, br.Step);
             case Series when b.Kind is Series && a.ObjectValue is GameEventScriptSeriesValue aseries && b.ObjectValue is GameEventScriptSeriesValue bseries:
                 return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
-            case Map or Custom when b.Kind is Map or Custom && a.ObjectValue is GesVmMapObject am && b.ObjectValue is GesVmMapObject bm:
+            case Map or Custom when b.Kind is Map or Custom && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmValueMap bm:
                 if (am.Length != bm.Length) return false;
                 var aKeys = am.KeyList;
                 var bKeys = bm.KeyList;

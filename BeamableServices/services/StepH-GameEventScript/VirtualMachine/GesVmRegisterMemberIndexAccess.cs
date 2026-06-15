@@ -15,13 +15,13 @@ internal static class GesVmRegisterMemberIndexAccess
     {
         switch (obj.Kind)
         {
-            case Map or Custom when obj.ObjectValue is GesVmMapObject map && map.TryGet(key, out var value):
+            case Map or Custom when obj.ObjectValue is GesVmValueMap map && map.TryGet(key, out var value):
                 dst = value;
                 return;
             case Custom when obj.ObjectValue is GameEventScriptValue externalValue && externalValue.TryGetMapMember(key, out var value):
                 dst.BindArguments(value);
                 return;
-            case Vector or Point when obj.ObjectValue is GesVmFloatTriplet vp && vp.TryGet(key, out var value):
+            case Vector or Point when obj.ObjectValue is GesVmValueVectorPoint vp && vp.TryGetComponent(key, out var value):
                 dst.SetFloat(value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
@@ -94,17 +94,31 @@ internal static class GesVmRegisterMemberIndexAccess
                 if (index < dices.Length) dst.SetInteger(dices[index]);
                 else dst.SetNothing();
                 return;
-            case Vector or Point when obj.ObjectValue is GesVmFloatTriplet vp && vp.TryGet(index, out var value):
-                dst.SetFloat(value, obj.Unit);
+            case Vector or Point when obj.ObjectValue is GesVmValueVectorPoint vp:
+                switch (index)
+                {
+                    case 0:
+                        dst.SetFloat(vp.X, obj.Unit);
+                        break;
+                    case 1:
+                        dst.SetFloat(vp.Y, obj.Unit);
+                        break;
+                    case 2:
+                        dst.SetFloat(vp.Z, obj.Unit);
+                        break;
+                    default:
+                        dst.SetNothing();
+                        break;
+                }
                 return;
-            case Range when obj.ObjectValue is GesVmRange integerRange:
-                var intRangeValue = integerRange.from + index * integerRange.step;
-                if (integerRange.step > 0 && intRangeValue <= integerRange.to || integerRange.step < 0 && intRangeValue >= integerRange.to) dst.SetInteger(intRangeValue);
+            case Range when obj.ObjectValue is GesVmValueRangeInteger integerRange:
+                var intRangeValue = integerRange.From + index * integerRange.Step;
+                if (integerRange.Step > 0 && intRangeValue <= integerRange.To || integerRange.Step < 0 && intRangeValue >= integerRange.To) dst.SetInteger(intRangeValue);
                 else dst.SetNothing();
                 return;
-            case Range when obj.ObjectValue is GesVmFloatRange floatRange:
-                var floatRangeValue = floatRange.from + index * floatRange.step;
-                if (floatRange.step > 0 && floatRangeValue <= floatRange.to || floatRange.step < 0 && floatRangeValue >= floatRange.to) dst.SetFloat(floatRangeValue);
+            case Range when obj.ObjectValue is GesVmValueRangeFloat floatRange:
+                var floatRangeValue = floatRange.From + index * floatRange.Step;
+                if (floatRange.Step > 0 && floatRangeValue <= floatRange.To || floatRange.Step < 0 && floatRangeValue >= floatRange.To) dst.SetFloat(floatRangeValue);
                 else dst.SetNothing();
                 return;
             case Text or Tag when obj.IsStoragePointer:

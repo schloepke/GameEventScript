@@ -11,14 +11,13 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCallExternal
 {
-    internal static void GesVmCallStandard(ref this GesVmValue dst, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
+    internal static void GesVmCallStandard(this GesVmState state, ushort destinationRegister, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
     {
-        var state = dst.OwningState;
         var shape = state.FetchUInt16SliceTableByPointer(extensionShapeIndex);
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (shape.Length < 2 || argumentSlots.Length != shape.Length - 2)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError("Invalid standard extension call shape.");
             return;
         }
@@ -42,15 +41,16 @@ internal static class GesVmRegisterCallExternal
             var reference = new GameEventScriptExtensionReference(state.FetchStringByPointer(shape[0]), state.FetchStringByPointer(shape[1]), labels);
             if (!GesStandardExtensions.TryInvoke(reference, arguments.AsSpan(0, argumentCount), out var result))
             {
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 state.RaiseError($"Unknown standard extension '{reference.SignatureId}'.");
                 return;
             }
 
-            dst.BindArguments(result);
+            state.BindArguments(destinationRegister, result);
+            ref var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
             }
         }
         finally
@@ -62,9 +62,8 @@ internal static class GesVmRegisterCallExternal
             }
         }
     }
-    internal static void GesVmCallExternal(ref this GesVmValue dst, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
+    internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
-        var state = dst.OwningState;
         var found = false;
         GameEventScriptBinaryBindEntry bind = default;
         foreach (var entry in state.Binary.BindTable.Entries)
@@ -80,7 +79,7 @@ internal static class GesVmRegisterCallExternal
 
         if (!found)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError($"External extension bind id '{externalBindId}' was not found.");
             return;
         }
@@ -88,7 +87,7 @@ internal static class GesVmRegisterCallExternal
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (argumentSlots.Length != bind.ArgumentNames.Count)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError("External extension call argument count does not match the reference shape.");
             return;
         }
@@ -97,7 +96,7 @@ internal static class GesVmRegisterCallExternal
         var separator = fullName.IndexOf('.');
         if (separator <= 0 || separator >= fullName.Length - 1)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError($"External extension reference '{fullName}' has an invalid name.");
             return;
         }
@@ -113,7 +112,7 @@ internal static class GesVmRegisterCallExternal
 
         if (!session.ExtensionRegistry.TryResolve(reference, out var function))
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{externalBindId}'.");
             return;
         }
@@ -128,10 +127,11 @@ internal static class GesVmRegisterCallExternal
             }
 
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
-            dst.BindArguments(result);
+            state.BindArguments(destinationRegister, result);
+            ref var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
             }
 
         }
@@ -143,6 +143,16 @@ internal static class GesVmRegisterCallExternal
                 ArrayPool<GameEventScriptFastValue>.Shared.Return(arguments);
             }
         }
+    }
+    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptFastValue argument)
+    {
+        ref var destination = ref state.Register(destinationRegister);
+        destination.BindArguments(argument);
+    }
+    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptValue argument)
+    {
+        ref var destination = ref state.Register(destinationRegister);
+        destination.BindArguments(argument);
     }
     private static void BindArguments(ref this GesVmValue destination, GameEventScriptFastValue argument)
     {

@@ -174,10 +174,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
                         case CallStandard:
-                            vmState.Register(instruction.DestinationSlot).GesVmCallStandard(instruction.SecondaryListIndex, instruction.ListIndex, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.GesVmCallStandard(instruction.DestinationSlot, instruction.SecondaryListIndex, instruction.ListIndex, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
                         case CallExternal:
-                            vmState.Register(instruction.DestinationSlot).GesVmCallExternal(instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.GesVmCallExternal(instruction.DestinationSlot, instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
 
                         case ReturnVoid:

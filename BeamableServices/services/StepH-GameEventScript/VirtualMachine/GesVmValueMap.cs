@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
@@ -15,20 +14,14 @@ internal sealed class GesVmValueMap
     private GesVmValue[]? _valueList;
     private GesVmValue[]? _entries;
 
-    internal GesVmValueMap(GesVmState ownerState, IReadOnlyDictionary<string, GesVmValue> entries)
+    internal GesVmValueMap(GesVmState ownerState, string[] keys, GesVmValue[] values, int count)
     {
         _ownerState = ownerState;
-        _keys = new string[entries.Count];
-        _values = ownerState.CreateRegisterArray(entries.Count);
+        _keys = new string[count];
+        _values = ownerState.CreateRegisterArray(count);
 
-        var index = 0;
-        foreach (var (key, value) in entries)
-        {
-            _keys[index] = key;
-            _values[index] = value;
-            index++;
-        }
-
+        Array.Copy(keys, _keys, count);
+        Array.Copy(values, _values, count);
         Array.Sort(_keys, _values, StringComparer.Ordinal);
 
         var visibleLength = 0;
@@ -116,10 +109,67 @@ internal sealed class GesVmValueMap
         {
             var key = _keys[index];
             if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-            list[i++].SetMap(new GesVmValueMap(_ownerState, new Dictionary<string, GesVmValue> { ["key"] = _ownerState.CreateTag(key), ["value"] = _values[index] }));
+            var entry = new GesVmValueMapBuilder(_ownerState, 2);
+            entry.Set("key", _ownerState.CreateTag(key));
+            entry.Set("value", _values[index]);
+            list[i++].SetMap(entry.ToMap());
         }
 
         return list;
     }
 
+}
+
+internal sealed class GesVmValueMapBuilder
+{
+    private readonly GesVmState _ownerState;
+    private string[] _keys;
+    private GesVmValue[] _values;
+    private int _count;
+
+    internal GesVmValueMapBuilder(GesVmState ownerState, int capacity = 0)
+    {
+        _ownerState = ownerState;
+        var size = capacity <= 0 ? 4 : capacity;
+        _keys = new string[size];
+        _values = ownerState.CreateRegisterArray(size);
+    }
+
+    internal int Count => _count;
+
+    internal bool ContainsKey(string key)
+    {
+        for (var i = 0; i < _count; i++)
+        {
+            if (string.Equals(_keys[i], key, StringComparison.Ordinal)) return true;
+        }
+
+        return false;
+    }
+
+    internal void Set(string key, GesVmValue value)
+    {
+        for (var i = 0; i < _count; i++)
+        {
+            if (!string.Equals(_keys[i], key, StringComparison.Ordinal)) continue;
+            _values[i] = value;
+            return;
+        }
+
+        if (_count == _keys.Length)
+        {
+            var nextKeys = new string[_keys.Length << 1];
+            var nextValues = _ownerState.CreateRegisterArray(_values.Length << 1);
+            Array.Copy(_keys, nextKeys, _keys.Length);
+            Array.Copy(_values, nextValues, _values.Length);
+            _keys = nextKeys;
+            _values = nextValues;
+        }
+
+        _keys[_count] = key;
+        _values[_count] = value;
+        _count++;
+    }
+
+    internal GesVmValueMap ToMap() => new(_ownerState, _keys, _values, _count);
 }

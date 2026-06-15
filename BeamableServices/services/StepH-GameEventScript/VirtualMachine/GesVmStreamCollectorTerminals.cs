@@ -1,8 +1,7 @@
-namespace StepH.GameEventScript.VirtualMachine;
-
 using System;
-using System.Collections.Generic;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+
+namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmStreamCollectorTerminals
 {
@@ -50,7 +49,7 @@ internal static class GesVmStreamCollectorTerminals
 
         var item = dst.OwningState.CreateNothing();
         var keyValue = dst.OwningState.CreateNothing();
-        var map = new Dictionary<string, GesVmValue>(StringComparer.Ordinal);
+        var map = new GesVmValueMapBuilder(dst.OwningState);
         try
         {
             while (stream.TryNext(ref item))
@@ -68,10 +67,10 @@ internal static class GesVmStreamCollectorTerminals
                     _ => keyValue.ConvertToText()
                 };
                 if (key.Length == 0) continue;
-                map[key] = item;
+                map.Set(key, item);
             }
 
-            dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+            dst.SetMap(map.ToMap());
         }
         finally
         {
@@ -89,7 +88,7 @@ internal static class GesVmStreamCollectorTerminals
         var item = dst.OwningState.CreateNothing();
         var keyValue = dst.OwningState.CreateNothing();
         var value = dst.OwningState.CreateNothing();
-        var map = new Dictionary<string, GesVmValue>(StringComparer.Ordinal);
+        var map = new GesVmValueMapBuilder(dst.OwningState);
         try
         {
             while (stream.TryNext(ref item))
@@ -114,10 +113,10 @@ internal static class GesVmStreamCollectorTerminals
                     return;
                 }
 
-                map[key] = value;
+                map.Set(key, value);
             }
 
-            dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+            dst.SetMap(map.ToMap());
         }
         finally
         {

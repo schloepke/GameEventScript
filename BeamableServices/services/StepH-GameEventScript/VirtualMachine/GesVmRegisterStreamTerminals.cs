@@ -1,8 +1,9 @@
-namespace StepH.GameEventScript.VirtualMachine;
 using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+
+namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterStreamTerminals
 {
@@ -53,6 +54,7 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
+
     internal static void GesVmSum(ref this GesVmValue dst, ref GesVmValue iterator)
     {
         switch (iterator.Kind)
@@ -177,6 +179,7 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
+
     internal static void GesVmAverage(ref this GesVmValue dst, ref GesVmValue iterator)
     {
         switch (iterator.Kind)
@@ -317,15 +320,19 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
+
     internal static void GesVmStreamMin(ref GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         GesVmStreamMinMax(ref dst, ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
     }
+
     internal static void GesVmStreamMax(ref GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         GesVmStreamMinMax(ref dst, ref iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
     }
-    internal static void GesVmStreamOneWeighted(ref GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
+
+    internal static void GesVmStreamOneWeighted(ref GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
+        GameEventScriptRandomGenerator randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
@@ -392,7 +399,9 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmStreamTakeWeighted(ref GesVmValue dst, ref GesVmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator, GameEventScriptRandomGenerator randomGenerator)
+
+    internal static void GesVmStreamTakeWeighted(ref GesVmValue dst, ref GesVmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
+        GameEventScriptRandomGenerator randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
@@ -482,6 +491,7 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
+
     private static void GesVmStreamMinMax(ref GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool isMax)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
@@ -531,5 +541,4 @@ internal static class GesVmRegisterStreamTerminals
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-
 }

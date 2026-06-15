@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -334,20 +333,21 @@ internal static class GesVmRegisterMath
             }
             case Map when b.Kind is not Nothing && a.ObjectValue is GesVmValueMap aMap:
             {
-                var keys = new HashSet<string>(StringComparer.Ordinal);
-                if (b.Kind is Map && b.ObjectValue is GesVmValueMap bMap)
+                string? singleKey = null;
+                string[]? keys = null;
+                GesVmValueMap? bMap = null;
+                if (b.Kind is Map && b.ObjectValue is GesVmValueMap rightMap)
                 {
-                    for (var i = 0; i < bMap.StorageLength; i++)
-                    {
-                        keys.Add(bMap.KeyAt(i));
-                    }
+                    bMap = rightMap;
+                    // Keys are already sorted in GesVmValueMap.
                 }
                 else if (b.Kind is Text or Tag)
                 {
-                    keys.Add(b.ReadTextOrTag());
+                    singleKey = b.ReadTextOrTag();
                 }
                 else if (b.Kind is List && b.ObjectValue is GesVmValue[] keyList)
                 {
+                    keys = new string[keyList.Length];
                     for (var i = 0; i < keyList.Length; i++)
                     {
                         var keyValue = keyList[i];
@@ -357,8 +357,10 @@ internal static class GesVmRegisterMath
                             return;
                         }
 
-                        keys.Add(keyValue.ReadTextOrTag());
+                        keys[i] = keyValue.ReadTextOrTag();
                     }
+
+                    Array.Sort(keys, StringComparer.Ordinal);
                 }
                 else
                 {
@@ -366,17 +368,40 @@ internal static class GesVmRegisterMath
                     return;
                 }
 
-                var map = new Dictionary<string, GesVmValue>(StringComparer.Ordinal);
-                for (var i = 0; i < aMap.StorageLength; i++)
+                var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength);
+                if (bMap is not null)
                 {
-                    var key = aMap.KeyAt(i);
-                    if (!keys.Contains(key))
+                    var bi = 0;
+                    for (var ai = 0; ai < aMap.StorageLength; ai++)
                     {
-                        map[key] = aMap.ValueAt(i);
+                        var key = aMap.KeyAt(ai);
+                        while (bi < bMap.StorageLength && string.CompareOrdinal(bMap.KeyAt(bi), key) < 0) bi++;
+                        if (bi < bMap.StorageLength && string.Equals(bMap.KeyAt(bi), key, StringComparison.Ordinal)) continue;
+                        map.Set(key, aMap.ValueAt(ai));
+                    }
+                }
+                else if (keys is not null)
+                {
+                    var ki = 0;
+                    for (var ai = 0; ai < aMap.StorageLength; ai++)
+                    {
+                        var key = aMap.KeyAt(ai);
+                        while (ki < keys.Length && string.CompareOrdinal(keys[ki], key) < 0) ki++;
+                        if (ki < keys.Length && string.Equals(keys[ki], key, StringComparison.Ordinal)) continue;
+                        map.Set(key, aMap.ValueAt(ai));
+                    }
+                }
+                else
+                {
+                    for (var ai = 0; ai < aMap.StorageLength; ai++)
+                    {
+                        var key = aMap.KeyAt(ai);
+                        if (string.Equals(key, singleKey, StringComparison.Ordinal)) continue;
+                        map.Set(key, aMap.ValueAt(ai));
                     }
                 }
 
-                dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+                dst.SetMap(map.ToMap());
                 return;
             }
             case not List and not Map and not Nothing when b.Kind is List or Map:

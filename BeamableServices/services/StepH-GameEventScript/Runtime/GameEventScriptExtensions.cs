@@ -85,8 +85,7 @@ public readonly struct GameEventScriptFastValue
 {
     private readonly GameEventScriptValue? _reference;
 
-    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, double number, double x, double y, double z, bool boolean, bool isIntegerNumber, GameEventScriptBytecodeInstructionUnit? unit,
-        GameEventScriptValue? reference)
+    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, double number, double x, double y, double z, bool boolean, bool isIntegerNumber, GameEventScriptBytecodeInstructionUnit? unit, GameEventScriptValue? reference)
     {
         Kind = kind;
         IntegerValue = integer;
@@ -174,7 +173,7 @@ public readonly struct GameEventScriptFastValue
            value <= long.MaxValue &&
            value == Math.Truncate(value)
             ? FromInteger((long)value, unit)
-            : new(GameEventScriptValueKind.Number, GesValueOperations.ToIntegerSaturated(value), value, 0d, 0d, 0d, value != 0d, false, unit, null);
+            : new GameEventScriptFastValue(GameEventScriptValueKind.Number, GesValueOperations.ToIntegerSaturated(value), value, 0d, 0d, 0d, value != 0d, false, unit, null);
 
     public static GameEventScriptFastValue FromPercentage(double ratio)
         => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0d, 0d, 0d, ratio != 0d, false, null, null);

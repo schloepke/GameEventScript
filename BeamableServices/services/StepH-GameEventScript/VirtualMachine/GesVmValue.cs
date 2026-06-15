@@ -1,7 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -384,7 +381,7 @@ internal struct GesVmValue
         Flags = StorageObjectFlag;
         Unit = UnitNone;
         IntegerValue = 0;
-        ObjectValue = new List<GesVmValue>();
+        ObjectValue = new GesVmValueListBuilder(OwningState);
     }
 
     public double AsNumeric => Kind switch

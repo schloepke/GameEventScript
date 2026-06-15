@@ -1,7 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
-using System.Collections.Generic;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
@@ -78,8 +75,6 @@ internal sealed class GesVmTableData
 
 internal sealed class GesVmTableShape
 {
-    private readonly Dictionary<ushort, ushort>? _columnsByName;
-
     public GesVmTableShape(params GesVmTableColumnDefinition[] columns)
     {
         if (columns.Length == 0)
@@ -90,7 +85,6 @@ internal sealed class GesVmTableShape
         Columns = new GesVmTableColumnDefinition[columns.Length];
         Array.Copy(columns, Columns, columns.Length);
 
-        Dictionary<ushort, ushort>? columnsByName = null;
         for (var i = 0; i < Columns.Length; i++)
         {
             var column = Columns[i];
@@ -99,14 +93,14 @@ internal sealed class GesVmTableShape
                 throw new ArgumentException("Non-unique VM table indexes are not implemented yet.", nameof(columns));
             }
 
-            columnsByName ??= new Dictionary<ushort, ushort>();
-            if (!columnsByName.TryAdd(column.NameIndex, checked((ushort)i)))
+            for (var previous = 0; previous < i; previous++)
             {
-                throw new ArgumentException($"Duplicate VM table column name index '{column.NameIndex}'.", nameof(columns));
+                if (Columns[previous].NameIndex == column.NameIndex)
+                {
+                    throw new ArgumentException($"Duplicate VM table column name index '{column.NameIndex}'.", nameof(columns));
+                }
             }
         }
-
-        _columnsByName = columnsByName;
     }
 
     public GesVmTableColumnDefinition[] Columns { get; }
@@ -125,8 +119,15 @@ internal sealed class GesVmTableShape
 
     public bool TryGetColumnIndex(ushort nameIndex, out ushort index)
     {
+        for (var i = 0; i < Columns.Length; i++)
+        {
+            if (Columns[i].NameIndex != nameIndex) continue;
+            index = checked((ushort)i);
+            return true;
+        }
+
         index = 0;
-        return _columnsByName?.TryGetValue(nameIndex, out index) == true;
+        return false;
     }
 }
 
@@ -153,8 +154,8 @@ internal readonly struct GesVmTableCell
 internal sealed class GesVmTableBuilder
 {
     private readonly GesVmTableShape _shape;
-    private readonly List<ulong>[] _columns;
-    private readonly Dictionary<ulong, int>?[] _scalarIndexes;
+    private readonly ulong[][] _columns;
+    private readonly int[] _columnLengths;
     private int _rowCount;
 
     public GesVmTableBuilder(GesVmTableShape shape, int capacity = 0)
@@ -165,20 +166,15 @@ internal sealed class GesVmTableBuilder
         }
 
         _shape = shape;
-        _columns = new List<ulong>[shape.ColumnCount];
-        _scalarIndexes = new Dictionary<ulong, int>?[shape.ColumnCount];
+        _columns = new ulong[shape.ColumnCount][];
+        _columnLengths = new int[shape.ColumnCount];
 
         for (var i = 0; i < _columns.Length; i++)
         {
             var column = shape.Columns[i];
             var width = checked((int)GesVmTableData.GetColumnWidth(column.Kind));
-            _columns[i] = new List<ulong>(capacity * width);
-            if (!column.RequiresIndex)
-            {
-                continue;
-            }
-
-            _scalarIndexes[i] = new Dictionary<ulong, int>();
+            var size = capacity <= 0 ? width * 4 : capacity * width;
+            _columns[i] = new ulong[size];
         }
     }
 
@@ -227,7 +223,7 @@ internal sealed class GesVmTableBuilder
         var dataLength = 0;
         for (var i = 0; i < _columns.Length; i++)
         {
-            dataLength += _columns[i].Count;
+            dataLength += _columnLengths[i];
         }
 
         var data = new ulong[dataLength];
@@ -235,14 +231,14 @@ internal sealed class GesVmTableBuilder
         for (var i = 0; i < _columns.Length; i++)
         {
             var source = _columns[i];
-            source.CopyTo(data, offset);
+            Array.Copy(source, 0, data, offset, _columnLengths[i]);
             columns[i] = new GesVmTableColumnSegment(
                 _shape.Columns[i].NameIndex,
                 _shape.Columns[i].Kind,
                 _shape.Columns[i].Flags,
                 checked((uint)offset),
                 checked((uint)_rowCount));
-            offset += source.Count;
+            offset += _columnLengths[i];
         }
 
         return new GesVmTableData(columns, data, checked((uint)_rowCount));
@@ -255,25 +251,38 @@ internal sealed class GesVmTableBuilder
             return true;
         }
 
-        return _scalarIndexes[columnIndex]?.ContainsKey(cell.A) != true;
+        var data = _columns[columnIndex];
+        var length = _columnLengths[columnIndex];
+        for (var i = 0; i < length; i++)
+        {
+            if (data[i] == cell.A) return false;
+        }
+
+        return true;
     }
 
     private void Write(int columnIndex, in GesVmTableCell cell, int rowIndex)
     {
         var target = _columns[columnIndex];
-        target.Add(cell.A);
-        _scalarIndexes[columnIndex]?.Add(cell.A, rowIndex);
+        var length = _columnLengths[columnIndex];
+        if (length == target.Length)
+        {
+            var resized = new ulong[target.Length << 1];
+            Array.Copy(target, resized, target.Length);
+            target = resized;
+            _columns[columnIndex] = target;
+        }
+
+        target[length] = cell.A;
+        _columnLengths[columnIndex] = length + 1;
     }
 }
 
 internal sealed class GesVmTable
 {
-    private readonly GesVmTableIndex?[] _indexes;
-
     public GesVmTable(GesVmTableData data)
     {
         Data = data;
-        _indexes = new GesVmTableIndex?[data.ColumnCount];
     }
 
     public GesVmTableData Data { get; }
@@ -306,51 +315,23 @@ internal sealed class GesVmTable
         return checked((int)(column.DataStart + (uint)rowIndex * GesVmTableData.GetColumnWidth(column.Kind)));
     }
 
-    private bool TryFindScalar(int columnIndex, ulong value, out int rowIndex) => GetIndex(columnIndex).TryFind(value, out rowIndex);
-
-    private GesVmTableIndex GetIndex(int columnIndex)
+    private bool TryFindScalar(int columnIndex, ulong value, out int rowIndex)
     {
-        var index = _indexes[columnIndex];
-        if (index is not null)
+        var column = Data.Columns[columnIndex];
+        var width = GesVmTableData.GetColumnWidth(column.Kind);
+        var offset = column.DataStart;
+        for (var row = 0; row < column.RowCount; row++)
         {
-            return index;
-        }
-
-        index = GesVmTableIndex.Build(Data, columnIndex);
-        _indexes[columnIndex] = index;
-        return index;
-    }
-
-    private sealed class GesVmTableIndex
-    {
-        private readonly Dictionary<ulong, int>? _scalarIndex;
-
-        private GesVmTableIndex(Dictionary<ulong, int>? scalarIndex)
-        {
-            _scalarIndex = scalarIndex;
-        }
-
-        public static GesVmTableIndex Build(GesVmTableData data, int columnIndex)
-        {
-            var column = data.Columns[columnIndex];
-            var width = GesVmTableData.GetColumnWidth(column.Kind);
-            var offset = column.DataStart;
-
-            var scalarIndex = new Dictionary<ulong, int>(checked((int)column.RowCount));
-            for (var row = 0; row < column.RowCount; row++)
+            if (Data.Data[offset] == value)
             {
-                scalarIndex.TryAdd(data.Data[offset], checked((int)row));
-                offset += width;
+                rowIndex = checked((int)row);
+                return true;
             }
 
-            return new GesVmTableIndex(scalarIndex);
+            offset += width;
         }
 
-        public bool TryFind(ulong value, out int rowIndex)
-        {
-            rowIndex = -1;
-            return _scalarIndex?.TryGetValue(value, out rowIndex) == true;
-        }
-
+        rowIndex = -1;
+        return false;
     }
 }

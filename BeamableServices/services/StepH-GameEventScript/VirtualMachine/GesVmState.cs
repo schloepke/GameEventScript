@@ -1,7 +1,4 @@
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
-
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
@@ -119,7 +116,6 @@ internal class GesVmState
         return values;
     }
     internal GesVmValue[] CreateList(int size) => size == 0 ? EmptyList : CreateRegisterArray(size);
-    internal GesVmValueMap CreateMap(IReadOnlyDictionary<string, GesVmValue> entries) => new(this, entries);
     internal GesVmValue CreateNothing()
     {
         var value = new GesVmValue();

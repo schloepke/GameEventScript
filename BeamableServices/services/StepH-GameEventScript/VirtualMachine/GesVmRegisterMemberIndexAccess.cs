@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -31,14 +30,14 @@ internal static class GesVmRegisterMemberIndexAccess
                         dst.SetText(message.Name);
                         return;
                     case "arguments":
-                        var entries = new Dictionary<string, GesVmValue>();
+                        var entries = new GesVmValueMapBuilder(dst.OwningState, message.Arguments.Count);
                         foreach(var argumentKey in message.Arguments.Keys)
                         {
                             var value = dst.OwningState.CreateNothing();
                             value.BindArguments(message.Arguments[argumentKey]);
-                            entries.Add(argumentKey, value);
+                            entries.Set(argumentKey, value);
                         }
-                        dst.SetMap(dst.OwningState.CreateMap(entries));
+                        dst.SetMap(entries.ToMap());
                         return;
                     case "tags":
                         var tagList = dst.OwningState.CreateList(message.Tags.Count);

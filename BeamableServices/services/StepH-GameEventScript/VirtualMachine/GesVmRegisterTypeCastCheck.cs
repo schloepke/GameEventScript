@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
@@ -356,28 +355,28 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var visibleEntries = new Dictionary<string, GesVmValue>(map.Length, StringComparer.Ordinal);
+                var visibleEntries = new GesVmValueMapBuilder(dst.OwningState, map.Length);
                 for (var i = 0; i < map.StorageLength; i++)
                 {
-                    if (map.IsVisibleAt(i)) visibleEntries[map.KeyAt(i)] = map.ValueAt(i);
+                    if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
                 }
 
-                dst.SetMap(new GesVmValueMap(dst.OwningState, visibleEntries));
+                dst.SetMap(visibleEntries.ToMap());
                 return;
             }
             case Custom when xSlot.ObjectValue is GameEventScriptValue externalValue:
             {
                 var sourceEntries = externalValue.AsMap();
-                var entries = new Dictionary<string, GesVmValue>(sourceEntries.Count, StringComparer.Ordinal);
+                var entries = new GesVmValueMapBuilder(dst.OwningState, sourceEntries.Count);
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     if (key.StartsWith("_", StringComparison.Ordinal)) continue;
                     var value = dst.OwningState.CreateNothing();
                     value.BindArguments(sourceValue);
-                    entries[key] = value;
+                    entries.Set(key, value);
                 }
 
-                dst.SetMap(new GesVmValueMap(dst.OwningState, entries));
+                dst.SetMap(entries.ToMap());
                 return;
             }
             case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
@@ -388,16 +387,15 @@ internal static class GesVmRegisterTypeCastCheck
                 y.SetFloat(triplet.Y, xSlot.Unit);
                 var z = dst.OwningState.CreateNothing();
                 z.SetFloat(triplet.Z, xSlot.Unit);
-                dst.SetMap(new GesVmValueMap(dst.OwningState, new Dictionary<string, GesVmValue>(StringComparer.Ordinal)
-                {
-                    ["x"] = x,
-                    ["y"] = y,
-                    ["z"] = z
-                }));
+                var entries = new GesVmValueMapBuilder(dst.OwningState, 3);
+                entries.Set("x", x);
+                entries.Set("y", y);
+                entries.Set("z", z);
+                dst.SetMap(entries.ToMap());
                 return;
             }
             default:
-                dst.SetMap(new GesVmValueMap(dst.OwningState, new Dictionary<string, GesVmValue>(StringComparer.Ordinal)));
+                dst.SetMap(new GesVmValueMapBuilder(dst.OwningState, 0).ToMap());
                 return;
         }
     }

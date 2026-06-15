@@ -224,21 +224,21 @@ internal static class GesVmRegisterCallExternal
 
                 var sourceEntries = argument.AsMap();
                 var isCustomType = argument.TryGetCustomTypeName(out var customTypeName);
-                var entries = new Dictionary<string, GesVmValue>(sourceEntries.Count + (isCustomType ? 1 : 0), StringComparer.Ordinal);
+                var entries = new GesVmValueMapBuilder(destination.OwningState, sourceEntries.Count + (isCustomType ? 1 : 0));
                 if (isCustomType)
                 {
-                    entries[GesVmValueMap.HiddenRecordTypeField] = destination.OwningState.CreateTag(customTypeName);
+                    entries.Set(GesVmValueMap.HiddenRecordTypeField, destination.OwningState.CreateTag(customTypeName));
                 }
 
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     var value = destination.OwningState.CreateNothing();
                     value.BindArguments(sourceValue);
-                    entries[key] = value;
+                    entries.Set(key, value);
                 }
 
-                if (isCustomType) destination.SetRecord(new GesVmValueMap(destination.OwningState, entries));
-                else destination.SetMap(new GesVmValueMap(destination.OwningState, entries));
+                if (isCustomType) destination.SetRecord(entries.ToMap());
+                else destination.SetMap(entries.ToMap());
                 break;
             case GameEventScriptValueKind.Dice:
                 var sourceDice = argument.AsDice().Rolls;

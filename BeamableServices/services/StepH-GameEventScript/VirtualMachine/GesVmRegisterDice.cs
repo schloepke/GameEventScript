@@ -7,13 +7,7 @@ internal static class GesVmRegisterDice
     private static readonly int[] EmptyDice = [];
     internal static void GesVmCreateDice(ref this GesVmValue dst, short count, short sides, GesVmState state, GameEventScriptSession session)
     {
-        if (count <= 0 || sides <= 0)
-        {
-            dst.SetDice(EmptyDice);
-            return;
-        }
-
-        if (!session.RuntimeBudget.TryCheckDice(count, sides))
+        if (count <= 0 || sides <= 0 || !session.RuntimeBudget.TryCheckDice(count, sides))
         {
             dst.SetDice(EmptyDice);
             return;

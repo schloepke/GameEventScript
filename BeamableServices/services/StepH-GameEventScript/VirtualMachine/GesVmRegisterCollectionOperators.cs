@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -972,16 +971,16 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     case Map when b.ObjectValue is GesVmValueMap bMap:
                     {
-                        var map = new Dictionary<string, GesVmValue>(aMap.StorageLength + bMap.StorageLength, StringComparer.Ordinal);
-                        for (var i = 0; i < aMap.StorageLength; i++) map[aMap.KeyAt(i)] = aMap.ValueAt(i);
-                        for (var i = 0; i < bMap.StorageLength; i++) map[bMap.KeyAt(i)] = bMap.ValueAt(i);
-                        dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+                        var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength + bMap.StorageLength);
+                        for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
+                        for (var i = 0; i < bMap.StorageLength; i++) map.Set(bMap.KeyAt(i), bMap.ValueAt(i));
+                        dst.SetMap(map.ToMap());
                         return;
                     }
                     case List when b.ObjectValue is GesVmValue[] keys:
                     {
-                        var map = new Dictionary<string, GesVmValue>(aMap.StorageLength + keys.Length, StringComparer.Ordinal);
-                        for (var i = 0; i < aMap.StorageLength; i++) map[aMap.KeyAt(i)] = aMap.ValueAt(i);
+                        var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength + keys.Length);
+                        for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < keys.Length; i++)
                         {
                             var keyValue = keys[i];
@@ -994,10 +993,10 @@ internal static class GesVmRegisterCollectionOperators
                             var key = keyValue.ReadTextOrTag();
                             if (map.ContainsKey(key)) continue;
                             var flag = dst.OwningState.CreateBoolean(true);
-                            map[key] = flag;
+                            map.Set(key, flag);
                         }
 
-                        dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+                        dst.SetMap(map.ToMap());
                         return;
                     }
                 }
@@ -1068,16 +1067,36 @@ internal static class GesVmRegisterCollectionOperators
         {
             case Map when a.ObjectValue is GesVmValueMap aMap:
             {
-                var keys = new HashSet<string>(StringComparer.Ordinal);
+                var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength);
                 switch (b.Kind)
                 {
                     case Map when b.ObjectValue is GesVmValueMap bMap:
                     {
-                        for (var i = 0; i < bMap.StorageLength; i++) keys.Add(bMap.KeyAt(i));
+                        var ai = 0;
+                        var bi = 0;
+                        while (ai < aMap.StorageLength && bi < bMap.StorageLength)
+                        {
+                            var comparison = string.CompareOrdinal(aMap.KeyAt(ai), bMap.KeyAt(bi));
+                            if (comparison == 0)
+                            {
+                                map.Set(aMap.KeyAt(ai), aMap.ValueAt(ai));
+                                ai++;
+                                bi++;
+                            }
+                            else if (comparison < 0)
+                            {
+                                ai++;
+                            }
+                            else
+                            {
+                                bi++;
+                            }
+                        }
                         break;
                     }
                     case List when b.ObjectValue is GesVmValue[] keyList:
                     {
+                        var keys = new string[keyList.Length];
                         for (var i = 0; i < keyList.Length; i++)
                         {
                             var keyValue = keyList[i];
@@ -1087,7 +1106,30 @@ internal static class GesVmRegisterCollectionOperators
                                 return;
                             }
 
-                            keys.Add(keyValue.ReadTextOrTag());
+                            keys[i] = keyValue.ReadTextOrTag();
+                        }
+
+                        Array.Sort(keys, StringComparer.Ordinal);
+                        var ai = 0;
+                        var bi = 0;
+                        while (ai < aMap.StorageLength && bi < keys.Length)
+                        {
+                            var comparison = string.CompareOrdinal(aMap.KeyAt(ai), keys[bi]);
+                            if (comparison == 0)
+                            {
+                                map.Set(aMap.KeyAt(ai), aMap.ValueAt(ai));
+                                ai++;
+                                bi++;
+                                while (bi < keys.Length && string.Equals(keys[bi], keys[bi - 1], StringComparison.Ordinal)) bi++;
+                            }
+                            else if (comparison < 0)
+                            {
+                                ai++;
+                            }
+                            else
+                            {
+                                bi++;
+                            }
                         }
                         break;
                     }
@@ -1095,13 +1137,7 @@ internal static class GesVmRegisterCollectionOperators
                         dst.SetNothing();
                         return;
                 }
-                var map = new Dictionary<string, GesVmValue>(StringComparer.Ordinal);
-                for (var i = 0; i < aMap.StorageLength; i++)
-                {
-                    var key = aMap.KeyAt(i);
-                    if (keys.Contains(key)) map[key] = aMap.ValueAt(i);
-                }
-                dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+                dst.SetMap(map.ToMap());
                 return;
             }
             case List when a.ObjectValue is GesVmValue[] leftList:
@@ -1257,11 +1293,10 @@ internal static class GesVmRegisterCollectionOperators
         var list = dst.OwningState.CreateList(length);
         for (var i = 0; i < length; i++)
         {
-            list[i].SetMap(new GesVmValueMap(dst.OwningState, new Dictionary<string, GesVmValue>
-            {
-                ["left"] = aList[i],
-                ["right"] = bList[i]
-            }));
+            var pair = new GesVmValueMapBuilder(dst.OwningState, 2);
+            pair.Set("left", aList[i]);
+            pair.Set("right", bList[i]);
+            list[i].SetMap(pair.ToMap());
         }
 
         dst.SetList(list);
@@ -1343,7 +1378,10 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     var value = dst.OwningState.CreateNothing();
                     value.BindArguments(entryEntries[entryKeys[i]]);
-                    entries[i].SetMap(new GesVmValueMap(dst.OwningState, new Dictionary<string, GesVmValue> { ["key"] = dst.OwningState.CreateTag(entryKeys[i]), ["value"] = value }));
+                    var entry = new GesVmValueMapBuilder(dst.OwningState, 2);
+                    entry.Set("key", dst.OwningState.CreateTag(entryKeys[i]));
+                    entry.Set("value", value);
+                    entries[i].SetMap(entry.ToMap());
                 }
 
                 dst.SetList(entries);

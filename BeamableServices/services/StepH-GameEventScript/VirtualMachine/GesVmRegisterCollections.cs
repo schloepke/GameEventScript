@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -21,12 +20,12 @@ internal static class GesVmRegisterCollections
             dst.SetNothing();
             return;
         }
-        var map = new Dictionary<string, GesVmValue>(state.StageLength);
+        var map = new GesVmValueMapBuilder(dst.OwningState, state.StageLength);
         for (ushort i = 0; i < state.StageLength; i++)
         {
-            map[dst.OwningState.Binary.TextConstantTable.Resolve(keyNames[i])] = state.RegisterStaged(i);
+            map.Set(dst.OwningState.Binary.TextConstantTable.Resolve(keyNames[i]), state.RegisterStaged(i));
         }
-        dst.SetMap(new GesVmValueMap(dst.OwningState, map));
+        dst.SetMap(map.ToMap());
     }
     internal static void GesVmCreateListBuilder(ref this GesVmValue dst)
     {
@@ -34,18 +33,13 @@ internal static class GesVmRegisterCollections
     }
     internal static void GesVmListBuilderAdd(ref this GesVmValue listBuilder, ref GesVmValue value)
     {
-        if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is List<GesVmValue> builder) builder.Add(value);
+        if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is GesVmValueListBuilder builder) builder.Add(value);
     }
     internal static void GesVmListBuilderFinish(ref this GesVmValue dst, ref GesVmValue listBuilder)
     {
-        if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is List<GesVmValue> builder)
+        if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is GesVmValueListBuilder builder)
         {
-            var list = dst.OwningState.CreateList(builder.Count);
-            for (var i = 0; i < builder.Count; i++)
-            {
-                list[i] = builder[i];
-            }
-            dst.SetList(list);
+            dst.SetList(builder.ToList());
             return;
         }
         

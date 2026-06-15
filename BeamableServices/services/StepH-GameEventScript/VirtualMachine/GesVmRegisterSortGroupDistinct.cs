@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -239,8 +238,7 @@ internal static class GesVmRegisterSortGroupDistinct
         {
             case List when source.ObjectValue is GesVmValue[] list:
             {
-                var groups = new Dictionary<string, GesVmValue[]>(StringComparer.Ordinal);
-                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                var groups = new GesVmValueGroupBuilder(state, list.Length);
                 var key = state.CreateNothing();
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -252,45 +250,16 @@ internal static class GesVmRegisterSortGroupDistinct
                     }
 
                     var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
-                    if (!groups.TryGetValue(keyText, out var bucket))
-                    {
-                        bucket = state.CreateRegisterArray(4);
-                        groups[keyText] = bucket;
-                        counts[keyText] = 0;
-                    }
-
-                    var count = counts[keyText];
-                    if (count == bucket.Length)
-                    {
-                        var resized = state.CreateRegisterArray(bucket.Length << 1);
-                        Array.Copy(bucket, resized, bucket.Length);
-                        bucket = resized;
-                        groups[keyText] = bucket;
-                    }
-
-                    bucket[count] = item;
-                    counts[keyText] = count + 1;
+                    groups.Add(keyText, item);
                 }
 
-                var map = new Dictionary<string, GesVmValue>(groups.Count, StringComparer.Ordinal);
-                foreach (var pair in groups)
-                {
-                    var count = counts[pair.Key];
-                    var groupedList = state.CreateList(count);
-                    for (var i = 0; i < count; i++) groupedList[i] = pair.Value[i];
-                    var groupedValue = state.CreateNothing();
-                    groupedValue.SetList(groupedList);
-                    map[pair.Key] = groupedValue;
-                }
-
-                state.Register(destinationSlot).SetMap(new GesVmValueMap(state, map));
+                groups.WriteTo(ref state.Register(destinationSlot));
                 return;
             }
             case Map or Custom when source.ObjectValue is GesVmValueMap mapSource:
             {
                 var values = mapSource.ValueList;
-                var groups = new Dictionary<string, GesVmValue[]>(StringComparer.Ordinal);
-                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                var groups = new GesVmValueGroupBuilder(state, values.Length);
                 var key = state.CreateNothing();
                 for (var i = 0; i < values.Length; i++)
                 {
@@ -302,44 +271,15 @@ internal static class GesVmRegisterSortGroupDistinct
                     }
 
                     var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
-                    if (!groups.TryGetValue(keyText, out var bucket))
-                    {
-                        bucket = state.CreateRegisterArray(4);
-                        groups[keyText] = bucket;
-                        counts[keyText] = 0;
-                    }
-
-                    var count = counts[keyText];
-                    if (count == bucket.Length)
-                    {
-                        var resized = state.CreateRegisterArray(bucket.Length << 1);
-                        Array.Copy(bucket, resized, bucket.Length);
-                        bucket = resized;
-                        groups[keyText] = bucket;
-                    }
-
-                    bucket[count] = item;
-                    counts[keyText] = count + 1;
+                    groups.Add(keyText, item);
                 }
 
-                var map = new Dictionary<string, GesVmValue>(groups.Count, StringComparer.Ordinal);
-                foreach (var pair in groups)
-                {
-                    var count = counts[pair.Key];
-                    var groupedList = state.CreateList(count);
-                    for (var i = 0; i < count; i++) groupedList[i] = pair.Value[i];
-                    var groupedValue = state.CreateNothing();
-                    groupedValue.SetList(groupedList);
-                    map[pair.Key] = groupedValue;
-                }
-
-                state.Register(destinationSlot).SetMap(new GesVmValueMap(state, map));
+                groups.WriteTo(ref state.Register(destinationSlot));
                 return;
             }
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
-                var groups = new Dictionary<string, GesVmValue[]>(StringComparer.Ordinal);
-                var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                var groups = new GesVmValueGroupBuilder(state);
                 var item = state.CreateNothing();
                 var key = state.CreateNothing();
                 try
@@ -353,24 +293,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         }
 
                         var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
-                        if (!groups.TryGetValue(keyText, out var bucket))
-                        {
-                            bucket = state.CreateRegisterArray(4);
-                            groups[keyText] = bucket;
-                            counts[keyText] = 0;
-                        }
-
-                        var count = counts[keyText];
-                        if (count == bucket.Length)
-                        {
-                            var resized = state.CreateRegisterArray(bucket.Length << 1);
-                            Array.Copy(bucket, resized, bucket.Length);
-                            bucket = resized;
-                            groups[keyText] = bucket;
-                        }
-
-                        bucket[count] = item;
-                        counts[keyText] = count + 1;
+                        groups.Add(keyText, item);
                     }
                 }
                 finally
@@ -378,18 +301,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     if (stream is IDisposable disposable) disposable.Dispose();
                 }
 
-                var map = new Dictionary<string, GesVmValue>(groups.Count, StringComparer.Ordinal);
-                foreach (var pair in groups)
-                {
-                    var count = counts[pair.Key];
-                    var groupedList = state.CreateList(count);
-                    for (var i = 0; i < count; i++) groupedList[i] = pair.Value[i];
-                    var groupedValue = state.CreateNothing();
-                    groupedValue.SetList(groupedList);
-                    map[pair.Key] = groupedValue;
-                }
-
-                state.Register(destinationSlot).SetMap(new GesVmValueMap(state, map));
+                groups.WriteTo(ref state.Register(destinationSlot));
                 return;
             }
             default:
@@ -778,5 +690,84 @@ internal static class GesVmRegisterSortGroupDistinct
             default:
                 return 8;
         }
+    }
+}
+
+internal sealed class GesVmValueGroupBuilder
+{
+    private readonly GesVmState _state;
+    private string[] _keys;
+    private GesVmValue[][] _buckets;
+    private int[] _counts;
+    private int _count;
+
+    internal GesVmValueGroupBuilder(GesVmState state, int capacity = 0)
+    {
+        _state = state;
+        var size = capacity <= 0 ? 4 : capacity;
+        _keys = new string[size];
+        _buckets = new GesVmValue[size][];
+        _counts = new int[size];
+    }
+
+    internal void Add(string key, GesVmValue value)
+    {
+        var groupIndex = -1;
+        for (var i = 0; i < _count; i++)
+        {
+            if (!string.Equals(_keys[i], key, StringComparison.Ordinal)) continue;
+            groupIndex = i;
+            break;
+        }
+
+        if (groupIndex < 0)
+        {
+            if (_count == _keys.Length)
+            {
+                var nextSize = _keys.Length << 1;
+                var nextKeys = new string[nextSize];
+                var nextBuckets = new GesVmValue[nextSize][];
+                var nextCounts = new int[nextSize];
+                Array.Copy(_keys, nextKeys, _keys.Length);
+                Array.Copy(_buckets, nextBuckets, _buckets.Length);
+                Array.Copy(_counts, nextCounts, _counts.Length);
+                _keys = nextKeys;
+                _buckets = nextBuckets;
+                _counts = nextCounts;
+            }
+
+            groupIndex = _count++;
+            _keys[groupIndex] = key;
+            _buckets[groupIndex] = _state.CreateRegisterArray(4);
+        }
+
+        var bucket = _buckets[groupIndex];
+        var itemCount = _counts[groupIndex];
+        if (itemCount == bucket.Length)
+        {
+            var resized = _state.CreateRegisterArray(bucket.Length << 1);
+            Array.Copy(bucket, resized, bucket.Length);
+            bucket = resized;
+            _buckets[groupIndex] = bucket;
+        }
+
+        bucket[itemCount] = value;
+        _counts[groupIndex] = itemCount + 1;
+    }
+
+    internal void WriteTo(ref GesVmValue destination)
+    {
+        var map = new GesVmValueMapBuilder(_state, _count);
+        for (var groupIndex = 0; groupIndex < _count; groupIndex++)
+        {
+            var itemCount = _counts[groupIndex];
+            var groupedList = _state.CreateList(itemCount);
+            for (var i = 0; i < itemCount; i++) groupedList[i] = _buckets[groupIndex][i];
+            var groupedValue = _state.CreateNothing();
+            groupedValue.SetList(groupedList);
+            map.Set(_keys[groupIndex], groupedValue);
+        }
+
+        destination.SetMap(map.ToMap());
     }
 }

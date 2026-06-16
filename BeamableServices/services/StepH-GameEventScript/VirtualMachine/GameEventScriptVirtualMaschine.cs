@@ -260,7 +260,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).GesVmPropertyAccess(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
                             break;
                         case BindHandler:
-                            vmState.Register(instruction.DestinationSlot).BindHandler(ref vmState.Register(instruction.XSlot), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
+                            vmState.BindHandler(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
                             break;
 
                         case LoadNothing:
@@ -288,10 +288,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.SetTagPointer(instruction.DestinationSlot, instruction.StringIndex);
                             break;
                         case LoadHandler:
-                            vmState.Register(instruction.DestinationSlot).CreateMessageSignature(vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), vmState, session);
+                            vmState.CreateMessageSignature(instruction.DestinationSlot, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
                             break;
                         case LoadMessage:
-                            vmState.Register(instruction.DestinationSlot).CreateMessage(vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
+                            vmState.CreateMessage(instruction.DestinationSlot, vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
                             break;
 
                         case StageRegister:

@@ -49,10 +49,10 @@ internal static class GesVmRegisterMath
                 dst.SetFloat(double.NaN);
                 break;
             case Text when b.Kind is not Nothing:
-                dst.SetText(a.ReadTextOrTag() + b.ConvertToText());
+                dst.SetText(a.TextValue + b.ConvertToText());
                 break;
             case not Nothing when b.Kind is Text:
-                dst.SetText(a.ConvertToText() + b.ReadTextOrTag());
+                dst.SetText(a.ConvertToText() + b.TextValue);
                 break;
             case List when b.Kind is not Nothing && a.ObjectValue is GesVmValue[] aList:
             {
@@ -343,7 +343,7 @@ internal static class GesVmRegisterMath
                 }
                 else if (b.Kind is Text or Tag)
                 {
-                    singleKey = b.ReadTextOrTag();
+                    singleKey = b.TextValue;
                 }
                 else if (b.Kind is List && b.ObjectValue is GesVmValue[] keyList)
                 {
@@ -357,7 +357,7 @@ internal static class GesVmRegisterMath
                             return;
                         }
 
-                        keys[i] = keyValue.ReadTextOrTag();
+                        keys[i] = keyValue.TextValue;
                     }
 
                     Array.Sort(keys, StringComparer.Ordinal);
@@ -1176,11 +1176,11 @@ internal static class GesVmRegisterMath
                 leftRank = 6;
                 break;
             case Text:
-                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftText = a.TextValue;
                 leftRank = 2;
                 break;
             case Tag:
-                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftText = a.TextValue;
                 leftNumber = ResolveNumericTagValue(leftText);
                 leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 leftRank = 1;
@@ -1234,11 +1234,11 @@ internal static class GesVmRegisterMath
                 rightRank = 6;
                 break;
             case Text:
-                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightText = b.TextValue;
                 rightRank = 2;
                 break;
             case Tag:
-                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightText = b.TextValue;
                 rightNumber = ResolveNumericTagValue(rightText);
                 rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 rightRank = 1;
@@ -1291,13 +1291,13 @@ internal static class GesVmRegisterMath
         switch (a.Kind)
         {
             case Text when b.Kind is Text:
-                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
-                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                leftText ??= a.TextValue;
+                rightText ??= b.TextValue;
                 comparison = StringComparer.Ordinal.Compare(rightText, leftText);
                 break;
             case Tag when b.Kind is Tag:
-                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
-                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                leftText ??= a.TextValue;
+                rightText ??= b.TextValue;
                 comparison = StringComparer.Ordinal.Compare(rightText, leftText);
                 break;
             case Vector when b.Kind is Vector:
@@ -1393,11 +1393,11 @@ internal static class GesVmRegisterMath
                 leftRank = 6;
                 break;
             case Text:
-                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftText = a.TextValue;
                 leftRank = 2;
                 break;
             case Tag:
-                leftText = a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
+                leftText = a.TextValue;
                 leftNumber = ResolveNumericTagValue(leftText);
                 leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 leftRank = 1;
@@ -1451,11 +1451,11 @@ internal static class GesVmRegisterMath
                 rightRank = 6;
                 break;
             case Text:
-                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightText = b.TextValue;
                 rightRank = 2;
                 break;
             case Tag:
-                rightText = b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                rightText = b.TextValue;
                 rightNumber = ResolveNumericTagValue(rightText);
                 rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
                 rightRank = 1;
@@ -1508,13 +1508,13 @@ internal static class GesVmRegisterMath
         switch (a.Kind)
         {
             case Text when b.Kind is Text:
-                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
-                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                leftText ??= a.TextValue;
+                rightText ??= b.TextValue;
                 comparison = StringComparer.Ordinal.Compare(rightText, leftText);
                 break;
             case Tag when b.Kind is Tag:
-                leftText ??= a.IsStoragePointer ? textTable.Resolve((ushort)a.IntegerValue) : a.ObjectValue as string ?? string.Empty;
-                rightText ??= b.IsStoragePointer ? textTable.Resolve((ushort)b.IntegerValue) : b.ObjectValue as string ?? string.Empty;
+                leftText ??= a.TextValue;
+                rightText ??= b.TextValue;
                 comparison = StringComparer.Ordinal.Compare(rightText, leftText);
                 break;
             case Vector when b.Kind is Vector:

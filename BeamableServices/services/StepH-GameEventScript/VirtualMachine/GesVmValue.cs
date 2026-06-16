@@ -27,8 +27,7 @@ internal struct GesVmValue
         HasValueFlag = 1 << 2,
         IsNumericFlag = 1 << 3,
 
-        StoragePointerFlag = 1 << 4,
-        StorageObjectFlag = 1 << 5
+        StorageObjectFlag = 1 << 4
     }
 
     [FieldOffset(0)] internal long IntegerValue;
@@ -41,65 +40,28 @@ internal struct GesVmValue
 
     [FieldOffset(24)] internal GesVmState OwningState;
 
-    internal bool IsTrue => (Flags & IsTrueFlag) != 0;
-    internal bool IsFalse => (Flags & IsFalseFlag) != 0;
-    internal bool IsNotTrue => (Flags & IsTrueFlag) == 0;
-    internal bool IsTruthDeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) != 0;
-    internal bool IsTruthIndeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) == 0;
+    internal readonly bool IsTrue => (Flags & IsTrueFlag) != 0;
+    internal readonly bool IsFalse => (Flags & IsFalseFlag) != 0;
+    internal readonly bool IsNotTrue => (Flags & IsTrueFlag) == 0;
+    internal readonly bool IsTruthDeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) != 0;
+    internal readonly bool IsTruthIndeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) == 0;
 
-    internal bool IsNumeric => (Flags & IsNumericFlag) != 0;
-    internal bool HasValue => (Flags & HasValueFlag) != 0;
+    internal readonly bool IsNumeric => (Flags & IsNumericFlag) != 0;
+    internal readonly bool HasValue => (Flags & HasValueFlag) != 0;
 
-    internal bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
-    internal bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
+    internal readonly bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
+    internal readonly bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
 
-    internal bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
-    internal bool HasUnit => Unit.IsNumericUnit();
-    internal bool IsStoragePointer => (Flags & StoragePointerFlag) != 0;
-    internal bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
-    
-    internal ushort PointerValue => (ushort)IntegerValue;
-    
-    internal string TextValue => IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+    internal readonly bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
+    internal readonly bool HasUnit => Unit.IsNumericUnit();
+    internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
+
+    internal readonly string TextValue => ObjectValue as string ?? string.Empty;
 
     internal void InitRegister(GesVmState state)
     {
         OwningState = state;
         SetNothing();
-    }
-
-    internal void UpdatedTextTruthinessCache()
-    {
-        if (IsTruthDeterminate) return;
-        switch (Kind)
-        {
-            case Text:
-                var resolvedText = IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
-                if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1") Flags |= IsTrueFlag;
-                else Flags |= IsFalseFlag;
-                break;
-            case Tag:
-                if ((IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
-                    {
-                        "true" => true,
-                        "infinity" => true,
-                        "negativeinfinity" => true,
-                        "pi" => true,
-                        "e" => true,
-                        "tau" => true,
-                        "phi" => true,
-                        _ => false
-                    })
-                {
-                    Flags |= IsTrueFlag;
-                }
-                else
-                {
-                    Flags |= IsFalseFlag;
-                }
-
-                break;
-        }
     }
 
     internal void SetNothing()
@@ -182,7 +144,9 @@ internal struct GesVmValue
     internal void SetText(string text)
     {
         Kind = Text;
-        Flags = StorageObjectFlag | (text.Length == 0 ? None : HasValueFlag);
+        Flags = StorageObjectFlag |
+                (text.Length == 0 ? None : HasValueFlag) |
+                (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = text.Length;
         ObjectValue = text;
@@ -191,7 +155,10 @@ internal struct GesVmValue
     internal void SetTag(string tag)
     {
         Kind = Tag;
-        Flags = IsNumericTag(tag) ? StorageObjectFlag | IsNumericFlag | HasValueFlag : StorageObjectFlag | HasValueFlag;
+        Flags = StorageObjectFlag |
+                HasValueFlag |
+                (IsNumericTag(tag) ? IsNumericFlag : None) |
+                (tag is "true" or "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = tag;
@@ -360,14 +327,14 @@ internal struct GesVmValue
         IntegerValue = 0;
         ObjectValue = value;
     }
-
-    internal void CreateListBuilder()
+    
+    internal void SetListBuilder(GesVmValueListBuilder listBuilder)
     {
         Kind = ListBuilder;
         Flags = StorageObjectFlag;
         Unit = UnitNone;
         IntegerValue = 0;
-        ObjectValue = new GesVmValueListBuilder(OwningState);
+        ObjectValue = listBuilder;
     }
 
     public double AsNumeric => Kind switch
@@ -375,7 +342,6 @@ internal struct GesVmValue
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
-        Tag when IsStoragePointer => ResolveNumericTagValue(OwningState.FetchStringByPointer((ushort)IntegerValue)),
         Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
         Dice when ObjectValue is int[] dices => SumDices(dices),
         _ => double.NaN,
@@ -391,14 +357,13 @@ internal struct GesVmValue
         unit = Unit;
         return AsNumeric;
     }
-    internal string ReadTextOrTag() => IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
-    internal ReadOnlySpan<ushort> ResolveIntegerAsPointerList() => OwningState.Binary.Uint16ConstantTable.Resolve((ushort)IntegerValue);
+
     internal bool EqualsValue(in GesVmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
     {
         Integer => IntegerValue == other.IntegerValue,
         Float or Percentage => FloatValue == other.FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue == other.IsTrue,
-        Text or Tag => string.Equals(ReadTextOrTag(), other.ReadTextOrTag(), StringComparison.Ordinal),
+        Text or Tag => string.Equals(TextValue, other.TextValue, StringComparison.Ordinal),
         _ => ReferenceEquals(ObjectValue, other.ObjectValue)
     };
     
@@ -435,9 +400,6 @@ internal struct GesVmValue
             case Vector or Point when ObjectValue is GesVmValueVectorPoint vp:
                 stream = new GesVmTripletStream(vp);
                 return true;
-            case Text or Tag when IsStoragePointer:
-                stream = new GesVmStringStream(OwningState.FetchStringByPointer((ushort)IntegerValue));
-                return true;
             case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
                 stream = new GesVmStringStream(text);
                 return true;
@@ -456,8 +418,8 @@ internal struct GesVmValue
             Float => FormatNumber(FloatValue, Unit),
             Percentage => $"{(FloatValue * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%",
             GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
-            Text => ReadTextOrTag(),
-            Tag => ":" + ReadTextOrTag(),
+            Text => TextValue,
+            Tag => ":" + TextValue,
             Vector when ObjectValue is GesVmValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
             Point when ObjectValue is GesVmValueVectorPoint point => FormatTriplet("point", point, Unit),
             Dice when ObjectValue is int[] dice => FormatDice(dice),

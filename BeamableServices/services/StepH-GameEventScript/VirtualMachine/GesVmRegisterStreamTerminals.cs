@@ -30,7 +30,7 @@ internal static class GesVmRegisterStreamTerminals
                 dst.SetInteger(3);
                 return;
             case Text or Tag:
-                dst.SetInteger(iterator.ReadTextOrTag().Length);
+                dst.SetInteger(iterator.TextValue.Length);
                 return;
         }
 

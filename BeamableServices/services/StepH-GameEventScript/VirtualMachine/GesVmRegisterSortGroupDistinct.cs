@@ -249,7 +249,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         return;
                     }
 
-                    var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
+                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ConvertToText();
                     groups.Add(keyText, item);
                 }
 
@@ -270,7 +270,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         return;
                     }
 
-                    var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
+                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ConvertToText();
                     groups.Add(keyText, item);
                 }
 
@@ -292,7 +292,7 @@ internal static class GesVmRegisterSortGroupDistinct
                             return;
                         }
 
-                        var keyText = key.Kind is Text or Tag ? key.ReadTextOrTag() : key.ConvertToText();
+                        var keyText = key.Kind is Text or Tag ? key.TextValue : key.ConvertToText();
                         groups.Add(keyText, item);
                     }
                 }
@@ -631,7 +631,7 @@ internal static class GesVmRegisterSortGroupDistinct
         {
             case Text when b.Kind is Text:
             case Tag when b.Kind is Tag:
-                comparison = StringComparer.Ordinal.Compare(a.ReadTextOrTag(), b.ReadTextOrTag());
+                comparison = StringComparer.Ordinal.Compare(a.TextValue, b.TextValue);
                 return true;
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
@@ -664,7 +664,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 return 1;
             case Tag:
             {
-                var text = value.ReadTextOrTag();
+                var text = value.TextValue;
                 return IsNumericTag(text) ? 1 : 3;
             }
             case Text:

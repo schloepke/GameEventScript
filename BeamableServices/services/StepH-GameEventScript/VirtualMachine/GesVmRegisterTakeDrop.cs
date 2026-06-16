@@ -1174,7 +1174,7 @@ internal static class GesVmRegisterTakeDrop
         {
             case Text when right.Kind is Text:
             case Tag when right.Kind is Tag:
-                return StringComparer.Ordinal.Compare(left.ReadTextOrTag(), right.ReadTextOrTag());
+                return StringComparer.Ordinal.Compare(left.TextValue, right.TextValue);
             case Vector when right.Kind is Vector:
             case Point when right.Kind is Point:
                 if (left.Unit != right.Unit) return left.Unit.CompareTo(right.Unit);

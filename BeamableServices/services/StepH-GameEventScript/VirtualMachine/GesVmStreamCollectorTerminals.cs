@@ -62,7 +62,7 @@ internal static class GesVmStreamCollectorTerminals
 
                 var key = keyValue.Kind switch
                 {
-                    Text or Tag => keyValue.ReadTextOrTag(),
+                    Text or Tag => keyValue.TextValue,
                     Nothing => string.Empty,
                     _ => keyValue.ConvertToText()
                 };
@@ -101,7 +101,7 @@ internal static class GesVmStreamCollectorTerminals
 
                 var key = keyValue.Kind switch
                 {
-                    Text or Tag => keyValue.ReadTextOrTag(),
+                    Text or Tag => keyValue.TextValue,
                     Nothing => string.Empty,
                     _ => keyValue.ConvertToText()
                 };
@@ -284,19 +284,19 @@ internal static class GesVmStreamCollectorTerminals
     }
     private static void FirstFromText(ref GesVmValue dst, ref GesVmValue source)
     {
-        var text = source.ReadTextOrTag();
+        var text = source.TextValue;
         if (text.Length > 0) dst.SetText(text[0].ToString());
         else dst.SetNothing();
     }
     private static void LastFromText(ref GesVmValue dst, ref GesVmValue source)
     {
-        var text = source.ReadTextOrTag();
+        var text = source.TextValue;
         if (text.Length > 0) dst.SetText(text[^1].ToString());
         else dst.SetNothing();
     }
     private static void SingleFromText(ref GesVmValue dst, ref GesVmValue source)
     {
-        var text = source.ReadTextOrTag();
+        var text = source.TextValue;
         if (text.Length == 1) dst.SetText(text);
         else dst.SetNothing();
     }

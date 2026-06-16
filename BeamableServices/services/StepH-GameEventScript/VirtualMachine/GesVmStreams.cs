@@ -209,7 +209,6 @@ internal sealed class GesVmTransformStream(
 
             if (filter)
             {
-                _result.UpdatedTextTruthinessCache();
                 if (!_result.IsTrue) continue;
                 value = _item;
                 return true;

@@ -386,19 +386,19 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         #region Group 2 - boolean algebra, comparison, math and random
 
                         case Or:
-                            vmState.GesVmOr(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
+                            vmState.GesVmOr(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case And:
-                            vmState.GesVmAnd(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
+                            vmState.GesVmAnd(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Xor:
-                            vmState.GesVmXor(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
+                            vmState.GesVmXor(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Implies:
-                            vmState.GesVmImplies(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
+                            vmState.GesVmImplies(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Not:
-                            vmState.GesVmNot(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot));
+                            vmState.GesVmNot(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case Equal:
                             vmState.GesVmEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));

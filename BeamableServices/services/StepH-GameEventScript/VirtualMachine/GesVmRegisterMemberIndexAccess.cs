@@ -120,11 +120,6 @@ internal static class GesVmRegisterMemberIndexAccess
                 if (floatRange.Step > 0 && floatRangeValue <= floatRange.To || floatRange.Step < 0 && floatRangeValue >= floatRange.To) dst.SetFloat(floatRangeValue);
                 else dst.SetNothing();
                 return;
-            case Text or Tag when obj.IsStoragePointer:
-                var resolvedText = dst.OwningState.FetchStringByPointer((ushort)obj.IntegerValue);
-                if (index < resolvedText.Length) dst.SetText(resolvedText[index].ToString());
-                else dst.SetNothing();
-                return;
             case Text or Tag when obj is { IsStorageObject: true, ObjectValue: string text }:
                 if (index < text.Length) dst.SetText(text[index].ToString());
                 else dst.SetNothing();
@@ -144,9 +139,6 @@ internal static class GesVmRegisterMemberIndexAccess
 
         switch (property.Kind)
         {
-            case Text or Tag when property.IsStoragePointer:
-                dst.GesVmMemberAccess((ushort)property.IntegerValue, ref obj);
-                return;
             case Text or Tag when property.ObjectValue is string key:
                 dst.GesVmMemberAccess(key, ref obj);
                 return;

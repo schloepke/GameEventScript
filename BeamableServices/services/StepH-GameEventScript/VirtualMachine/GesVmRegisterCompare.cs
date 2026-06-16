@@ -26,7 +26,7 @@ internal static class GesVmRegisterCompare
                 return a.Unit == b.Unit && DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
             case Text or Tag when b.Kind is Text or Tag:
                 if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
-                return string.Equals(a.ReadTextOrTag(), b.ReadTextOrTag(), StringComparison.Ordinal);
+                return string.Equals(a.TextValue, b.TextValue, StringComparison.Ordinal);
             case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv:
                 return a.Unit == b.Unit && a.Kind == b.Kind && DoubleEqualsUlp(av.X, bv.X) && DoubleEqualsUlp(av.Y, bv.Y) && DoubleEqualsUlp(av.Z, bv.Z);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:

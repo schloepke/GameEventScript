@@ -108,25 +108,19 @@ internal class GesVmState
         return true;
     }
     internal ref GesVmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
-    internal ref GesVmValue RegisterWithTruthinessEvaluated(ushort index)
-    {
-        var absoluteIndex = index + RegisterFrameStart;
-        UpdateRegisterTruthinessCache(absoluteIndex);
-        return ref RegisterSlots[absoluteIndex];
-    }
     internal bool IsRegisterTrue(ushort index)
     {
-        ref var value = ref RegisterWithTruthinessEvaluated(index);
+        ref var value = ref Register(index);
         return value.IsTrue;
     }
     internal bool IsRegisterFalse(ushort index)
     {
-        ref var value = ref RegisterWithTruthinessEvaluated(index);
+        ref var value = ref Register(index);
         return value.IsFalse;
     }
     internal bool IsRegisterNotTrue(ushort index)
     {
-        ref var value = ref RegisterWithTruthinessEvaluated(index);
+        ref var value = ref Register(index);
         return value.IsNotTrue;
     }
     internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
@@ -155,33 +149,8 @@ internal class GesVmState
     internal void SetMessage(ushort index, GameEventScriptMessage message) => Register(index).SetMessage(message);
     internal void SetSeries(ushort index, GameEventScriptSeriesValue series) => Register(index).SetSeries(series);
     internal void SetStream(ushort index, IGesVmStream value) => Register(index).SetStream(value);
-    internal void CreateListBuilder(ushort index) => Register(index).CreateListBuilder();
-    private void UpdateRegisterTruthinessCache(int absoluteIndex)
-    {
-        ref var value = ref RegisterSlots[absoluteIndex];
-        if (value.IsTruthDeterminate) return;
-        switch (value.Kind)
-        {
-            case Text:
-                var resolvedText = value.IsStoragePointer ? FetchStringByPointer((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
-                value.Flags |= resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1" ? IsTrueFlag : IsFalseFlag;
-                break;
-            case Tag:
-                var resolvedTag = value.IsStoragePointer ? FetchStringByPointer((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
-                value.Flags |= resolvedTag switch
-                {
-                    "true" => IsTrueFlag,
-                    "infinity" => IsTrueFlag,
-                    "negativeinfinity" => IsTrueFlag,
-                    "pi" => IsTrueFlag,
-                    "e" => IsTrueFlag,
-                    "tau" => IsTrueFlag,
-                    "phi" => IsTrueFlag,
-                    _ => IsFalseFlag
-                };
-                break;
-        }
-    }
+    internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder(this));
+    
     internal GesVmValue[] CreateRegisterArray(int size)
     {
         var values = new GesVmValue[size];

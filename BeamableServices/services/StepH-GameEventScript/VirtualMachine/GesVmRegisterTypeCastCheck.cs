@@ -46,7 +46,6 @@ internal static class GesVmRegisterTypeCastCheck
                 dst.SetNothing();
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:
-                xSlot.UpdatedTextTruthinessCache();
                 dst.SetBoolean(xSlot.IsTrue);
                 return;
             case Integer:
@@ -132,7 +131,7 @@ internal static class GesVmRegisterTypeCastCheck
     {
         if (xSlot.Kind is Text)
         {
-            if (double.TryParse(xSlot.ReadTextOrTag(), NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
+            if (double.TryParse(xSlot.TextValue, NumberStyles.Number, CultureInfo.InvariantCulture, out var parsed))
             {
                 dst.SetFloat(parsed);
             }
@@ -260,7 +259,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
             case Text or Tag:
             {
-                var text = xSlot.ReadTextOrTag();
+                var text = xSlot.TextValue;
                 if (text.Length == 0)
                 {
                     dst.SetList(dst.OwningState.EmptyList);
@@ -546,16 +545,7 @@ internal static class GesVmRegisterTypeCastCheck
         switch (xSlot.Kind)
         {
             case Tag:
-                if (GameEventScriptTagValue.IsValidTagName(xSlot.ReadTextOrTag())) dst = xSlot;
-                else dst.SetNothing();
-                return;
-            case Text when xSlot.IsStoragePointer:
-                var pointerText = xSlot.ReadTextOrTag();
-                if (GameEventScriptTagValue.TryNormalizeTextCast(pointerText, out var pointerTag))
-                {
-                    if (pointerTag == pointerText) dst.SetTag(dst.OwningState.FetchStringByPointer((ushort)xSlot.IntegerValue));
-                    else dst.SetTag(pointerTag);
-                }
+                if (GameEventScriptTagValue.IsValidTagName(xSlot.TextValue)) dst = xSlot;
                 else dst.SetNothing();
                 return;
             case Text when xSlot.ObjectValue is string text:
@@ -578,7 +568,6 @@ internal static class GesVmRegisterTypeCastCheck
             Custom when value.ObjectValue is string customTypeName => string.Equals(customTypeName, typeName, StringComparison.Ordinal),
             Map or Custom when value.ObjectValue is GesVmValueMap map && map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) => marker.Kind switch
             {
-                Tag when marker.IsStoragePointer => string.Equals(value.OwningState.FetchStringByPointer((ushort)marker.IntegerValue), typeName, StringComparison.Ordinal),
                 Tag when marker.ObjectValue is string markerTypeName => string.Equals(markerTypeName, typeName, StringComparison.Ordinal),
                 _ => false
             },

@@ -11,9 +11,6 @@ internal static class GesVmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Text or Tag when a.IsStoragePointer:
-                vmState.SetInteger(dst, vmState.FetchStringByPointer((ushort)a.IntegerValue).Length);
-                break;
             case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
                 vmState.SetInteger(dst, text.Length);
                 break;
@@ -412,7 +409,6 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     while (stream.TryNext(ref item))
                     {
-                        if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
                         if (item.IsTrue)
                         {
                             if (!requireAll)
@@ -440,7 +436,6 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < list.Length; i++)
                 {
                     var item = list[i];
-                    if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
                     if (item.IsTrue)
                     {
                         if (!requireAll)
@@ -493,7 +488,6 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < list.Length; i++)
                 {
                     var item = list[i];
-                    if (item.Kind is Text or Tag) item.UpdatedTextTruthinessCache();
                     if (item.IsTrue)
                     {
                         if (!requireAll)
@@ -525,7 +519,6 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < text.Length; i++)
                 {
                     item.SetText(text[i].ToString());
-                    item.UpdatedTextTruthinessCache();
                     if (item.IsTrue)
                     {
                         if (!requireAll)
@@ -978,7 +971,7 @@ internal static class GesVmRegisterCollectionOperators
                                 return;
                             }
 
-                            var key = keyValue.ReadTextOrTag();
+                            var key = keyValue.TextValue;
                             if (map.ContainsKey(key)) continue;
                             var flag = vmState.CreateBoolean(true);
                             map.Set(key, flag);
@@ -1096,7 +1089,7 @@ internal static class GesVmRegisterCollectionOperators
                                 return;
                             }
 
-                            keys[i] = keyValue.ReadTextOrTag();
+                            keys[i] = keyValue.TextValue;
                         }
 
                         Array.Sort(keys, StringComparer.Ordinal);

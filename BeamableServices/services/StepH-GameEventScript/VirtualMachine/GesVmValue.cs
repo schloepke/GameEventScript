@@ -179,15 +179,6 @@ internal struct GesVmValue
         ObjectValue = null;
     }
 
-    internal void SetTextPointer(ushort pointer)
-    {
-        Kind = Text;
-        Flags = StoragePointerFlag | (OwningState.FetchStringByPointer(pointer).Length == 0 ? None : HasValueFlag);
-        Unit = UnitNone;
-        IntegerValue = pointer;
-        ObjectValue = null;
-    }
-
     internal void SetText(string text)
     {
         Kind = Text;
@@ -195,15 +186,6 @@ internal struct GesVmValue
         Unit = UnitNone;
         IntegerValue = text.Length;
         ObjectValue = text;
-    }
-
-    internal void SetTagPointer(ushort pointer)
-    {
-        Kind = Tag;
-        Flags = IsNumericTag(OwningState.FetchStringByPointer(pointer)) ? StoragePointerFlag | IsNumericFlag | HasValueFlag : StoragePointerFlag | HasValueFlag;
-        Unit = UnitNone;
-        IntegerValue = pointer;
-        ObjectValue = null;
     }
 
     internal void SetTag(string tag)

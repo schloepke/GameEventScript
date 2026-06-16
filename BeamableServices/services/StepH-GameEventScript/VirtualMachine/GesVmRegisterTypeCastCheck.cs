@@ -553,7 +553,7 @@ internal static class GesVmRegisterTypeCastCheck
                 var pointerText = xSlot.ReadTextOrTag();
                 if (GameEventScriptTagValue.TryNormalizeTextCast(pointerText, out var pointerTag))
                 {
-                    if (pointerTag == pointerText) dst.SetTagPointer((ushort)xSlot.IntegerValue);
+                    if (pointerTag == pointerText) dst.SetTag(dst.OwningState.FetchStringByPointer((ushort)xSlot.IntegerValue));
                     else dst.SetTag(pointerTag);
                 }
                 else dst.SetNothing();

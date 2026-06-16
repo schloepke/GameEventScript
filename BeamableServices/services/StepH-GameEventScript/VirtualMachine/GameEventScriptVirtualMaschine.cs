@@ -282,10 +282,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
                             break;
                         case LoadText:
-                            vmState.Register(instruction.DestinationSlot).SetTextPointer(instruction.StringIndex);
+                            vmState.SetTextPointer(instruction.DestinationSlot, instruction.StringIndex);
                             break;
                         case LoadTag:
-                            vmState.Register(instruction.DestinationSlot).SetTagPointer(instruction.StringIndex);
+                            vmState.SetTagPointer(instruction.DestinationSlot, instruction.StringIndex);
                             break;
                         case LoadHandler:
                             vmState.Register(instruction.DestinationSlot).CreateMessageSignature(vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), vmState, session);

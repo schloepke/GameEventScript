@@ -136,9 +136,9 @@ internal class GesVmState
     internal void SetInteger(ushort index, long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetInteger(value, unit);
     internal void SetFloat(ushort index, double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetFloat(value, unit);
     internal void SetPercentage(ushort index, double ratio) => Register(index).SetPercentage(ratio);
-    internal void SetTextPointer(ushort index, ushort pointer) => Register(index).SetTextPointer(pointer);
+    internal void SetTextPointer(ushort index, ushort pointer) => Register(index).SetText(FetchStringByPointer(pointer));
     internal void SetText(ushort index, string text) => Register(index).SetText(text);
-    internal void SetTagPointer(ushort index, ushort pointer) => Register(index).SetTagPointer(pointer);
+    internal void SetTagPointer(ushort index, ushort pointer) => Register(index).SetTag(FetchStringByPointer(pointer));
     internal void SetTag(ushort index, string tag) => Register(index).SetTag(tag);
     internal void SetVector(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(x, y, z, unit);
     internal void SetVector(ushort index, GesVmValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(vector, unit);
@@ -372,8 +372,8 @@ internal class GesVmState
     internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetInteger(value, unit);
     internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetFloat(value, unit);
     internal void StagePercentage(double value) => AddStageSlot().SetPercentage(value);
-    internal void StageTextConstant(ushort constantIndex) => AddStageSlot().SetTextPointer(constantIndex);
-    internal void StageTagConstant(ushort constantIndex) => AddStageSlot().SetTagPointer(constantIndex);
+    internal void StageTextConstant(ushort constantIndex) => AddStageSlot().SetText(FetchStringByPointer(constantIndex));
+    internal void StageTagConstant(ushort constantIndex) => AddStageSlot().SetTag(FetchStringByPointer(constantIndex));
     private ref GesVmValue AddStageSlot()
     {
         var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;

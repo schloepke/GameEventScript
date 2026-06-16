@@ -557,26 +557,14 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmEntries(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case GameEventScriptBytecodeOpCode.First:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmFirst(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        }
                         case GameEventScriptBytecodeOpCode.Last:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmLast(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmLast(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        }
                         case GameEventScriptBytecodeOpCode.Single:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmSingle(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmSingle(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        }
                         case StreamCreate:
                             vmState.GesVmStreamCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
@@ -620,26 +608,14 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmStreamTakeWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
                             break;
                         case StreamCollectList:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmStreamCollectList(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamCollectList(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        }
                         case StreamCollectMap:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmStreamCollectMap(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamCollectMap(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
-                        }
                         case StreamCollectMapValue:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmStreamCollectMapValue(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamCollectMapValue(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
                             break;
-                        }
                         case HasAny:
                             vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), false);
                             break;

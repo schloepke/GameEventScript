@@ -5,15 +5,15 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmStreamCollectorTerminals
 {
-    internal static void GesVmStreamCollectList(ref this GesVmValue dst, ref GesVmValue iterator)
+    internal static void GesVmStreamCollectList(this GesVmState state, ushort destinationRegister, in GesVmValue iterator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
-        var item = dst.OwningState.CreateNothing();
+        var item = state.CreateNothing();
         var count = 0;
         var buffer = new GesVmValue[16];
         try
@@ -26,37 +26,37 @@ internal static class GesVmStreamCollectorTerminals
 
             if (count == 0)
             {
-                dst.SetList(dst.OwningState.EmptyList);
+                state.SetList(destinationRegister, state.EmptyList);
                 return;
             }
 
-            var list = dst.OwningState.CreateList(count);
+            var list = state.CreateList(count);
             Array.Copy(buffer, list, count);
-            dst.SetList(list);
+            state.SetList(destinationRegister, list);
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmStreamCollectMap(ref this GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmStreamCollectMap(this GesVmState state, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
-        var item = dst.OwningState.CreateNothing();
-        var keyValue = dst.OwningState.CreateNothing();
-        var map = new GesVmValueMapBuilder(dst.OwningState);
+        var item = state.CreateNothing();
+        var keyValue = state.CreateNothing();
+        var map = new GesVmValueMapBuilder(state);
         try
         {
             while (stream.TryNext(ref item))
             {
                 if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref keyValue))
                 {
-                    dst.SetNothing();
+                    state.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -70,32 +70,32 @@ internal static class GesVmStreamCollectorTerminals
                 map.Set(key, item);
             }
 
-            dst.SetMap(map.ToMap());
+            state.SetMap(destinationRegister, map.ToMap());
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmStreamCollectMapValue(ref this GesVmValue dst, ref GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, ushort valueEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmStreamCollectMapValue(this GesVmState state, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort keyEntryAddress, ushort valueEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
-        var item = dst.OwningState.CreateNothing();
-        var keyValue = dst.OwningState.CreateNothing();
-        var value = dst.OwningState.CreateNothing();
-        var map = new GesVmValueMapBuilder(dst.OwningState);
+        var item = state.CreateNothing();
+        var keyValue = state.CreateNothing();
+        var value = state.CreateNothing();
+        var map = new GesVmValueMapBuilder(state);
         try
         {
             while (stream.TryNext(ref item))
             {
                 if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref keyValue))
                 {
-                    dst.SetNothing();
+                    state.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -109,142 +109,148 @@ internal static class GesVmStreamCollectorTerminals
 
                 if (!evaluator.TryEvaluateStreamEntry(valueEntryAddress, itemSlot, ref item, null, ref value))
                 {
-                    dst.SetNothing();
+                    state.SetNothing(destinationRegister);
                     return;
                 }
 
                 map.Set(key, value);
             }
 
-            dst.SetMap(map.ToMap());
+            state.SetMap(destinationRegister, map.ToMap());
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmFirst(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmFirst(this GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
-                dst = list.Length > 0 ? list[0] : dst.OwningState.CreateNothing();
+                if (list.Length > 0) state.SetValue(destinationRegister, in list[0]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length > 0) dst.SetInteger(dice[0]);
-                else dst.SetNothing();
+                if (dice.Length > 0) state.SetInteger(destinationRegister, dice[0]);
+                else state.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) dst.SetInteger(range.From);
-                else dst.SetNothing();
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) state.SetInteger(destinationRegister, range.From);
+                else state.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) dst.SetFloat(range.From);
-                else dst.SetNothing();
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) state.SetFloat(destinationRegister, range.From);
+                else state.SetNothing(destinationRegister);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:
-                dst = map.ValueList.Length > 0 ? map.ValueList[0] : dst.OwningState.CreateNothing();
+                if (map.ValueList.Length > 0) state.SetValue(destinationRegister, in map.ValueList[0]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Vector or Point when source.ObjectValue is GesVmValueVectorPoint triplet:
-                dst.SetFloat(triplet.X);
+                state.SetFloat(destinationRegister, triplet.X);
                 return;
             case Text or Tag:
-                FirstFromText(ref dst, ref source);
+                FirstFromText(state, destinationRegister, in source);
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
-                FirstFromStream(ref dst, stream);
+                FirstFromStream(state, destinationRegister, stream);
                 return;
             default:
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
         }
     }
-    internal static void GesVmLast(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmLast(this GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
-                dst = list.Length > 0 ? list[list.Length - 1] : dst.OwningState.CreateNothing();
+                if (list.Length > 0) state.SetValue(destinationRegister, in list[list.Length - 1]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length > 0) dst.SetInteger(dice[^1]);
-                else dst.SetNothing();
+                if (dice.Length > 0) state.SetInteger(destinationRegister, dice[^1]);
+                else state.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastInteger)) dst.SetInteger(lastInteger);
-                else dst.SetNothing();
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastInteger)) state.SetInteger(destinationRegister, lastInteger);
+                else state.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastFloat)) dst.SetFloat(lastFloat);
-                else dst.SetNothing();
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastFloat)) state.SetFloat(destinationRegister, lastFloat);
+                else state.SetNothing(destinationRegister);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:
-                dst = map.ValueList.Length > 0 ? map.ValueList[map.ValueList.Length - 1] : dst.OwningState.CreateNothing();
+                if (map.ValueList.Length > 0) state.SetValue(destinationRegister, in map.ValueList[map.ValueList.Length - 1]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Vector or Point when source.ObjectValue is GesVmValueVectorPoint triplet:
-                dst.SetFloat(triplet.Z);
+                state.SetFloat(destinationRegister, triplet.Z);
                 return;
             case Text or Tag:
-                LastFromText(ref dst, ref source);
+                LastFromText(state, destinationRegister, in source);
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
-                LastFromStream(ref dst, stream);
+                LastFromStream(state, destinationRegister, stream);
                 return;
             default:
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
         }
     }
-    internal static void GesVmSingle(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmSingle(this GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
-                dst = list.Length == 1 ? list[0] : dst.OwningState.CreateNothing();
+                if (list.Length == 1) state.SetValue(destinationRegister, in list[0]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length == 1) dst.SetInteger(dice[0]);
-                else dst.SetNothing();
+                if (dice.Length == 1) state.SetInteger(destinationRegister, dice[0]);
+                else state.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) dst.SetInteger(range.From);
-                else dst.SetNothing();
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) state.SetInteger(destinationRegister, range.From);
+                else state.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) dst.SetFloat(range.From);
-                else dst.SetNothing();
+                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) state.SetFloat(destinationRegister, range.From);
+                else state.SetNothing(destinationRegister);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:
-                dst = map.ValueList.Length == 1 ? map.ValueList[0] : dst.OwningState.CreateNothing();
+                if (map.ValueList.Length == 1) state.SetValue(destinationRegister, in map.ValueList[0]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Text or Tag:
-                SingleFromText(ref dst, ref source);
+                SingleFromText(state, destinationRegister, in source);
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
-                SingleFromStream(ref dst, stream);
+                SingleFromStream(state, destinationRegister, stream);
                 return;
             default:
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
         }
     }
-    private static void FirstFromStream(ref GesVmValue dst, IGesVmStream stream)
+    private static void FirstFromStream(GesVmState state, ushort destinationRegister, IGesVmStream stream)
     {
-        var item = dst.OwningState.CreateNothing();
+        var item = state.CreateNothing();
         try
         {
-            if (stream.TryNext(ref item)) dst = item;
-            else dst.SetNothing();
+            if (stream.TryNext(ref item)) state.SetValue(destinationRegister, in item);
+            else state.SetNothing(destinationRegister);
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void LastFromStream(ref GesVmValue dst, IGesVmStream stream)
+    private static void LastFromStream(GesVmState state, ushort destinationRegister, IGesVmStream stream)
     {
-        var item = dst.OwningState.CreateNothing();
-        var last = dst.OwningState.CreateNothing();
+        var item = state.CreateNothing();
+        var last = state.CreateNothing();
         var found = false;
         try
         {
@@ -254,51 +260,50 @@ internal static class GesVmStreamCollectorTerminals
                 found = true;
             }
 
-            if (found) dst = last;
-            else dst.SetNothing();
+            if (found) state.SetValue(destinationRegister, in last);
+            else state.SetNothing(destinationRegister);
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void SingleFromStream(ref GesVmValue dst, IGesVmStream stream)
+    private static void SingleFromStream(GesVmState state, ushort destinationRegister, IGesVmStream stream)
     {
-        var item = dst.OwningState.CreateNothing();
+        var item = state.CreateNothing();
         try
         {
             if (!stream.TryNext(ref item))
             {
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
             }
 
-            var second = dst.OwningState.CreateNothing();
-            if (stream.TryNext(ref second)) dst.SetNothing();
-            else dst = item;
+            var second = state.CreateNothing();
+            if (stream.TryNext(ref second)) state.SetNothing(destinationRegister);
+            else state.SetValue(destinationRegister, in item);
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void FirstFromText(ref GesVmValue dst, ref GesVmValue source)
+    private static void FirstFromText(GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
         var text = source.TextValue;
-        if (text.Length > 0) dst.SetText(text[0].ToString());
-        else dst.SetNothing();
+        if (text.Length > 0) state.SetText(destinationRegister, text[0].ToString());
+        else state.SetNothing(destinationRegister);
     }
-    private static void LastFromText(ref GesVmValue dst, ref GesVmValue source)
+    private static void LastFromText(GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
         var text = source.TextValue;
-        if (text.Length > 0) dst.SetText(text[^1].ToString());
-        else dst.SetNothing();
+        if (text.Length > 0) state.SetText(destinationRegister, text[^1].ToString());
+        else state.SetNothing(destinationRegister);
     }
-    private static void SingleFromText(ref GesVmValue dst, ref GesVmValue source)
+    private static void SingleFromText(GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
         var text = source.TextValue;
-        if (text.Length == 1) dst.SetText(text);
-        else dst.SetNothing();
+        if (text.Length == 1) state.SetText(destinationRegister, text);
+        else state.SetNothing(destinationRegister);
     }
-
 }

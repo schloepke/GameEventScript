@@ -216,35 +216,35 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
 
                         case Cast:
-                            vmState.Register(instruction.DestinationSlot).GesVmCast(ref vmState.Register(instruction.XSlot), instruction.TypeKind, session);
+                            vmState.GesVmCast(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TypeKind, session);
                             break;
                         case CastCustom:
-                            vmState.Register(instruction.DestinationSlot).GesVmCastCustom(ref vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex, instruction.DestinationSlot);
+                            vmState.GesVmCastCustom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
                             break;
                         case CastUnit:
-                            vmState.Register(instruction.DestinationSlot).GesVmCastUnit(ref vmState.Register(instruction.XSlot), instruction.Unit);
+                            vmState.GesVmCastUnit(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.Unit);
                             break;
                         case CastNumeric:
-                            vmState.Register(instruction.DestinationSlot).GesVmCastNumeric(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmCastNumeric(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
 
                         case CheckType:
-                            vmState.Register(instruction.DestinationSlot).GesVmCheckType(ref vmState.Register(instruction.XSlot), instruction.TypeKind);
+                            vmState.GesVmCheckType(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TypeKind);
                             break;
                         case CheckCustomType:
-                            vmState.Register(instruction.DestinationSlot).GesVmCheckCustomType(ref vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
+                            vmState.GesVmCheckCustomType(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
                             break;
                         case CheckUnit:
-                            vmState.Register(instruction.DestinationSlot).GesVmCheckUnit(ref vmState.Register(instruction.XSlot), instruction.Unit);
+                            vmState.GesVmCheckUnit(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.Unit);
                             break;
                         case CheckNumeric:
-                            vmState.Register(instruction.DestinationSlot).GesVmCheckNumeric(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmCheckNumeric(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case CheckInteger:
-                            vmState.Register(instruction.DestinationSlot).GesVmCheckInteger(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmCheckInteger(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case CheckFractional:
-                            vmState.Register(instruction.DestinationSlot).GesVmCheckFractional(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmCheckFractional(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
 
                         case Move:

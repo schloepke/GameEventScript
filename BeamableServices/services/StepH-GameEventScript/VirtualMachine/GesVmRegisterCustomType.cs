@@ -86,55 +86,55 @@ internal static class GesVmRegisterCustomType
                     converted.SetNothing();
                     break;
                 case "boolean":
-                    converted.GesVmCast(ref source, Boolean);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Boolean, state, destinationRegister);
                     break;
                 case "number":
-                    converted.GesVmCast(ref source, Float);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Float, state, destinationRegister);
                     break;
                 case "numeric":
-                    converted.GesVmCastNumeric(ref source);
+                    GesVmRegisterTypeCastCheck.GesVmCastNumeric(ref converted, in source, state);
                     break;
                 case "percentage":
-                    converted.GesVmCast(ref source, Percentage);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Percentage, state, destinationRegister);
                     break;
                 case "tag":
-                    converted.GesVmCast(ref source, Tag);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Tag, state, destinationRegister);
                     break;
                 case "text":
-                    converted.GesVmCast(ref source, Text);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Text, state, destinationRegister);
                     break;
                 case "vector":
-                    converted.GesVmCast(ref source, Vector);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Vector, state, destinationRegister);
                     break;
                 case "point":
-                    converted.GesVmCast(ref source, Point);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Point, state, destinationRegister);
                     break;
                 case "range":
-                    converted.GesVmCast(ref source, Range);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Range, state, destinationRegister);
                     break;
                 case "message":
-                    converted.GesVmCast(ref source, Message);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Message, state, destinationRegister);
                     break;
                 case "handler":
-                    converted.GesVmCast(ref source, Handler);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Handler, state, destinationRegister);
                     break;
                 case "list":
-                    converted.GesVmCast(ref source, List);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, List, state, destinationRegister);
                     break;
                 case "map":
-                    converted.GesVmCast(ref source, Map);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Map, state, destinationRegister);
                     break;
                 case "dice":
-                    converted.GesVmCast(ref source, Dice);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Dice, state, destinationRegister);
                     break;
                 case "degree":
-                    converted.GesVmCastUnit(ref source, UnitDegree);
+                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitDegree, state);
                     break;
                 case "meter":
-                    converted.GesVmCastUnit(ref source, UnitMeter);
+                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitMeter, state);
                     break;
                 case "second":
-                    converted.GesVmCastUnit(ref source, UnitSecond);
+                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitSecond, state);
                     break;
                 default:
                     converted.SetNothing();

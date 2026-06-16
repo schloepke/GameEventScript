@@ -9,7 +9,13 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterTypeCastCheck
 {
-    internal static void GesVmCastUnit(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    internal static void GesVmCastUnit(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    {
+        var dst = state.CreateNothing();
+        GesVmCastUnit(ref dst, in xSlot, unit, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    internal static void GesVmCastUnit(ref GesVmValue dst, in GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit, GesVmState state)
     {
         switch (xSlot.Kind)
         {
@@ -34,11 +40,17 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
         }
     }
-    internal static void GesVmCheckUnit(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
+    internal static void GesVmCheckUnit(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
-        dst.SetBoolean(xSlot.Kind is Integer or Float or Vector or Point && xSlot.Unit == unit);
+        state.SetBoolean(destinationRegister, xSlot.Kind is Integer or Float or Vector or Point && xSlot.Unit == unit);
     }
-    internal static void GesVmCast(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
+    internal static void GesVmCast(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
+    {
+        var dst = state.CreateNothing();
+        GesVmCast(ref dst, in xSlot, type, state, destinationRegister, session);
+        state.SetValue(destinationRegister, in dst);
+    }
+    internal static void GesVmCast(ref GesVmValue dst, in GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GesVmState state, ushort destinationRegister, GameEventScriptSession? session = null)
     {
         switch (type)
         {
@@ -68,16 +80,16 @@ internal static class GesVmRegisterTypeCastCheck
                 else dst.SetNothing();
                 return;
             case Text:
-                CastText(ref dst, ref xSlot);
+                CastText(ref dst, in xSlot);
                 return;
             case Tag:
-                CastTag(ref dst, ref xSlot);
+                CastTag(ref dst, in xSlot);
                 return;
             case Vector:
-                CastVectorOrPoint(ref dst, ref xSlot, asPoint: false);
+                CastVectorOrPoint(ref dst, in xSlot, asPoint: false);
                 return;
             case Point:
-                CastVectorOrPoint(ref dst, ref xSlot, asPoint: true);
+                CastVectorOrPoint(ref dst, in xSlot, asPoint: true);
                 return;
             case Dice:
                 switch (xSlot.Kind)
@@ -111,10 +123,10 @@ internal static class GesVmRegisterTypeCastCheck
                         return;
                 }
             case List:
-                CastList(ref dst, ref xSlot, session);
+                CastList(state, ref dst, in xSlot, session);
                 return;
             case Map:
-                CastMap(ref dst, ref xSlot);
+                CastMap(state, ref dst, in xSlot);
                 return;
 
             case Custom:
@@ -127,7 +139,13 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
         }
     }
-    internal static void GesVmCastNumeric(ref this GesVmValue dst, ref GesVmValue xSlot)
+    internal static void GesVmCastNumeric(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot)
+    {
+        var dst = state.CreateNothing();
+        GesVmCastNumeric(ref dst, in xSlot, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    internal static void GesVmCastNumeric(ref GesVmValue dst, in GesVmValue xSlot, GesVmState state)
     {
         if (xSlot.Kind is Text)
         {
@@ -146,31 +164,34 @@ internal static class GesVmRegisterTypeCastCheck
         if (xSlot.Kind is Series && xSlot.ObjectValue is GameEventScriptSeriesValue series)
         {
             dst.BindArguments(series.FirstTerm);
-            dst.GesVmCastNumeric(ref dst);
+            GesVmCastNumeric(ref dst, in dst, state);
             return;
         }
 
         dst.SetFloat(xSlot.AsNumeric, xSlot.Kind is Integer or Float ? xSlot.Unit : UnitNone);
     }
-    internal static void GesVmCastCustom(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer, ushort destinationSlot)
+    internal static void GesVmCastCustom(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot, ushort typeTextPointer)
     {
-        var state = dst.OwningState;
+        var dst = state.CreateNothing();
         var typeName = state.FetchStringByPointer(typeTextPointer);
-        if (IsCustomType(ref xSlot, typeName))
+        if (IsCustomType(in xSlot, typeName))
         {
             if (xSlot.ObjectValue is GesVmValueMap typedMap)
             {
                 dst.SetRecord(typedMap);
+                state.SetValue(destinationRegister, in dst);
                 return;
             }
 
             if (xSlot.Kind is Custom)
             {
                 dst = xSlot;
+                state.SetValue(destinationRegister, in dst);
                 return;
             }
 
             dst.SetNothing();
+            state.SetValue(destinationRegister, in dst);
             return;
         }
 
@@ -193,19 +214,21 @@ internal static class GesVmRegisterTypeCastCheck
                     else state.StageNothing();
                 }
 
-                state.CallRecordConstructor(recordId, destinationSlot);
+                state.CallRecordConstructor(recordId, destinationRegister);
                 return;
             }
 
             dst.SetNothing();
+            state.SetValue(destinationRegister, in dst);
             return;
         }
 
         dst.SetNothing();
+        state.SetValue(destinationRegister, in dst);
     }
-    internal static void GesVmCheckType(ref this GesVmValue dst, ref GesVmValue xSlot, GameEventScriptBytecodeTypeKind type)
+    internal static void GesVmCheckType(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeTypeKind type)
     {
-        dst.SetBoolean(type switch
+        state.SetBoolean(destinationRegister, type switch
         {
             Nothing => xSlot.IsNothing,
             Map => xSlot.Kind is Map or Custom,
@@ -213,34 +236,34 @@ internal static class GesVmRegisterTypeCastCheck
             _ => xSlot.IsNotNothing && xSlot.Kind == type
         });
     }
-    internal static void GesVmCheckNumeric(ref this GesVmValue dst, ref GesVmValue xSlot) => dst.SetBoolean(xSlot.IsNumeric);
-    internal static void GesVmCheckInteger(ref this GesVmValue dst, ref GesVmValue xSlot)
+    internal static void GesVmCheckNumeric(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot) => state.SetBoolean(destinationRegister, xSlot.IsNumeric);
+    internal static void GesVmCheckInteger(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot)
     {
         if (!xSlot.IsNumeric)
         {
-            dst.SetBoolean(false);
+            state.SetBoolean(destinationRegister, false);
             return;
         }
 
         var number = xSlot.AsNumeric;
-        dst.SetBoolean(double.IsFinite(number) && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
+        state.SetBoolean(destinationRegister, double.IsFinite(number) && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
     }
-    internal static void GesVmCheckFractional(ref this GesVmValue dst, ref GesVmValue xSlot)
+    internal static void GesVmCheckFractional(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot)
     {
         if (!xSlot.IsNumeric)
         {
-            dst.SetBoolean(false);
+            state.SetBoolean(destinationRegister, false);
             return;
         }
 
         var number = xSlot.AsNumeric;
-        dst.SetBoolean(double.IsFinite(number) && number != Math.Truncate(number));
+        state.SetBoolean(destinationRegister, double.IsFinite(number) && number != Math.Truncate(number));
     }
-    internal static void GesVmCheckCustomType(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer)
+    internal static void GesVmCheckCustomType(this GesVmState state, ushort destinationRegister, in GesVmValue xSlot, ushort typeTextPointer)
     {
-        dst.SetBoolean(IsCustomType(ref xSlot, dst.OwningState.FetchStringByPointer(typeTextPointer)));
+        state.SetBoolean(destinationRegister, IsCustomType(in xSlot, state.FetchStringByPointer(typeTextPointer)));
     }
-    private static void CastText(ref GesVmValue dst, ref GesVmValue xSlot)
+    private static void CastText(ref GesVmValue dst, in GesVmValue xSlot)
     {
         if (xSlot.Kind is Text)
         {
@@ -250,7 +273,7 @@ internal static class GesVmRegisterTypeCastCheck
 
         dst.SetText(xSlot.ConvertToText());
     }
-    private static void CastList(ref GesVmValue dst, ref GesVmValue xSlot, GameEventScriptSession? session)
+    private static void CastList(GesVmState state, ref GesVmValue dst, in GesVmValue xSlot, GameEventScriptSession? session)
     {
         switch (xSlot.Kind)
         {
@@ -262,18 +285,18 @@ internal static class GesVmRegisterTypeCastCheck
                 var text = xSlot.TextValue;
                 if (text.Length == 0)
                 {
-                    dst.SetList(dst.OwningState.EmptyList);
+                    dst.SetList(state.EmptyList);
                     return;
                 }
 
-                var list = dst.OwningState.CreateList(text.Length);
+                var list = state.CreateList(text.Length);
                 for (var i = 0; i < text.Length; i++) list[i].SetText(text[i].ToString());
                 dst.SetList(list);
                 return;
             }
             case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
-                var list = dst.OwningState.CreateList(3);
+                var list = state.CreateList(3);
                 list[0].SetFloat(triplet.X, xSlot.Unit);
                 list[1].SetFloat(triplet.Y, xSlot.Unit);
                 list[2].SetFloat(triplet.Z, xSlot.Unit);
@@ -282,7 +305,7 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case Dice when xSlot.ObjectValue is int[] dice:
             {
-                var list = dst.OwningState.CreateList(dice.Length);
+                var list = state.CreateList(dice.Length);
                 for (var i = 0; i < dice.Length; i++) list[i].SetInteger(dice[i]);
                 dst.SetList(list);
                 return;
@@ -297,11 +320,11 @@ internal static class GesVmRegisterTypeCastCheck
 
                 if (session is not null && !session.RuntimeBudget.TryCheckRangeLength(xSlot.IntegerValue, "Range length exceeds the configured limit."))
                 {
-                    dst.SetList(dst.OwningState.EmptyList);
+                    dst.SetList(state.EmptyList);
                     return;
                 }
 
-                var list = dst.OwningState.CreateList((int)xSlot.IntegerValue);
+                var list = state.CreateList((int)xSlot.IntegerValue);
                 var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -322,11 +345,11 @@ internal static class GesVmRegisterTypeCastCheck
 
                 if (session is not null && !session.RuntimeBudget.TryCheckRangeLength(xSlot.IntegerValue, "Range length exceeds the configured limit."))
                 {
-                    dst.SetList(dst.OwningState.EmptyList);
+                    dst.SetList(state.EmptyList);
                     return;
                 }
 
-                var list = dst.OwningState.CreateList((int)xSlot.IntegerValue);
+                var list = state.CreateList((int)xSlot.IntegerValue);
                 var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -338,11 +361,11 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
             }
             default:
-                dst.SetList(dst.OwningState.EmptyList);
+                dst.SetList(state.EmptyList);
                 return;
         }
     }
-    private static void CastMap(ref GesVmValue dst, ref GesVmValue xSlot)
+    private static void CastMap(GesVmState state, ref GesVmValue dst, in GesVmValue xSlot)
     {
         switch (xSlot.Kind)
         {
@@ -354,7 +377,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var visibleEntries = new GesVmValueMapBuilder(dst.OwningState, map.Length);
+                var visibleEntries = new GesVmValueMapBuilder(state, map.Length);
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
@@ -366,11 +389,11 @@ internal static class GesVmRegisterTypeCastCheck
             case Custom when xSlot.ObjectValue is GameEventScriptValue externalValue:
             {
                 var sourceEntries = externalValue.AsMap();
-                var entries = new GesVmValueMapBuilder(dst.OwningState, sourceEntries.Count);
+                var entries = new GesVmValueMapBuilder(state, sourceEntries.Count);
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-                    var value = dst.OwningState.CreateNothing();
+                    var value = state.CreateNothing();
                     value.BindArguments(sourceValue);
                     entries.Set(key, value);
                 }
@@ -380,13 +403,13 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
-                var x = dst.OwningState.CreateNothing();
+                var x = state.CreateNothing();
                 x.SetFloat(triplet.X, xSlot.Unit);
-                var y = dst.OwningState.CreateNothing();
+                var y = state.CreateNothing();
                 y.SetFloat(triplet.Y, xSlot.Unit);
-                var z = dst.OwningState.CreateNothing();
+                var z = state.CreateNothing();
                 z.SetFloat(triplet.Z, xSlot.Unit);
-                var entries = new GesVmValueMapBuilder(dst.OwningState, 3);
+                var entries = new GesVmValueMapBuilder(state, 3);
                 entries.Set("x", x);
                 entries.Set("y", y);
                 entries.Set("z", z);
@@ -394,11 +417,11 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
             }
             default:
-                dst.SetMap(new GesVmValueMapBuilder(dst.OwningState, 0).ToMap());
+                dst.SetMap(new GesVmValueMapBuilder(state, 0).ToMap());
                 return;
         }
     }
-    private static void CastVectorOrPoint(ref GesVmValue dst, ref GesVmValue xSlot, bool asPoint)
+    private static void CastVectorOrPoint(ref GesVmValue dst, in GesVmValue xSlot, bool asPoint)
     {
         var unit = UnitNone;
         double x = 0;
@@ -540,7 +563,7 @@ internal static class GesVmRegisterTypeCastCheck
         if (asPoint) dst.SetPoint(x, y, z, unit);
         else dst.SetVector(x, y, z, unit);
     }
-    private static void CastTag(ref GesVmValue dst, ref GesVmValue xSlot)
+    private static void CastTag(ref GesVmValue dst, in GesVmValue xSlot)
     {
         switch (xSlot.Kind)
         {
@@ -560,7 +583,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
         }
     }
-    private static bool IsCustomType(ref GesVmValue value, string typeName)
+    private static bool IsCustomType(in GesVmValue value, string typeName)
     {
         if (value.ObjectValue is IGameEventScriptCustomTypeValue custom) return string.Equals(custom.CustomTypeName, typeName, StringComparison.Ordinal);
         return value.Kind switch

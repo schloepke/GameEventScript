@@ -5,47 +5,58 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterStreams
 {
-    internal static void GesVmStreamCreate(ref this GesVmValue dst, ref GesVmValue x)
+    internal static void GesVmStreamCreate(this GesVmState state, ushort destinationRegister, in GesVmValue x)
     {
-        if (x.TryCreateStream(out var stream)) dst.SetStream(stream);
-        else dst.SetNothing();
+        if (x.TryCreateStream(out var stream)) state.SetStream(destinationRegister, stream);
+        else state.SetNothing(destinationRegister);
     }
-    internal static void GesVmStreamNext(ref this GesVmValue dst, ref GesVmValue stream, ushort noMoreAddress)
+
+    internal static void GesVmStreamNext(this GesVmState state, ushort destinationRegister, in GesVmValue stream, ushort noMoreAddress)
     {
-        if (stream is not { Kind: Stream, ObjectValue: IGesVmStream it } || !it.TryNext(ref dst)) dst.OwningState.JumpAddress(noMoreAddress);
+        var result = state.CreateNothing();
+        if (stream is { Kind: Stream, ObjectValue: IGesVmStream it } && it.TryNext(ref result))
+        {
+            state.SetValue(destinationRegister, in result);
+            return;
+        }
+
+        state.SetValue(destinationRegister, in result);
+        state.JumpAddress(noMoreAddress);
     }
-    internal static void GesVmStreamClose(ref this GesVmValue iterator)
+
+    internal static void GesVmStreamClose(this GesVmState state, ushort iteratorRegister)
     {
+        ref var iterator = ref state.Register(iteratorRegister);
         if (iterator is not { Kind: Stream, ObjectValue: IDisposable it }) return;
         it.Dispose();
-        iterator.SetNothing();
+        state.SetNothing(iteratorRegister);
     }
-    internal static void GesVmStreamMap(ref this GesVmValue dst, ref GesVmValue stream, ushort mapEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator)
+
+    internal static void GesVmStreamMap(this GesVmState state, ushort destinationRegister, in GesVmValue stream, ushort mapEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator)
     {
         if (stream is not { Kind: Stream, ObjectValue: IGesVmStream source })
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
-        var captureSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captureSlots = state.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
         var captures = captureSlots.Length == 0 ? [] : new GesVmValue[captureSlots.Length];
-        for (var i = 0; i < captureSlots.Length; i++) captures[i] = dst.OwningState.Register(captureSlots[i]);
-        dst.SetStream(new GesVmTransformStream(dst.OwningState, source, evaluator, mapEntryAddress, helperSlot, captures, filter: false));
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = state.Register(captureSlots[i]);
+        state.SetStream(destinationRegister, new GesVmTransformStream(state, source, evaluator, mapEntryAddress, helperSlot, captures, filter: false));
     }
-    internal static void GesVmStreamFilter(ref this GesVmValue dst, ref GesVmValue stream, ushort predicateEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator)
+
+    internal static void GesVmStreamFilter(this GesVmState state, ushort destinationRegister, in GesVmValue stream, ushort predicateEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator)
     {
         if (stream is not { Kind: Stream, ObjectValue: IGesVmStream source })
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
-        var captureSlots = dst.OwningState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captureSlots = state.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
         var captures = captureSlots.Length == 0 ? [] : new GesVmValue[captureSlots.Length];
-        for (var i = 0; i < captureSlots.Length; i++) captures[i] = dst.OwningState.Register(captureSlots[i]);
-        dst.SetStream(new GesVmTransformStream(dst.OwningState, source, evaluator, predicateEntryAddress, helperSlot, captures, filter: true));
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = state.Register(captureSlots[i]);
+        state.SetStream(destinationRegister, new GesVmTransformStream(state, source, evaluator, predicateEntryAddress, helperSlot, captures, filter: true));
     }
-
-   
 }

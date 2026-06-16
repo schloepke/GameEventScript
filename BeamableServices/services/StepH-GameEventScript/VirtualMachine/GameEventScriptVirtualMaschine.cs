@@ -578,11 +578,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         }
                         case StreamCreate:
-                            vmState.Register(instruction.DestinationSlot).GesVmStreamCreate(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmStreamCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case StreamNext:
                         {
-                            vmState.Register(instruction.DestinationSlot).GesVmStreamNext(ref vmState.Register(instruction.XSlot), instruction.TargetAddress);
+                            vmState.GesVmStreamNext(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TargetAddress);
                             if (vmState.Register(instruction.DestinationSlot).Kind is not Nothing)
                             {
                                 session.RuntimeBudget.TryConsumeLoopIteration("For loop iteration exceeds the configured limit.");
@@ -590,22 +590,14 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         }
                         case StreamClose:
-                            vmState.Register(instruction.XSlot).GesVmStreamClose();
+                            vmState.GesVmStreamClose(instruction.XSlot);
                             break;
                         case StreamMap:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmStreamMap(ref vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamMap(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
-                        }
                         case StreamFilter:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmStreamFilter(ref vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
-                        }
                         case Count:
                             vmState.Register(instruction.DestinationSlot).GesVmCount(ref vmState.Register(instruction.XSlot));
                             break;

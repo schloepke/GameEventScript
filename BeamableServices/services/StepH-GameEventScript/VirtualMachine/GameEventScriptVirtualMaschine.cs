@@ -488,34 +488,34 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         #region Group 3 - text, collection, streams
 
                         case TakeFirst:
-                            vmState.Register(instruction.DestinationSlot).GesVmTakeFirst(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case DropFirst:
-                            vmState.Register(instruction.DestinationSlot).GesVmDropFirst(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case TakeLast:
-                            vmState.Register(instruction.DestinationSlot).GesVmTakeLast(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeLast(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case DropLast:
-                            vmState.Register(instruction.DestinationSlot).GesVmDropLast(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropLast(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case TakeHighest:
-                            vmState.Register(instruction.DestinationSlot).GesVmTakeHighest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeHighest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case TakeLowest:
-                            vmState.Register(instruction.DestinationSlot).GesVmTakeLowest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeLowest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case DropHighest:
-                            vmState.Register(instruction.DestinationSlot).GesVmDropHighest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropHighest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case DropLowest:
-                            vmState.Register(instruction.DestinationSlot).GesVmDropLowest(ref vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropLowest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
                             break;
                         case OneRandom:
-                            vmState.Register(instruction.DestinationSlot).GesVmOneRandom(ref vmState.Register(instruction.XSlot), vmState.RandomGenerator);
+                            vmState.GesVmOneRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.RandomGenerator);
                             break;
                         case TakeRandom:
-                            vmState.Register(instruction.DestinationSlot).GesVmTakeRandom(ref vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
+                            vmState.GesVmTakeRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
                             break;
                         case Length:
                             vmState.GesVmLength(instruction.DestinationSlot, vmState.Register(instruction.XSlot));

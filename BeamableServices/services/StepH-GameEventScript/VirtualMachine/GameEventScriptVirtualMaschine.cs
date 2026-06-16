@@ -599,50 +599,26 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
                         case Count:
-                            vmState.Register(instruction.DestinationSlot).GesVmCount(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmCount(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case Sum:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmSum(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmSum(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        }
                         case Average:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmAverage(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmAverage(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        }
                         case StreamMin:
-                        {
-                            var dst = vmState.CreateNothing();
-                            GesVmRegisterStreamTerminals.GesVmStreamMin(ref dst, ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamMin(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
-                        }
                         case StreamMax:
-                        {
-                            var dst = vmState.CreateNothing();
-                            GesVmRegisterStreamTerminals.GesVmStreamMax(ref dst, ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamMax(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
-                        }
                         case StreamOneWeighted:
-                        {
-                            var dst = vmState.CreateNothing();
-                            GesVmRegisterStreamTerminals.GesVmStreamOneWeighted(ref dst, ref vmState.Register(instruction.XSlot), instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamOneWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
                             break;
-                        }
                         case StreamTakeWeighted:
-                        {
-                            var dst = vmState.CreateNothing();
-                            GesVmRegisterStreamTerminals.GesVmStreamTakeWeighted(ref dst, ref vmState.Register(instruction.XSlot), instruction.ImmediateY, instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmStreamTakeWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
                             break;
-                        }
                         case StreamCollectList:
                         {
                             var dst = vmState.CreateNothing();

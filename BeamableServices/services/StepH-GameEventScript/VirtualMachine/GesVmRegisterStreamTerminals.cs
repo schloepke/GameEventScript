@@ -72,7 +72,7 @@ internal static class GesVmRegisterStreamTerminals
                 var listNext = state.CreateNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
-                    listNext.GesVmAdd(ref listSum, ref list[i], ref state.Binary.TextConstantTable);
+                    GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], state);
                     listSum = listNext;
                 }
 
@@ -92,7 +92,7 @@ internal static class GesVmRegisterStreamTerminals
                 var mapNext = state.CreateNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
-                    mapNext.GesVmAdd(ref mapSum, ref values[i], ref state.Binary.TextConstantTable);
+                    GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], state);
                     mapSum = mapNext;
                 }
 
@@ -169,7 +169,7 @@ internal static class GesVmRegisterStreamTerminals
 
             while (stream.TryNext(ref item))
             {
-                next.GesVmAdd(ref sum, ref item, ref state.Binary.TextConstantTable);
+                GesVmRegisterMath.GesVmAdd(ref next, in sum, in item, state);
                 sum = next;
             }
 
@@ -199,12 +199,12 @@ internal static class GesVmRegisterStreamTerminals
                 var listNext = state.CreateNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
-                    listNext.GesVmAdd(ref listSum, ref list[i], ref state.Binary.TextConstantTable);
+                    GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], state);
                     listSum = listNext;
                 }
 
                 var countValue = state.CreateInteger(list.Length);
-                listNext.GesVmDivide(ref listSum, ref countValue, ref state.Binary.TextConstantTable);
+                GesVmRegisterMath.GesVmDivide(ref listNext, in listSum, in countValue, state);
                 state.SetValue(destinationRegister, in listNext);
                 return;
             }
@@ -221,12 +221,12 @@ internal static class GesVmRegisterStreamTerminals
                 var mapNext = state.CreateNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
-                    mapNext.GesVmAdd(ref mapSum, ref values[i], ref state.Binary.TextConstantTable);
+                    GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], state);
                     mapSum = mapNext;
                 }
 
                 var countValue = state.CreateInteger(values.Length);
-                mapNext.GesVmDivide(ref mapSum, ref countValue, ref state.Binary.TextConstantTable);
+                GesVmRegisterMath.GesVmDivide(ref mapNext, in mapSum, in countValue, state);
                 state.SetValue(destinationRegister, in mapNext);
                 return;
             }
@@ -304,7 +304,7 @@ internal static class GesVmRegisterStreamTerminals
                     continue;
                 }
 
-                next.GesVmAdd(ref sum, ref item, ref state.Binary.TextConstantTable);
+                GesVmRegisterMath.GesVmAdd(ref next, in sum, in item, state);
                 sum = next;
             }
 
@@ -315,7 +315,7 @@ internal static class GesVmRegisterStreamTerminals
             }
 
             var countValue = state.CreateInteger(count);
-            next.GesVmDivide(ref sum, ref countValue, ref state.Binary.TextConstantTable);
+            GesVmRegisterMath.GesVmDivide(ref next, in sum, in countValue, state);
             result = next;
             state.SetValue(destinationRegister, in result);
         }

@@ -12,20 +12,26 @@ namespace StepH.GameEventScript.VirtualMachine;
 [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class GesVmRegisterMath
 {
-    internal static void GesVmAdd(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmAdd(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmAdd(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    internal static void GesVmAdd(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TrySameUnit(ref a, ref b, out var unit)) dst.SetInteger(a.IntegerValue + b.IntegerValue, unit);
+                if (TrySameUnit(in a, in b, out var unit)) dst.SetInteger(a.IntegerValue + b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Float when b.Kind is Float:
-                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue + b.FloatValue, unit);
+                if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(a.FloatValue + b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric + b.AsNumeric, unit);
+                if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric + b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer when b.Kind is Percentage:
@@ -38,11 +44,11 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(a.FloatValue + b.FloatValue);
                 break;
             case Vector when b.Kind is Vector:
-                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z, vectorUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) dst.SetVector(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Point when b.Kind is Vector:
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bvv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetPoint(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z, pointUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bvv && TrySameUnit(in a, in b, out var pointUnit)) dst.SetPoint(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
@@ -56,7 +62,7 @@ internal static class GesVmRegisterMath
                 break;
             case List when b.Kind is not Nothing && a.ObjectValue is GesVmValue[] aList:
             {
-                var list = dst.OwningState.CreateList(aList.Length + 1);
+                var list = state.CreateList(aList.Length + 1);
                 for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                 list[aList.Length] = b;
                 dst.SetList(list);
@@ -64,7 +70,7 @@ internal static class GesVmRegisterMath
             }
             case not List and not Nothing when b.Kind is List && b.ObjectValue is GesVmValue[] rightList:
             {
-                var list = dst.OwningState.CreateList(rightList.Length + 1);
+                var list = state.CreateList(rightList.Length + 1);
                 list[0] = a;
                 for (var i = 0; i < rightList.Length; i++) list[i + 1] = rightList[i];
                 dst.SetList(list);
@@ -114,27 +120,33 @@ internal static class GesVmRegisterMath
                     var bNum = b.AsNumeric;
                     if (double.IsNaN(bNum)) dst.SetFloat(double.NaN);
                     else if (b.Kind is Percentage) dst.SetFloat(aNum + aNum * bNum, a.Unit);
-                    else if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(aNum + bNum, unit);
+                    else if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(aNum + bNum, unit);
                     else dst.SetFloat(double.NaN);
                 }
 
                 break;
         }
     }
-    internal static void GesVmSubtract(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmSubtract(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmSubtract(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmSubtract(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TrySameUnit(ref a, ref b, out var unit)) dst.SetInteger(a.IntegerValue - b.IntegerValue, unit);
+                if (TrySameUnit(in a, in b, out var unit)) dst.SetInteger(a.IntegerValue - b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Float when b.Kind is Float:
-                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue - b.FloatValue, unit);
+                if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(a.FloatValue - b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric - b.AsNumeric, unit);
+                if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric - b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer when b.Kind is Percentage:
@@ -148,7 +160,7 @@ internal static class GesVmRegisterMath
                 break;
             case Vector when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) dst.SetVector(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
@@ -158,13 +170,13 @@ internal static class GesVmRegisterMath
                 return;
             case Point when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetPoint(ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var pointUnit)) dst.SetPoint(ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
             case Point when b.Kind is Point:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bp && TrySameUnit(ref a, ref b, out var pointUnit)) dst.SetVector(ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bp && TrySameUnit(in a, in b, out var pointUnit)) dst.SetVector(ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
@@ -188,8 +200,8 @@ internal static class GesVmRegisterMath
                     for (var j = 0; j < removeCount; j++)
                     {
                         if (removed[j]) continue;
-                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
-                        if (!candidate.EqualsValue(ref aList[i])) continue;
+                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? state.CreateInteger(removeDice[j]) : b;
+                        if (!candidate.EqualsValue(in aList[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -198,7 +210,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = dst.OwningState.CreateList(resultLength);
+                var list = state.CreateList(resultLength);
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aList.Length; i++)
@@ -207,8 +219,8 @@ internal static class GesVmRegisterMath
                     for (var j = 0; j < removeCount; j++)
                     {
                         if (removed[j]) continue;
-                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? dst.OwningState.CreateInteger(removeDice[j]) : b;
-                        if (!candidate.EqualsValue(ref aList[i])) continue;
+                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? state.CreateInteger(removeDice[j]) : b;
+                        if (!candidate.EqualsValue(in aList[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -264,11 +276,11 @@ internal static class GesVmRegisterMath
                 var resultLength = 0;
                 for (var i = 0; i < aDice.Length; i++)
                 {
-                    var item = dst.OwningState.CreateInteger(aDice[i]);
+                    var item = state.CreateInteger(aDice[i]);
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
-                        if (removed[j] || !item.EqualsValue(ref removeList[j])) continue;
+                        if (removed[j] || !item.EqualsValue(in removeList[j])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -277,16 +289,16 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = dst.OwningState.CreateList(resultLength);
+                var list = state.CreateList(resultLength);
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aDice.Length; i++)
                 {
-                    var item = dst.OwningState.CreateInteger(aDice[i]);
+                    var item = state.CreateInteger(aDice[i]);
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
-                        if (removed[j] || !item.EqualsValue(ref removeList[j])) continue;
+                        if (removed[j] || !item.EqualsValue(in removeList[j])) continue;
                         removed[j] = true;
                         shouldRemove = true;
                         break;
@@ -368,7 +380,7 @@ internal static class GesVmRegisterMath
                     return;
                 }
 
-                var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength);
+                var map = new GesVmValueMapBuilder(state, aMap.StorageLength);
                 if (bMap is not null)
                 {
                     var bi = 0;
@@ -434,7 +446,7 @@ internal static class GesVmRegisterMath
                         var bNum = b.AsNumeric;
                         if (double.IsNaN(bNum)) dst.SetFloat(double.NaN);
                         else if (b.Kind is Percentage) dst.SetFloat(aNum - aNum * bNum, a.Unit);
-                        else if (TrySameUnit(ref a, ref b, out unit)) dst.SetFloat(aNum - bNum, unit);
+                        else if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(aNum - bNum, unit);
                         else dst.SetFloat(double.NaN);
                     }
                 }
@@ -442,20 +454,26 @@ internal static class GesVmRegisterMath
                 break;
         }
     }
-    internal static void GesVmMultiply(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmMultiply(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmMultiply(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmMultiply(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TryProductUnit(ref a, ref b, out var unit)) dst.SetFloat((double)a.IntegerValue * b.IntegerValue, unit);
+                if (TryProductUnit(in a, in b, out var unit)) dst.SetFloat((double)a.IntegerValue * b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Float when b.Kind is Float:
-                if (TryProductUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue * b.FloatValue, unit);
+                if (TryProductUnit(in a, in b, out unit)) dst.SetFloat(a.FloatValue * b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TryProductUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric * b.AsNumeric, unit);
+                if (TryProductUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric * b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Integer when b.Kind is Percentage:
@@ -483,11 +501,11 @@ internal static class GesVmRegisterMath
                 dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && TryProductUnit(in a, in b, out unit)) dst.SetVector(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(in a, in b, out unit)) dst.SetVector(vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
@@ -499,7 +517,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector:
                 var vectorScalar = b.AsNumeric;
-                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(ref a, ref b, out unit))
+                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(in a, in b, out unit))
                     dst.SetVector(vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -511,7 +529,7 @@ internal static class GesVmRegisterMath
                 return;
             case Integer or Float when b.Kind is Vector:
                 var scalar = a.AsNumeric;
-                if (b.ObjectValue is GesVmValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(ref a, ref b, out unit)) dst.SetVector(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
+                if (b.ObjectValue is GesVmValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(in a, in b, out unit)) dst.SetVector(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Integer or Float when b.Kind is Point:
@@ -557,7 +575,7 @@ internal static class GesVmRegisterMath
         {
             case Vector:
             {
-                if (b.ObjectValue is GesVmValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(ref a, ref b, out var vectorUnit)) dst.SetVector(fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
+                if (b.ObjectValue is GesVmValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(in a, in b, out var vectorUnit)) dst.SetVector(fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 return;
             }
@@ -569,7 +587,7 @@ internal static class GesVmRegisterMath
         }
 
         var bNum = b.AsNumeric;
-        if (double.IsNaN(bNum) || !TryProductUnit(ref a, ref b, out var fallbackUnit))
+        if (double.IsNaN(bNum) || !TryProductUnit(in a, in b, out var fallbackUnit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -577,27 +595,33 @@ internal static class GesVmRegisterMath
 
         dst.SetFloat(fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
     }
-    internal static void GesVmDivide(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmDivide(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmDivide(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    internal static void GesVmDivide(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TryQuotientUnit(ref a, ref b, out var unit)) dst.SetFloat((double)a.IntegerValue / b.IntegerValue, unit);
+                if (TryQuotientUnit(in a, in b, out var unit)) dst.SetFloat((double)a.IntegerValue / b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Float when b.Kind is Float:
-                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.FloatValue / b.FloatValue, unit);
+                if (TryQuotientUnit(in a, in b, out unit)) dst.SetFloat(a.FloatValue / b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric / b.AsNumeric, unit);
+                if (TryQuotientUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric / b.AsNumeric, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Percentage when b.Kind is Percentage:
                 dst.SetFloat(a.FloatValue / b.FloatValue);
                 return;
             case Percentage when b.Kind is Integer or Float:
-                if (b.HasUnit || !TryQuotientUnit(ref a, ref b, out unit))
+                if (b.HasUnit || !TryQuotientUnit(in a, in b, out unit))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -606,15 +630,15 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(a.FloatValue / b.AsNumeric);
                 return;
             case Integer or Float when b.Kind is Percentage:
-                if (TryQuotientUnit(ref a, ref b, out unit)) dst.SetFloat(a.AsNumeric / b.FloatValue, unit);
+                if (TryQuotientUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric / b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && b.IntegerValue != 0 && TryQuotientUnit(ref a, ref b, out unit)) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, unit);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && b.IntegerValue != 0 && TryQuotientUnit(in a, in b, out unit)) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(ref a, ref b, out unit))
+                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(in a, in b, out unit))
                     dst.SetVector(vectorFloat.X / b.FloatValue, vectorFloat.Y / b.FloatValue, vectorFloat.Z / b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -627,7 +651,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector:
                 var vectorDivisor = b.AsNumeric;
-                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(ref a, ref b, out unit))
+                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(in a, in b, out unit))
                     dst.SetVector(vector.X / vectorDivisor, vector.Y / vectorDivisor, vector.Z / vectorDivisor, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -648,7 +672,7 @@ internal static class GesVmRegisterMath
                 }
 
                 var percentageDivisor = b.AsNumeric;
-                if (double.IsNaN(percentageDivisor) || b.HasUnit || !TryQuotientUnit(ref a, ref b, out unit))
+                if (double.IsNaN(percentageDivisor) || b.HasUnit || !TryQuotientUnit(in a, in b, out unit))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -693,7 +717,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        if (!TryQuotientUnit(ref a, ref b, out var fallbackUnit))
+        if (!TryQuotientUnit(in a, in b, out var fallbackUnit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -703,7 +727,13 @@ internal static class GesVmRegisterMath
         if (a.Kind is Percentage) dst.SetPercentage(fallbackResult);
         else dst.SetFloat(fallbackResult, fallbackUnit);
     }
-    internal static void GesVmPower(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmPower(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmPower(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmPower(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -807,12 +837,18 @@ internal static class GesVmRegisterMath
         if (double.IsNaN(left)) dst.SetFloat(double.NaN);
         else dst.SetFloat(Math.Pow(left, right), unit);
     }
-    internal static void GesVmFloorDivide(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmFloorDivide(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmFloorDivide(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmFloorDivide(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TryQuotientUnit(ref a, ref b, out var integerUnit))
+                if (TryQuotientUnit(in a, in b, out var integerUnit))
                 {
                     var result = Math.Floor((double)a.IntegerValue / b.IntegerValue);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, integerUnit);
@@ -822,7 +858,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Float when b.Kind is Float:
-                if (TryQuotientUnit(ref a, ref b, out var floatUnit))
+                if (TryQuotientUnit(in a, in b, out var floatUnit))
                 {
                     var result = Math.Floor(a.FloatValue / b.FloatValue);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, floatUnit);
@@ -832,7 +868,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TryQuotientUnit(ref a, ref b, out var mixedUnit))
+                if (TryQuotientUnit(in a, in b, out var mixedUnit))
                 {
                     var result = Math.Floor(a.AsNumeric / b.AsNumeric);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, mixedUnit);
@@ -842,7 +878,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Integer or Float when b.Kind is Percentage:
-                if (TryQuotientUnit(ref a, ref b, out var percentageRightUnit))
+                if (TryQuotientUnit(in a, in b, out var percentageRightUnit))
                 {
                     var result = Math.Floor(a.AsNumeric / b.FloatValue);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageRightUnit);
@@ -852,7 +888,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Percentage when b.Kind is Integer or Float or Percentage:
-                if (TryQuotientUnit(ref a, ref b, out var percentageLeftUnit))
+                if (TryQuotientUnit(in a, in b, out var percentageLeftUnit))
                 {
                     var result = Math.Floor(a.FloatValue / b.AsNumeric);
                     if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageLeftUnit);
@@ -879,7 +915,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        if (b.Kind is Vector or Point || !TryQuotientUnit(ref a, ref b, out var unit))
+        if (b.Kind is Vector or Point || !TryQuotientUnit(in a, in b, out var unit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -903,12 +939,18 @@ internal static class GesVmRegisterMath
         if (double.IsFinite(floorResult) && floorResult is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)floorResult, unit);
         else dst.SetFloat(floorResult, unit);
     }
-    internal static void GesVmModulo(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmModulo(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmModulo(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmModulo(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TrySameUnit(ref a, ref b, out var integerUnit))
+                if (TrySameUnit(in a, in b, out var integerUnit))
                 {
                     var rightInteger = b.IntegerValue;
                     if (rightInteger == 0)
@@ -934,7 +976,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Float when b.Kind is Float:
-                if (TrySameUnit(ref a, ref b, out var floatUnit))
+                if (TrySameUnit(in a, in b, out var floatUnit))
                 {
                     var leftFloat = a.FloatValue;
                     var rightFloat = b.FloatValue;
@@ -958,7 +1000,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(ref a, ref b, out var mixedUnit))
+                if (TrySameUnit(in a, in b, out var mixedUnit))
                 {
                     var leftNumber = a.AsNumeric;
                     var rightNumber = b.AsNumeric;
@@ -992,7 +1034,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        if (a.Kind is Vector or Point || b.Kind is Vector or Point || !TrySameUnit(ref a, ref b, out var unit))
+        if (a.Kind is Vector or Point || b.Kind is Vector or Point || !TrySameUnit(in a, in b, out var unit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -1022,12 +1064,18 @@ internal static class GesVmRegisterMath
         if (fallbackModuloResult != 0d && (fallbackModuloResult < 0d && right > 0d || fallbackModuloResult > 0d && right < 0d)) fallbackModuloResult += right;
         dst.SetFloat(fallbackModuloResult, unit);
     }
-    internal static void GesVmRemainder(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmRemainder(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmRemainder(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmRemainder(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TrySameUnit(ref a, ref b, out var integerUnit))
+                if (TrySameUnit(in a, in b, out var integerUnit))
                 {
                     var rightInteger = b.IntegerValue;
                     if (rightInteger == 0)
@@ -1045,7 +1093,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Float when b.Kind is Float:
-                if (TrySameUnit(ref a, ref b, out var floatUnit))
+                if (TrySameUnit(in a, in b, out var floatUnit))
                 {
                     var leftFloat = a.FloatValue;
                     var rightFloat = b.FloatValue;
@@ -1061,7 +1109,7 @@ internal static class GesVmRegisterMath
 
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(ref a, ref b, out var mixedUnit))
+                if (TrySameUnit(in a, in b, out var mixedUnit))
                 {
                     var leftNumber = a.AsNumeric;
                     var rightNumber = b.AsNumeric;
@@ -1087,7 +1135,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        if (a.Kind is Vector or Point || b.Kind is Vector or Point || !TrySameUnit(ref a, ref b, out var unit))
+        if (a.Kind is Vector or Point || b.Kind is Vector or Point || !TrySameUnit(in a, in b, out var unit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -1109,20 +1157,26 @@ internal static class GesVmRegisterMath
 
         dst.SetFloat(double.IsInfinity(right) ? left : left % right, unit);
     }
-    internal static void GesVmMin(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmMin(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmMin(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmMin(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (!TrySameUnit(ref a, ref b, out _)) dst.SetFloat(double.NaN);
+                if (!TrySameUnit(in a, in b, out _)) dst.SetFloat(double.NaN);
                 else dst = b.IntegerValue < a.IntegerValue ? b : a;
                 return;
             case Float when b.Kind is Float:
-                if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(a.FloatValue) || double.IsNaN(b.FloatValue)) dst.SetFloat(double.NaN);
+                if (!TrySameUnit(in a, in b, out _) || double.IsNaN(a.FloatValue) || double.IsNaN(b.FloatValue)) dst.SetFloat(double.NaN);
                 else dst = b.FloatValue < a.FloatValue ? b : a;
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (!TrySameUnit(ref a, ref b, out _))
+                if (!TrySameUnit(in a, in b, out _))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -1271,7 +1325,7 @@ internal static class GesVmRegisterMath
 
         if (leftIsNumeric && rightIsNumeric)
         {
-            if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(leftNumber) || double.IsNaN(rightNumber))
+            if (!TrySameUnit(in a, in b, out _) || double.IsNaN(leftNumber) || double.IsNaN(rightNumber))
             {
                 dst.SetFloat(double.NaN);
                 return;
@@ -1326,20 +1380,26 @@ internal static class GesVmRegisterMath
 
         dst = comparison < 0 ? b : a;
     }
-    internal static void GesVmMax(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+    internal static void GesVmMax(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    {
+        var dst = state.CreateNothing();
+        GesVmMax(ref dst, in a, in b, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmMax(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (!TrySameUnit(ref a, ref b, out _)) dst.SetFloat(double.NaN);
+                if (!TrySameUnit(in a, in b, out _)) dst.SetFloat(double.NaN);
                 else dst = b.IntegerValue > a.IntegerValue ? b : a;
                 return;
             case Float when b.Kind is Float:
-                if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(a.FloatValue) || double.IsNaN(b.FloatValue)) dst.SetFloat(double.NaN);
+                if (!TrySameUnit(in a, in b, out _) || double.IsNaN(a.FloatValue) || double.IsNaN(b.FloatValue)) dst.SetFloat(double.NaN);
                 else dst = b.FloatValue > a.FloatValue ? b : a;
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (!TrySameUnit(ref a, ref b, out _))
+                if (!TrySameUnit(in a, in b, out _))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -1488,7 +1548,7 @@ internal static class GesVmRegisterMath
 
         if (leftIsNumeric && rightIsNumeric)
         {
-            if (!TrySameUnit(ref a, ref b, out _) || double.IsNaN(leftNumber) || double.IsNaN(rightNumber))
+            if (!TrySameUnit(in a, in b, out _) || double.IsNaN(leftNumber) || double.IsNaN(rightNumber))
             {
                 dst.SetFloat(double.NaN);
                 return;
@@ -1543,7 +1603,13 @@ internal static class GesVmRegisterMath
 
         dst = comparison > 0 ? b : a;
     }
-    internal static void GesVmNegate(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmNegate(this GesVmState state, ushort destinationRegister, in GesVmValue a)
+    {
+        var dst = state.CreateNothing();
+        GesVmNegate(ref dst, in a, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmNegate(ref GesVmValue dst, in GesVmValue a, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1578,7 +1644,13 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void GesVmAbs(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmAbs(this GesVmState state, ushort destinationRegister, in GesVmValue a)
+    {
+        var dst = state.CreateNothing();
+        GesVmAbs(ref dst, in a, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmAbs(ref GesVmValue dst, in GesVmValue a, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1615,13 +1687,19 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void GesVmClamp(ref this GesVmValue dst, ref GesVmValue value, ref GesVmValue min, ref GesVmValue max, ref GameEventScriptTextTable textTable)
+    internal static void GesVmClamp(this GesVmState state, ushort destinationRegister, in GesVmValue value, in GesVmValue min, in GesVmValue max)
+    {
+        var dst = state.CreateNothing();
+        GesVmClamp(ref dst, in value, in min, in max, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmClamp(ref GesVmValue dst, in GesVmValue value, in GesVmValue min, in GesVmValue max, GesVmState state)
     {
         switch (value.Kind)
         {
             case Integer when min.Kind is Integer && max.Kind is Integer:
             {
-                if (!TrySameUnit(ref value, ref min, ref max, out var integerUnit))
+                if (!TrySameUnit(in value, in min, in max, out var integerUnit))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -1635,7 +1713,7 @@ internal static class GesVmRegisterMath
             }
             case Float when min.Kind is Float && max.Kind is Float:
             {
-                if (!TrySameUnit(ref value, ref min, ref max, out var floatUnit))
+                if (!TrySameUnit(in value, in min, in max, out var floatUnit))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -1655,7 +1733,7 @@ internal static class GesVmRegisterMath
             }
             case Float or Integer when min.Kind is Float or Integer && max.Kind is Float or Integer:
             {
-                if (!TrySameUnit(ref value, ref min, ref max, out var mixedUnit))
+                if (!TrySameUnit(in value, in min, in max, out var mixedUnit))
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -1691,7 +1769,7 @@ internal static class GesVmRegisterMath
             return;
         }
 
-        if (min.Kind is Vector or Point || max.Kind is Vector or Point || !TrySameUnit(ref value, ref min, ref max, out var unit))
+        if (min.Kind is Vector or Point || max.Kind is Vector or Point || !TrySameUnit(in value, in min, in max, out var unit))
         {
             dst.SetFloat(double.NaN);
             return;
@@ -1711,7 +1789,13 @@ internal static class GesVmRegisterMath
         var fallbackResult = raw < lowerFallback ? lowerFallback : raw > upperFallback ? upperFallback : raw;
         dst.SetFloat(fallbackResult, unit);
     }
-    internal static void GesVmNaturalLog(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmNaturalLog(this GesVmState state, ushort destinationRegister, in GesVmValue a)
+    {
+        var dst = state.CreateNothing();
+        GesVmNaturalLog(ref dst, in a, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmNaturalLog(ref GesVmValue dst, in GesVmValue a, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1756,7 +1840,13 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void GesVmTerm(ref this GesVmValue dst, ref GesVmValue source, ref GesVmValue termSlot)
+    internal static void GesVmTerm(this GesVmState state, ushort destinationRegister, in GesVmValue source, in GesVmValue termSlot)
+    {
+        var dst = state.CreateNothing();
+        GesVmTerm(ref dst, in source, in termSlot, state);
+        state.SetValue(destinationRegister, in dst);
+    }
+    private static void GesVmTerm(ref GesVmValue dst, in GesVmValue source, in GesVmValue termSlot, GesVmState state)
     {
         long index;
         bool ret;

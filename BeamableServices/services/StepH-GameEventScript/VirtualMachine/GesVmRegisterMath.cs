@@ -127,65 +127,59 @@ internal static class GesVmRegisterMath
                 break;
         }
     }
-    internal static void GesVmSubtract(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
-    {
-        var dst = state.CreateNothing();
-        GesVmSubtract(ref dst, in a, in b, state);
-        state.SetValue(destinationRegister, in dst);
-    }
-    private static void GesVmSubtract(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    internal static void GesVmSubtract(this GesVmState state, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TrySameUnit(in a, in b, out var unit)) dst.SetInteger(a.IntegerValue - b.IntegerValue, unit);
-                else dst.SetFloat(double.NaN);
-                break;
+                if (TrySameUnit(in a, in b, out var unit)) state.SetInteger(dst, a.IntegerValue - b.IntegerValue, unit);
+                else state.SetFloat(dst, double.NaN);
+                return;
             case Float when b.Kind is Float:
-                if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(a.FloatValue - b.FloatValue, unit);
-                else dst.SetFloat(double.NaN);
-                break;
+                if (TrySameUnit(in a, in b, out unit)) state.SetFloat(dst, a.FloatValue - b.FloatValue, unit);
+                else state.SetFloat(dst, double.NaN);
+                return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric - b.AsNumeric, unit);
-                else dst.SetFloat(double.NaN);
-                break;
+                if (TrySameUnit(in a, in b, out unit)) state.SetFloat(dst, a.AsNumeric - b.AsNumeric, unit);
+                else state.SetFloat(dst, double.NaN);
+                return;
             case Integer when b.Kind is Percentage:
-                dst.SetFloat(a.IntegerValue - a.IntegerValue * b.FloatValue, a.Unit);
-                break;
+                state.SetFloat(dst, a.IntegerValue - a.IntegerValue * b.FloatValue, a.Unit);
+                return;
             case Float when b.Kind is Percentage:
-                dst.SetFloat(a.FloatValue - a.FloatValue * b.FloatValue, a.Unit);
-                break;
+                state.SetFloat(dst, a.FloatValue - a.FloatValue * b.FloatValue, a.Unit);
+                return;
             case Percentage when b.Kind is Percentage:
-                dst.SetPercentage(a.FloatValue - b.FloatValue);
-                break;
+                state.SetPercentage(dst, a.FloatValue - b.FloatValue);
+                return;
             case Vector when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) dst.SetVector(av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
-                else dst.SetFloat(double.NaN);
+                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) state.SetVector(dst, av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             }
             case Vector:
-                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
-                else dst.SetNothing();
+                if (b.Kind is not Nothing) state.SetFloat(dst, double.NaN);
+                else state.SetNothing(dst);
                 return;
             case Point when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var pointUnit)) dst.SetPoint(ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
-                else dst.SetFloat(double.NaN);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var pointUnit)) state.SetPoint(dst, ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             }
             case Point when b.Kind is Point:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bp && TrySameUnit(in a, in b, out var pointUnit)) dst.SetVector(ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
-                else dst.SetFloat(double.NaN);
+                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bp && TrySameUnit(in a, in b, out var pointUnit)) state.SetVector(dst, ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             }
             case Point:
-                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
-                else dst.SetNothing();
+                if (b.Kind is not Nothing) state.SetFloat(dst, double.NaN);
+                else state.SetNothing(dst);
                 return;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
-                dst.SetFloat(double.NaN);
+                state.SetFloat(dst, double.NaN);
                 return;
             case List when b.Kind is List or Dice and not Nothing or not Map && a.ObjectValue is GesVmValue[] aList:
             {
@@ -229,7 +223,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) list[index++] = aList[i];
                 }
 
-                dst.SetList(list);
+                state.SetList(dst, list);
                 return;
             }
             case Dice when b.Kind is Dice && a.ObjectValue is int[] aDice && b.ObjectValue is int[] bDice:
@@ -267,7 +261,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) dice[index++] = aDice[i];
                 }
 
-                dst.SetDice(dice);
+                state.SetDice(dst, dice);
                 return;
             }
             case Dice when b.Kind is List && a.ObjectValue is int[] aDice && b.ObjectValue is GesVmValue[] removeList:
@@ -307,7 +301,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) list[index++].SetInteger(aDice[i]);
                 }
 
-                dst.SetList(list);
+                state.SetList(dst, list);
                 return;
             }
             case Dice when b.Kind is Integer && b.Unit is UnitNone && a.ObjectValue is int[] aDice && b.IntegerValue is > 0 and <= int.MaxValue:
@@ -340,7 +334,7 @@ internal static class GesVmRegisterMath
                     dice[index++] = aDice[i];
                 }
 
-                dst.SetDice(dice);
+                state.SetDice(dst, dice);
                 return;
             }
             case Map when b.Kind is not Nothing && a.ObjectValue is GesVmValueMap aMap:
@@ -365,7 +359,7 @@ internal static class GesVmRegisterMath
                         var keyValue = keyList[i];
                         if (keyValue.Kind is not (Text or Tag))
                         {
-                            dst.SetNothing();
+                            state.SetNothing(dst);
                             return;
                         }
 
@@ -376,7 +370,7 @@ internal static class GesVmRegisterMath
                 }
                 else
                 {
-                    dst.SetNothing();
+                    state.SetNothing(dst);
                     return;
                 }
 
@@ -413,161 +407,153 @@ internal static class GesVmRegisterMath
                     }
                 }
 
-                dst.SetMap(map.ToMap());
+                state.SetMap(dst, map.ToMap());
                 return;
             }
             case not List and not Map and not Nothing when b.Kind is List or Map:
-                dst.SetNothing();
+                state.SetNothing(dst);
                 return;
             case Percentage:
-                if (b.Kind is not Nothing) dst.SetFloat(double.NaN);
-                else dst.SetNothing();
+                if (b.Kind is not Nothing) state.SetFloat(dst, double.NaN);
+                else state.SetNothing(dst);
                 break;
             case Dice:
-                dst.SetNothing();
+                state.SetNothing(dst);
                 break;
             case Nothing:
-                dst.SetNothing();
+                state.SetNothing(dst);
                 return;
             default:
                 if (b.Kind is Nothing)
                 {
-                    dst.SetNothing();
+                    state.SetNothing(dst);
                 }
                 else
                 {
                     var aNum = a.AsNumeric;
                     if (double.IsNaN(aNum))
                     {
-                        dst.SetFloat(double.NaN);
+                        state.SetFloat(dst, double.NaN);
                     }
                     else
                     {
                         var bNum = b.AsNumeric;
-                        if (double.IsNaN(bNum)) dst.SetFloat(double.NaN);
-                        else if (b.Kind is Percentage) dst.SetFloat(aNum - aNum * bNum, a.Unit);
-                        else if (TrySameUnit(in a, in b, out unit)) dst.SetFloat(aNum - bNum, unit);
-                        else dst.SetFloat(double.NaN);
+                        if (double.IsNaN(bNum)) state.SetFloat(dst, double.NaN);
+                        else if (b.Kind is Percentage) state.SetFloat(dst, aNum - aNum * bNum, a.Unit);
+                        else if (TrySameUnit(in a, in b, out unit)) state.SetFloat(dst, aNum - bNum, unit);
+                        else state.SetFloat(dst, double.NaN);
                     }
                 }
 
                 break;
         }
     }
-    internal static void GesVmMultiply(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
-    {
-        var dst = state.CreateNothing();
-        GesVmMultiply(ref dst, in a, in b, state);
-        state.SetValue(destinationRegister, in dst);
-    }
-    private static void GesVmMultiply(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    internal static void GesVmMultiply(this GesVmState state, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (TryProductUnit(in a, in b, out var unit)) dst.SetFloat((double)a.IntegerValue * b.IntegerValue, unit);
-                else dst.SetFloat(double.NaN);
+                if (TryProductUnit(in a, in b, out var unit)) state.SetFloat(dst, (double)a.IntegerValue * b.IntegerValue, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Float when b.Kind is Float:
-                if (TryProductUnit(in a, in b, out unit)) dst.SetFloat(a.FloatValue * b.FloatValue, unit);
-                else dst.SetFloat(double.NaN);
+                if (TryProductUnit(in a, in b, out unit)) state.SetFloat(dst, a.FloatValue * b.FloatValue, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Float or Integer when b.Kind is Float or Integer:
-                if (TryProductUnit(in a, in b, out unit)) dst.SetFloat(a.AsNumeric * b.AsNumeric, unit);
-                else dst.SetFloat(double.NaN);
+                if (TryProductUnit(in a, in b, out unit)) state.SetFloat(dst, a.AsNumeric * b.AsNumeric, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Integer when b.Kind is Percentage:
-                dst.SetFloat(a.IntegerValue * b.FloatValue, a.Unit);
+                state.SetFloat(dst, a.IntegerValue * b.FloatValue, a.Unit);
                 return;
             case Float when b.Kind is Percentage:
-                dst.SetFloat(a.FloatValue * b.FloatValue, a.Unit);
+                state.SetFloat(dst, a.FloatValue * b.FloatValue, a.Unit);
                 return;
             case Percentage when b.Kind is Percentage:
-                dst.SetPercentage(a.FloatValue * b.FloatValue);
+                state.SetPercentage(dst, a.FloatValue * b.FloatValue);
                 return;
             case Percentage when b.Kind is Integer:
-                var percentageIntegerResult = a.FloatValue * b.IntegerValue;
-                dst.SetFloat(percentageIntegerResult, b.Unit);
+                state.SetFloat(dst, a.FloatValue * b.IntegerValue, b.Unit);
                 return;
             case Percentage when b.Kind is Float:
-                var percentageFloatResult = a.FloatValue * b.FloatValue;
-                dst.SetFloat(percentageFloatResult, b.Unit);
+                state.SetFloat(dst, a.FloatValue * b.FloatValue, b.Unit);
                 return;
             case Percentage when b.Kind is Vector:
-                if (b.ObjectValue is GesVmValueVectorPoint percentageVector) dst.SetVector(a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
-                else dst.SetFloat(double.NaN);
+                if (b.ObjectValue is GesVmValueVectorPoint percentageVector) state.SetVector(dst, a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Point:
-                dst.SetFloat(double.NaN);
+                state.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && TryProductUnit(in a, in b, out unit)) dst.SetVector(vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
-                else dst.SetFloat(double.NaN);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && TryProductUnit(in a, in b, out unit)) state.SetVector(dst, vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(in a, in b, out unit)) dst.SetVector(vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
-                else dst.SetFloat(double.NaN);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(in a, in b, out unit)) state.SetVector(dst, vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorPercent) dst.SetVector(vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
-                else dst.SetFloat(double.NaN);
+                if (a.ObjectValue is GesVmValueVectorPoint vectorPercent) state.SetVector(dst, vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Nothing:
-                dst.SetNothing();
+                state.SetNothing(dst);
                 return;
             case Vector:
                 var vectorScalar = b.AsNumeric;
                 if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(in a, in b, out unit))
-                    dst.SetVector(vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar, unit);
-                else dst.SetFloat(double.NaN);
+                    state.SetVector(dst, vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Point when b.Kind is Nothing:
-                dst.SetNothing();
+                state.SetNothing(dst);
                 return;
             case Point:
-                dst.SetFloat(double.NaN);
+                state.SetFloat(dst, double.NaN);
                 return;
             case Integer or Float when b.Kind is Vector:
                 var scalar = a.AsNumeric;
-                if (b.ObjectValue is GesVmValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(in a, in b, out unit)) dst.SetVector(scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
-                else dst.SetFloat(double.NaN);
+                if (b.ObjectValue is GesVmValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(in a, in b, out unit)) state.SetVector(dst, scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             case Integer or Float when b.Kind is Point:
-                dst.SetFloat(double.NaN);
+                state.SetFloat(dst, double.NaN);
                 return;
             case Percentage:
                 if (b.Kind is Nothing)
                 {
-                    dst.SetNothing();
+                    state.SetNothing(dst);
                     return;
                 }
 
                 var percentageScalar = b.AsNumeric;
                 if (double.IsNaN(percentageScalar))
                 {
-                    dst.SetFloat(double.NaN);
+                    state.SetFloat(dst, double.NaN);
                     return;
                 }
 
                 var percentageResult = a.FloatValue * percentageScalar;
-                if (b.HasUnit) dst.SetFloat(percentageResult, b.Unit);
-                else dst.SetFloat(percentageResult);
+                if (b.HasUnit) state.SetFloat(dst, percentageResult, b.Unit);
+                else state.SetFloat(dst, percentageResult);
                 return;
             case Nothing:
-                dst.SetNothing();
+                state.SetNothing(dst);
                 return;
         }
 
         if (b.Kind is Nothing)
         {
-            dst.SetNothing();
+            state.SetNothing(dst);
             return;
         }
 
         var fallbackLeft = a.AsNumeric;
         if (double.IsNaN(fallbackLeft))
         {
-            dst.SetFloat(double.NaN);
+            state.SetFloat(dst, double.NaN);
             return;
         }
 
@@ -575,13 +561,13 @@ internal static class GesVmRegisterMath
         {
             case Vector:
             {
-                if (b.ObjectValue is GesVmValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(in a, in b, out var vectorUnit)) dst.SetVector(fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
-                else dst.SetFloat(double.NaN);
+                if (b.ObjectValue is GesVmValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(in a, in b, out var vectorUnit)) state.SetVector(dst, fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
+                else state.SetFloat(dst, double.NaN);
                 return;
             }
             case Point:
             {
-                dst.SetFloat(double.NaN);
+                state.SetFloat(dst, double.NaN);
                 return;
             }
         }
@@ -589,11 +575,11 @@ internal static class GesVmRegisterMath
         var bNum = b.AsNumeric;
         if (double.IsNaN(bNum) || !TryProductUnit(in a, in b, out var fallbackUnit))
         {
-            dst.SetFloat(double.NaN);
+            state.SetFloat(dst, double.NaN);
             return;
         }
 
-        dst.SetFloat(fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
+        state.SetFloat(dst, fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
     }
     internal static void GesVmDivide(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {

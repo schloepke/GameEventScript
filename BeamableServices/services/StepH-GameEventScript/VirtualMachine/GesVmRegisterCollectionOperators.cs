@@ -12,7 +12,7 @@ internal static class GesVmRegisterCollectionOperators
         switch (a.Kind)
         {
             case Text or Tag when a.IsStoragePointer:
-                vmState.SetInteger(dst, vmState.ResolveTextPointer((ushort)a.IntegerValue).Length);
+                vmState.SetInteger(dst, vmState.FetchStringByPointer((ushort)a.IntegerValue).Length);
                 break;
             case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
                 vmState.SetInteger(dst, text.Length);

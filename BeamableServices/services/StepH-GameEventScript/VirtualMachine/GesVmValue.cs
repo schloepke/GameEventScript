@@ -60,7 +60,7 @@ internal struct GesVmValue
     
     internal ushort PointerValue => (ushort)IntegerValue;
     
-    internal string TextValue => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+    internal string TextValue => IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
 
     internal void InitRegister(GesVmState state)
     {
@@ -74,12 +74,12 @@ internal struct GesVmValue
         switch (Kind)
         {
             case Text:
-                var resolvedText = IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+                var resolvedText = IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
                 if (resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1") Flags |= IsTrueFlag;
                 else Flags |= IsFalseFlag;
                 break;
             case Tag:
-                if ((IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
+                if ((IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty) switch
                     {
                         "true" => true,
                         "infinity" => true,
@@ -182,7 +182,7 @@ internal struct GesVmValue
     internal void SetTextPointer(ushort pointer)
     {
         Kind = Text;
-        Flags = StoragePointerFlag | (OwningState.Binary.TextConstantTable.ResolveSize(pointer) == 0 ? None : HasValueFlag);
+        Flags = StoragePointerFlag | (OwningState.FetchStringByPointer(pointer).Length == 0 ? None : HasValueFlag);
         Unit = UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -200,7 +200,7 @@ internal struct GesVmValue
     internal void SetTagPointer(ushort pointer)
     {
         Kind = Tag;
-        Flags = IsNumericTag(OwningState.Binary.TextConstantTable.Resolve(pointer)) ? StoragePointerFlag | IsNumericFlag | HasValueFlag : StoragePointerFlag | HasValueFlag;
+        Flags = IsNumericTag(OwningState.FetchStringByPointer(pointer)) ? StoragePointerFlag | IsNumericFlag | HasValueFlag : StoragePointerFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = pointer;
         ObjectValue = null;
@@ -393,7 +393,7 @@ internal struct GesVmValue
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
-        Tag when IsStoragePointer => ResolveNumericTagValue(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue)),
+        Tag when IsStoragePointer => ResolveNumericTagValue(OwningState.FetchStringByPointer((ushort)IntegerValue)),
         Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
         Dice when ObjectValue is int[] dices => SumDices(dices),
         _ => double.NaN,
@@ -409,7 +409,7 @@ internal struct GesVmValue
         unit = Unit;
         return AsNumeric;
     }
-    internal string ReadTextOrTag() => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
+    internal string ReadTextOrTag() => IsStoragePointer ? OwningState.FetchStringByPointer((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
     internal ReadOnlySpan<ushort> ResolveIntegerAsPointerList() => OwningState.Binary.Uint16ConstantTable.Resolve((ushort)IntegerValue);
     internal bool EqualsValue(in GesVmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
     {
@@ -454,7 +454,7 @@ internal struct GesVmValue
                 stream = new GesVmTripletStream(vp);
                 return true;
             case Text or Tag when IsStoragePointer:
-                stream = new GesVmStringStream(OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue));
+                stream = new GesVmStringStream(OwningState.FetchStringByPointer((ushort)IntegerValue));
                 return true;
             case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
                 stream = new GesVmStringStream(text);

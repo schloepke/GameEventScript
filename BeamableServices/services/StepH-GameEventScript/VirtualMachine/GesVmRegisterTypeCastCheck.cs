@@ -156,8 +156,8 @@ internal static class GesVmRegisterTypeCastCheck
     internal static void GesVmCastCustom(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer, ushort destinationSlot)
     {
         var state = dst.OwningState;
-        var typeName = state.Binary.TextConstantTable.Resolve(typeTextPointer);
-        if (IsCustomType(ref xSlot, typeName, ref state.Binary.TextConstantTable))
+        var typeName = state.FetchStringByPointer(typeTextPointer);
+        if (IsCustomType(ref xSlot, typeName))
         {
             if (xSlot.ObjectValue is GesVmValueMap typedMap)
             {
@@ -181,7 +181,7 @@ internal static class GesVmRegisterTypeCastCheck
             {
                 var bind = state.RecordConstructors[recordId];
                 if (bind.Kind is not GameEventScriptBinaryBindKind.Record ||
-                    !string.Equals(state.Binary.TextConstantTable.Resolve(bind.Name), typeName, StringComparison.Ordinal))
+                    !string.Equals(state.FetchStringByPointer(bind.Name), typeName, StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -189,7 +189,7 @@ internal static class GesVmRegisterTypeCastCheck
                 state.ClearStage();
                 for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
                 {
-                    var argumentName = state.Binary.TextConstantTable.Resolve(bind.ArgumentNames[argumentIndex]);
+                    var argumentName = state.FetchStringByPointer(bind.ArgumentNames[argumentIndex]);
                     if (map.TryGet(argumentName, out var argument)) state.StageValue(ref argument);
                     else state.StageNothing();
                 }
@@ -239,7 +239,7 @@ internal static class GesVmRegisterTypeCastCheck
     }
     internal static void GesVmCheckCustomType(ref this GesVmValue dst, ref GesVmValue xSlot, ushort typeTextPointer)
     {
-        dst.SetBoolean(IsCustomType(ref xSlot, dst.OwningState.Binary.TextConstantTable.Resolve(typeTextPointer), ref dst.OwningState.Binary.TextConstantTable));
+        dst.SetBoolean(IsCustomType(ref xSlot, dst.OwningState.FetchStringByPointer(typeTextPointer)));
     }
     private static void CastText(ref GesVmValue dst, ref GesVmValue xSlot)
     {
@@ -570,7 +570,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
         }
     }
-    private static bool IsCustomType(ref GesVmValue value, string typeName, ref GameEventScriptTextTable textTable)
+    private static bool IsCustomType(ref GesVmValue value, string typeName)
     {
         if (value.ObjectValue is IGameEventScriptCustomTypeValue custom) return string.Equals(custom.CustomTypeName, typeName, StringComparison.Ordinal);
         return value.Kind switch
@@ -578,7 +578,7 @@ internal static class GesVmRegisterTypeCastCheck
             Custom when value.ObjectValue is string customTypeName => string.Equals(customTypeName, typeName, StringComparison.Ordinal),
             Map or Custom when value.ObjectValue is GesVmValueMap map && map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) => marker.Kind switch
             {
-                Tag when marker.IsStoragePointer => string.Equals(textTable.Resolve((ushort)marker.IntegerValue), typeName, StringComparison.Ordinal),
+                Tag when marker.IsStoragePointer => string.Equals(value.OwningState.FetchStringByPointer((ushort)marker.IntegerValue), typeName, StringComparison.Ordinal),
                 Tag when marker.ObjectValue is string markerTypeName => string.Equals(markerTypeName, typeName, StringComparison.Ordinal),
                 _ => false
             },

@@ -35,6 +35,7 @@ internal class GesVmState
     internal GesVmValue[] EmptyList { get; init; }
 
     internal GameEventScriptBinary Binary { get; init; }
+    internal string[] StringPool { get; init; }
 
     internal StateValue State { get; set; }
 
@@ -66,6 +67,7 @@ internal class GesVmState
         MaxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
         EmptyList = CreateRegisterArray(0);
         Binary = binary;
+        StringPool = BuildStringPool(binary.TextConstantTable);
         CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
         CallStackPointer = 0;
@@ -78,12 +80,7 @@ internal class GesVmState
         OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
         RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
     }
-    
-    internal string ResolveTextPointer(ushort textPointer)
-    {
-        return Binary.TextConstantTable.Resolve(textPointer);
-    }
-    
+
     internal bool PrepareStateForMessage(GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptSession session)
     {
         if (State != Ready) return RaiseError("State not ready to receive new messages.");
@@ -166,11 +163,11 @@ internal class GesVmState
         switch (value.Kind)
         {
             case Text:
-                var resolvedText = value.IsStoragePointer ? Binary.TextConstantTable.Resolve((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
+                var resolvedText = value.IsStoragePointer ? FetchStringByPointer((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
                 value.Flags |= resolvedText.Equals("true", StringComparison.OrdinalIgnoreCase) || resolvedText == "1" ? IsTrueFlag : IsFalseFlag;
                 break;
             case Tag:
-                var resolvedTag = value.IsStoragePointer ? Binary.TextConstantTable.Resolve((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
+                var resolvedTag = value.IsStoragePointer ? FetchStringByPointer((ushort)value.IntegerValue) : value.ObjectValue as string ?? string.Empty;
                 value.Flags |= resolvedTag switch
                 {
                     "true" => IsTrueFlag,
@@ -334,7 +331,7 @@ internal class GesVmState
         RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
     internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
-    internal string FetchStringByPointer(ushort index) => Binary.TextConstantTable.Resolve(index);
+    internal string FetchStringByPointer(ushort index) => StringPool[index];
     internal ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
     internal void ModifyLocalSlots(short slotCount)
     {
@@ -430,6 +427,17 @@ internal class GesVmState
         }
 
         return result;
+    }
+
+    private static string[] BuildStringPool(GameEventScriptTextTable textTable)
+    {
+        var strings = new string[textTable.Slices.Length];
+        for (var i = 0; i < strings.Length; i++)
+        {
+            strings[i] = textTable.Resolve((ushort)i);
+        }
+
+        return strings;
     }
     
 }

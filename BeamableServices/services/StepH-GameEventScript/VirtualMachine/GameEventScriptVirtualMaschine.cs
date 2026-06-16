@@ -34,8 +34,8 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         foreach (var bind in _vmState.Binary.BindTable.Entries)
         {
             if (bind.Kind is not ExternalType) continue;
-            var typeName = _vmState.Binary.TextConstantTable.Resolve(bind.Name);
-            var argumentLabels = bind.ArgumentNames.Select(_vmState.Binary.TextConstantTable.Resolve);
+            var typeName = _vmState.FetchStringByPointer(bind.Name);
+            var argumentLabels = bind.ArgumentNames.Select(_vmState.FetchStringByPointer);
             var reference = new GameEventScriptExternalTypeConstructorReference(typeName, argumentLabels);
             if (!_externalTypeRegistry.TryResolve(reference, out _))
             {
@@ -54,13 +54,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
     {
         ModuleName = binary.ModuleName;
         _vmState = new GesVmState(binary, registerSize, stackSize);
-        Handlers = (from bind in binary.BindTable.Entries.Where(x => x.Kind is MessageHandler or MessageNameHandler)
-            let signature = GameEventScriptMessageSignature.Create(binary.TextConstantTable.Resolve(bind.Name), bind.ArgumentNames.Select(binary.TextConstantTable.Resolve))
+        Handlers = (from bind in _vmState.Binary.BindTable.Entries.Where(x => x.Kind is MessageHandler or MessageNameHandler)
+            let signature = GameEventScriptMessageSignature.Create(_vmState.FetchStringByPointer(bind.Name), bind.ArgumentNames.Select(_vmState.FetchStringByPointer))
             let matchArguments = bind.Kind == MessageHandler
             select new GameEventScriptMessageHandlerDescriptor(signature,
                 (msg, session) => Invoke(msg, matchArguments, bind.EntryAddress, session),
-                bind.RequiredTags.Select(binary.TextConstantTable.Resolve).ToArray(),
-                bind.ExcludedTags.Select(binary.TextConstantTable.Resolve).ToArray(),
+                bind.RequiredTags.Select(_vmState.FetchStringByPointer).ToArray(),
+                bind.ExcludedTags.Select(_vmState.FetchStringByPointer).ToArray(),
                 matchArguments)).ToList();
     }
 

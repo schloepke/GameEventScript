@@ -8,7 +8,7 @@ internal static class GesVmRegisterMemberIndexAccess
 {
     internal static void GesVmMemberAccess(ref this GesVmValue dst, ushort memberNameIndex, ref GesVmValue obj)
     {
-        dst.GesVmMemberAccess(dst.OwningState.Binary.TextConstantTable.Resolve(memberNameIndex), ref obj);
+        dst.GesVmMemberAccess(dst.OwningState.FetchStringByPointer(memberNameIndex), ref obj);
     }
     internal static void GesVmMemberAccess(ref this GesVmValue dst, string key, ref GesVmValue obj)
     {
@@ -121,7 +121,7 @@ internal static class GesVmRegisterMemberIndexAccess
                 else dst.SetNothing();
                 return;
             case Text or Tag when obj.IsStoragePointer:
-                var resolvedText = dst.OwningState.Binary.TextConstantTable.Resolve((ushort)obj.IntegerValue);
+                var resolvedText = dst.OwningState.FetchStringByPointer((ushort)obj.IntegerValue);
                 if (index < resolvedText.Length) dst.SetText(resolvedText[index].ToString());
                 else dst.SetNothing();
                 return;

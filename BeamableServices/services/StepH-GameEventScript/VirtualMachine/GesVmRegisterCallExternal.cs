@@ -294,7 +294,7 @@ internal static class GesVmRegisterCallExternal
             case Point when value.ObjectValue is GesVmValueVectorPoint point:
                 return GameEventScriptFastValue.FromPoint(point.X, point.Y, point.Z, value.Unit);
             case Text:
-                return GameEventScriptFastValue.FromText(value.IsStorageObject ? value.ObjectValue as string ?? string.Empty : value.OwningState.Binary.TextConstantTable.Resolve((ushort)value.IntegerValue));
+                return GameEventScriptFastValue.FromText(value.IsStorageObject ? value.ObjectValue as string ?? string.Empty : value.OwningState.FetchStringByPointer((ushort)value.IntegerValue));
             default:
                 return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue());
         }
@@ -308,8 +308,8 @@ internal static class GesVmRegisterCallExternal
         Vector when a.ObjectValue is GesVmValueVectorPoint vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
         Point when a.ObjectValue is GesVmValueVectorPoint point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
         GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
-        Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
-        Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.Binary.TextConstantTable.Resolve((ushort)a.IntegerValue)),
+        Text => GameEventScriptValueFactory.GesText(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.FetchStringByPointer((ushort)a.IntegerValue)),
+        Tag => GameEventScriptValueFactory.GesTag(a.IsStorageObject ? a.ObjectValue as string ?? string.Empty : a.OwningState.FetchStringByPointer((ushort)a.IntegerValue)),
         List when a.ObjectValue is GesVmValue[] list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
         Map when a.ObjectValue is GesVmValueMap map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
         Custom when a.ObjectValue is GameEventScriptValue custom => custom,
@@ -355,7 +355,7 @@ internal static class GesVmRegisterCallExternal
         if (valueMap.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) && marker.Kind is Tag)
         {
             typeName = marker.IsStoragePointer
-                ? state.Binary.TextConstantTable.Resolve((ushort)marker.IntegerValue)
+                ? state.FetchStringByPointer((ushort)marker.IntegerValue)
                 : marker.ObjectValue as string ?? string.Empty;
         }
 

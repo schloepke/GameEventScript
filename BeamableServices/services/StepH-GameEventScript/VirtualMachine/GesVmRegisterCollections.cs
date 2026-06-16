@@ -23,7 +23,7 @@ internal static class GesVmRegisterCollections
         var map = new GesVmValueMapBuilder(vmState, vmState.StageLength);
         for (ushort i = 0; i < vmState.StageLength; i++)
         {
-            map.Set(vmState.Binary.TextConstantTable.Resolve(keyNames[i]), vmState.RegisterStaged(i));
+            map.Set(vmState.FetchStringByPointer(keyNames[i]), vmState.RegisterStaged(i));
         }
 
         vmState.SetMap(destinationRegister, map.ToMap());

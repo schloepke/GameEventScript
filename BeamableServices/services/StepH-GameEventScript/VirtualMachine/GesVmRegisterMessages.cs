@@ -15,11 +15,11 @@ internal static class GesVmRegisterMessages
             vmState.RaiseError("Cannot create message signature from empty shape");
             return;
         }
-        var messageName = vmState.Binary.TextConstantTable.Resolve(shape[0]);
+        var messageName = vmState.FetchStringByPointer(shape[0]);
         var argumentNames = new List<string>(shape.Length - 1);
         for (var index = 1; index < shape.Length; index++)
         {
-            argumentNames.Add(vmState.Binary.TextConstantTable.Resolve(shape[index]));
+            argumentNames.Add(vmState.FetchStringByPointer(shape[index]));
         }
         dest.SetMessageHandler(GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
@@ -30,11 +30,11 @@ internal static class GesVmRegisterMessages
             dest.OwningState.RaiseError("Message signature shape and argument slots mismatch");
             return;
         }
-        var messageName = dest.OwningState.Binary.TextConstantTable.Resolve(shape[0]);
+        var messageName = dest.OwningState.FetchStringByPointer(shape[0]);
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(dest.OwningState.Binary.TextConstantTable.Resolve(shape[index + 1]), dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue());
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(dest.OwningState.FetchStringByPointer(shape[index + 1]), dest.OwningState.Register(argumentSlots[index]).ToGameEventScriptValue());
         }
         try
         {

@@ -401,22 +401,22 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmNot(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot));
                             break;
                         case Equal:
-                            vmState.Register(instruction.DestinationSlot).GesVmEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case NotEqual:
-                            vmState.Register(instruction.DestinationSlot).GesVmNotEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmNotEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case Less:
-                            vmState.Register(instruction.DestinationSlot).GesVmLess(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmLess(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case Greater:
-                            vmState.Register(instruction.DestinationSlot).GesVmGreater(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmGreater(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case LessOrEqual:
-                            vmState.Register(instruction.DestinationSlot).GesVmLessOrEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmLessOrEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case GreaterOrEqual:
-                            vmState.Register(instruction.DestinationSlot).GesVmGreaterOrEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmGreaterOrEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case Add:
                             vmState.Register(instruction.DestinationSlot).GesVmAdd(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);

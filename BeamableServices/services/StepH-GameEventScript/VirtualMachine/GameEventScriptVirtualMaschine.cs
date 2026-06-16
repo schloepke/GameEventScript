@@ -715,10 +715,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmListBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
                             break;
                         case HasPattern:
-                            vmState.Register(instruction.DestinationSlot).GesVmHasPattern(ref vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this, instruction.DestinationSlot);
+                            vmState.GesVmHasPattern(instruction.DestinationSlot, vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this);
                             break;
                         case TakePattern:
-                            vmState.Register(instruction.DestinationSlot).GesVmTakePattern(ref vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this, instruction.DestinationSlot);
+                            vmState.GesVmTakePattern(instruction.DestinationSlot, vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this);
                             break;
 
                         #endregion

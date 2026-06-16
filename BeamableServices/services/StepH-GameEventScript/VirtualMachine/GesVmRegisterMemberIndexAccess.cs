@@ -6,10 +6,6 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterMemberIndexAccess
 {
-    internal static void GesVmMemberAccess(ref this GesVmValue dst, ushort memberNameIndex, ref GesVmValue obj)
-    {
-        dst.GesVmMemberAccess(dst.OwningState.FetchStringByPointer(memberNameIndex), ref obj);
-    }
     internal static void GesVmMemberAccess(ref this GesVmValue dst, string key, ref GesVmValue obj)
     {
         switch (obj.Kind)

@@ -647,25 +647,25 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), true);
                             break;
                         case Distinct:
-                            vmState.Register(instruction.DestinationSlot).GesVmDistinct(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmDistinct(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case DistinctBy:
-                            vmState.Register(instruction.DestinationSlot).GesVmDistinctBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
+                            vmState.GesVmDistinctBy(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case GroupBy:
-                            vmState.Register(instruction.DestinationSlot).GesVmGroupBy(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
+                            vmState.GesVmGroupBy(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case SortAscending:
-                            vmState.Register(instruction.DestinationSlot).GesVmSortAscending(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmSortAscending(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case SortDescending:
-                            vmState.Register(instruction.DestinationSlot).GesVmSortDescending(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmSortDescending(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case OrderByAscending:
-                            vmState.Register(instruction.DestinationSlot).GesVmOrderByAscending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
+                            vmState.GesVmOrderByAscending(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case OrderByDescending:
-                            vmState.Register(instruction.DestinationSlot).GesVmOrderByDescending(ref vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this, instruction.DestinationSlot);
+                            vmState.GesVmOrderByDescending(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case Reverse:
                             vmState.Register(instruction.DestinationSlot).GesVmReverse(ref vmState.Register(instruction.XSlot));

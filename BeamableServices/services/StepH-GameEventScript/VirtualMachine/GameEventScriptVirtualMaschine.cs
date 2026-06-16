@@ -709,7 +709,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmCreateListBuilder(instruction.DestinationSlot);
                             break;
                         case ListBuilderAdd:
-                            vmState.GesVmListBuilderAdd(instruction.XSlot, in vmState.Register(instruction.YSlot));
+                            vmState.GesVmListBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
                             break;
                         case ListBuilderFinish:
                             vmState.GesVmListBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));

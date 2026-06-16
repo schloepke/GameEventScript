@@ -15,7 +15,7 @@ internal sealed class GesVmValueListBuilder
 
     internal int Count { get; private set; }
 
-    internal void Add(GesVmValue value)
+    internal void Add(in GesVmValue value)
     {
         if (Count == _items.Length)
         {

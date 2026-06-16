@@ -334,11 +334,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.ClearStage();
                             break;
                         case CreateList:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateList();
+                            vmState.GesVmCreateList(instruction.DestinationSlot);
                             vmState.ClearStage();
                             break;
                         case CreateMap:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateMap(instruction.SecondaryListIndex);
+                            vmState.GesVmCreateMap(instruction.DestinationSlot, instruction.SecondaryListIndex);
                             vmState.ClearStage();
                             break;
                         case CreateRange:
@@ -706,13 +706,13 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).GesVmShuffle(ref vmState.Register(instruction.XSlot), vmState.RandomGenerator);
                             break;
                         case ListBuilderCreate:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateListBuilder();
+                            vmState.GesVmCreateListBuilder(instruction.DestinationSlot);
                             break;
                         case ListBuilderAdd:
-                            vmState.Register(instruction.XSlot).GesVmListBuilderAdd(ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmListBuilderAdd(instruction.XSlot, in vmState.Register(instruction.YSlot));
                             break;
                         case ListBuilderFinish:
-                            vmState.Register(instruction.DestinationSlot).GesVmListBuilderFinish(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmListBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
                             break;
                         case HasPattern:
                             vmState.Register(instruction.DestinationSlot).GesVmHasPattern(ref vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, instruction.BU, this, instruction.DestinationSlot);

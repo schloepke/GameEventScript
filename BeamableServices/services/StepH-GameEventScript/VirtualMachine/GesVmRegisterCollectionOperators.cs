@@ -7,45 +7,46 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCollectionOperators
 {
-    internal static void GesVmLength(ref this GesVmValue dst, ref GesVmValue a, ref GameEventScriptTextTable textTable)
+    internal static void GesVmLength(this GesVmState vmState, ushort dst, in GesVmValue a)
     {
         switch (a.Kind)
         {
             case Text or Tag when a.IsStoragePointer:
-                dst.SetInteger(textTable.Resolve((ushort)a.IntegerValue).Length);
+                vmState.SetInteger(dst, vmState.ResolveTextPointer((ushort)a.IntegerValue).Length);
                 break;
             case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
-                dst.SetInteger(text.Length);
+                vmState.SetInteger(dst, text.Length);
                 break;
             case List or Map or Dice or GameEventScriptBytecodeTypeKind.Range:
-                dst.SetInteger(a.IntegerValue);
+                vmState.SetInteger(dst, a.IntegerValue);
                 break;
             case Nothing:
-                dst.SetInteger(0);
+                vmState.SetInteger(dst, 0);
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 break;
         }
     }
-    internal static void GesVmStartsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmStartsWith(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Text or Tag when b.Kind is Text or Tag:
-                dst.SetBoolean(a.ReadTextOrTag().StartsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
+                vmState.SetBoolean(dst, a.TextValue.StartsWith(b.TextValue, StringComparison.Ordinal));
                 return;
             case Nothing:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 return;
             case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
 
         if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
         {
-            dst.SetBoolean(false);
+            vmState.SetBoolean(dst, false);
             return;
         }
 
@@ -73,7 +74,7 @@ internal static class GesVmRegisterCollectionOperators
                 leftFloatRange = value;
                 break;
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
 
@@ -92,13 +93,13 @@ internal static class GesVmRegisterCollectionOperators
                 rightFloatRange = value;
                 break;
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
 
         if (b.IntegerValue > a.IntegerValue)
         {
-            dst.SetBoolean(false);
+            vmState.SetBoolean(dst, false);
             return;
         }
 
@@ -109,7 +110,7 @@ internal static class GesVmRegisterCollectionOperators
 
         for (var i = 0; i < b.IntegerValue; i++)
         {
-            var left = dst.OwningState.CreateNothing();
+            var left = vmState.CreateNothing();
             if (leftList is not null) left = leftList[i];
             else if (leftDice is not null) left.SetInteger(leftDice[i]);
             else if (leftRange is not null)
@@ -123,7 +124,7 @@ internal static class GesVmRegisterCollectionOperators
                 leftFloat += leftFloatRange.Step;
             }
 
-            var right = dst.OwningState.CreateNothing();
+            var right = vmState.CreateNothing();
             if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
@@ -137,31 +138,32 @@ internal static class GesVmRegisterCollectionOperators
                 rightFloat += rightFloatRange.Step;
             }
 
-            if (left.EqualsValue(ref right)) continue;
-            dst.SetBoolean(false);
+            if (left.EqualsValue(right)) continue;
+            vmState.SetBoolean(dst, false);
             return;
         }
 
-        dst.SetBoolean(true);
+        vmState.SetBoolean(dst, true);
     }
-    internal static void GesVmEndsWith(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmEndsWith(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Text or Tag when b.Kind is Text or Tag:
-                dst.SetBoolean(a.ReadTextOrTag().EndsWith(b.ReadTextOrTag(), StringComparison.Ordinal));
+                vmState.SetBoolean(dst, a.TextValue.EndsWith(b.TextValue, StringComparison.Ordinal));
                 return;
             case Nothing:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 return;
             case not (List or Dice or GameEventScriptBytecodeTypeKind.Range):
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
 
         if (b.Kind is not (List or Dice or GameEventScriptBytecodeTypeKind.Range))
         {
-            dst.SetBoolean(false);
+            vmState.SetBoolean(dst, false);
             return;
         }
 
@@ -189,7 +191,7 @@ internal static class GesVmRegisterCollectionOperators
                 leftFloatRange = value;
                 break;
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
 
@@ -208,13 +210,13 @@ internal static class GesVmRegisterCollectionOperators
                 rightFloatRange = value;
                 break;
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
 
         if (b.IntegerValue > a.IntegerValue)
         {
-            dst.SetBoolean(false);
+            vmState.SetBoolean(dst, false);
             return;
         }
 
@@ -227,7 +229,7 @@ internal static class GesVmRegisterCollectionOperators
         for (var i = 0; i < b.IntegerValue; i++)
         {
             var leftIndex = leftOffset + i;
-            var left = dst.OwningState.CreateNothing();
+            var left = vmState.CreateNothing();
             if (leftList is not null) left = leftList[leftIndex];
             else if (leftDice is not null) left.SetInteger(leftDice[leftIndex]);
             else if (leftRange is not null)
@@ -241,7 +243,7 @@ internal static class GesVmRegisterCollectionOperators
                 leftFloat += leftFloatRange.Step;
             }
 
-            var right = dst.OwningState.CreateNothing();
+            var right = vmState.CreateNothing();
             if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
@@ -255,45 +257,46 @@ internal static class GesVmRegisterCollectionOperators
                 rightFloat += rightFloatRange.Step;
             }
 
-            if (left.EqualsValue(ref right)) continue;
-            dst.SetBoolean(false);
+            if (left.EqualsValue(right)) continue;
+            vmState.SetBoolean(dst, false);
             return;
         }
 
-        dst.SetBoolean(true);
+        vmState.SetBoolean(dst, true);
     }
-    internal static void GesVmContains(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmContains(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (b.Kind)
         {
             case Text or Tag when a.Kind is Text or Tag:
-                dst.SetBoolean(b.ReadTextOrTag().Contains(a.ReadTextOrTag(), StringComparison.Ordinal));
+                vmState.SetBoolean(dst, b.TextValue.Contains(a.TextValue, StringComparison.Ordinal));
                 return;
             case Text or Tag:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
             case List when b.ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length; i++)
                 {
-                    if (!list[i].EqualsValue(ref a)) continue;
-                    dst.SetBoolean(true);
+                    if (!list[i].EqualsValue(a)) continue;
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
             case Stream when b.ObjectValue is IGesVmStream stream:
-                var item = dst.OwningState.CreateNothing();
+                var item = vmState.CreateNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
                     {
-                        if (!item.EqualsValue(ref a)) continue;
-                        dst.SetBoolean(true);
+                        if (!item.EqualsValue(a)) continue;
+                        vmState.SetBoolean(dst, true);
                         return;
                     }
 
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
                 finally
@@ -303,115 +306,108 @@ internal static class GesVmRegisterCollectionOperators
             case Dice when b.ObjectValue is int[] dice:
                 if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
                 for (var i = 0; i < dice.Length; i++)
                 {
                     if (dice[i] != a.IntegerValue) continue;
-                    dst.SetBoolean(true);
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
             case Map when b.ObjectValue is GesVmValueMap map:
                 if (a.Kind is not (Text or Tag))
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
-                var key = a.ReadTextOrTag();
-                dst.SetBoolean(!key.StartsWith("_", StringComparison.Ordinal) && map.ContainsKey(key));
+                var key = a.TextValue;
+                vmState.SetBoolean(dst, !key.StartsWith("_", StringComparison.Ordinal) && map.ContainsKey(key));
                 return;
             case Vector or Point when b.ObjectValue is GesVmValueVectorPoint triplet:
                 if (!a.IsNumeric)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
-                var value = dst.OwningState.CreateNothing();
+                var value = vmState.CreateNothing();
                 value.SetFloat(triplet.X, b.Unit);
-                if (value.EqualsValue(ref a))
+                if (value.EqualsValue(a))
                 {
-                    dst.SetBoolean(true);
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
                 value.SetFloat(triplet.Y, b.Unit);
-                if (value.EqualsValue(ref a))
+                if (value.EqualsValue(a))
                 {
-                    dst.SetBoolean(true);
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
                 value.SetFloat(triplet.Z, b.Unit);
-                dst.SetBoolean(value.EqualsValue(ref a));
+                vmState.SetBoolean(dst, value.EqualsValue(a));
                 return;
             case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmValueRangeInteger range:
                 if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || range.Step == 0)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
-                dst.SetBoolean(range.Step > 0
+                vmState.SetBoolean(dst, range.Step > 0
                     ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
                     : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL);
                 return;
             case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmValueRangeFloat range:
                 if (!a.IsNumeric || range.Step == 0d)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
                 var number = a.AsNumeric;
                 if (!double.IsFinite(number))
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
                 if (range.Step > 0d)
                 {
                     var quotient = (number - range.From) / range.Step;
-                    dst.SetBoolean(number >= range.From && number <= range.To && quotient == Math.Truncate(quotient));
+                    vmState.SetBoolean(dst, number >= range.From && number <= range.To && quotient == Math.Truncate(quotient));
                     return;
                 }
 
                 var descendingQuotient = (range.From - number) / -range.Step;
-                dst.SetBoolean(number <= range.From && number >= range.To && descendingQuotient == Math.Truncate(descendingQuotient));
+                vmState.SetBoolean(dst, number <= range.From && number >= range.To && descendingQuotient == Math.Truncate(descendingQuotient));
                 return;
             case Nothing:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 return;
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
     }
-    internal static void GesVmContainsAny(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
-        => GesVmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: false);
-    internal static void GesVmContainsAll(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
-        => GesVmContainsAnyAll(ref dst, ref a, ref b, ref textTable, requireAll: true);
-    internal static void GesVmHasAny(ref this GesVmValue dst, ref GesVmValue source)
-        => GesVmHasAnyAll(ref dst, ref source, requireAll: false);
-    internal static void GesVmHasAll(ref this GesVmValue dst, ref GesVmValue source)
-        => GesVmHasAnyAll(ref dst, ref source, requireAll: true);
-    private static void GesVmHasAnyAll(ref GesVmValue dst, ref GesVmValue source, bool requireAll)
+
+    internal static void GesVmHasAnyAll(this GesVmState vmState, ushort dst, in GesVmValue source, bool requireAll)
     {
         switch (source.Kind)
         {
             case Nothing:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
-                var item = dst.OwningState.CreateNothing();
+                var item = vmState.CreateNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -421,18 +417,18 @@ internal static class GesVmRegisterCollectionOperators
                         {
                             if (!requireAll)
                             {
-                                dst.SetBoolean(true);
+                                vmState.SetBoolean(dst, true);
                                 return;
                             }
                         }
                         else if (requireAll)
                         {
-                            dst.SetBoolean(false);
+                            vmState.SetBoolean(dst, false);
                             return;
                         }
                     }
 
-                    dst.SetBoolean(requireAll);
+                    vmState.SetBoolean(dst, requireAll);
                     return;
                 }
                 finally
@@ -449,23 +445,23 @@ internal static class GesVmRegisterCollectionOperators
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             case Dice when source.ObjectValue is int[] dice:
                 if (dice.Length == 0)
                 {
-                    dst.SetBoolean(requireAll);
+                    vmState.SetBoolean(dst, requireAll);
                     return;
                 }
 
@@ -474,22 +470,22 @@ internal static class GesVmRegisterCollectionOperators
                     for (var i = 0; i < dice.Length; i++)
                     {
                         if (dice[i] == 0) continue;
-                        dst.SetBoolean(true);
+                        vmState.SetBoolean(dst, true);
                         return;
                     }
 
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
                 for (var i = 0; i < dice.Length; i++)
                 {
                     if (dice[i] != 0) continue;
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
-                dst.SetBoolean(true);
+                vmState.SetBoolean(dst, true);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:
             {
@@ -502,30 +498,30 @@ internal static class GesVmRegisterCollectionOperators
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             case Text or Tag:
             {
-                var text = source.ReadTextOrTag();
+                var text = source.TextValue;
                 if (text.Length == 0)
                 {
-                    dst.SetBoolean(requireAll);
+                    vmState.SetBoolean(dst, requireAll);
                     return;
                 }
 
-                var item = dst.OwningState.CreateNothing();
+                var item = vmState.CreateNothing();
                 for (var i = 0; i < text.Length; i++)
                 {
                     item.SetText(text[i].ToString());
@@ -534,18 +530,18 @@ internal static class GesVmRegisterCollectionOperators
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             case Vector or Point when source.ObjectValue is GesVmValueVectorPoint triplet:
@@ -553,13 +549,13 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     if (!requireAll)
                     {
-                        dst.SetBoolean(true);
+                        vmState.SetBoolean(dst, true);
                         return;
                     }
                 }
                 else if (requireAll)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
@@ -567,27 +563,27 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     if (!requireAll)
                     {
-                        dst.SetBoolean(true);
+                        vmState.SetBoolean(dst, true);
                         return;
                     }
                 }
                 else if (requireAll)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
                 if (triplet.Z != 0d && double.IsFinite(triplet.Z))
                 {
-                    dst.SetBoolean(true);
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -595,25 +591,25 @@ internal static class GesVmRegisterCollectionOperators
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
 
                     value += range.Step;
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -621,180 +617,170 @@ internal static class GesVmRegisterCollectionOperators
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
 
                     value += range.Step;
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
     }
-    private static void GesVmContainsAnyAll(ref GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable, bool requireAll)
+
+    internal static void GesVmContainsAnyAll(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b, bool requireAll)
     {
         if (b.Kind is Nothing)
         {
-            dst.SetNothing();
+            vmState.SetNothing(dst);
             return;
         }
 
         if (b.Kind is Stream && b.ObjectValue is IGesVmStream stream)
         {
-            GesVmContainsAnyAllStream(ref dst, ref a, stream, requireAll);
+            vmState.GesVmContainsAnyAllStream(dst, a, stream, requireAll);
             return;
         }
 
-        var candidate = dst.OwningState.CreateNothing();
-        var probe = dst.OwningState.CreateNothing();
-
+        var candidate = vmState.CreateNothing();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length; i++)
                 {
                     candidate = list[i];
-                    probe.GesVmContains(ref candidate, ref b, ref textTable);
-                    if (probe.IsTrue)
+                    if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
-
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             case Dice when a.ObjectValue is int[] dice:
                 for (var i = 0; i < dice.Length; i++)
                 {
                     candidate.SetInteger(dice[i]);
-                    probe.GesVmContains(ref candidate, ref b, ref textTable);
-                    if (probe.IsTrue)
+                    if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
-
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             case Text or Tag:
             {
-                var text = a.ReadTextOrTag();
+                var text = a.TextValue;
                 for (var i = 0; i < text.Length; i++)
                 {
                     candidate.SetText(text[i].ToString());
-                    probe.GesVmContains(ref candidate, ref b, ref textTable);
-                    if (probe.IsTrue)
+                    if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
-
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
                     candidate.SetInteger(value);
                     value += range.Step;
-                    probe.GesVmContains(ref candidate, ref b, ref textTable);
-                    if (probe.IsTrue)
+                    if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
-
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
                     candidate.SetFloat(value);
                     value += range.Step;
-                    probe.GesVmContains(ref candidate, ref b, ref textTable);
-                    if (probe.IsTrue)
+                    if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
                         {
-                            dst.SetBoolean(true);
+                            vmState.SetBoolean(dst, true);
                             return;
                         }
                     }
                     else if (requireAll)
                     {
-                        dst.SetBoolean(false);
+                        vmState.SetBoolean(dst, false);
                         return;
                     }
-
                 }
 
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
             default:
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
         }
     }
-    private static void GesVmContainsAnyAllStream(ref GesVmValue dst, ref GesVmValue a, IGesVmStream stream, bool requireAll)
+
+    private static void GesVmContainsAnyAllStream(this GesVmState vmState, ushort dst, in GesVmValue a, IGesVmStream stream, bool requireAll)
     {
         var candidates = new GesVmValue[8];
         var candidateCount = 0;
@@ -805,7 +791,7 @@ internal static class GesVmRegisterCollectionOperators
             candidates[candidateCount++] = value;
         }
 
-        var candidate = dst.OwningState.CreateNothing();
+        var candidate = vmState.CreateNothing();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesVmValue[] list:
@@ -821,7 +807,7 @@ internal static class GesVmRegisterCollectionOperators
                 break;
             case Text or Tag:
             {
-                var text = a.ReadTextOrTag();
+                var text = a.TextValue;
                 for (var i = 0; i < text.Length; i++)
                 {
                     candidate.SetText(text[i].ToString());
@@ -832,7 +818,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger range:
             {
-                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -845,7 +831,7 @@ internal static class GesVmRegisterCollectionOperators
             }
             case GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat range:
             {
-                var length = StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
+                var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 var value = range.From;
                 for (var i = 0L; i < length; i++)
                 {
@@ -862,24 +848,24 @@ internal static class GesVmRegisterCollectionOperators
         {
             if (candidateCount == 0)
             {
-                dst.SetBoolean(requireAll);
+                vmState.SetBoolean(dst, requireAll);
                 return;
             }
 
-            var item = dst.OwningState.CreateNothing();
+            var item = vmState.CreateNothing();
             if (!requireAll)
             {
                 while (stream.TryNext(ref item))
                 {
                     for (var i = 0; i < candidateCount; i++)
                     {
-                        if (!item.EqualsValue(ref candidates[i])) continue;
-                        dst.SetBoolean(true);
+                        if (!item.EqualsValue(candidates[i])) continue;
+                        vmState.SetBoolean(dst, true);
                         return;
                     }
                 }
 
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
             }
 
@@ -889,24 +875,25 @@ internal static class GesVmRegisterCollectionOperators
             {
                 for (var i = 0; i < candidateCount; i++)
                 {
-                    if (found[i] || !item.EqualsValue(ref candidates[i])) continue;
+                    if (found[i] || !item.EqualsValue(candidates[i])) continue;
                     found[i] = true;
                     foundCount++;
                 }
 
                 if (foundCount != candidateCount) continue;
-                dst.SetBoolean(true);
+                vmState.SetBoolean(dst, true);
                 return;
             }
 
-            dst.SetBoolean(false);
+            vmState.SetBoolean(dst, false);
         }
         finally
         {
             if (stream is IDisposable disposable) disposable.Dispose();
         }
     }
-    internal static void GesVmContainsValue(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmContainsValue(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (b.Kind)
         {
@@ -915,51 +902,52 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     if (!map.IsVisibleAt(i)) continue;
                     var mapValue = map.ValueAt(i);
-                    if (!mapValue.EqualsValue(ref a)) continue;
-                    dst.SetBoolean(true);
+                    if (!mapValue.EqualsValue(a)) continue;
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
             case Vector or Point when b.ObjectValue is GesVmValueVectorPoint triplet:
                 if (!a.IsNumeric)
                 {
-                    dst.SetBoolean(false);
+                    vmState.SetBoolean(dst, false);
                     return;
                 }
 
-                var value = dst.OwningState.CreateNothing();
+                var value = vmState.CreateNothing();
                 value.SetFloat(triplet.X, b.Unit);
-                if (value.EqualsValue(ref a))
+                if (value.EqualsValue(a))
                 {
-                    dst.SetBoolean(true);
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
                 value.SetFloat(triplet.Y, b.Unit);
-                if (value.EqualsValue(ref a))
+                if (value.EqualsValue(a))
                 {
-                    dst.SetBoolean(true);
+                    vmState.SetBoolean(dst, true);
                     return;
                 }
 
                 value.SetFloat(triplet.Z, b.Unit);
-                dst.SetBoolean(value.EqualsValue(ref a));
+                vmState.SetBoolean(dst, value.EqualsValue(a));
                 return;
             case Nothing:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 return;
             default:
-                dst.SetBoolean(false);
+                vmState.SetBoolean(dst, false);
                 return;
         }
     }
-    internal static void GesVmUnion(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmUnion(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
-            dst.SetNothing();
+            vmState.SetNothing(dst);
             return;
         }
 
@@ -971,32 +959,32 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     case Map when b.ObjectValue is GesVmValueMap bMap:
                     {
-                        var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength + bMap.StorageLength);
+                        var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength + bMap.StorageLength);
                         for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < bMap.StorageLength; i++) map.Set(bMap.KeyAt(i), bMap.ValueAt(i));
-                        dst.SetMap(map.ToMap());
+                        vmState.SetMap(dst, map.ToMap());
                         return;
                     }
                     case List when b.ObjectValue is GesVmValue[] keys:
                     {
-                        var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength + keys.Length);
+                        var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength + keys.Length);
                         for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < keys.Length; i++)
                         {
                             var keyValue = keys[i];
                             if (keyValue.Kind is not (Text or Tag))
                             {
-                                dst.SetNothing();
+                                vmState.SetNothing(dst);
                                 return;
                             }
 
                             var key = keyValue.ReadTextOrTag();
                             if (map.ContainsKey(key)) continue;
-                            var flag = dst.OwningState.CreateBoolean(true);
+                            var flag = vmState.CreateBoolean(true);
                             map.Set(key, flag);
                         }
 
-                        dst.SetMap(map.ToMap());
+                        vmState.SetMap(dst, map.ToMap());
                         return;
                     }
                 }
@@ -1009,18 +997,18 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     case List when b.ObjectValue is GesVmValue[] bList:
                     {
-                        var list = dst.OwningState.CreateList(aList.Length + bList.Length);
+                        var list = vmState.CreateList(aList.Length + bList.Length);
                         for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                         for (var i = 0; i < bList.Length; i++) list[aList.Length + i] = bList[i];
-                        dst.SetList(list);
+                        vmState.SetList(dst, list);
                         return;
                     }
                     case Dice when b.ObjectValue is int[] bDice:
                     {
-                        var list = dst.OwningState.CreateList(aList.Length + bDice.Length);
+                        var list = vmState.CreateList(aList.Length + bDice.Length);
                         for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                         for (var i = 0; i < bDice.Length; i++) list[aList.Length + i].SetInteger(bDice[i]);
-                        dst.SetList(list);
+                        vmState.SetList(dst, list);
                         return;
                     }
                 }
@@ -1036,15 +1024,15 @@ internal static class GesVmRegisterCollectionOperators
                         var dice = new int[aDice.Length + bDice.Length];
                         Array.Copy(aDice, dice, aDice.Length);
                         Array.Copy(bDice, 0, dice, aDice.Length, bDice.Length);
-                        dst.SetDice(dice);
+                        vmState.SetDice(dst, dice);
                         return;
                     }
                     case List when b.ObjectValue is GesVmValue[] bList:
                     {
-                        var list = dst.OwningState.CreateList(aDice.Length + bList.Length);
+                        var list = vmState.CreateList(aDice.Length + bList.Length);
                         for (var i = 0; i < aDice.Length; i++) list[i].SetInteger(aDice[i]);
                         for (var i = 0; i < bList.Length; i++) list[aDice.Length + i] = bList[i];
-                        dst.SetList(list);
+                        vmState.SetList(dst, list);
                         return;
                     }
                 }
@@ -1053,13 +1041,14 @@ internal static class GesVmRegisterCollectionOperators
             }
         }
 
-        dst.SetNothing();
+        vmState.SetNothing(dst);
     }
-    internal static void GesVmIntersect(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmIntersect(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
-            dst.SetNothing();
+            vmState.SetNothing(dst);
             return;
         }
 
@@ -1067,7 +1056,7 @@ internal static class GesVmRegisterCollectionOperators
         {
             case Map when a.ObjectValue is GesVmValueMap aMap:
             {
-                var map = new GesVmValueMapBuilder(dst.OwningState, aMap.StorageLength);
+                var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength);
                 switch (b.Kind)
                 {
                     case Map when b.ObjectValue is GesVmValueMap bMap:
@@ -1092,6 +1081,7 @@ internal static class GesVmRegisterCollectionOperators
                                 bi++;
                             }
                         }
+
                         break;
                     }
                     case List when b.ObjectValue is GesVmValue[] keyList:
@@ -1102,7 +1092,7 @@ internal static class GesVmRegisterCollectionOperators
                             var keyValue = keyList[i];
                             if (keyValue.Kind is not (Text or Tag))
                             {
-                                dst.SetNothing();
+                                vmState.SetNothing(dst);
                                 return;
                             }
 
@@ -1131,13 +1121,15 @@ internal static class GesVmRegisterCollectionOperators
                                 bi++;
                             }
                         }
+
                         break;
                     }
                     default:
-                        dst.SetNothing();
+                        vmState.SetNothing(dst);
                         return;
                 }
-                dst.SetMap(map.ToMap());
+
+                vmState.SetMap(dst, map.ToMap());
                 return;
             }
             case List when a.ObjectValue is GesVmValue[] leftList:
@@ -1152,26 +1144,28 @@ internal static class GesVmRegisterCollectionOperators
                         {
                             for (var j = 0; j < rightList.Length; j++)
                             {
-                                if (removed[j] || !leftList[i].EqualsValue(ref rightList[j])) continue;
+                                if (removed[j] || !leftList[i].EqualsValue(rightList[j])) continue;
                                 removed[j] = true;
                                 resultLength++;
                                 break;
                             }
                         }
-                        var list = dst.OwningState.CreateList(resultLength);
+
+                        var list = vmState.CreateList(resultLength);
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
                         for (var i = 0; i < leftList.Length; i++)
                         {
                             for (var j = 0; j < rightList.Length; j++)
                             {
-                                if (removed[j] || !leftList[i].EqualsValue(ref rightList[j])) continue;
+                                if (removed[j] || !leftList[i].EqualsValue(rightList[j])) continue;
                                 removed[j] = true;
                                 list[index++] = leftList[i];
                                 break;
                             }
                         }
-                        dst.SetList(list);
+
+                        vmState.SetList(dst, list);
                         return;
                     }
                     case Dice when b.ObjectValue is int[] rightDice:
@@ -1190,7 +1184,8 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
-                        var list = dst.OwningState.CreateList(resultLength);
+
+                        var list = vmState.CreateList(resultLength);
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
                         for (var i = 0; i < leftList.Length; i++)
@@ -1205,7 +1200,8 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
-                        dst.SetList(list);
+
+                        vmState.SetList(dst, list);
                         return;
                     }
                 }
@@ -1229,6 +1225,7 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
+
                         var dice = new int[resultLength];
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
@@ -1242,7 +1239,8 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
-                        dst.SetDice(dice);
+
+                        vmState.SetDice(dst, dice);
                         return;
                     case List when b.ObjectValue is GesVmValue[] rightList:
                         var removed1 = new bool[rightList.Length];
@@ -1258,7 +1256,8 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
-                        var list = dst.OwningState.CreateList(resultLength1);
+
+                        var list = vmState.CreateList(resultLength1);
                         var index1 = 0;
                         Array.Clear(removed1, 0, removed1.Length);
                         for (var i = 0; i < leftDice.Length; i++)
@@ -1272,41 +1271,45 @@ internal static class GesVmRegisterCollectionOperators
                                 break;
                             }
                         }
-                        dst.SetList(list);
+
+                        vmState.SetList(dst, list);
                         return;
                 }
+
                 break;
             }
         }
 
-        dst.SetNothing();
+        vmState.SetNothing(dst);
     }
-    internal static void GesVmZip(ref this GesVmValue dst, ref GesVmValue a, ref GesVmValue b, ref GameEventScriptTextTable textTable)
+
+    internal static void GesVmZip(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         if (a.Kind is not List || b.Kind is not List || a.ObjectValue is not GesVmValue[] aList || b.ObjectValue is not GesVmValue[] bList)
         {
-            dst.SetNothing();
+            vmState.SetNothing(dst);
             return;
         }
 
         var length = Math.Min(aList.Length, bList.Length);
-        var list = dst.OwningState.CreateList(length);
+        var list = vmState.CreateList(length);
         for (var i = 0; i < length; i++)
         {
-            var pair = new GesVmValueMapBuilder(dst.OwningState, 2);
+            var pair = new GesVmValueMapBuilder(vmState, 2);
             pair.Set("left", aList[i]);
             pair.Set("right", bList[i]);
             list[i].SetMap(pair.ToMap());
         }
 
-        dst.SetList(list);
+        vmState.SetList(dst, list);
     }
-    internal static void GesVmValues(ref this GesVmValue dst, ref GesVmValue a)
+
+    internal static void GesVmValues(this GesVmState vmState, ushort dst, in GesVmValue a)
     {
         switch (a.Kind)
         {
             case Map or Custom when a.ObjectValue is GesVmValueMap map:
-                dst.SetList(map.ValueList);
+                vmState.SetList(dst, map.ValueList);
                 break;
             case Custom when a.ObjectValue is GameEventScriptValue externalValue:
                 var valueEntries = externalValue.AsMap();
@@ -1319,21 +1322,22 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(valueKeys, 0, valueKeyCount, StringComparer.Ordinal);
-                var values = dst.OwningState.CreateList(valueKeyCount);
+                var values = vmState.CreateList(valueKeyCount);
                 for (var i = 0; i < valueKeyCount; i++) values[i].BindArguments(valueEntries[valueKeys[i]]);
-                dst.SetList(values);
+                vmState.SetList(dst, values);
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 break;
         }
     }
-    internal static void GesVmKeys(ref this GesVmValue dst, ref GesVmValue a)
+
+    internal static void GesVmKeys(this GesVmState vmState, ushort dst, in GesVmValue a)
     {
         switch (a.Kind)
         {
             case Map or Custom when a.ObjectValue is GesVmValueMap map:
-                dst.SetList(map.KeyList);
+                vmState.SetList(dst, map.KeyList);
                 break;
             case Custom when a.ObjectValue is GameEventScriptValue externalValue:
                 var keyEntries = externalValue.AsMap();
@@ -1346,21 +1350,22 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(keyKeys, 0, keyCount, StringComparer.Ordinal);
-                var keys = dst.OwningState.CreateList(keyCount);
+                var keys = vmState.CreateList(keyCount);
                 for (var i = 0; i < keyCount; i++) keys[i].SetTag(keyKeys[i]);
-                dst.SetList(keys);
+                vmState.SetList(dst, keys);
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 break;
         }
     }
-    internal static void GesVmEntries(ref this GesVmValue dst, ref GesVmValue a)
+
+    internal static void GesVmEntries(this GesVmState vmState, ushort dst, in GesVmValue a)
     {
         switch (a.Kind)
         {
             case Map or Custom when a.ObjectValue is GesVmValueMap map:
-                dst.SetList(map.EntryList);
+                vmState.SetList(dst, map.EntryList);
                 break;
             case Custom when a.ObjectValue is GameEventScriptValue externalValue:
                 var entryEntries = externalValue.AsMap();
@@ -1373,23 +1378,101 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(entryKeys, 0, entryKeyCount, StringComparer.Ordinal);
-                var entries = dst.OwningState.CreateList(entryKeyCount);
+                var entries = vmState.CreateList(entryKeyCount);
                 for (var i = 0; i < entryKeyCount; i++)
                 {
-                    var value = dst.OwningState.CreateNothing();
+                    var value = vmState.CreateNothing();
                     value.BindArguments(entryEntries[entryKeys[i]]);
-                    var entry = new GesVmValueMapBuilder(dst.OwningState, 2);
-                    entry.Set("key", dst.OwningState.CreateTag(entryKeys[i]));
+                    var entry = new GesVmValueMapBuilder(vmState, 2);
+                    entry.Set("key", vmState.CreateTag(entryKeys[i]));
                     entry.Set("value", value);
                     entries[i].SetMap(entry.ToMap());
                 }
 
-                dst.SetList(entries);
+                vmState.SetList(dst, entries);
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(dst);
                 break;
         }
     }
 
+    private static bool? ContainsHelper(this GesVmState vmState, in GesVmValue a, in GesVmValue b)
+    {
+        switch (b.Kind)
+        {
+            case Text or Tag when a.Kind is Text or Tag:
+                return b.TextValue.Contains(a.TextValue, StringComparison.Ordinal);
+            case Text or Tag:
+                return false;
+            case List when b.ObjectValue is GesVmValue[] list:
+                for (var i = 0; i < list.Length; i++)
+                {
+                    if (!list[i].EqualsValue(a)) continue;
+                    return true;
+                }
+
+                return false;
+            case Stream when b.ObjectValue is IGesVmStream stream:
+                var item = vmState.CreateNothing();
+                try
+                {
+                    while (stream.TryNext(ref item))
+                    {
+                        if (!item.EqualsValue(a)) continue;
+                        return true;
+                    }
+
+                    return false;
+                }
+                finally
+                {
+                    if (stream is IDisposable disposable) disposable.Dispose();
+                }
+            case Dice when b.ObjectValue is int[] dice:
+                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) return false;
+                for (var i = 0; i < dice.Length; i++)
+                {
+                    if (dice[i] != a.IntegerValue) continue;
+                    return true;
+                }
+
+                return false;
+            case Map when b.ObjectValue is GesVmValueMap map:
+                if (a.Kind is not (Text or Tag)) return false;
+                var key = a.TextValue;
+                return !key.StartsWith("_", StringComparison.Ordinal) && map.ContainsKey(key);
+            case Vector or Point when b.ObjectValue is GesVmValueVectorPoint triplet:
+                if (!a.IsNumeric) return false;
+                var value = vmState.CreateNothing();
+                value.SetFloat(triplet.X, b.Unit);
+                if (value.EqualsValue(a)) return true;
+                value.SetFloat(triplet.Y, b.Unit);
+                if (value.EqualsValue(a)) return true;
+                value.SetFloat(triplet.Z, b.Unit);
+                return value.EqualsValue(a);
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmValueRangeInteger range:
+                if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone || range.Step == 0) return false;
+                return range.Step > 0
+                    ? a.IntegerValue >= range.From && a.IntegerValue <= range.To && unchecked((ulong)a.IntegerValue - (ulong)range.From) % (ulong)range.Step == 0UL
+                    : a.IntegerValue <= range.From && a.IntegerValue >= range.To && unchecked((ulong)range.From - (ulong)a.IntegerValue) % unchecked(0UL - (ulong)range.Step) == 0UL;
+            case GameEventScriptBytecodeTypeKind.Range when b.ObjectValue is GesVmValueRangeFloat range:
+                if (!a.IsNumeric || range.Step == 0d) return false;
+                var number = a.AsNumeric;
+                if (!double.IsFinite(number)) return false;
+                if (range.Step > 0d)
+                {
+                    var quotient = (number - range.From) / range.Step;
+                    return number >= range.From && number <= range.To && quotient == Math.Truncate(quotient);
+                }
+
+                var descendingQuotient = (range.From - number) / -range.Step;
+                return number <= range.From && number >= range.To && descendingQuotient == Math.Truncate(descendingQuotient);
+            case Nothing:
+                return null;
+            default:
+                return false;
+        }
+    }
+    
 }

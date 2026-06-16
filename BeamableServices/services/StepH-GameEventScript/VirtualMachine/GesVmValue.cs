@@ -57,6 +57,10 @@ internal struct GesVmValue
     internal bool HasUnit => Unit.IsNumericUnit();
     internal bool IsStoragePointer => (Flags & StoragePointerFlag) != 0;
     internal bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
+    
+    internal ushort PointerValue => (ushort)IntegerValue;
+    
+    internal string TextValue => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
 
     internal void InitRegister(GesVmState state)
     {
@@ -407,7 +411,7 @@ internal struct GesVmValue
     }
     internal string ReadTextOrTag() => IsStoragePointer ? OwningState.Binary.TextConstantTable.Resolve((ushort)IntegerValue) : ObjectValue as string ?? string.Empty;
     internal ReadOnlySpan<ushort> ResolveIntegerAsPointerList() => OwningState.Binary.Uint16ConstantTable.Resolve((ushort)IntegerValue);
-    internal bool EqualsValue(ref GesVmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
+    internal bool EqualsValue(in GesVmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
     {
         Integer => IntegerValue == other.IntegerValue,
         Float or Percentage => FloatValue == other.FloatValue,
@@ -415,6 +419,7 @@ internal struct GesVmValue
         Text or Tag => string.Equals(ReadTextOrTag(), other.ReadTextOrTag(), StringComparison.Ordinal),
         _ => ReferenceEquals(ObjectValue, other.ObjectValue)
     };
+    
     internal bool TryGetInteger(out long value)
     {
         if (Kind != Integer)

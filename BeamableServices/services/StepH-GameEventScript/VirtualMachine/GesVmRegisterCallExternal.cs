@@ -47,7 +47,7 @@ internal static class GesVmRegisterCallExternal
             }
 
             state.BindArguments(destinationRegister, result);
-            ref var dst = ref state.Register(destinationRegister);
+            ref readonly var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
                 state.SetNothing(destinationRegister);
@@ -62,6 +62,7 @@ internal static class GesVmRegisterCallExternal
             }
         }
     }
+
     internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
         var found = false;
@@ -128,12 +129,11 @@ internal static class GesVmRegisterCallExternal
 
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
             state.BindArguments(destinationRegister, result);
-            ref var dst = ref state.Register(destinationRegister);
+            ref readonly var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
                 state.SetNothing(destinationRegister);
             }
-
         }
         finally
         {
@@ -144,16 +144,19 @@ internal static class GesVmRegisterCallExternal
             }
         }
     }
-    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptFastValue argument)
+
+    private static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptFastValue argument)
     {
         ref var destination = ref state.Register(destinationRegister);
         destination.BindArguments(argument);
     }
+
     internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptValue argument)
     {
         ref var destination = ref state.Register(destinationRegister);
         destination.BindArguments(argument);
     }
+
     private static void BindArguments(ref this GesVmValue destination, GameEventScriptFastValue argument)
     {
         switch (argument.Kind)
@@ -182,6 +185,7 @@ internal static class GesVmRegisterCallExternal
                 break;
         }
     }
+
     internal static void BindArguments(ref this GesVmValue destination, GameEventScriptValue argument)
     {
         switch (argument.Kind)
@@ -270,7 +274,8 @@ internal static class GesVmRegisterCallExternal
                 break;
         }
     }
-    internal static GameEventScriptFastValue ToGameEventScriptFastValue(this ref GesVmValue value)
+
+    private static GameEventScriptFastValue ToGameEventScriptFastValue(this in GesVmValue value)
     {
         switch (value.Kind)
         {
@@ -294,7 +299,8 @@ internal static class GesVmRegisterCallExternal
                 return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue());
         }
     }
-    internal static GameEventScriptValue ToGameEventScriptValue(this ref GesVmValue a) => a.Kind switch
+
+    internal static GameEventScriptValue ToGameEventScriptValue(this in GesVmValue a) => a.Kind switch
     {
         Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
         Float => double.IsNaN(a.FloatValue) ? GameEventScriptValueFactory.GesNothing() : GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
@@ -316,16 +322,19 @@ internal static class GesVmRegisterCallExternal
         Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
         _ => GameEventScriptValueFactory.GesNothing(),
     };
+
     private static List<GameEventScriptValue> ToGameEventScriptValues(this GesVmValue[] list)
     {
         var result = new List<GameEventScriptValue>(list.Length);
         for (var i = 0; i < list.Length; i++)
         {
-            result.Add(list[i].ToGameEventScriptValue());
+            ref readonly var value = ref list[i];
+            result.Add(value.ToGameEventScriptValue());
         }
 
         return result;
     }
+
     private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this GesVmValueMap valueMap)
     {
         var result = new Dictionary<string, GameEventScriptValue>(valueMap.Length, StringComparer.Ordinal);
@@ -334,12 +343,12 @@ internal static class GesVmRegisterCallExternal
             var key = valueMap.KeyAt(i);
             if (!valueMap.IsVisibleAt(i)) continue;
             var value = valueMap.ValueAt(i);
-            var x = value;
-            result.Add(key, x.ToGameEventScriptValue());
+            result.Add(key, value.ToGameEventScriptValue());
         }
 
         return result;
     }
+
     private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this GesVmValueMap valueMap, GesVmState state)
     {
         var typeName = string.Empty;
@@ -354,4 +363,5 @@ internal static class GesVmRegisterCallExternal
             ? GameEventScriptValueFactory.GesNothing()
             : GameEventScriptValueFactory.GesCustomType(typeName, valueMap.ToGameEventScriptValues());
     }
+    
 }

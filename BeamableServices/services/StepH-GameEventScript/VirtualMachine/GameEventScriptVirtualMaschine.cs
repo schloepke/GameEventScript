@@ -386,19 +386,19 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         #region Group 2 - boolean algebra, comparison, math and random
 
                         case Or:
-                            vmState.GesVmOr(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
+                            vmState.GesVmOr(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
                             break;
                         case And:
-                            vmState.GesVmAnd(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
+                            vmState.GesVmAnd(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
                             break;
                         case Xor:
-                            vmState.GesVmXor(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
+                            vmState.GesVmXor(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
                             break;
                         case Implies:
-                            vmState.GesVmImplies(instruction.DestinationSlot, instruction.XSlot, instruction.YSlot);
+                            vmState.GesVmImplies(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot), vmState.RegisterWithTruthinessEvaluated(instruction.YSlot));
                             break;
                         case Not:
-                            vmState.GesVmNot(instruction.DestinationSlot, instruction.XSlot);
+                            vmState.GesVmNot(instruction.DestinationSlot, vmState.RegisterWithTruthinessEvaluated(instruction.XSlot));
                             break;
                         case Equal:
                             vmState.Register(instruction.DestinationSlot).GesVmEqual(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
@@ -458,7 +458,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).GesVmNaturalLog(ref vmState.Register(instruction.XSlot), ref vmState.Binary.TextConstantTable);
                             break;
                         case Chance:
-                            vmState.GesVmChance(instruction.DestinationSlot, instruction.XSlot);
+                            vmState.GesVmChance(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case Clamp:
                             vmState.Register(instruction.DestinationSlot).GesVmClamp(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU), ref vmState.Binary.TextConstantTable);
@@ -518,43 +518,43 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.Register(instruction.DestinationSlot).GesVmTakeRandom(ref vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
                             break;
                         case Length:
-                            vmState.Register(instruction.DestinationSlot).GesVmLength(ref vmState.Register(instruction.XSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmLength(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case StartsWith:
-                            vmState.Register(instruction.DestinationSlot).GesVmStartsWith(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmStartsWith(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case EndsWith:
-                            vmState.Register(instruction.DestinationSlot).GesVmEndsWith(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmEndsWith(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Contains:
-                            vmState.Register(instruction.DestinationSlot).GesVmContains(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmContains(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case ContainsAny:
-                            vmState.Register(instruction.DestinationSlot).GesVmContainsAny(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmContainsAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), requireAll: false);
                             break;
                         case ContainsAll:
-                            vmState.Register(instruction.DestinationSlot).GesVmContainsAll(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmContainsAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), requireAll: true);
                             break;
                         case ContainsValue:
-                            vmState.Register(instruction.DestinationSlot).GesVmContainsValue(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmContainsValue(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Union:
-                            vmState.Register(instruction.DestinationSlot).GesVmUnion(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmUnion(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Intersect:
-                            vmState.Register(instruction.DestinationSlot).GesVmIntersect(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmIntersect(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case Zip:
-                            vmState.Register(instruction.DestinationSlot).GesVmZip(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmZip(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case KeysOfMap:
-                            vmState.Register(instruction.DestinationSlot).GesVmKeys(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmKeys(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case ValuesOfMap:
-                            vmState.Register(instruction.DestinationSlot).GesVmValues(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmValues(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case EntriesOfMap:
-                            vmState.Register(instruction.DestinationSlot).GesVmEntries(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmEntries(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case GameEventScriptBytecodeOpCode.First:
                         {
@@ -673,19 +673,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         }
                         case HasAny:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmHasAny(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), false);
                             break;
-                        }
                         case HasAll:
-                        {
-                            var dst = vmState.CreateNothing();
-                            dst.GesVmHasAll(ref vmState.Register(instruction.XSlot));
-                            vmState.Register(instruction.DestinationSlot) = dst;
+                            vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), true);
                             break;
-                        }
                         case Distinct:
                             vmState.Register(instruction.DestinationSlot).GesVmDistinct(ref vmState.Register(instruction.XSlot));
                             break;

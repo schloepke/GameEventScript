@@ -78,7 +78,12 @@ internal class GesVmState
         OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
         RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
     }
-
+    
+    internal string ResolveTextPointer(ushort textPointer)
+    {
+        return Binary.TextConstantTable.Resolve(textPointer);
+    }
+    
     internal bool PrepareStateForMessage(GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptSession session)
     {
         if (State != Ready) return RaiseError("State not ready to receive new messages.");
@@ -129,6 +134,7 @@ internal class GesVmState
     }
     internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
     internal void SetNothing(ushort index) => Register(index).SetNothing();
+    internal void SetValue(ushort index, in GesVmValue value) => Register(index) = value;
     internal void SetBoolean(ushort index, bool value) => Register(index).SetBoolean(value);
     internal void SetInteger(ushort index, long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetInteger(value, unit);
     internal void SetFloat(ushort index, double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetFloat(value, unit);

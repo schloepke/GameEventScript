@@ -9,9 +9,8 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCustomType
 {
-    internal static void GesVmCreateExternalType(ref this GesVmValue dst, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal static void GesVmCreateExternalType(this GesVmState state, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
-        var state = dst.OwningState;
         var found = false;
         GameEventScriptBinaryBindEntry bind = default;
         foreach (var entry in state.Binary.BindTable.Entries)
@@ -25,7 +24,7 @@ internal static class GesVmRegisterCustomType
 
         if (!found)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
             return;
         }
@@ -33,7 +32,7 @@ internal static class GesVmRegisterCustomType
         var argumentNames = state.FetchUInt16SliceTableByPointer(argumentNamesIndex);
         if (argumentNames.Length != state.StageLength || argumentNames.Length != bind.ArgumentNames.Count)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
@@ -42,7 +41,7 @@ internal static class GesVmRegisterCustomType
         {
             labels[labelIndex] = state.FetchStringByPointer(argumentNames[labelIndex]);
             if (!string.Equals(labels[labelIndex], GameEventScriptMessageSignature.UnlabeledParameterName, System.StringComparison.Ordinal)) continue;
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
@@ -50,14 +49,14 @@ internal static class GesVmRegisterCustomType
         var reference = new GameEventScriptExternalTypeConstructorReference(typeName, labels);
         if (!typeRegistry.TryResolve(reference, out var constructor))
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             state.RaiseError($"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{externalTypeConstructorBindId}'.");
             return;
         }
 
         if (constructor.Definition.Parameters.Count != labels.Length)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
@@ -75,7 +74,7 @@ internal static class GesVmRegisterCustomType
 
             if (argumentIndex < 0)
             {
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
             }
 
@@ -144,7 +143,7 @@ internal static class GesVmRegisterCustomType
 
             if (converted.IsNothing)
             {
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
             }
 
@@ -153,6 +152,6 @@ internal static class GesVmRegisterCustomType
                 parameter);
         }
 
-        dst.BindArguments(constructor.Invoke(arguments));
+        state.BindArguments(destinationRegister, constructor.Invoke(arguments));
     }
 }

@@ -7,23 +7,24 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterShuffleReverse
 {
-    internal static void GesVmReverse(ref this GesVmValue dst, ref GesVmValue source)
+    internal static void GesVmReverse(this GesVmState state, ushort destinationRegister, in GesVmValue source)
     {
+        var dst = state.CreateNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
             {
-                var result = dst.OwningState.CreateList(list.Length);
+                var result = state.CreateList(list.Length);
                 for (var i = 0; i < list.Length; i++) result[i] = list[list.Length - i - 1];
                 dst.SetList(result);
-                return;
+                break;
             }
             case Dice when source.ObjectValue is int[] dice:
             {
-                var result = dst.OwningState.CreateList(dice.Length);
+                var result = state.CreateList(dice.Length);
                 for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[dice.Length - i - 1]);
                 dst.SetList(result);
-                return;
+                break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
             {
@@ -31,12 +32,12 @@ internal static class GesVmRegisterShuffleReverse
                 if (length <= 0)
                 {
                     dst.SetRange(0, 0, 0);
-                    return;
+                    break;
                 }
 
                 if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)) dst.SetRange(last, range.From, -range.Step);
                 else dst.SetNothing();
-                return;
+                break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
             {
@@ -44,57 +45,60 @@ internal static class GesVmRegisterShuffleReverse
                 if (length <= 0)
                 {
                     dst.SetRange(0d, 0d, 0d);
-                    return;
+                    break;
                 }
 
                 if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)) dst.SetRange(last, range.From, -range.Step);
                 else dst.SetNothing();
-                return;
+                break;
             }
             case Stream when source.ObjectValue is IGesVmStream stream:
-                ReverseStream(ref dst, stream);
-                return;
+                ReverseStream(state, ref dst, stream);
+                break;
             default:
                 dst.SetNothing();
-                return;
+                break;
         }
+
+        state.SetValue(destinationRegister, in dst);
     }
-    internal static void GesVmShuffle(ref this GesVmValue dst, ref GesVmValue source, GesVmXoshiroRandom randomGenerator)
+    internal static void GesVmShuffle(this GesVmState state, ushort destinationRegister, in GesVmValue source, GesVmXoshiroRandom randomGenerator)
     {
+        var dst = state.CreateNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
             {
-                var result = dst.OwningState.CreateList(list.Length);
+                var result = state.CreateList(list.Length);
                 for (var i = 0; i < list.Length; i++) result[i] = list[i];
                 ShuffleList(result, randomGenerator);
                 dst.SetList(result);
-                return;
+                break;
             }
             case Dice when source.ObjectValue is int[] dice:
             {
-                var result = dst.OwningState.CreateList(dice.Length);
+                var result = state.CreateList(dice.Length);
                 for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[i]);
                 ShuffleList(result, randomGenerator);
                 dst.SetList(result);
-                return;
+                break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    dst.SetList(dst.OwningState.EmptyList);
-                    return;
+                    dst.SetList(state.EmptyList);
+                    break;
                 }
 
                 if (length > int.MaxValue)
                 {
                     dst.SetNothing();
-                    return;
+                    break;
                 }
 
-                var result = dst.OwningState.CreateList((int)length);
+                var result = state.CreateList((int)length);
                 for (var i = 0; i < result.Length; i++)
                 {
                     if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i + 1L, out var value)) result[i].SetInteger(value);
@@ -103,24 +107,24 @@ internal static class GesVmRegisterShuffleReverse
 
                 ShuffleList(result, randomGenerator);
                 dst.SetList(result);
-                return;
+                break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    dst.SetList(dst.OwningState.EmptyList);
-                    return;
+                    dst.SetList(state.EmptyList);
+                    break;
                 }
 
                 if (length > int.MaxValue)
                 {
                     dst.SetNothing();
-                    return;
+                    break;
                 }
 
-                var result = dst.OwningState.CreateList((int)length);
+                var result = state.CreateList((int)length);
                 for (var i = 0; i < result.Length; i++)
                 {
                     if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i + 1L, out var value)) result[i].SetFloat(value);
@@ -129,20 +133,22 @@ internal static class GesVmRegisterShuffleReverse
 
                 ShuffleList(result, randomGenerator);
                 dst.SetList(result);
-                return;
+                break;
             }
             case Stream when source.ObjectValue is IGesVmStream stream:
-                ShuffleStream(ref dst, stream, randomGenerator);
-                return;
+                ShuffleStream(state, ref dst, stream, randomGenerator);
+                break;
             default:
                 dst.SetNothing();
-                return;
+                break;
         }
+
+        state.SetValue(destinationRegister, in dst);
     }
-    private static void ReverseStream(ref GesVmValue dst, IGesVmStream stream)
+    private static void ReverseStream(GesVmState state, ref GesVmValue dst, IGesVmStream stream)
     {
-        var item = dst.OwningState.CreateNothing();
-        var values = dst.OwningState.CreateRegisterArray(16);
+        var item = state.CreateNothing();
+        var values = state.CreateRegisterArray(16);
         var count = 0;
         try
         {
@@ -150,7 +156,7 @@ internal static class GesVmRegisterShuffleReverse
             {
                 if (count == values.Length)
                 {
-                    var resized = dst.OwningState.CreateRegisterArray(values.Length << 1);
+                    var resized = state.CreateRegisterArray(values.Length << 1);
                     Array.Copy(values, resized, values.Length);
                     values = resized;
                 }
@@ -163,14 +169,14 @@ internal static class GesVmRegisterShuffleReverse
             if (stream is IDisposable disposable) disposable.Dispose();
         }
 
-        var result = dst.OwningState.CreateList(count);
+        var result = state.CreateList(count);
         for (var i = 0; i < count; i++) result[i] = values[count - i - 1];
         dst.SetList(result);
     }
-    private static void ShuffleStream(ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
+    private static void ShuffleStream(GesVmState state, ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
     {
-        var item = dst.OwningState.CreateNothing();
-        var values = dst.OwningState.CreateRegisterArray(16);
+        var item = state.CreateNothing();
+        var values = state.CreateRegisterArray(16);
         var count = 0;
         try
         {
@@ -178,7 +184,7 @@ internal static class GesVmRegisterShuffleReverse
             {
                 if (count == values.Length)
                 {
-                    var resized = dst.OwningState.CreateRegisterArray(values.Length << 1);
+                    var resized = state.CreateRegisterArray(values.Length << 1);
                     Array.Copy(values, resized, values.Length);
                     values = resized;
                 }
@@ -191,7 +197,7 @@ internal static class GesVmRegisterShuffleReverse
             if (stream is IDisposable disposable) disposable.Dispose();
         }
 
-        var result = dst.OwningState.CreateList(count);
+        var result = state.CreateList(count);
         for (var i = 0; i < count; i++) result[i] = values[i];
         ShuffleList(result, randomGenerator);
         dst.SetList(result);

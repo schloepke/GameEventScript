@@ -644,10 +644,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmOrderByDescending(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case Reverse:
-                            vmState.Register(instruction.DestinationSlot).GesVmReverse(ref vmState.Register(instruction.XSlot));
+                            vmState.GesVmReverse(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case Shuffle:
-                            vmState.Register(instruction.DestinationSlot).GesVmShuffle(ref vmState.Register(instruction.XSlot), vmState.RandomGenerator);
+                            vmState.GesVmShuffle(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.RandomGenerator);
                             break;
                         case ListBuilderCreate:
                             vmState.GesVmCreateListBuilder(instruction.DestinationSlot);

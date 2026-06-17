@@ -326,11 +326,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmCreateDice(instruction.DestinationSlot, instruction.Count, instruction.ImmediateY, session);
                             break;
                         case CreateVector:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateVector(instruction.ImmediateX, vmState);
+                            vmState.GesVmCreateVector(instruction.DestinationSlot, instruction.ImmediateX);
                             vmState.ClearStage();
                             break;
                         case CreatePoint:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreatePoint(instruction.ImmediateX, vmState);
+                            vmState.GesVmCreatePoint(instruction.DestinationSlot, instruction.ImmediateX);
                             vmState.ClearStage();
                             break;
                         case CreateList:

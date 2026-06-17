@@ -7,30 +7,30 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterStreamTerminals
 {
-    internal static void GesVmCount(this GesVmState state, ushort destinationRegister, in GesVmValue iterator)
+    internal static void GesVmCount(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
-                state.SetInteger(destinationRegister, list.Length);
+                vmState.SetInteger(destinationRegister, list.Length);
                 return;
             case Map when iterator.ObjectValue is GesVmValueMap map:
-                state.SetInteger(destinationRegister, map.Length);
+                vmState.SetInteger(destinationRegister, map.Length);
                 return;
             case Dice when iterator.ObjectValue is int[] dice:
-                state.SetInteger(destinationRegister, dice.Length);
+                vmState.SetInteger(destinationRegister, dice.Length);
                 return;
             case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
-                state.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
+                vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
             case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
-                state.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
+                vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
             case Vector or Point when iterator.ObjectValue is GesVmValueVectorPoint:
-                state.SetInteger(destinationRegister, 3);
+                vmState.SetInteger(destinationRegister, 3);
                 return;
             case Text or Tag:
-                state.SetInteger(destinationRegister, iterator.TextValue.Length);
+                vmState.SetInteger(destinationRegister, iterator.TextValue.Length);
                 return;
         }
 
@@ -38,16 +38,16 @@ internal static class GesVmRegisterStreamTerminals
         if (iterator is { Kind: Stream, ObjectValue: IGesVmStream sourceStream }) stream = sourceStream;
         else if (!iterator.TryCreateStream(out stream))
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
         long count = 0;
-        var item = state.CreateNothing();
+        var item = vmState.CreateNothing();
         try
         {
             while (stream.TryNext(ref item)) count++;
-            state.SetInteger(destinationRegister, count);
+            vmState.SetInteger(destinationRegister, count);
         }
         finally
         {
@@ -55,28 +55,28 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    internal static void GesVmSum(this GesVmState state, ushort destinationRegister, in GesVmValue iterator)
+    internal static void GesVmSum(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
-        var result = state.CreateNothing();
+        var result = vmState.CreateNothing();
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
-                    state.SetFloat(destinationRegister, 0d);
+                    vmState.SetFloat(destinationRegister, 0d);
                     return;
                 }
 
                 var listSum = list[0];
-                var listNext = state.CreateNothing();
+                var listNext = vmState.CreateNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
-                    GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], state);
+                    GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], vmState);
                     listSum = listNext;
                 }
 
-                state.SetValue(destinationRegister, in listSum);
+                vmState.SetValue(destinationRegister, in listSum);
                 return;
             }
             case Map when iterator.ObjectValue is GesVmValueMap map:
@@ -84,32 +84,32 @@ internal static class GesVmRegisterStreamTerminals
                 var values = map.ValueList;
                 if (values.Length == 0)
                 {
-                    state.SetFloat(destinationRegister, 0d);
+                    vmState.SetFloat(destinationRegister, 0d);
                     return;
                 }
 
                 var mapSum = values[0];
-                var mapNext = state.CreateNothing();
+                var mapNext = vmState.CreateNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
-                    GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], state);
+                    GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], vmState);
                     mapSum = mapNext;
                 }
 
-                state.SetValue(destinationRegister, in mapSum);
+                vmState.SetValue(destinationRegister, in mapSum);
                 return;
             }
             case Dice when iterator.ObjectValue is int[] dice:
             {
                 if (dice.Length == 0)
                 {
-                    state.SetFloat(destinationRegister, 0d);
+                    vmState.SetFloat(destinationRegister, 0d);
                     return;
                 }
 
                 long diceSum = 0;
                 for (var i = 0; i < dice.Length; i++) diceSum += dice[i];
-                state.SetInteger(destinationRegister, diceSum);
+                vmState.SetInteger(destinationRegister, diceSum);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
@@ -117,7 +117,7 @@ internal static class GesVmRegisterStreamTerminals
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    state.SetFloat(destinationRegister, 0d);
+                    vmState.SetFloat(destinationRegister, 0d);
                     return;
                 }
 
@@ -127,7 +127,7 @@ internal static class GesVmRegisterStreamTerminals
                     if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) rangeSum += value;
                 }
 
-                state.SetInteger(destinationRegister, rangeSum);
+                vmState.SetInteger(destinationRegister, rangeSum);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
@@ -135,7 +135,7 @@ internal static class GesVmRegisterStreamTerminals
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    state.SetFloat(destinationRegister, 0d);
+                    vmState.SetFloat(destinationRegister, 0d);
                     return;
                 }
 
@@ -145,36 +145,36 @@ internal static class GesVmRegisterStreamTerminals
                     if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) floatRangeSum += value;
                 }
 
-                state.SetFloat(destinationRegister, floatRangeSum);
+                vmState.SetFloat(destinationRegister, floatRangeSum);
                 return;
             }
         }
 
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var item = state.CreateNothing();
-        var sum = state.CreateNothing();
-        var next = state.CreateNothing();
+        var item = vmState.CreateNothing();
+        var sum = vmState.CreateNothing();
+        var next = vmState.CreateNothing();
         try
         {
             if (!stream.TryNext(ref sum))
             {
-                state.SetFloat(destinationRegister, 0d);
+                vmState.SetFloat(destinationRegister, 0d);
                 return;
             }
 
             while (stream.TryNext(ref item))
             {
-                GesVmRegisterMath.GesVmAdd(ref next, in sum, in item, state);
+                GesVmRegisterMath.GesVmAdd(ref next, in sum, in item, vmState);
                 sum = next;
             }
 
             result = sum;
-            state.SetValue(destinationRegister, in result);
+            vmState.SetValue(destinationRegister, in result);
         }
         finally
         {
@@ -182,30 +182,30 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    internal static void GesVmAverage(this GesVmState state, ushort destinationRegister, in GesVmValue iterator)
+    internal static void GesVmAverage(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
-        var result = state.CreateNothing();
+        var result = vmState.CreateNothing();
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
             {
                 if (list.Length == 0)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 var listSum = list[0];
-                var listNext = state.CreateNothing();
+                var listNext = vmState.CreateNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
-                    GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], state);
+                    GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], vmState);
                     listSum = listNext;
                 }
 
-                var countValue = state.CreateInteger(list.Length);
-                GesVmRegisterMath.GesVmDivide(ref listNext, in listSum, in countValue, state);
-                state.SetValue(destinationRegister, in listNext);
+                var countValue = vmState.CreateInteger(list.Length);
+                GesVmRegisterMath.GesVmDivide(ref listNext, in listSum, in countValue, vmState);
+                vmState.SetValue(destinationRegister, in listNext);
                 return;
             }
             case Map when iterator.ObjectValue is GesVmValueMap map:
@@ -213,34 +213,34 @@ internal static class GesVmRegisterStreamTerminals
                 var values = map.ValueList;
                 if (values.Length == 0)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 var mapSum = values[0];
-                var mapNext = state.CreateNothing();
+                var mapNext = vmState.CreateNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
-                    GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], state);
+                    GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], vmState);
                     mapSum = mapNext;
                 }
 
-                var countValue = state.CreateInteger(values.Length);
-                GesVmRegisterMath.GesVmDivide(ref mapNext, in mapSum, in countValue, state);
-                state.SetValue(destinationRegister, in mapNext);
+                var countValue = vmState.CreateInteger(values.Length);
+                GesVmRegisterMath.GesVmDivide(ref mapNext, in mapSum, in countValue, vmState);
+                vmState.SetValue(destinationRegister, in mapNext);
                 return;
             }
             case Dice when iterator.ObjectValue is int[] dice:
             {
                 if (dice.Length == 0)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 long diceSum = 0;
                 for (var i = 0; i < dice.Length; i++) diceSum += dice[i];
-                state.SetFloat(destinationRegister, (double)diceSum / dice.Length);
+                vmState.SetFloat(destinationRegister, (double)diceSum / dice.Length);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
@@ -248,7 +248,7 @@ internal static class GesVmRegisterStreamTerminals
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -258,7 +258,7 @@ internal static class GesVmRegisterStreamTerminals
                     if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) rangeSum += value;
                 }
 
-                state.SetFloat(destinationRegister, (double)rangeSum / length);
+                vmState.SetFloat(destinationRegister, (double)rangeSum / length);
                 return;
             }
             case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
@@ -266,7 +266,7 @@ internal static class GesVmRegisterStreamTerminals
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -276,7 +276,7 @@ internal static class GesVmRegisterStreamTerminals
                     if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i, out var value)) floatRangeSum += value;
                 }
 
-                state.SetFloat(destinationRegister, floatRangeSum / length);
+                vmState.SetFloat(destinationRegister, floatRangeSum / length);
                 return;
             }
         }
@@ -285,14 +285,14 @@ internal static class GesVmRegisterStreamTerminals
         if (iterator is { Kind: Stream, ObjectValue: IGesVmStream sourceStream }) stream = sourceStream;
         else if (!iterator.TryCreateStream(out stream))
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
         long count = 0;
-        var item = state.CreateNothing();
-        var sum = state.CreateNothing();
-        var next = state.CreateNothing();
+        var item = vmState.CreateNothing();
+        var sum = vmState.CreateNothing();
+        var next = vmState.CreateNothing();
         try
         {
             while (stream.TryNext(ref item))
@@ -304,20 +304,20 @@ internal static class GesVmRegisterStreamTerminals
                     continue;
                 }
 
-                GesVmRegisterMath.GesVmAdd(ref next, in sum, in item, state);
+                GesVmRegisterMath.GesVmAdd(ref next, in sum, in item, vmState);
                 sum = next;
             }
 
             if (count == 0)
             {
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             }
 
-            var countValue = state.CreateInteger(count);
-            GesVmRegisterMath.GesVmDivide(ref next, in sum, in countValue, state);
+            var countValue = vmState.CreateInteger(count);
+            GesVmRegisterMath.GesVmDivide(ref next, in sum, in countValue, vmState);
             result = next;
-            state.SetValue(destinationRegister, in result);
+            vmState.SetValue(destinationRegister, in result);
         }
         finally
         {
@@ -325,41 +325,41 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    internal static void GesVmStreamMin(this GesVmState state, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmStreamMin(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        GesVmStreamMinMax(state, destinationRegister, in iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
+        GesVmStreamMinMax(vmState, destinationRegister, in iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
     }
 
-    internal static void GesVmStreamMax(this GesVmState state, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmStreamMax(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        GesVmStreamMinMax(state, destinationRegister, in iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
+        GesVmStreamMinMax(vmState, destinationRegister, in iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
     }
 
-    internal static void GesVmStreamOneWeighted(this GesVmState state, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
+    internal static void GesVmStreamOneWeighted(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
         GesVmXoshiroRandom randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var item = state.CreateNothing();
-        var weightValue = state.CreateNothing();
+        var item = vmState.CreateNothing();
+        var weightValue = vmState.CreateNothing();
         var items = new GesVmValue[16];
         var weights = new double[16];
         var itemCount = 0;
         double totalWeight = 0d;
-        var captureSlots = state.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captureSlots = vmState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
         var captures = captureSlots.Length == 0 ? [] : new GesVmValue[captureSlots.Length];
-        for (var i = 0; i < captureSlots.Length; i++) captures[i] = state.Register(captureSlots[i]);
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = vmState.Register(captureSlots[i]);
         try
         {
             while (stream.TryNext(ref item))
             {
                 if (!evaluator.TryEvaluateStreamEntry(weightEntryAddress, itemSlot, ref item, captures, ref weightValue))
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -379,7 +379,7 @@ internal static class GesVmRegisterStreamTerminals
 
             if (itemCount == 0 || totalWeight <= 0d)
             {
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             }
 
@@ -396,7 +396,7 @@ internal static class GesVmRegisterStreamTerminals
                 }
             }
 
-            state.SetValue(destinationRegister, in items[selected]);
+            vmState.SetValue(destinationRegister, in items[selected]);
         }
         finally
         {
@@ -404,38 +404,38 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    internal static void GesVmStreamTakeWeighted(this GesVmState state, ushort destinationRegister, in GesVmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
+    internal static void GesVmStreamTakeWeighted(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, short count, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
         GesVmXoshiroRandom randomGenerator)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
         if (count <= 0)
         {
             if (stream is IDisposable disposable) disposable.Dispose();
-            state.SetList(destinationRegister, state.EmptyList);
+            vmState.SetList(destinationRegister, vmState.EmptyList);
             return;
         }
 
-        var item = state.CreateNothing();
-        var weightValue = state.CreateNothing();
+        var item = vmState.CreateNothing();
+        var weightValue = vmState.CreateNothing();
         var items = new GesVmValue[16];
         var weights = new double[16];
         var itemCount = 0;
         double totalWeight = 0d;
-        var captureSlots = state.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
+        var captureSlots = vmState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
         var captures = captureSlots.Length == 0 ? [] : new GesVmValue[captureSlots.Length];
-        for (var i = 0; i < captureSlots.Length; i++) captures[i] = state.Register(captureSlots[i]);
+        for (var i = 0; i < captureSlots.Length; i++) captures[i] = vmState.Register(captureSlots[i]);
         try
         {
             while (stream.TryNext(ref item))
             {
                 if (!evaluator.TryEvaluateStreamEntry(weightEntryAddress, itemSlot, ref item, captures, ref weightValue))
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -455,12 +455,12 @@ internal static class GesVmRegisterStreamTerminals
 
             if (itemCount == 0 || totalWeight <= 0d)
             {
-                state.SetList(destinationRegister, state.EmptyList);
+                vmState.SetList(destinationRegister, vmState.EmptyList);
                 return;
             }
 
             var selectedCount = count < itemCount ? count : itemCount;
-            var list = state.CreateList(selectedCount);
+            var list = vmState.CreateList(selectedCount);
             var remainingCount = itemCount;
             for (var target = 0; target < selectedCount && remainingCount > 0 && totalWeight > 0d; target++)
             {
@@ -488,7 +488,7 @@ internal static class GesVmRegisterStreamTerminals
                 remainingCount--;
             }
 
-            state.SetList(destinationRegister, list);
+            vmState.SetList(destinationRegister, list);
         }
         finally
         {
@@ -496,18 +496,18 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    private static void GesVmStreamMinMax(GesVmState state, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool isMax)
+    private static void GesVmStreamMinMax(GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool isMax)
     {
         if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var item = state.CreateNothing();
-        var projection = state.CreateNothing();
-        var winner = state.CreateNothing();
-        var winnerProjection = state.CreateNothing();
+        var item = vmState.CreateNothing();
+        var projection = vmState.CreateNothing();
+        var winner = vmState.CreateNothing();
+        var winnerProjection = vmState.CreateNothing();
         var hasWinner = false;
         try
         {
@@ -515,7 +515,7 @@ internal static class GesVmRegisterStreamTerminals
             {
                 if (!evaluator.TryEvaluateStreamEntry(projectionEntryAddress, itemSlot, ref item, null, ref projection))
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
@@ -537,8 +537,8 @@ internal static class GesVmRegisterStreamTerminals
                 }
             }
 
-            if (hasWinner) state.SetValue(destinationRegister, in winner);
-            else state.SetNothing(destinationRegister);
+            if (hasWinner) vmState.SetValue(destinationRegister, in winner);
+            else vmState.SetNothing(destinationRegister);
         }
         finally
         {

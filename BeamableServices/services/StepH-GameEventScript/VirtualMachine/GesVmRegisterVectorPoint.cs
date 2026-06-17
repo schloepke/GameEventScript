@@ -5,41 +5,41 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterVectorPoint
 {
-    internal static void GesVmCreateVector(ref this GesVmValue dst, short start, GesVmState state)
+    internal static void GesVmCreateVector(this GesVmState vmState, ushort destinationRegister, short start)
     {
-        if (start == 0 && state.StageLength > 0)
+        if (start == 0 && vmState.StageLength > 0)
         {
-            ref var first = ref state.RegisterStaged(0);
+            ref readonly var first = ref vmState.RegisterStaged(0);
             switch (first.Kind)
             {
                 case Vector:
                 case Point:
-                    if (state.StageLength > 2)
+                    if (vmState.StageLength > 2)
                     {
-                        dst.SetNothing();
+                        vmState.SetNothing(destinationRegister);
                         return;
                     }
 
                     if (first.ObjectValue is not GesVmValueVectorPoint triplet)
                     {
-                        dst.SetNothing();
+                        vmState.SetNothing(destinationRegister);
                         return;
                     }
 
                     var liftedZ = triplet.Z;
                     var liftedUnit = first.Unit;
-                    if (state.StageLength > 1)
+                    if (vmState.StageLength > 1)
                     {
-                        ref var zSlot = ref state.RegisterStaged(1);
+                        ref readonly var zSlot = ref vmState.RegisterStaged(1);
                         liftedZ = zSlot.AsNumericWithUnit(out var liftedUnitZ);
                         if (double.IsNaN(liftedZ) || liftedUnit != liftedUnitZ)
                         {
-                            dst.SetNothing();
+                            vmState.SetNothing(destinationRegister);
                             return;
                         }
                     }
 
-                    dst.SetVector(triplet.X, triplet.Y, liftedZ, liftedUnit);
+                    vmState.SetVector(destinationRegister, triplet.X, triplet.Y, liftedZ, liftedUnit);
                     return;
             }
         }
@@ -48,9 +48,9 @@ internal static class GesVmRegisterVectorPoint
         var unitX = UnitNothing;
         var unitY = UnitNothing;
         var unitZ = UnitNothing;
-        var x = start == 0 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
-        var y = start <= 1 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
-        var z = start <= 2 && i < state.StageLength ? state.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
+        var x = start == 0 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
+        var y = start <= 1 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
+        var z = start <= 2 && i < vmState.StageLength ? vmState.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
         var unit = unitX;
         if (unitX is UnitNothing)
         {
@@ -66,48 +66,48 @@ internal static class GesVmRegisterVectorPoint
         }
         if (unit is UnitNothing || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
-            dst.SetNothing();
+            vmState.SetNothing(destinationRegister);
         }
         else
         {
-            dst.SetVector(x, y, z, unit);
+            vmState.SetVector(destinationRegister, x, y, z, unit);
         }
     }
-    internal static void GesVmCreatePoint(ref this GesVmValue dst, short start, GesVmState state)
+    internal static void GesVmCreatePoint(this GesVmState vmState, ushort destinationRegister, short start)
     {
-        if (start == 0 && state.StageLength > 0)
+        if (start == 0 && vmState.StageLength > 0)
         {
-            ref var first = ref state.RegisterStaged(0);
+            ref readonly var first = ref vmState.RegisterStaged(0);
             switch (first.Kind)
             {
                 case Vector:
                 case Point:
-                    if (state.StageLength > 2)
+                    if (vmState.StageLength > 2)
                     {
-                        dst.SetNothing();
+                        vmState.SetNothing(destinationRegister);
                         return;
                     }
 
                     if (first.ObjectValue is not GesVmValueVectorPoint triplet)
                     {
-                        dst.SetNothing();
+                        vmState.SetNothing(destinationRegister);
                         return;
                     }
 
                     var liftedZ = triplet.Z;
                     var liftedUnit = first.Unit;
-                    if (state.StageLength > 1)
+                    if (vmState.StageLength > 1)
                     {
-                        ref var zSlot = ref state.RegisterStaged(1);
+                        ref readonly var zSlot = ref vmState.RegisterStaged(1);
                         liftedZ = zSlot.AsNumericWithUnit(out var liftedUnitZ);
                         if (double.IsNaN(liftedZ) || liftedUnit != liftedUnitZ)
                         {
-                            dst.SetNothing();
+                            vmState.SetNothing(destinationRegister);
                             return;
                         }
                     }
 
-                    dst.SetPoint(triplet.X, triplet.Y, liftedZ, liftedUnit);
+                    vmState.SetPoint(destinationRegister, triplet.X, triplet.Y, liftedZ, liftedUnit);
                     return;
             }
         }
@@ -116,9 +116,9 @@ internal static class GesVmRegisterVectorPoint
         var unitX = UnitNothing;
         var unitY = UnitNothing;
         var unitZ = UnitNothing;
-        var x = start == 0 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
-        var y = start <= 1 && i < state.StageLength ? state.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
-        var z = start <= 2 && i < state.StageLength ? state.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
+        var x = start == 0 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
+        var y = start <= 1 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
+        var z = start <= 2 && i < vmState.StageLength ? vmState.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
         var unit = unitX;
         if (unitX is UnitNothing)
         {
@@ -134,11 +134,11 @@ internal static class GesVmRegisterVectorPoint
         }
         if (unit is UnitNothing || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
-            dst.SetNothing();
+            vmState.SetNothing(destinationRegister);
         }
         else
         {
-            dst.SetPoint(x, y, z, unit);
+            vmState.SetPoint(destinationRegister, x, y, z, unit);
         }
     }
     

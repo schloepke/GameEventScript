@@ -23,13 +23,14 @@ internal static class GesVmRegisterCallExternal
         }
 
         var argumentCount = argumentSlots.Length;
-        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptBoxedValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue();
+                ref readonly var argument = ref state.Register(argumentSlots[argumentIndex]);
+                arguments[argumentIndex] = GameEventScriptBoxedValue.FromVmValue(in argument);
             }
 
             var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
@@ -46,7 +47,7 @@ internal static class GesVmRegisterCallExternal
                 return;
             }
 
-            state.BindArguments(destinationRegister, result);
+            state.SetValue(destinationRegister, in result.GetVmValue());
             ref readonly var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
@@ -58,7 +59,7 @@ internal static class GesVmRegisterCallExternal
             if (argumentCount > 0)
             {
                 Array.Clear(arguments, 0, argumentCount);
-                ArrayPool<GameEventScriptFastValue>.Shared.Return(arguments);
+                ArrayPool<GameEventScriptBoxedValue>.Shared.Return(arguments);
             }
         }
     }
@@ -118,17 +119,18 @@ internal static class GesVmRegisterCallExternal
             return;
         }
 
-        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptFastValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptBoxedValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                arguments[argumentIndex] = state.Register(argumentSlots[argumentIndex]).ToGameEventScriptFastValue();
+                ref readonly var argument = ref state.Register(argumentSlots[argumentIndex]);
+                arguments[argumentIndex] = GameEventScriptBoxedValue.FromVmValue(in argument);
             }
 
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
-            state.BindArguments(destinationRegister, result);
+            state.SetValue(destinationRegister, in result.GetVmValue());
             ref readonly var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
@@ -140,50 +142,15 @@ internal static class GesVmRegisterCallExternal
             if (argumentCount > 0)
             {
                 Array.Clear(arguments, 0, argumentCount);
-                ArrayPool<GameEventScriptFastValue>.Shared.Return(arguments);
+                ArrayPool<GameEventScriptBoxedValue>.Shared.Return(arguments);
             }
         }
-    }
-
-    private static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptFastValue argument)
-    {
-        ref var destination = ref state.Register(destinationRegister);
-        destination.BindArguments(argument);
     }
 
     internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptValue argument)
     {
         ref var destination = ref state.Register(destinationRegister);
         destination.BindArguments(argument);
-    }
-
-    private static void BindArguments(ref this GesVmValue destination, GameEventScriptFastValue argument)
-    {
-        switch (argument.Kind)
-        {
-            case GameEventScriptValueKind.Nothing:
-                destination.SetNothing();
-                break;
-            case GameEventScriptValueKind.Boolean:
-                destination.SetBoolean(argument.Boolean);
-                break;
-            case GameEventScriptValueKind.Number:
-                if (argument.IsIntegerNumber) destination.SetInteger(argument.Integer, argument.Unit);
-                else destination.SetFloat(argument.Number, argument.Unit);
-                break;
-            case GameEventScriptValueKind.Percentage:
-                destination.SetPercentage(argument.Number);
-                break;
-            case GameEventScriptValueKind.Vector:
-                destination.SetVector(argument.X, argument.Y, argument.Z, argument.Unit);
-                break;
-            case GameEventScriptValueKind.Point:
-                destination.SetPoint(argument.X, argument.Y, argument.Z, argument.Unit);
-                break;
-            default:
-                destination.BindArguments(argument.ToGameEventScriptValue());
-                break;
-        }
     }
 
     internal static void BindArguments(ref this GesVmValue destination, GameEventScriptValue argument)
@@ -274,31 +241,6 @@ internal static class GesVmRegisterCallExternal
             default:
                 destination.SetNothing();
                 break;
-        }
-    }
-
-    private static GameEventScriptFastValue ToGameEventScriptFastValue(this in GesVmValue value)
-    {
-        switch (value.Kind)
-        {
-            case Nothing:
-                return GameEventScriptFastValue.Nothing;
-            case GameEventScriptBytecodeTypeKind.Boolean:
-                return GameEventScriptFastValue.FromBoolean(value.IsTrue);
-            case Integer:
-                return GameEventScriptFastValue.FromInteger(value.IntegerValue, value.Unit);
-            case Float:
-                return double.IsNaN(value.FloatValue) ? GameEventScriptFastValue.Nothing : GameEventScriptFastValue.FromFloat(value.FloatValue, value.Unit);
-            case Percentage:
-                return GameEventScriptFastValue.FromPercentage(value.FloatValue);
-            case Vector when value.ObjectValue is GesVmValueVectorPoint vector:
-                return GameEventScriptFastValue.FromVector(vector.X, vector.Y, vector.Z, value.Unit);
-            case Point when value.ObjectValue is GesVmValueVectorPoint point:
-                return GameEventScriptFastValue.FromPoint(point.X, point.Y, point.Z, value.Unit);
-            case Text:
-                return GameEventScriptFastValue.FromText(value.TextValue);
-            default:
-                return GameEventScriptFastValue.FromGameEventScriptValue(value.ToGameEventScriptValue());
         }
     }
 

@@ -17,7 +17,7 @@ public interface IGameEventScriptExtensionRegistry
 
 public interface IGameEventScriptExtensionFunction
 {
-    GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments);
+    GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments);
 }
 
 public sealed class GameEventScriptExtensionReference
@@ -81,143 +81,6 @@ public sealed class GameEventScriptExtensionContext(GameEventScriptSession runti
     public GameEventScriptRuntimeLimits RuntimeLimits => RuntimeSession.RuntimeLimits;
 }
 
-public readonly struct GameEventScriptFastValue
-{
-    private readonly GameEventScriptValue? _reference;
-
-    private GameEventScriptFastValue(GameEventScriptValueKind kind, long integer, double number, double x, double y, double z, bool boolean, bool isIntegerNumber, GameEventScriptBytecodeInstructionUnit? unit, GameEventScriptValue? reference)
-    {
-        Kind = kind;
-        IntegerValue = integer;
-        NumberValue = number;
-        X = x;
-        Y = y;
-        Z = z;
-        BooleanValue = boolean;
-        IsIntegerNumber = isIntegerNumber;
-        Unit = unit.ToStoredUnit();
-        _reference = reference;
-    }
-
-    public GameEventScriptValueKind Kind { get; }
-
-    public long Integer => Kind switch
-    {
-        GameEventScriptValueKind.Number => IsReferenceBacked ? ToGameEventScriptValue().AsInteger() : IsIntegerNumber ? IntegerValue : GesValueOperations.ToIntegerSaturated(NumberValue),
-        GameEventScriptValueKind.Percentage => ToIntegerPercentage(NumberValue),
-        GameEventScriptValueKind.Boolean => BooleanValue ? 1 : 0,
-        _ => ToGameEventScriptValue().AsInteger()
-    };
-
-    public double Number => Kind switch
-    {
-        GameEventScriptValueKind.Number => IsReferenceBacked ? ToGameEventScriptValue().AsNumber() : IsIntegerNumber ? IntegerValue : NumberValue,
-        GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsNumber() : NumberValue,
-        GameEventScriptValueKind.Boolean => BooleanValue ? 1d : 0d,
-        _ => ToGameEventScriptValue().AsNumber()
-    };
-
-    public bool Boolean => Kind switch
-    {
-        GameEventScriptValueKind.Boolean => BooleanValue,
-        GameEventScriptValueKind.Number => IsReferenceBacked ? ToGameEventScriptValue().AsBoolean() : IsIntegerNumber ? IntegerValue != 0 : NumberValue != 0d,
-        GameEventScriptValueKind.Percentage => IsReferenceBacked ? ToGameEventScriptValue().AsBoolean() : NumberValue != 0d,
-        GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point => X != 0d || Y != 0d || Z != 0d,
-        _ => ToGameEventScriptValue().AsBoolean()
-    };
-
-    public string Text => ToGameEventScriptValue().AsText();
-
-    public GameEventScriptBytecodeInstructionUnit Unit { get; }
-
-    public double X { get; }
-
-    public double Y { get; }
-
-    public double Z { get; }
-
-    public bool IsReferenceBacked => _reference is not null;
-
-    public bool IsIntegerNumber { get; }
-
-    private long IntegerValue { get; }
-
-    private double NumberValue { get; }
-
-    private bool BooleanValue { get; }
-
-    public static GameEventScriptFastValue Nothing { get; } = new(GameEventScriptValueKind.Nothing, 0, 0d, 0d, 0d, 0d, false, false, null, null);
-
-    public static GameEventScriptFastValue FromGameEventScriptValue(GameEventScriptValue value) => value switch
-    {
-        null => Nothing,
-        _ when value.IsNothing() => Nothing,
-        GameEventScriptBooleanValue boolean => FromBoolean(boolean.Value),
-        GameEventScriptNumberValue { IsIntegerValue: true } integer => FromInteger(integer.IntegerValue, integer.Unit),
-        GameEventScriptNumberValue numberValue when numberValue.HasSemanticValue() => FromFloat(numberValue.NumberValue, numberValue.Unit),
-        { Kind: GameEventScriptValueKind.Percentage } => FromPercentage(value.AsNumber()),
-        GameEventScriptVectorValue vector => FromVector(vector.X, vector.Y, vector.Z, vector.Unit),
-        GameEventScriptPointValue point => FromPoint(point.X, point.Y, point.Z, point.Unit),
-        _ => new GameEventScriptFastValue(value.Kind, 0, 0d, 0d, 0d, 0d, value.AsBoolean(), false, null, value)
-    };
-
-    public static GameEventScriptFastValue FromBoolean(bool value)
-        => new(GameEventScriptValueKind.Boolean, value ? 1 : 0, value ? 1d : 0d, 0d, 0d, 0d, value, false, null, null);
-
-    public static GameEventScriptFastValue FromInteger(long value, GameEventScriptBytecodeInstructionUnit? unit = null)
-        => new(GameEventScriptValueKind.Number, value, value, 0d, 0d, 0d, value != 0, true, unit, null);
-
-    public static GameEventScriptFastValue FromFloat(double value, GameEventScriptBytecodeInstructionUnit? unit = null)
-        => double.IsFinite(value) &&
-           value >= long.MinValue &&
-           value <= long.MaxValue &&
-           value == Math.Truncate(value)
-            ? FromInteger((long)value, unit)
-            : new GameEventScriptFastValue(GameEventScriptValueKind.Number, GesValueOperations.ToIntegerSaturated(value), value, 0d, 0d, 0d, value != 0d, false, unit, null);
-
-    public static GameEventScriptFastValue FromPercentage(double ratio)
-        => new(GameEventScriptValueKind.Percentage, ToIntegerPercentage(ratio), ratio, 0d, 0d, 0d, ratio != 0d, false, null, null);
-
-    public static GameEventScriptFastValue FromVector(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit? unit = null)
-        => new(GameEventScriptValueKind.Vector, 0, 0d, x, y, z, x != 0d || y != 0d || z != 0d, false, unit, null);
-
-    public static GameEventScriptFastValue FromPoint(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit? unit = null)
-        => new(GameEventScriptValueKind.Point, 0, 0d, x, y, z, x != 0d || y != 0d || z != 0d, false, unit, null);
-
-    public static GameEventScriptFastValue FromText(string value) => FromGameEventScriptValue(GesText(value));
-
-    private static long ToIntegerPercentage(double ratio) => GesValueOperations.ToIntegerSaturated(Math.Truncate(ratio * 100d));
-
-    public GameEventScriptValue ToGameEventScriptValue()
-    {
-        if (_reference is not null) return _reference;
-        return Kind switch
-        {
-            GameEventScriptValueKind.Nothing => GesNothing(),
-            GameEventScriptValueKind.Boolean => GesBoolean(BooleanValue),
-            GameEventScriptValueKind.Number => IsIntegerNumber ? GesInteger(IntegerValue, Unit) : GesFloat(NumberValue, Unit),
-            GameEventScriptValueKind.Percentage => GesPercentage(NumberValue),
-            GameEventScriptValueKind.Vector => GesVector(X, Y, Z, Unit),
-            GameEventScriptValueKind.Point => GesPoint(X, Y, Z, Unit),
-            _ => GesNothing()
-        };
-    }
-
-    public bool TryGetExternalObject<T>(out T value)
-    {
-        if (_reference is not null) return _reference.TryGetExternalObject(out value);
-        value = default!;
-        return false;
-    }
-
-    public bool TryGetExternalObject(Type objectType, out object value)
-    {
-        if (_reference is not null) return _reference.TryGetExternalObject(objectType, out value);
-        value = default!;
-        return false;
-    }
-}
-
 public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtensionRegistry
 {
     private readonly IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _functions;
@@ -274,7 +137,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         if (method.ReturnType == typeof(void))
         {
-            throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' must return a fast-compatible value.");
+            throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' must return a extension-compatible value.");
         }
 
         var parameters = method.GetParameters();
@@ -304,9 +167,9 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
     private static object CreateArgumentReader(MethodInfo method, Type parameterType, ExtensionParameterDefinition definition)
     {
-        if (parameterType == typeof(GameEventScriptFastValue))
+        if (parameterType == typeof(GameEventScriptBoxedValue))
         {
-            return FastValueArgumentReader.Instance;
+            return BoxedValueArgumentReader.Instance;
         }
 
         if (parameterType == typeof(double))
@@ -336,13 +199,13 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         if (parameterType == typeof(GameEventScriptValue) || parameterType.IsSubclassOf(typeof(GameEventScriptValue)))
         {
             throw new ArgumentException(
-                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' cannot use boxed GameEventScriptValue types. Use GameEventScriptFastValue instead.");
+                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
         }
 
         if (parameterType.IsValueType)
         {
             throw new ArgumentException(
-                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' type '{parameterType.FullName}' is not fast-compatible.");
+                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' type '{parameterType.FullName}' is not extension-compatible.");
         }
 
         if (definition.Kind is not null)
@@ -382,9 +245,9 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
     private static object CreateReturnConverter(MethodInfo method, GesFunctionAttribute attribute)
     {
         var returnType = method.ReturnType;
-        if (returnType == typeof(GameEventScriptFastValue))
+        if (returnType == typeof(GameEventScriptBoxedValue))
         {
-            return FastValueReturnConverter.Instance;
+            return BoxedValueReturnConverter.Instance;
         }
 
         if (typeof(GameEventScriptValue).IsAssignableFrom(returnType))
@@ -432,7 +295,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return FloatNullableNumericUnitTupleReturnConverter.Instance;
         }
 
-        throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' is not fast-compatible.");
+        throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' is not extension-compatible.");
     }
 
     private static void RequireReturnKind(MethodInfo method, GesFunctionAttribute attribute, GameEventScriptValueKind kind)
@@ -449,7 +312,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         if (readers.Length > 4)
         {
             throw new ArgumentException(
-                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' has {readers.Length} script parameter(s); annotated fast extensions currently support up to 4.");
+                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' has {readers.Length} script parameter(s); annotated extension functions currently support up to 4.");
         }
 
         var returnType = method.ReturnType;
@@ -498,14 +361,14 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             _ => throw new ArgumentOutOfRangeException(nameof(arity), arity, "Unsupported extension function arity.")
         };
 
-    private interface IFastArgumentReader<T>
+    private interface IExtensionArgumentReader<T>
     {
-        bool TryRead(GameEventScriptFastValue input, out T value);
+        bool TryRead(GameEventScriptBoxedValue input, out T value);
     }
 
-    private interface IFastReturnConverter<T>
+    private interface IExtensionReturnConverter<T>
     {
-        GameEventScriptFastValue Convert(T value);
+        GameEventScriptBoxedValue Convert(T value);
     }
 
     private sealed class ExtensionParameterDefinition
@@ -541,24 +404,24 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
                 : GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
     }
 
-    private sealed class FastValueArgumentReader : IFastArgumentReader<GameEventScriptFastValue>
+    private sealed class BoxedValueArgumentReader : IExtensionArgumentReader<GameEventScriptBoxedValue>
     {
-        public static readonly FastValueArgumentReader Instance = new();
+        public static readonly BoxedValueArgumentReader Instance = new();
 
-        public bool TryRead(GameEventScriptFastValue input, out GameEventScriptFastValue value)
+        public bool TryRead(GameEventScriptBoxedValue input, out GameEventScriptBoxedValue value)
         {
             value = input;
             return true;
         }
     }
 
-    private sealed class FloatArgumentReader : IFastArgumentReader<double>
+    private sealed class FloatArgumentReader : IExtensionArgumentReader<double>
     {
         public static readonly FloatArgumentReader Instance = new();
 
-        public bool TryRead(GameEventScriptFastValue input, out double value)
+        public bool TryRead(GameEventScriptBoxedValue input, out double value)
         {
-            if (input.Kind is GameEventScriptValueKind.Number or GameEventScriptValueKind.Percentage)
+            if (input.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage)
             {
                 value = input.Number;
                 return true;
@@ -569,13 +432,13 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         }
     }
 
-    private sealed class LongArgumentReader : IFastArgumentReader<long>
+    private sealed class LongArgumentReader : IExtensionArgumentReader<long>
     {
         public static readonly LongArgumentReader Instance = new();
 
-        public bool TryRead(GameEventScriptFastValue input, out long value)
+        public bool TryRead(GameEventScriptBoxedValue input, out long value)
         {
-            if (input.Kind is GameEventScriptValueKind.Number or GameEventScriptValueKind.Percentage or GameEventScriptValueKind.Boolean)
+            if (input.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean)
             {
                 value = input.Integer;
                 return true;
@@ -586,11 +449,11 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         }
     }
 
-    private sealed class IntArgumentReader : IFastArgumentReader<int>
+    private sealed class IntArgumentReader : IExtensionArgumentReader<int>
     {
         public static readonly IntArgumentReader Instance = new();
 
-        public bool TryRead(GameEventScriptFastValue input, out int value)
+        public bool TryRead(GameEventScriptBoxedValue input, out int value)
         {
             if (LongArgumentReader.Instance.TryRead(input, out var integer) &&
                 integer is >= int.MinValue and <= int.MaxValue)
@@ -604,14 +467,14 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         }
     }
 
-    private sealed class BoolArgumentReader : IFastArgumentReader<bool>
+    private sealed class BoolArgumentReader : IExtensionArgumentReader<bool>
     {
         public static readonly BoolArgumentReader Instance = new();
 
-        public bool TryRead(GameEventScriptFastValue input, out bool value)
+        public bool TryRead(GameEventScriptBoxedValue input, out bool value)
         {
-            if (input.Kind is GameEventScriptValueKind.Boolean or GameEventScriptValueKind.Number or GameEventScriptValueKind.Percentage
-                or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point)
+            if (input.Kind is GameEventScriptBytecodeTypeKind.Boolean or GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage
+                or GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point)
             {
                 value = input.Boolean;
                 return true;
@@ -622,193 +485,193 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         }
     }
 
-    private sealed class ExternalObjectArgumentReader<T> : IFastArgumentReader<T>
+    private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>
     {
-        public bool TryRead(GameEventScriptFastValue input, out T value)
+        public bool TryRead(GameEventScriptBoxedValue input, out T value)
             => input.TryGetExternalObject(out value);
     }
 
-    private sealed class FastValueReturnConverter : IFastReturnConverter<GameEventScriptFastValue>
+    private sealed class BoxedValueReturnConverter : IExtensionReturnConverter<GameEventScriptBoxedValue>
     {
-        public static readonly FastValueReturnConverter Instance = new();
+        public static readonly BoxedValueReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert(GameEventScriptFastValue value) => value;
+        public GameEventScriptBoxedValue Convert(GameEventScriptBoxedValue value) => value;
     }
 
-    private sealed class GameEventScriptValueReturnConverter<T> : IFastReturnConverter<T>
+    private sealed class GameEventScriptValueReturnConverter<T> : IExtensionReturnConverter<T>
         where T : GameEventScriptValue
     {
-        public GameEventScriptFastValue Convert(T value)
-            => GameEventScriptFastValue.FromGameEventScriptValue(value is null ? GameEventScriptNothingValue.Instance : value);
+        public GameEventScriptBoxedValue Convert(T value)
+            => GameEventScriptBoxedValue.FromGameEventScriptValue(value is null ? GameEventScriptNothingValue.Instance : value);
     }
 
-    private sealed class SeriesReturnConverter<T> : IFastReturnConverter<T>
+    private sealed class SeriesReturnConverter<T> : IExtensionReturnConverter<T>
         where T : IGameEventScriptSeries
     {
-        public GameEventScriptFastValue Convert(T value)
-            => GameEventScriptFastValue.FromGameEventScriptValue(value is null
+        public GameEventScriptBoxedValue Convert(T value)
+            => GameEventScriptBoxedValue.FromGameEventScriptValue(value is null
                 ? GameEventScriptNothingValue.Instance
                 : GameEventScriptValueFactory.GesSeries(value));
     }
 
-    private sealed class FloatReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IFastReturnConverter<double>
+    private sealed class FloatReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<double>
     {
-        public GameEventScriptFastValue Convert(double value) => GameEventScriptFastValue.FromFloat(value, unit);
+        public GameEventScriptBoxedValue Convert(double value) => GameEventScriptBoxedValue.FromFloat(value, unit.ToStoredUnit());
     }
 
-    private sealed class LongReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IFastReturnConverter<long>
+    private sealed class LongReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<long>
     {
-        public GameEventScriptFastValue Convert(long value) => GameEventScriptFastValue.FromInteger(value, unit);
+        public GameEventScriptBoxedValue Convert(long value) => GameEventScriptBoxedValue.FromInteger(value, unit.ToStoredUnit());
     }
 
-    private sealed class IntReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IFastReturnConverter<int>
+    private sealed class IntReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<int>
     {
-        public GameEventScriptFastValue Convert(int value) => GameEventScriptFastValue.FromInteger(value, unit);
+        public GameEventScriptBoxedValue Convert(int value) => GameEventScriptBoxedValue.FromInteger(value, unit.ToStoredUnit());
     }
 
-    private sealed class BoolReturnConverter : IFastReturnConverter<bool>
+    private sealed class BoolReturnConverter : IExtensionReturnConverter<bool>
     {
         public static readonly BoolReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert(bool value) => GameEventScriptFastValue.FromBoolean(value);
+        public GameEventScriptBoxedValue Convert(bool value) => GameEventScriptBoxedValue.FromBoolean(value);
     }
 
-    private sealed class FloatNumericUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit Unit)>
+    private sealed class FloatNumericUnitTupleReturnConverter : IExtensionReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit Unit)>
     {
         public static readonly FloatNumericUnitTupleReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert((double Value, GameEventScriptBytecodeInstructionUnit Unit) value)
-            => GameEventScriptFastValue.FromFloat(value.Value, value.Unit);
+        public GameEventScriptBoxedValue Convert((double Value, GameEventScriptBytecodeInstructionUnit Unit) value)
+            => GameEventScriptBoxedValue.FromFloat(value.Value, value.Unit);
     }
 
-    private sealed class FloatNullableNumericUnitTupleReturnConverter : IFastReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit? Unit)>
+    private sealed class FloatNullableNumericUnitTupleReturnConverter : IExtensionReturnConverter<(double Value, GameEventScriptBytecodeInstructionUnit? Unit)>
     {
         public static readonly FloatNullableNumericUnitTupleReturnConverter Instance = new();
 
-        public GameEventScriptFastValue Convert((double Value, GameEventScriptBytecodeInstructionUnit? Unit) value)
-            => GameEventScriptFastValue.FromFloat(value.Value, value.Unit);
+        public GameEventScriptBoxedValue Convert((double Value, GameEventScriptBytecodeInstructionUnit? Unit) value)
+            => GameEventScriptBoxedValue.FromFloat(value.Value, value.Unit.ToStoredUnit());
     }
 
-    private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+    private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
-            => arguments.Length == 0 ? returnConverter.Convert(invoke()) : GameEventScriptFastValue.Nothing;
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
+            => arguments.Length == 0 ? returnConverter.Convert(invoke()) : GameEventScriptBoxedValue.Nothing();
     }
 
-    private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IFastArgumentReader<T1> reader1, IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+    private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 1 && reader1.TryRead(arguments[0], out var value1)
                 ? returnConverter.Convert(invoke(value1))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
-    private sealed class AnnotatedExtensionFunction2<T1, T2, R>(Func<T1, T2, R> invoke, IFastArgumentReader<T1> reader1, IFastArgumentReader<T2> reader2, IFastReturnConverter<R> returnConverter)
+    private sealed class AnnotatedExtensionFunction2<T1, T2, R>(Func<T1, T2, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionArgumentReader<T2> reader2, IExtensionReturnConverter<R> returnConverter)
         : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 2 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2)
                 ? returnConverter.Convert(invoke(value1, value2))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
     private sealed class AnnotatedExtensionFunction3<T1, T2, T3, R>(
         Func<T1, T2, T3, R> invoke,
-        IFastArgumentReader<T1> reader1,
-        IFastArgumentReader<T2> reader2,
-        IFastArgumentReader<T3> reader3,
-        IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionArgumentReader<T3> reader3,
+        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 3 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
                reader3.TryRead(arguments[2], out var value3)
                 ? returnConverter.Convert(invoke(value1, value2, value3))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
     private sealed class AnnotatedExtensionFunction4<T1, T2, T3, T4, R>(
         Func<T1, T2, T3, T4, R> invoke,
-        IFastArgumentReader<T1> reader1,
-        IFastArgumentReader<T2> reader2,
-        IFastArgumentReader<T3> reader3,
-        IFastArgumentReader<T4> reader4,
-        IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionArgumentReader<T3> reader3,
+        IExtensionArgumentReader<T4> reader4,
+        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 4 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
                reader3.TryRead(arguments[2], out var value3) &&
                reader4.TryRead(arguments[3], out var value4)
                 ? returnConverter.Convert(invoke(value1, value2, value3, value4))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
-    private sealed class AnnotatedContextExtensionFunction0<R>(Func<GameEventScriptExtensionContext, R> invoke, IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+    private sealed class AnnotatedContextExtensionFunction0<R>(Func<GameEventScriptExtensionContext, R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
-            => arguments.Length == 0 ? returnConverter.Convert(invoke(context)) : GameEventScriptFastValue.Nothing;
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
+            => arguments.Length == 0 ? returnConverter.Convert(invoke(context)) : GameEventScriptBoxedValue.Nothing();
     }
 
-    private sealed class AnnotatedContextExtensionFunction1<T1, R>(Func<GameEventScriptExtensionContext, T1, R> invoke, IFastArgumentReader<T1> reader1, IFastReturnConverter<R> returnConverter)
+    private sealed class AnnotatedContextExtensionFunction1<T1, R>(Func<GameEventScriptExtensionContext, T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter)
         : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 1 && reader1.TryRead(arguments[0], out var value1)
                 ? returnConverter.Convert(invoke(context, value1))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
     private sealed class AnnotatedContextExtensionFunction2<T1, T2, R>(
         Func<GameEventScriptExtensionContext, T1, T2, R> invoke,
-        IFastArgumentReader<T1> reader1,
-        IFastArgumentReader<T2> reader2,
-        IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 2 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2)
                 ? returnConverter.Convert(invoke(context, value1, value2))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
     private sealed class AnnotatedContextExtensionFunction3<T1, T2, T3, R>(
         Func<GameEventScriptExtensionContext, T1, T2, T3, R> invoke,
-        IFastArgumentReader<T1> reader1,
-        IFastArgumentReader<T2> reader2,
-        IFastArgumentReader<T3> reader3,
-        IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionArgumentReader<T3> reader3,
+        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 3 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
                reader3.TryRead(arguments[2], out var value3)
                 ? returnConverter.Convert(invoke(context, value1, value2, value3))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 
     private sealed class AnnotatedContextExtensionFunction4<T1, T2, T3, T4, R>(
         Func<GameEventScriptExtensionContext, T1, T2, T3, T4, R> invoke,
-        IFastArgumentReader<T1> reader1,
-        IFastArgumentReader<T2> reader2,
-        IFastArgumentReader<T3> reader3,
-        IFastArgumentReader<T4> reader4,
-        IFastReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
+        IExtensionArgumentReader<T1> reader1,
+        IExtensionArgumentReader<T2> reader2,
+        IExtensionArgumentReader<T3> reader3,
+        IExtensionArgumentReader<T4> reader4,
+        IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => arguments.Length == 4 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
                reader3.TryRead(arguments[2], out var value3) &&
                reader4.TryRead(arguments[3], out var value4)
                 ? returnConverter.Convert(invoke(context, value1, value2, value3, value4))
-                : GameEventScriptFastValue.Nothing;
+                : GameEventScriptBoxedValue.Nothing();
     }
 }
 

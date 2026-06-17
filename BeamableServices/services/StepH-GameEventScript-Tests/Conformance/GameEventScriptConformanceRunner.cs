@@ -590,14 +590,14 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
 
     private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
         args.Length == 1
-            ? GameEventScriptFastValue.FromFloat(Math.Floor(args[0].Number), args[0].Unit)
-            : GameEventScriptFastValue.Nothing);
+            ? GameEventScriptBoxedValue.FromFloat(Math.Floor(args[0].Number), args[0].Unit)
+            : GameEventScriptBoxedValue.Nothing());
 
     private static readonly IGameEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length == 0)
         {
-            return GameEventScriptFastValue.Nothing;
+            return GameEventScriptBoxedValue.Nothing();
         }
 
         var max = args[0].Number;
@@ -606,53 +606,53 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             max = Math.Max(max, args[index].Number);
         }
 
-        return GameEventScriptFastValue.FromFloat(max);
+        return GameEventScriptBoxedValue.FromFloat(max);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 2)
         {
-            return GameEventScriptFastValue.Nothing;
+            return GameEventScriptBoxedValue.Nothing();
         }
 
         var from = args[0].Number;
         var to = args[1].Number;
         var delta = (to - from + 540d) % 360d - 180d;
-        return GameEventScriptFastValue.FromFloat(delta, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+        return GameEventScriptBoxedValue.FromFloat(delta, GameEventScriptBytecodeInstructionUnit.UnitDegree);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 1)
         {
-            return GameEventScriptFastValue.FromBoolean(false);
+            return GameEventScriptBoxedValue.FromBoolean(false);
         }
 
         var value = args[0].Number;
         var wrapped = ((value % 360d) + 360d) % 360d;
-        return GameEventScriptFastValue.FromBoolean(wrapped is <= 45d or >= 315d);
+        return GameEventScriptBoxedValue.FromBoolean(wrapped is <= 45d or >= 315d);
     });
 
     private static readonly IGameEventScriptExtensionFunction TestVectorSum = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 1)
         {
-            return GameEventScriptFastValue.Nothing;
+            return GameEventScriptBoxedValue.Nothing();
         }
 
         return args[0].Kind switch
         {
-            GameEventScriptValueKind.Vector => GameEventScriptFastValue.FromFloat(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
-            _ => GameEventScriptFastValue.Nothing
+            GameEventScriptBytecodeTypeKind.Vector => GameEventScriptBoxedValue.FromFloat(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
+            _ => GameEventScriptBoxedValue.Nothing()
         };
     });
 
     private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((_, args) =>
-        args.Length == 1 ? args[0] : GameEventScriptFastValue.Nothing);
+        args.Length == 1 ? args[0] : GameEventScriptBoxedValue.Nothing());
 
     private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((_, _) =>
-        GameEventScriptFastValue.FromBoolean(true));
+        GameEventScriptBoxedValue.FromBoolean(true));
 
     private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) =>
         throw new InvalidOperationException("Configured conformance extension failure."));
@@ -738,11 +738,11 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
     private static bool IsUnlabeled(string label)
         => string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
 
-    private delegate GameEventScriptFastValue ExtensionInvoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments);
+    private delegate GameEventScriptBoxedValue ExtensionInvoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments);
 
     private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptFastValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptFastValue> arguments)
+        public GameEventScriptBoxedValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
             => invoke(context, arguments);
     }
 }

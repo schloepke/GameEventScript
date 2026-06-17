@@ -5,6 +5,7 @@ using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
+using StepH.GameEventScript.VirtualMachine;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -421,7 +422,7 @@ internal static class GesAstOptimizer
             return false;
         }
 
-        var arguments = new GameEventScriptFastValue[extensionCall.Arguments.Count];
+        var arguments = new GameEventScriptBoxedValue[extensionCall.Arguments.Count];
         for (var index = 0; index < extensionCall.Arguments.Count; index++)
         {
             if (!TryEvaluateConstant(extensionCall.Arguments[index].Expression, out var argument))
@@ -429,11 +430,16 @@ internal static class GesAstOptimizer
                 return false;
             }
 
-            arguments[index] = GameEventScriptFastValue.FromGameEventScriptValue(argument);
+            arguments[index] = GameEventScriptBoxedValue.FromGameEventScriptValue(argument);
         }
 
-        return GesStandardExtensions.TryInvoke(reference, arguments, out var value) &&
-               TryConvertValueToLiteral(value.ToGameEventScriptValue(), out folded);
+        if (!GesStandardExtensions.TryInvoke(reference, arguments, out var value))
+        {
+            return false;
+        }
+
+        ref readonly var vmValue = ref value.GetVmValue();
+        return TryConvertValueToLiteral(vmValue.ToGameEventScriptValue(), out folded);
     }
 
     private static bool TryEvaluateConstant(ExpressionNode expression, out GameEventScriptValue value)

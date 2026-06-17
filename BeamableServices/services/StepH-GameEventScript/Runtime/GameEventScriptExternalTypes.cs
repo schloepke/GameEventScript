@@ -775,9 +775,9 @@ internal static class GameEventScriptExternalTypeValueConverter
             return value;
         }
 
-        if (targetType == typeof(GameEventScriptFastValue))
+        if (targetType == typeof(GameEventScriptBoxedValue))
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(value);
+            return GameEventScriptBoxedValue.FromGameEventScriptValue(value);
         }
 
         if (targetType == typeof(string))

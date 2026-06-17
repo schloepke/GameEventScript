@@ -140,10 +140,18 @@ public sealed class GameEventScriptExternalTypeTests
     }
 
     [TestMethod]
-    public void AnnotatedExtensionsRejectBoxedValueParameters()
+    public void AnnotatedExtensionsAllowBoxedValueParameters()
+    {
+        var registry = GameEventScriptExtensionRegistry.Create(typeof(BoxedExtensionFunctions));
+
+        Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("boxed", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
+    }
+
+    [TestMethod]
+    public void AnnotatedExtensionsRejectPolymorphicValueParameters()
     {
         var exception = Assert.ThrowsExactly<ArgumentException>(() =>
-            GameEventScriptExtensionRegistry.Create(typeof(BoxedExtensionFunctions)));
+            GameEventScriptExtensionRegistry.Create(typeof(PolymorphicValueExtensionFunctions)));
 
         StringAssert.Contains(exception.Message, "cannot use boxed GameEventScriptValue");
     }
@@ -204,7 +212,15 @@ public sealed class GameEventScriptExternalTypeTests
     private static class BoxedExtensionFunctions
     {
         [GesFunction("value")]
-        public static GameEventScriptFastValue Value([GesParam("_", GameEventScriptValueKind.Number)] GameEventScriptValue value)
-            => GameEventScriptFastValue.FromGameEventScriptValue(value);
+        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptValueKind.Number)] GameEventScriptBoxedValue value)
+            => value;
+    }
+
+    [GesExtension("polymorphic")]
+    private static class PolymorphicValueExtensionFunctions
+    {
+        [GesFunction("value")]
+        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptValueKind.Number)] GameEventScriptValue value)
+            => GameEventScriptBoxedValue.Nothing();
     }
 }

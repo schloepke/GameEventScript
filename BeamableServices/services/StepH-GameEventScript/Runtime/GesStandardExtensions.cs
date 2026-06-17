@@ -14,10 +14,10 @@ internal static class GesStandardExtensions
 
     public static bool TryInvoke(
         GameEventScriptExtensionReference reference,
-        ReadOnlySpan<GameEventScriptFastValue> arguments,
-        out GameEventScriptFastValue value)
+        ReadOnlySpan<GameEventScriptBoxedValue> arguments,
+        out GameEventScriptBoxedValue value)
     {
-        value = GameEventScriptFastValue.Nothing;
+        value = GameEventScriptBoxedValue.Nothing();
         if (IsSeriesStandardReference(reference))
         {
             value = EvaluateSeries(reference, arguments);
@@ -33,7 +33,7 @@ internal static class GesStandardExtensions
         {
             "integer" => EvaluateInteger(reference.FunctionName, arguments[0]),
             "degree" => EvaluateDegree(reference.FunctionName, arguments[0]),
-            _ => GameEventScriptFastValue.Nothing
+            _ => GameEventScriptBoxedValue.Nothing()
         };
 
         value = result;
@@ -43,12 +43,12 @@ internal static class GesStandardExtensions
     public static bool TryInvoke(
         IReadOnlyList<string> stringPool,
         IReadOnlyList<ushort> shape,
-        GameEventScriptFastValue argument0,
-        GameEventScriptFastValue argument1,
+        GameEventScriptBoxedValue argument0,
+        GameEventScriptBoxedValue argument1,
         int argumentCount,
-        out GameEventScriptFastValue value)
+        out GameEventScriptBoxedValue value)
     {
-        value = GameEventScriptFastValue.Nothing;
+        value = GameEventScriptBoxedValue.Nothing();
         if (shape.Count < 2 ||
             !TryReadStringPool(stringPool, shape[0], out var extensionName) ||
             !TryReadStringPool(stringPool, shape[1], out var functionName) ||
@@ -62,13 +62,13 @@ internal static class GesStandardExtensions
             switch (functionName)
             {
                 case "fibonacci" when shape.Count == 2:
-                    value = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Fibonacci());
+                    value = GameEventScriptBoxedValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Fibonacci());
                     return true;
                 case "factorial" when shape.Count == 2:
-                    value = GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Factorial());
+                    value = GameEventScriptBoxedValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Factorial());
                     return true;
                 case "natural" when IsNaturalSeriesSignature(stringPool, shape):
-                    value = GameEventScriptFastValue.FromGameEventScriptValue(EvaluateNaturalSeries(stringPool, shape, argument0, argument1, argumentCount));
+                    value = GameEventScriptBoxedValue.FromGameEventScriptValue(EvaluateNaturalSeries(stringPool, shape, argument0, argument1, argumentCount));
                     return true;
             }
         }
@@ -176,7 +176,7 @@ internal static class GesStandardExtensions
     private static bool IsLabelNormalized(string label, string expected)
         => string.Equals(label, expected, StringComparison.Ordinal);
 
-    private static GameEventScriptFastValue EvaluateSeries(GameEventScriptExtensionReference reference, ReadOnlySpan<GameEventScriptFastValue> arguments)
+    private static GameEventScriptBoxedValue EvaluateSeries(GameEventScriptExtensionReference reference, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
     {
         var series = reference.FunctionName switch
         {
@@ -186,10 +186,10 @@ internal static class GesStandardExtensions
             _ => GameEventScriptNothingValue.Instance
         };
 
-        return GameEventScriptFastValue.FromGameEventScriptValue(series);
+        return GameEventScriptBoxedValue.FromGameEventScriptValue(series);
     }
 
-    private static GameEventScriptValue EvaluateNaturalSeries(IReadOnlyList<string> labels, ReadOnlySpan<GameEventScriptFastValue> arguments)
+    private static GameEventScriptValue EvaluateNaturalSeries(IReadOnlyList<string> labels, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
     {
         long start = 0;
         long step = 1;
@@ -212,8 +212,8 @@ internal static class GesStandardExtensions
     private static GameEventScriptValue EvaluateNaturalSeries(
         IReadOnlyList<string> stringPool,
         IReadOnlyList<ushort> shape,
-        GameEventScriptFastValue argument0,
-        GameEventScriptFastValue argument1,
+        GameEventScriptBoxedValue argument0,
+        GameEventScriptBoxedValue argument1,
         int argumentCount)
     {
         long start = 0;
@@ -248,26 +248,26 @@ internal static class GesStandardExtensions
         return false;
     }
 
-    private static GameEventScriptFastValue EvaluateInteger(string functionName, GameEventScriptFastValue input)
+    private static GameEventScriptBoxedValue EvaluateInteger(string functionName, GameEventScriptBoxedValue input)
     {
         if (!TryReadNumeric(input, out var number))
         {
-            return GameEventScriptFastValue.FromInteger(input.Integer);
+            return GameEventScriptBoxedValue.FromInteger(input.Integer);
         }
 
         if (number.IsNaN)
         {
-            return GameEventScriptFastValue.FromInteger(0);
+            return GameEventScriptBoxedValue.FromInteger(0);
         }
 
         if (number.IsPositiveInfinity)
         {
-            return GameEventScriptFastValue.FromInteger(long.MaxValue);
+            return GameEventScriptBoxedValue.FromInteger(long.MaxValue);
         }
 
         if (number.IsNegativeInfinity)
         {
-            return GameEventScriptFastValue.FromInteger(long.MinValue);
+            return GameEventScriptBoxedValue.FromInteger(long.MinValue);
         }
 
         var rounded = functionName switch
@@ -281,86 +281,69 @@ internal static class GesStandardExtensions
             _ => 0d
         };
 
-        return GameEventScriptFastValue.FromInteger(GesValueOperations.ToIntegerSaturated(rounded));
+        return GameEventScriptBoxedValue.FromInteger(GesValueOperations.ToIntegerSaturated(rounded));
     }
 
-    private static GameEventScriptFastValue EvaluateDegree(string functionName, GameEventScriptFastValue input)
+    private static GameEventScriptBoxedValue EvaluateDegree(string functionName, GameEventScriptBoxedValue input)
         => functionName switch
         {
             "wrap" => EvaluateDegreeWrap(input),
             "toRadians" => EvaluateDegreeToRadians(input),
             "fromRadians" => EvaluateDegreeFromRadians(input),
-            _ => GameEventScriptFastValue.Nothing
+            _ => GameEventScriptBoxedValue.Nothing()
         };
 
-    private static GameEventScriptFastValue EvaluateDegreeWrap(GameEventScriptFastValue input)
+    private static GameEventScriptBoxedValue EvaluateDegreeWrap(GameEventScriptBoxedValue input)
     {
-        if (input.IsReferenceBacked)
-        {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GesValueOperations.EvaluateWrapDegree(input.ToGameEventScriptValue()));
-        }
-
         if (input.Unit.IsNumericUnit() && input.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
+            return GameEventScriptBoxedValue.Nothing();
         }
 
-        if (input.Kind is GameEventScriptValueKind.Number)
+        if (input.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float)
         {
-            return GameEventScriptFastValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptBytecodeInstructionUnit.UnitDegree);
+            return GameEventScriptBoxedValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptBytecodeInstructionUnit.UnitDegree);
         }
 
-        return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
+        return GameEventScriptBoxedValue.Nothing();
     }
 
-    private static GameEventScriptFastValue EvaluateDegreeToRadians(GameEventScriptFastValue input)
+    private static GameEventScriptBoxedValue EvaluateDegreeToRadians(GameEventScriptBoxedValue input)
     {
         if (!TryReadUnitlessOrDegreeNumeric(input, out var number) || !number.IsFinite)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
+            return GameEventScriptBoxedValue.Nothing();
         }
 
         try
         {
-            return GameEventScriptFastValue.FromFloat(number.Value / 180d * Pi);
+            return GameEventScriptBoxedValue.FromFloat(number.Value / 180d * Pi);
         }
         catch (OverflowException)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
+            return GameEventScriptBoxedValue.Nothing();
         }
     }
 
-    private static GameEventScriptFastValue EvaluateDegreeFromRadians(GameEventScriptFastValue input)
+    private static GameEventScriptBoxedValue EvaluateDegreeFromRadians(GameEventScriptBoxedValue input)
     {
         if (!TryReadUnitlessNumeric(input, out var number) || !number.IsFinite)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
+            return GameEventScriptBoxedValue.Nothing();
         }
 
         try
         {
-            return GameEventScriptFastValue.FromFloat(number.Value / Pi * 180d, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+            return GameEventScriptBoxedValue.FromFloat(number.Value / Pi * 180d, GameEventScriptBytecodeInstructionUnit.UnitDegree);
         }
         catch (OverflowException)
         {
-            return GameEventScriptFastValue.FromGameEventScriptValue(GameEventScriptValueFactory.GesFloatNaN());
+            return GameEventScriptBoxedValue.Nothing();
         }
     }
 
-    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptFastValue input, out GesValueOperations.NumericValue number)
+    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptBoxedValue input, out GesValueOperations.NumericValue number)
     {
-        if (input.IsReferenceBacked)
-        {
-            var value = input.ToGameEventScriptValue();
-            if (GameEventScriptValue.TryGetNumericUnit(value, out var unit) && unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
-            {
-                number = GesValueOperations.NumericValue.NaN();
-                return false;
-            }
-
-            return GesValueOperations.TryCoerceNumericForOperation(value, out number);
-        }
-
         if (input.Unit.IsNumericUnit() && input.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
         {
             number = GesValueOperations.NumericValue.NaN();
@@ -370,20 +353,8 @@ internal static class GesStandardExtensions
         return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadUnitlessNumeric(GameEventScriptFastValue input, out GesValueOperations.NumericValue number)
+    private static bool TryReadUnitlessNumeric(GameEventScriptBoxedValue input, out GesValueOperations.NumericValue number)
     {
-        if (input.IsReferenceBacked)
-        {
-            var value = input.ToGameEventScriptValue();
-            if (GameEventScriptValue.TryGetNumericUnit(value, out _))
-            {
-                number = GesValueOperations.NumericValue.NaN();
-                return false;
-            }
-
-            return GesValueOperations.TryCoerceNumericForOperation(value, out number);
-        }
-
         if (input.Unit.IsNumericUnit())
         {
             number = GesValueOperations.NumericValue.NaN();
@@ -393,20 +364,20 @@ internal static class GesStandardExtensions
         return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadNumeric(GameEventScriptFastValue input, out GesValueOperations.NumericValue number)
+    private static bool TryReadNumeric(GameEventScriptBoxedValue input, out GesValueOperations.NumericValue number)
     {
-        if (input.IsReferenceBacked)
-        {
-            var value = input.ToGameEventScriptValue();
-            return GesValueOperations.TryCoerceNumericForOperation(value, out number);
-        }
-
         switch (input.Kind)
         {
-            case GameEventScriptValueKind.Number:
-            case GameEventScriptValueKind.Percentage:
-            case GameEventScriptValueKind.Boolean:
+            case GameEventScriptBytecodeTypeKind.Integer:
+            case GameEventScriptBytecodeTypeKind.Percentage:
+            case GameEventScriptBytecodeTypeKind.Boolean:
                 number = GesValueOperations.NumericValue.Finite(input.Number);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Float:
+                var value = input.Number;
+                if (double.IsPositiveInfinity(value)) number = GesValueOperations.NumericValue.PositiveInfinity();
+                else if (double.IsNegativeInfinity(value)) number = GesValueOperations.NumericValue.NegativeInfinity();
+                else number = double.IsNaN(value) ? GesValueOperations.NumericValue.NaN() : GesValueOperations.NumericValue.Finite(value);
                 return true;
             default:
                 number = default;

@@ -464,10 +464,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmClamp(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
                             break;
                         case RandomTake:
-                            vmState.Register(instruction.DestinationSlot).GesVmRandom(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), vmState.RandomGenerator, ref vmState.Binary.TextConstantTable);
+                            vmState.GesVmRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.RandomGenerator);
                             break;
                         case RandomTakeFloat:
-                            vmState.Register(instruction.DestinationSlot).GesVmRandomFloat(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), vmState.RandomGenerator);
+                            vmState.GesVmRandomFloat(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.RandomGenerator);
                             break;
                         case RandomPush:
                             var seed = vmState.Register(instruction.XSlot);

@@ -13,7 +13,9 @@ internal static class GesVmStreamCollectorTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
         var count = 0;
         var buffer = new GesVmValue[16];
         try
@@ -30,7 +32,7 @@ internal static class GesVmStreamCollectorTerminals
                 return;
             }
 
-            var list = vmState.CreateList(count);
+            var list = new GesVmValue[count];
             Array.Copy(buffer, list, count);
             vmState.SetList(destinationRegister, list);
         }
@@ -47,9 +49,12 @@ internal static class GesVmStreamCollectorTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
-        var keyValue = vmState.CreateNothing();
-        var map = new GesVmValueMapBuilder(vmState);
+        var item = new GesVmValue();
+
+        item.SetNothing();
+        var keyValue = new GesVmValue();
+        keyValue.SetNothing();
+        var map = new GesVmValueMapBuilder();
         try
         {
             while (stream.TryNext(ref item))
@@ -85,10 +90,14 @@ internal static class GesVmStreamCollectorTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
-        var keyValue = vmState.CreateNothing();
-        var value = vmState.CreateNothing();
-        var map = new GesVmValueMapBuilder(vmState);
+        var item = new GesVmValue();
+
+        item.SetNothing();
+        var keyValue = new GesVmValue();
+        keyValue.SetNothing();
+        var value = new GesVmValue();
+        value.SetNothing();
+        var map = new GesVmValueMapBuilder();
         try
         {
             while (stream.TryNext(ref item))
@@ -236,7 +245,8 @@ internal static class GesVmStreamCollectorTerminals
     }
     private static void FirstFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
     {
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         try
         {
             if (stream.TryNext(ref item)) vmState.SetValue(destinationRegister, in item);
@@ -249,8 +259,10 @@ internal static class GesVmStreamCollectorTerminals
     }
     private static void LastFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
     {
-        var item = vmState.CreateNothing();
-        var last = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
+        var last = new GesVmValue();
+        last.SetNothing();
         var found = false;
         try
         {
@@ -270,7 +282,8 @@ internal static class GesVmStreamCollectorTerminals
     }
     private static void SingleFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
     {
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         try
         {
             if (!stream.TryNext(ref item))
@@ -279,7 +292,9 @@ internal static class GesVmStreamCollectorTerminals
                 return;
             }
 
-            var second = vmState.CreateNothing();
+            var second = new GesVmValue();
+
+            second.SetNothing();
             if (stream.TryNext(ref second)) vmState.SetNothing(destinationRegister);
             else vmState.SetValue(destinationRegister, in item);
         }

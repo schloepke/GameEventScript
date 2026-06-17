@@ -177,7 +177,6 @@ internal class GesVmTripletStream(GesVmValueVectorPoint triplet) : IGesVmStream,
 }
 
 internal sealed class GesVmTransformStream(
-    GesVmState ownerState,
     IGesVmStream source,
     IGesVmStreamEntryEvaluator evaluator,
     ushort entryAddress,
@@ -186,8 +185,8 @@ internal sealed class GesVmTransformStream(
     bool filter) : IGesVmStream, IDisposable
 {
     private IGesVmStream? _source = source;
-    private GesVmValue _item = ownerState.CreateNothing();
-    private GesVmValue _result = ownerState.CreateNothing();
+    private GesVmValue _item = new GesVmValue();
+    private GesVmValue _result = new GesVmValue();
     public bool IsPatternSequence { get; } = source.IsPatternSequence;
 
     public bool TryNext(ref GesVmValue value)

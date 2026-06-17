@@ -9,11 +9,14 @@ internal static class GesVmRegisterPatterns
 {
     internal static void GesVmHasPattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var result = vmState.CreateNothing();
+        var result = new GesVmValue();
+        result.SetNothing();
         if (pattern == CountFace)
         {
-            var face = vmState.CreateNothing();
-            var unused = vmState.CreateNothing();
+            var face = new GesVmValue();
+            face.SetNothing();
+            var unused = new GesVmValue();
+            unused.SetNothing();
             if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
             {
                 vmState.SetNothing(destinationRegister);
@@ -80,11 +83,14 @@ internal static class GesVmRegisterPatterns
 
     internal static void GesVmTakePattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var result = vmState.CreateNothing();
+        var result = new GesVmValue();
+        result.SetNothing();
         if (pattern == CountFace)
         {
-            var face = vmState.CreateNothing();
-            var unused = vmState.CreateNothing();
+            var face = new GesVmValue();
+            face.SetNothing();
+            var unused = new GesVmValue();
+            unused.SetNothing();
             if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
             {
                 vmState.SetNothing(destinationRegister);
@@ -94,7 +100,7 @@ internal static class GesVmRegisterPatterns
             switch (source.Kind)
             {
                 case Dice when source.ObjectValue is int[] dice:
-                    var buffer = vmState.CreateList(dice.Length);
+                    var buffer = new GesVmValue[dice.Length];
                     for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
                     var found = 0;
                     for (var i = 0; i < buffer.Length; i++) if (buffer[i].EqualsValue(ref face)) found++;
@@ -173,8 +179,10 @@ internal static class GesVmRegisterPatterns
                 dst.SetBoolean(false);
                 return;
             case CountFace:
-                var face = vmState.CreateNothing();
-                var unused = vmState.CreateNothing();
+                var face = new GesVmValue();
+                face.SetNothing();
+                var unused = new GesVmValue();
+                unused.SetNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -239,8 +247,10 @@ internal static class GesVmRegisterPatterns
                 dst.SetBoolean(false);
                 return;
             case CountFace:
-                var face = vmState.CreateNothing();
-                var unused = vmState.CreateNothing();
+                var face = new GesVmValue();
+                face.SetNothing();
+                var unused = new GesVmValue();
+                unused.SetNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -272,7 +282,7 @@ internal static class GesVmRegisterPatterns
 
     private static void HasPatternBuffer(GesVmState vmState, ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++) list[i] = items[i];
         HasPatternList(vmState, ref dst, list, pattern, count, faceEntryAddress, evaluator);
     }
@@ -286,7 +296,7 @@ internal static class GesVmRegisterPatterns
 
     private static void TakePatternDice(GesVmState vmState, ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var buffer = vmState.CreateList(dice.Length);
+        var buffer = new GesVmValue[dice.Length];
         for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
         TakePatternBuffer(vmState, ref dst, buffer, dice.Length, pattern, count, faceEntryAddress, evaluator, diceResult: true);
     }
@@ -302,8 +312,10 @@ internal static class GesVmRegisterPatterns
         {
             case CountFace:
             {
-                var face = vmState.CreateNothing();
-                var unused = vmState.CreateNothing();
+                var face = new GesVmValue();
+                face.SetNothing();
+                var unused = new GesVmValue();
+                unused.SetNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -362,7 +374,7 @@ internal static class GesVmRegisterPatterns
             return;
         }
 
-        var list = vmState.CreateList(count);
+        var list = new GesVmValue[count];
         var listIndex = 0;
         for (var i = 0; i < length && listIndex < count; i++)
         {
@@ -397,7 +409,7 @@ internal static class GesVmRegisterPatterns
                     return;
                 }
 
-                var list = vmState.CreateList(5);
+                var list = new GesVmValue[5];
                 var li = 0;
                 for (var k = 0; k < length && li < 3; k++) if (items[k].EqualsValue(ref items[i])) list[li++] = items[k];
                 for (var k = 0; k < length && li < 5; k++) if (items[k].EqualsValue(ref items[p])) list[li++] = items[k];
@@ -448,7 +460,7 @@ internal static class GesVmRegisterPatterns
             return;
         }
 
-        var list = vmState.CreateList(uniqueCount);
+        var list = new GesVmValue[uniqueCount];
         var listIndex = 0;
         for (var i = 0; i < length; i++)
         {
@@ -569,14 +581,16 @@ internal static class GesVmRegisterPatterns
     {
         var buffer = Array.Empty<GesVmValue>();
         length = 0;
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         try
         {
             while (stream.TryNext(ref item))
             {
                 if (length == buffer.Length) Array.Resize(ref buffer, buffer.Length == 0 ? 8 : buffer.Length * 2);
                 buffer[length++] = item;
-                item = vmState.CreateNothing();
+                item = new GesVmValue();
+                item.SetNothing();
             }
         }
         finally

@@ -97,7 +97,8 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
             if (captures is null)
             {
                 var helperFrameLength = Math.Max(parentFrameLength, itemSlot + 1);
-                var nothing = vmState.CreateNothing();
+                var nothing = new GesVmValue();
+                nothing.SetNothing();
                 for (ushort i = 0; i < helperFrameLength; i++)
                 {
                     if (i == itemSlot) vmState.StageValue(ref item);
@@ -108,7 +109,8 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
             else
             {
                 var helperFrameLength = Math.Max(itemSlot + 1, captures.Length + 1);
-                var nothing = vmState.CreateNothing();
+                var nothing = new GesVmValue();
+                nothing.SetNothing();
                 for (ushort i = 0; i < helperFrameLength; i++)
                 {
                     if (i == itemSlot)

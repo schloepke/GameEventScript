@@ -38,8 +38,6 @@ internal struct GesVmValue
     [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
     [FieldOffset(18)] internal GesVmValueFlags Flags;
 
-    [FieldOffset(24)] internal GesVmState OwningState;
-
     internal readonly bool IsTrue => (Flags & IsTrueFlag) != 0;
     internal readonly bool IsFalse => (Flags & IsFalseFlag) != 0;
     internal readonly bool IsNotTrue => (Flags & IsTrueFlag) == 0;
@@ -57,12 +55,6 @@ internal struct GesVmValue
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
     internal readonly string TextValue => ObjectValue as string ?? string.Empty;
-
-    internal void InitRegister(GesVmState state)
-    {
-        OwningState = state;
-        SetNothing();
-    }
 
     internal void SetNothing()
     {

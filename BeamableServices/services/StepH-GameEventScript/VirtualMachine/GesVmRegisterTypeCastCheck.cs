@@ -11,7 +11,8 @@ internal static class GesVmRegisterTypeCastCheck
 {
     internal static void GesVmCastUnit(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmCastUnit(ref dst, in xSlot, unit, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -46,7 +47,8 @@ internal static class GesVmRegisterTypeCastCheck
     }
     internal static void GesVmCast(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmCast(ref dst, in xSlot, type, vmState, destinationRegister, session);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -141,7 +143,8 @@ internal static class GesVmRegisterTypeCastCheck
     }
     internal static void GesVmCastNumeric(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmCastNumeric(ref dst, in xSlot, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -172,7 +175,8 @@ internal static class GesVmRegisterTypeCastCheck
     }
     internal static void GesVmCastCustom(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot, ushort typeTextPointer)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         var typeName = vmState.FetchStringByPointer(typeTextPointer);
         if (IsCustomType(in xSlot, typeName))
         {
@@ -289,14 +293,14 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var list = vmState.CreateList(text.Length);
+                var list = new GesVmValue[text.Length];
                 for (var i = 0; i < text.Length; i++) list[i].SetText(text[i].ToString());
                 dst.SetList(list);
                 return;
             }
             case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
-                var list = vmState.CreateList(3);
+                var list = new GesVmValue[3];
                 list[0].SetFloat(triplet.X, xSlot.Unit);
                 list[1].SetFloat(triplet.Y, xSlot.Unit);
                 list[2].SetFloat(triplet.Z, xSlot.Unit);
@@ -305,7 +309,7 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case Dice when xSlot.ObjectValue is int[] dice:
             {
-                var list = vmState.CreateList(dice.Length);
+                var list = new GesVmValue[dice.Length];
                 for (var i = 0; i < dice.Length; i++) list[i].SetInteger(dice[i]);
                 dst.SetList(list);
                 return;
@@ -324,7 +328,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var list = vmState.CreateList((int)xSlot.IntegerValue);
+                var list = new GesVmValue[(int)xSlot.IntegerValue];
                 var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -349,7 +353,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var list = vmState.CreateList((int)xSlot.IntegerValue);
+                var list = new GesVmValue[(int)xSlot.IntegerValue];
                 var current = range.From;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -377,7 +381,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var visibleEntries = new GesVmValueMapBuilder(vmState, map.Length);
+                var visibleEntries = new GesVmValueMapBuilder(map.Length);
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
@@ -389,11 +393,12 @@ internal static class GesVmRegisterTypeCastCheck
             case Custom when xSlot.ObjectValue is GameEventScriptValue externalValue:
             {
                 var sourceEntries = externalValue.AsMap();
-                var entries = new GesVmValueMapBuilder(vmState, sourceEntries.Count);
+                var entries = new GesVmValueMapBuilder(sourceEntries.Count);
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-                    var value = vmState.CreateNothing();
+                    var value = new GesVmValue();
+                    value.SetNothing();
                     value.BindArguments(sourceValue);
                     entries.Set(key, value);
                 }
@@ -403,13 +408,16 @@ internal static class GesVmRegisterTypeCastCheck
             }
             case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
-                var x = vmState.CreateNothing();
+                var x = new GesVmValue();
+                x.SetNothing();
                 x.SetFloat(triplet.X, xSlot.Unit);
-                var y = vmState.CreateNothing();
+                var y = new GesVmValue();
+                y.SetNothing();
                 y.SetFloat(triplet.Y, xSlot.Unit);
-                var z = vmState.CreateNothing();
+                var z = new GesVmValue();
+                z.SetNothing();
                 z.SetFloat(triplet.Z, xSlot.Unit);
-                var entries = new GesVmValueMapBuilder(vmState, 3);
+                var entries = new GesVmValueMapBuilder(3);
                 entries.Set("x", x);
                 entries.Set("y", y);
                 entries.Set("z", z);
@@ -417,7 +425,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
             }
             default:
-                dst.SetMap(new GesVmValueMapBuilder(vmState, 0).ToMap());
+                dst.SetMap(new GesVmValueMapBuilder(0).ToMap());
                 return;
         }
     }

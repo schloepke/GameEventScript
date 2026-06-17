@@ -225,7 +225,7 @@ internal static class GesVmRegisterCallExternal
                 break;
             case GameEventScriptValueKind.List:
                 var sourceItems = argument.AsList();
-                var list = destination.OwningState.CreateList(sourceItems.Count);
+                var list = new GesVmValue[sourceItems.Count];
                 for (var index = 0; index < sourceItems.Count; index++) list[index].BindArguments(sourceItems[index]);
                 destination.SetList(list);
                 break;
@@ -238,15 +238,18 @@ internal static class GesVmRegisterCallExternal
 
                 var sourceEntries = argument.AsMap();
                 var isCustomType = argument.TryGetCustomTypeName(out var customTypeName);
-                var entries = new GesVmValueMapBuilder(destination.OwningState, sourceEntries.Count + (isCustomType ? 1 : 0));
+                var entries = new GesVmValueMapBuilder(sourceEntries.Count + (isCustomType ? 1 : 0));
                 if (isCustomType)
                 {
-                    entries.Set(GesVmValueMap.HiddenRecordTypeField, destination.OwningState.CreateTag(customTypeName));
+                    var typeName = new GesVmValue();
+                    typeName.SetTag(customTypeName);
+                    entries.Set(GesVmValueMap.HiddenRecordTypeField, typeName);
                 }
 
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
-                    var value = destination.OwningState.CreateNothing();
+                    var value = new GesVmValue();
+                    value.SetNothing();
                     value.BindArguments(sourceValue);
                     entries.Set(key, value);
                 }
@@ -313,7 +316,7 @@ internal static class GesVmRegisterCallExternal
         List when a.ObjectValue is GesVmValue[] list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
         Map when a.ObjectValue is GesVmValueMap map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
         Custom when a.ObjectValue is GameEventScriptValue custom => custom,
-        Custom when a.ObjectValue is GesVmValueMap map => map.ToGameEventScriptCustomTypeValue(a.OwningState),
+        Custom when a.ObjectValue is GesVmValueMap map => map.ToGameEventScriptCustomTypeValue(),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
@@ -349,7 +352,7 @@ internal static class GesVmRegisterCallExternal
         return result;
     }
 
-    private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this GesVmValueMap valueMap, GesVmState state)
+    private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this GesVmValueMap valueMap)
     {
         var typeName = string.Empty;
         if (valueMap.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) && marker.Kind is Tag)

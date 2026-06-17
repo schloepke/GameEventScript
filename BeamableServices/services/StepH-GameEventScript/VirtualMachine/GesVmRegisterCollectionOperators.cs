@@ -107,7 +107,8 @@ internal static class GesVmRegisterCollectionOperators
 
         for (var i = 0; i < b.IntegerValue; i++)
         {
-            var left = vmState.CreateNothing();
+            var left = new GesVmValue();
+            left.SetNothing();
             if (leftList is not null) left = leftList[i];
             else if (leftDice is not null) left.SetInteger(leftDice[i]);
             else if (leftRange is not null)
@@ -121,7 +122,9 @@ internal static class GesVmRegisterCollectionOperators
                 leftFloat += leftFloatRange.Step;
             }
 
-            var right = vmState.CreateNothing();
+            var right = new GesVmValue();
+
+            right.SetNothing();
             if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
@@ -226,7 +229,8 @@ internal static class GesVmRegisterCollectionOperators
         for (var i = 0; i < b.IntegerValue; i++)
         {
             var leftIndex = leftOffset + i;
-            var left = vmState.CreateNothing();
+            var left = new GesVmValue();
+            left.SetNothing();
             if (leftList is not null) left = leftList[leftIndex];
             else if (leftDice is not null) left.SetInteger(leftDice[leftIndex]);
             else if (leftRange is not null)
@@ -240,7 +244,9 @@ internal static class GesVmRegisterCollectionOperators
                 leftFloat += leftFloatRange.Step;
             }
 
-            var right = vmState.CreateNothing();
+            var right = new GesVmValue();
+
+            right.SetNothing();
             if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
@@ -283,7 +289,8 @@ internal static class GesVmRegisterCollectionOperators
                 vmState.SetBoolean(dst, false);
                 return;
             case Stream when b.ObjectValue is IGesVmStream stream:
-                var item = vmState.CreateNothing();
+                var item = new GesVmValue();
+                item.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -333,7 +340,9 @@ internal static class GesVmRegisterCollectionOperators
                     return;
                 }
 
-                var value = vmState.CreateNothing();
+                var value = new GesVmValue();
+
+                value.SetNothing();
                 value.SetFloat(triplet.X, b.Unit);
                 if (value.EqualsValue(a))
                 {
@@ -404,7 +413,8 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
-                var item = vmState.CreateNothing();
+                var item = new GesVmValue();
+                item.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -515,7 +525,9 @@ internal static class GesVmRegisterCollectionOperators
                     return;
                 }
 
-                var item = vmState.CreateNothing();
+                var item = new GesVmValue();
+
+                item.SetNothing();
                 for (var i = 0; i < text.Length; i++)
                 {
                     item.SetText(text[i].ToString());
@@ -646,7 +658,9 @@ internal static class GesVmRegisterCollectionOperators
             return;
         }
 
-        var candidate = vmState.CreateNothing();
+        var candidate = new GesVmValue();
+
+        candidate.SetNothing();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesVmValue[] list:
@@ -784,7 +798,9 @@ internal static class GesVmRegisterCollectionOperators
             candidates[candidateCount++] = value;
         }
 
-        var candidate = vmState.CreateNothing();
+        var candidate = new GesVmValue();
+
+        candidate.SetNothing();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesVmValue[] list:
@@ -845,7 +861,9 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             }
 
-            var item = vmState.CreateNothing();
+            var item = new GesVmValue();
+
+            item.SetNothing();
             if (!requireAll)
             {
                 while (stream.TryNext(ref item))
@@ -909,7 +927,9 @@ internal static class GesVmRegisterCollectionOperators
                     return;
                 }
 
-                var value = vmState.CreateNothing();
+                var value = new GesVmValue();
+
+                value.SetNothing();
                 value.SetFloat(triplet.X, b.Unit);
                 if (value.EqualsValue(a))
                 {
@@ -952,7 +972,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     case Map when b.ObjectValue is GesVmValueMap bMap:
                     {
-                        var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength + bMap.StorageLength);
+                        var map = new GesVmValueMapBuilder(aMap.StorageLength + bMap.StorageLength);
                         for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < bMap.StorageLength; i++) map.Set(bMap.KeyAt(i), bMap.ValueAt(i));
                         vmState.SetMap(dst, map.ToMap());
@@ -960,7 +980,7 @@ internal static class GesVmRegisterCollectionOperators
                     }
                     case List when b.ObjectValue is GesVmValue[] keys:
                     {
-                        var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength + keys.Length);
+                        var map = new GesVmValueMapBuilder(aMap.StorageLength + keys.Length);
                         for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < keys.Length; i++)
                         {
@@ -973,7 +993,8 @@ internal static class GesVmRegisterCollectionOperators
 
                             var key = keyValue.TextValue;
                             if (map.ContainsKey(key)) continue;
-                            var flag = vmState.CreateBoolean(true);
+                            var flag = new GesVmValue();
+                            flag.SetBoolean(true);
                             map.Set(key, flag);
                         }
 
@@ -990,7 +1011,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     case List when b.ObjectValue is GesVmValue[] bList:
                     {
-                        var list = vmState.CreateList(aList.Length + bList.Length);
+                        var list = new GesVmValue[aList.Length + bList.Length];
                         for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                         for (var i = 0; i < bList.Length; i++) list[aList.Length + i] = bList[i];
                         vmState.SetList(dst, list);
@@ -998,7 +1019,7 @@ internal static class GesVmRegisterCollectionOperators
                     }
                     case Dice when b.ObjectValue is int[] bDice:
                     {
-                        var list = vmState.CreateList(aList.Length + bDice.Length);
+                        var list = new GesVmValue[aList.Length + bDice.Length];
                         for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                         for (var i = 0; i < bDice.Length; i++) list[aList.Length + i].SetInteger(bDice[i]);
                         vmState.SetList(dst, list);
@@ -1022,7 +1043,7 @@ internal static class GesVmRegisterCollectionOperators
                     }
                     case List when b.ObjectValue is GesVmValue[] bList:
                     {
-                        var list = vmState.CreateList(aDice.Length + bList.Length);
+                        var list = new GesVmValue[aDice.Length + bList.Length];
                         for (var i = 0; i < aDice.Length; i++) list[i].SetInteger(aDice[i]);
                         for (var i = 0; i < bList.Length; i++) list[aDice.Length + i] = bList[i];
                         vmState.SetList(dst, list);
@@ -1049,7 +1070,7 @@ internal static class GesVmRegisterCollectionOperators
         {
             case Map when a.ObjectValue is GesVmValueMap aMap:
             {
-                var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength);
+                var map = new GesVmValueMapBuilder(aMap.StorageLength);
                 switch (b.Kind)
                 {
                     case Map when b.ObjectValue is GesVmValueMap bMap:
@@ -1144,7 +1165,7 @@ internal static class GesVmRegisterCollectionOperators
                             }
                         }
 
-                        var list = vmState.CreateList(resultLength);
+                        var list = new GesVmValue[resultLength];
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
                         for (var i = 0; i < leftList.Length; i++)
@@ -1178,7 +1199,7 @@ internal static class GesVmRegisterCollectionOperators
                             }
                         }
 
-                        var list = vmState.CreateList(resultLength);
+                        var list = new GesVmValue[resultLength];
                         var index = 0;
                         Array.Clear(removed, 0, removed.Length);
                         for (var i = 0; i < leftList.Length; i++)
@@ -1250,7 +1271,7 @@ internal static class GesVmRegisterCollectionOperators
                             }
                         }
 
-                        var list = vmState.CreateList(resultLength1);
+                        var list = new GesVmValue[resultLength1];
                         var index1 = 0;
                         Array.Clear(removed1, 0, removed1.Length);
                         for (var i = 0; i < leftDice.Length; i++)
@@ -1285,10 +1306,10 @@ internal static class GesVmRegisterCollectionOperators
         }
 
         var length = Math.Min(aList.Length, bList.Length);
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++)
         {
-            var pair = new GesVmValueMapBuilder(vmState, 2);
+            var pair = new GesVmValueMapBuilder(2);
             pair.Set("left", aList[i]);
             pair.Set("right", bList[i]);
             list[i].SetMap(pair.ToMap());
@@ -1315,7 +1336,7 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(valueKeys, 0, valueKeyCount, StringComparer.Ordinal);
-                var values = vmState.CreateList(valueKeyCount);
+                var values = new GesVmValue[valueKeyCount];
                 for (var i = 0; i < valueKeyCount; i++) values[i].BindArguments(valueEntries[valueKeys[i]]);
                 vmState.SetList(dst, values);
                 break;
@@ -1343,7 +1364,7 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(keyKeys, 0, keyCount, StringComparer.Ordinal);
-                var keys = vmState.CreateList(keyCount);
+                var keys = new GesVmValue[keyCount];
                 for (var i = 0; i < keyCount; i++) keys[i].SetTag(keyKeys[i]);
                 vmState.SetList(dst, keys);
                 break;
@@ -1371,13 +1392,16 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 Array.Sort(entryKeys, 0, entryKeyCount, StringComparer.Ordinal);
-                var entries = vmState.CreateList(entryKeyCount);
+                var entries = new GesVmValue[entryKeyCount];
                 for (var i = 0; i < entryKeyCount; i++)
                 {
-                    var value = vmState.CreateNothing();
+                    var value = new GesVmValue();
+                    value.SetNothing();
                     value.BindArguments(entryEntries[entryKeys[i]]);
-                    var entry = new GesVmValueMapBuilder(vmState, 2);
-                    entry.Set("key", vmState.CreateTag(entryKeys[i]));
+                    var entry = new GesVmValueMapBuilder(2);
+                    var keyValue = new GesVmValue();
+                    keyValue.SetTag(entryKeys[i]);
+                    entry.Set("key", keyValue);
                     entry.Set("value", value);
                     entries[i].SetMap(entry.ToMap());
                 }
@@ -1407,7 +1431,8 @@ internal static class GesVmRegisterCollectionOperators
 
                 return false;
             case Stream when b.ObjectValue is IGesVmStream stream:
-                var item = vmState.CreateNothing();
+                var item = new GesVmValue();
+                item.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -1437,7 +1462,8 @@ internal static class GesVmRegisterCollectionOperators
                 return !key.StartsWith("_", StringComparison.Ordinal) && map.ContainsKey(key);
             case Vector or Point when b.ObjectValue is GesVmValueVectorPoint triplet:
                 if (!a.IsNumeric) return false;
-                var value = vmState.CreateNothing();
+                var value = new GesVmValue();
+                value.SetNothing();
                 value.SetFloat(triplet.X, b.Unit);
                 if (value.EqualsValue(a)) return true;
                 value.SetFloat(triplet.Y, b.Unit);

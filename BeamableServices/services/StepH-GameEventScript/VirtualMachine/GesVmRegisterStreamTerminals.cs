@@ -43,7 +43,8 @@ internal static class GesVmRegisterStreamTerminals
         }
 
         long count = 0;
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         try
         {
             while (stream.TryNext(ref item)) count++;
@@ -57,7 +58,8 @@ internal static class GesVmRegisterStreamTerminals
 
     internal static void GesVmSum(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
-        var result = vmState.CreateNothing();
+        var result = new GesVmValue();
+        result.SetNothing();
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
@@ -69,7 +71,8 @@ internal static class GesVmRegisterStreamTerminals
                 }
 
                 var listSum = list[0];
-                var listNext = vmState.CreateNothing();
+                var listNext = new GesVmValue();
+                listNext.SetNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], vmState);
@@ -89,7 +92,8 @@ internal static class GesVmRegisterStreamTerminals
                 }
 
                 var mapSum = values[0];
-                var mapNext = vmState.CreateNothing();
+                var mapNext = new GesVmValue();
+                mapNext.SetNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], vmState);
@@ -156,9 +160,13 @@ internal static class GesVmRegisterStreamTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
-        var sum = vmState.CreateNothing();
-        var next = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
+        var sum = new GesVmValue();
+        sum.SetNothing();
+        var next = new GesVmValue();
+        next.SetNothing();
         try
         {
             if (!stream.TryNext(ref sum))
@@ -184,7 +192,8 @@ internal static class GesVmRegisterStreamTerminals
 
     internal static void GesVmAverage(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
-        var result = vmState.CreateNothing();
+        var result = new GesVmValue();
+        result.SetNothing();
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
@@ -196,14 +205,17 @@ internal static class GesVmRegisterStreamTerminals
                 }
 
                 var listSum = list[0];
-                var listNext = vmState.CreateNothing();
+                var listNext = new GesVmValue();
+                listNext.SetNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], vmState);
                     listSum = listNext;
                 }
 
-                var countValue = vmState.CreateInteger(list.Length);
+                var countValue = new GesVmValue();
+
+                countValue.SetInteger(list.Length);
                 GesVmRegisterMath.GesVmDivide(ref listNext, in listSum, in countValue, vmState);
                 vmState.SetValue(destinationRegister, in listNext);
                 return;
@@ -218,14 +230,17 @@ internal static class GesVmRegisterStreamTerminals
                 }
 
                 var mapSum = values[0];
-                var mapNext = vmState.CreateNothing();
+                var mapNext = new GesVmValue();
+                mapNext.SetNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], vmState);
                     mapSum = mapNext;
                 }
 
-                var countValue = vmState.CreateInteger(values.Length);
+                var countValue = new GesVmValue();
+
+                countValue.SetInteger(values.Length);
                 GesVmRegisterMath.GesVmDivide(ref mapNext, in mapSum, in countValue, vmState);
                 vmState.SetValue(destinationRegister, in mapNext);
                 return;
@@ -290,9 +305,12 @@ internal static class GesVmRegisterStreamTerminals
         }
 
         long count = 0;
-        var item = vmState.CreateNothing();
-        var sum = vmState.CreateNothing();
-        var next = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
+        var sum = new GesVmValue();
+        sum.SetNothing();
+        var next = new GesVmValue();
+        next.SetNothing();
         try
         {
             while (stream.TryNext(ref item))
@@ -314,7 +332,9 @@ internal static class GesVmRegisterStreamTerminals
                 return;
             }
 
-            var countValue = vmState.CreateInteger(count);
+            var countValue = new GesVmValue();
+
+            countValue.SetInteger(count);
             GesVmRegisterMath.GesVmDivide(ref next, in sum, in countValue, vmState);
             result = next;
             vmState.SetValue(destinationRegister, in result);
@@ -344,8 +364,11 @@ internal static class GesVmRegisterStreamTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
-        var weightValue = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
+        var weightValue = new GesVmValue();
+        weightValue.SetNothing();
         var items = new GesVmValue[16];
         var weights = new double[16];
         var itemCount = 0;
@@ -420,8 +443,11 @@ internal static class GesVmRegisterStreamTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
-        var weightValue = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
+        var weightValue = new GesVmValue();
+        weightValue.SetNothing();
         var items = new GesVmValue[16];
         var weights = new double[16];
         var itemCount = 0;
@@ -460,7 +486,7 @@ internal static class GesVmRegisterStreamTerminals
             }
 
             var selectedCount = count < itemCount ? count : itemCount;
-            var list = vmState.CreateList(selectedCount);
+            var list = new GesVmValue[selectedCount];
             var remainingCount = itemCount;
             for (var target = 0; target < selectedCount && remainingCount > 0 && totalWeight > 0d; target++)
             {
@@ -504,10 +530,15 @@ internal static class GesVmRegisterStreamTerminals
             return;
         }
 
-        var item = vmState.CreateNothing();
-        var projection = vmState.CreateNothing();
-        var winner = vmState.CreateNothing();
-        var winnerProjection = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
+        var projection = new GesVmValue();
+        projection.SetNothing();
+        var winner = new GesVmValue();
+        winner.SetNothing();
+        var winnerProjection = new GesVmValue();
+        winnerProjection.SetNothing();
         var hasWinner = false;
         try
         {

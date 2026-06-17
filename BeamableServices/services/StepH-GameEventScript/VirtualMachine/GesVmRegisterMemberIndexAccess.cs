@@ -26,17 +26,18 @@ internal static class GesVmRegisterMemberIndexAccess
                         vmState.SetText(destinationRegister, message.Name);
                         return;
                     case "arguments":
-                        var entries = new GesVmValueMapBuilder(vmState, message.Arguments.Count);
+                        var entries = new GesVmValueMapBuilder(message.Arguments.Count);
                         foreach (var argumentKey in message.Arguments.Keys)
                         {
-                            var argumentValue = vmState.CreateNothing();
+                            var argumentValue = new GesVmValue();
+                            argumentValue.SetNothing();
                             argumentValue.BindArguments(message.Arguments[argumentKey]);
                             entries.Set(argumentKey, argumentValue);
                         }
                         vmState.SetMap(destinationRegister, entries.ToMap());
                         return;
                     case "tags":
-                        var tagList = vmState.CreateList(message.Tags.Count);
+                        var tagList = new GesVmValue[message.Tags.Count];
                         for (var i = 0; i < tagList.Length; i++) tagList[i].SetTag(message.Tags[i]);
                         vmState.SetList(destinationRegister, tagList);
                         return;
@@ -54,7 +55,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         vmState.SetText(destinationRegister, signature.Name);
                         return;
                     case "parameters":
-                        var list = vmState.CreateList(signature.Parameters.Count);
+                        var list = new GesVmValue[signature.Parameters.Count];
                         for (var i = 0; i < list.Length; i++) list[i].SetText(signature.Parameters[i]);
                         vmState.SetList(destinationRegister, list);
                         return;

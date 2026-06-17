@@ -78,7 +78,9 @@ internal static class GesVmRegisterCustomType
                 return;
             }
 
-            var converted = vmState.CreateNothing();
+            var converted = new GesVmValue();
+
+            converted.SetNothing();
             var source = vmState.RegisterStaged((ushort)argumentIndex);
             switch (parameter.TypeName)
             {

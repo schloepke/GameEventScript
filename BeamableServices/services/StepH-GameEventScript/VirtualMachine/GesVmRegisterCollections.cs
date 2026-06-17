@@ -6,7 +6,7 @@ internal static class GesVmRegisterCollections
 {
     internal static void GesVmCreateList(this GesVmState vmState, ushort destinationRegister)
     {
-        var list = vmState.CreateList(vmState.StageLength);
+        var list = new GesVmValue[vmState.StageLength];
         for (ushort i = 0; i < vmState.StageLength; i++) list[i] = vmState.RegisterStaged(i);
         vmState.SetList(destinationRegister, list);
     }
@@ -20,7 +20,7 @@ internal static class GesVmRegisterCollections
             return;
         }
 
-        var map = new GesVmValueMapBuilder(vmState, vmState.StageLength);
+        var map = new GesVmValueMapBuilder(vmState.StageLength);
         for (ushort i = 0; i < vmState.StageLength; i++)
         {
             map.Set(vmState.FetchStringByPointer(keyNames[i]), vmState.RegisterStaged(i));

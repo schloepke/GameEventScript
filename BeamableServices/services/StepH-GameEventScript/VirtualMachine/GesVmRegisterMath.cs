@@ -14,7 +14,8 @@ internal static class GesVmRegisterMath
 {
     internal static void GesVmAdd(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmAdd(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -62,7 +63,7 @@ internal static class GesVmRegisterMath
                 break;
             case List when b.Kind is not Nothing && a.ObjectValue is GesVmValue[] aList:
             {
-                var list = state.CreateList(aList.Length + 1);
+                var list = new GesVmValue[aList.Length + 1];
                 for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                 list[aList.Length] = b;
                 dst.SetList(list);
@@ -70,7 +71,7 @@ internal static class GesVmRegisterMath
             }
             case not List and not Nothing when b.Kind is List && b.ObjectValue is GesVmValue[] rightList:
             {
-                var list = state.CreateList(rightList.Length + 1);
+                var list = new GesVmValue[rightList.Length + 1];
                 list[0] = a;
                 for (var i = 0; i < rightList.Length; i++) list[i + 1] = rightList[i];
                 dst.SetList(list);
@@ -194,7 +195,12 @@ internal static class GesVmRegisterMath
                     for (var j = 0; j < removeCount; j++)
                     {
                         if (removed[j]) continue;
-                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? vmState.CreateInteger(removeDice[j]) : b;
+                        var candidate = removeList is not null ? removeList[j] : b;
+                        if (removeList is null && removeDice is not null)
+                        {
+                            candidate = new GesVmValue();
+                            candidate.SetInteger(removeDice[j]);
+                        }
                         if (!candidate.EqualsValue(in aList[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
@@ -204,7 +210,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = vmState.CreateList(resultLength);
+                var list = new GesVmValue[resultLength];
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aList.Length; i++)
@@ -213,7 +219,12 @@ internal static class GesVmRegisterMath
                     for (var j = 0; j < removeCount; j++)
                     {
                         if (removed[j]) continue;
-                        var candidate = removeList is not null ? removeList[j] : removeDice is not null ? vmState.CreateInteger(removeDice[j]) : b;
+                        var candidate = removeList is not null ? removeList[j] : b;
+                        if (removeList is null && removeDice is not null)
+                        {
+                            candidate = new GesVmValue();
+                            candidate.SetInteger(removeDice[j]);
+                        }
                         if (!candidate.EqualsValue(in aList[i])) continue;
                         removed[j] = true;
                         shouldRemove = true;
@@ -270,7 +281,8 @@ internal static class GesVmRegisterMath
                 var resultLength = 0;
                 for (var i = 0; i < aDice.Length; i++)
                 {
-                    var item = vmState.CreateInteger(aDice[i]);
+                    var item = new GesVmValue();
+                    item.SetInteger(aDice[i]);
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
@@ -283,12 +295,13 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = vmState.CreateList(resultLength);
+                var list = new GesVmValue[resultLength];
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aDice.Length; i++)
                 {
-                    var item = vmState.CreateInteger(aDice[i]);
+                    var item = new GesVmValue();
+                    item.SetInteger(aDice[i]);
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
                     {
@@ -374,7 +387,7 @@ internal static class GesVmRegisterMath
                     return;
                 }
 
-                var map = new GesVmValueMapBuilder(vmState, aMap.StorageLength);
+                var map = new GesVmValueMapBuilder(aMap.StorageLength);
                 if (bMap is not null)
                 {
                     var bi = 0;
@@ -583,7 +596,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmDivide(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmDivide(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -715,7 +729,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmPower(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmPower(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -825,7 +840,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmFloorDivide(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmFloorDivide(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -927,7 +943,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmModulo(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmModulo(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1052,7 +1069,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmRemainder(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmRemainder(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1145,7 +1163,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmMin(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmMin(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1368,7 +1387,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmMax(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmMax(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1591,7 +1611,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmNegate(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmNegate(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1632,7 +1653,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmAbs(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmAbs(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1675,7 +1697,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmClamp(this GesVmState vmState, ushort destinationRegister, in GesVmValue value, in GesVmValue min, in GesVmValue max)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmClamp(ref dst, in value, in min, in max, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1777,7 +1800,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmNaturalLog(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmNaturalLog(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1828,7 +1852,8 @@ internal static class GesVmRegisterMath
     }
     internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, in GesVmValue termSlot)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         GesVmTerm(ref dst, in source, in termSlot, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }

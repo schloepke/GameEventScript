@@ -9,7 +9,8 @@ internal static class GesVmRegisterTakeDrop
 {
     internal static void GesVmTakeFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case Series when source.ObjectValue is GameEventScriptSeriesValue series:
@@ -39,7 +40,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmOneRandom(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GesVmXoshiroRandom randomGenerator)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -68,7 +70,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmTakeRandom(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count, GesVmXoshiroRandom randomGenerator)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -95,7 +98,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmDropFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case Series when source.ObjectValue is GameEventScriptSeriesValue series:
@@ -125,7 +129,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmTakeLast(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -152,7 +157,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmDropLast(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -179,7 +185,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmTakeHighest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -206,7 +213,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmTakeLowest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -233,7 +241,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmDropHighest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -260,7 +269,8 @@ internal static class GesVmRegisterTakeDrop
     }
     internal static void GesVmDropLowest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
-        var dst = vmState.CreateNothing();
+        var dst = new GesVmValue();
+        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -293,7 +303,7 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var list = vmState.CreateList(count);
+        var list = new GesVmValue[count];
         for (var i = 0; i < count; i++) list[i].BindArguments(series.GetTerm(i));
         dst.SetList(list);
     }
@@ -306,7 +316,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var length = count < source.Length ? count : source.Length;
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++) list[i] = source[i];
         dst.SetList(list);
     }
@@ -320,7 +330,7 @@ internal static class GesVmRegisterTakeDrop
 
         var start = count < source.Length ? count : source.Length;
         var length = source.Length - start;
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++) list[i] = source[start + i];
         dst.SetList(list);
     }
@@ -334,7 +344,7 @@ internal static class GesVmRegisterTakeDrop
 
         var length = count < source.Length ? count : source.Length;
         var start = source.Length - length;
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++) list[i] = source[start + i];
         dst.SetList(list);
     }
@@ -347,7 +357,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var length = count < source.Length ? source.Length - count : 0;
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++) list[i] = source[i];
         dst.SetList(list);
     }
@@ -415,7 +425,7 @@ internal static class GesVmRegisterTakeDrop
 
         var length = count < source.Length ? count : source.Length;
         var selected = new bool[source.Length];
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++)
         {
             var best = -1;
@@ -455,7 +465,7 @@ internal static class GesVmRegisterTakeDrop
 
         var selected = new bool[source.Length];
         SelectExtremeSlots(source, source.Length, selected, selectedCount, highest);
-        var list = vmState.CreateList(source.Length - selectedCount);
+        var list = new GesVmValue[source.Length - selectedCount];
         var target = 0;
         for (var i = 0; i < source.Length; i++)
         {
@@ -495,7 +505,9 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
         var buffer = new GesVmValue[count < 16 ? count : 16];
         var itemCount = 0;
         try
@@ -515,7 +527,8 @@ internal static class GesVmRegisterTakeDrop
     }
     private static void DropFirstStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
     {
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         var skipped = 0;
         var buffer = new GesVmValue[16];
         var itemCount = 0;
@@ -544,7 +557,9 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -563,7 +578,7 @@ internal static class GesVmRegisterTakeDrop
                 return;
             }
 
-            var list = vmState.CreateList(length);
+            var list = new GesVmValue[length];
             Array.Copy(buffer, start, list, 0, length);
             dst.SetList(list);
         }
@@ -574,7 +589,8 @@ internal static class GesVmRegisterTakeDrop
     }
     private static void DropLastStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
     {
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -602,7 +618,9 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
         var buffer = new GesVmValue[count];
         var itemCount = 0;
         try
@@ -632,7 +650,8 @@ internal static class GesVmRegisterTakeDrop
     }
     private static void DropExtremeStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count, bool highest)
     {
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -658,7 +677,7 @@ internal static class GesVmRegisterTakeDrop
 
             var selected = new bool[itemCount];
             SelectExtremeSlots(buffer, itemCount, selected, selectedCount, highest);
-            var list = vmState.CreateList(itemCount - selectedCount);
+            var list = new GesVmValue[itemCount - selectedCount];
             var target = 0;
             for (var i = 0; i < itemCount; i++)
             {
@@ -701,8 +720,10 @@ internal static class GesVmRegisterTakeDrop
     }
     private static void OneRandomStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
     {
-        var item = vmState.CreateNothing();
-        var chosen = vmState.CreateNothing();
+        var item = new GesVmValue();
+        item.SetNothing();
+        var chosen = new GesVmValue();
+        chosen.SetNothing();
         var count = 0;
         try
         {
@@ -730,7 +751,7 @@ internal static class GesVmRegisterTakeDrop
 
         var length = count < source.Length ? count : source.Length;
         var indices = CreateShuffledPrefix(source.Length, length, randomGenerator);
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         for (var i = 0; i < length; i++) list[i] = source[indices[i]];
         dst.SetList(list);
     }
@@ -758,7 +779,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var length = count < sourceLength ? count : checked((int)sourceLength);
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         if (sourceLength <= int.MaxValue)
         {
             var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
@@ -808,7 +829,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var length = count < sourceLength ? count : checked((int)sourceLength);
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         if (sourceLength <= int.MaxValue)
         {
             var indices = CreateShuffledPrefix(checked((int)sourceLength), length, randomGenerator);
@@ -857,7 +878,9 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var item = vmState.CreateNothing();
+        var item = new GesVmValue();
+
+        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -876,7 +899,7 @@ internal static class GesVmRegisterTakeDrop
 
             var length = count < itemCount ? count : itemCount;
             var indices = CreateShuffledPrefix(itemCount, length, randomGenerator);
-            var list = vmState.CreateList(length);
+            var list = new GesVmValue[length];
             for (var i = 0; i < length; i++) list[i] = buffer[indices[i]];
             dst.SetList(list);
         }
@@ -928,7 +951,7 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var list = vmState.CreateList(length);
+        var list = new GesVmValue[length];
         Array.Copy(buffer, list, length);
         dst.SetList(list);
     }

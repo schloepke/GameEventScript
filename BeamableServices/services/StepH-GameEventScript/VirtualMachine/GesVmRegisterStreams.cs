@@ -13,7 +13,8 @@ internal static class GesVmRegisterStreams
 
     internal static void GesVmStreamNext(this GesVmState vmState, ushort destinationRegister, in GesVmValue stream, ushort noMoreAddress)
     {
-        var result = vmState.CreateNothing();
+        var result = new GesVmValue();
+        result.SetNothing();
         if (stream is { Kind: Stream, ObjectValue: IGesVmStream it } && it.TryNext(ref result))
         {
             vmState.SetValue(destinationRegister, in result);
@@ -43,7 +44,7 @@ internal static class GesVmRegisterStreams
         var captureSlots = vmState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
         var captures = captureSlots.Length == 0 ? [] : new GesVmValue[captureSlots.Length];
         for (var i = 0; i < captureSlots.Length; i++) captures[i] = vmState.Register(captureSlots[i]);
-        vmState.SetStream(destinationRegister, new GesVmTransformStream(vmState, source, evaluator, mapEntryAddress, helperSlot, captures, filter: false));
+        vmState.SetStream(destinationRegister, new GesVmTransformStream(source, evaluator, mapEntryAddress, helperSlot, captures, filter: false));
     }
 
     internal static void GesVmStreamFilter(this GesVmState vmState, ushort destinationRegister, in GesVmValue stream, ushort predicateEntryAddress, ushort helperSlot, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator)
@@ -57,6 +58,6 @@ internal static class GesVmRegisterStreams
         var captureSlots = vmState.Binary.Uint16ConstantTable.Resolve(captureSlotListIndex);
         var captures = captureSlots.Length == 0 ? [] : new GesVmValue[captureSlots.Length];
         for (var i = 0; i < captureSlots.Length; i++) captures[i] = vmState.Register(captureSlots[i]);
-        vmState.SetStream(destinationRegister, new GesVmTransformStream(vmState, source, evaluator, predicateEntryAddress, helperSlot, captures, filter: true));
+        vmState.SetStream(destinationRegister, new GesVmTransformStream(source, evaluator, predicateEntryAddress, helperSlot, captures, filter: true));
     }
 }

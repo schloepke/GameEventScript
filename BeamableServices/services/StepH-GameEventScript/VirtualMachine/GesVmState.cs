@@ -65,15 +65,14 @@ internal class GesVmState
     internal GesVmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
         MaxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
-        EmptyList = CreateRegisterArray(0);
+        EmptyList = [];
         Binary = binary;
         StringPool = BuildStringPool(binary.TextConstantTable);
         CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterSlots = CreateRegisterArray(InitialRegisterCapacity);
-        _overflowRegister.InitRegister(this);
+        RegisterSlots = new GesVmValue[InitialRegisterCapacity];
         RandomGenerators = new GesVmXoshiroRandom[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = new GesVmXoshiroRandom(0);
@@ -149,51 +148,8 @@ internal class GesVmState
     internal void SetMessage(ushort index, GameEventScriptMessage message) => Register(index).SetMessage(message);
     internal void SetSeries(ushort index, GameEventScriptSeriesValue series) => Register(index).SetSeries(series);
     internal void SetStream(ushort index, IGesVmStream value) => Register(index).SetStream(value);
-    internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder(this));
+    internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder());
     
-    internal GesVmValue[] CreateRegisterArray(int size)
-    {
-        var values = new GesVmValue[size];
-        for (var i = 0; i < values.Length; i++) values[i].InitRegister(this);
-        return values;
-    }
-    internal GesVmValue[] CreateList(int size) => size == 0 ? EmptyList : CreateRegisterArray(size);
-    internal GesVmValue CreateNothing()
-    {
-        var value = new GesVmValue();
-        value.InitRegister(this);
-        value.SetNothing();
-        return value;
-    }
-
-    internal GesVmValue CreateBoolean(bool boolean)
-    {
-        var value = new GesVmValue();
-        value.InitRegister(this);
-        value.SetBoolean(boolean);
-        return value;
-    }
-    internal GesVmValue CreateInteger(long integer)
-    {
-        var value = new GesVmValue();
-        value.InitRegister(this);
-        value.SetInteger(integer);
-        return value;
-    }
-    internal GesVmValue CreateText(string text)
-    {
-        var value = new GesVmValue();
-        value.InitRegister(this);
-        value.SetText(text);
-        return value;
-    }
-    internal GesVmValue CreateTag(string tag)
-    {
-        var value = new GesVmValue();
-        value.InitRegister(this);
-        value.SetTag(tag);
-        return value;
-    }
     internal bool PushRandom(GesVmXoshiroRandom randomGenerator)
     {
         if (RandomGeneratorsPointer >= RandomGenerators.Length) return RaiseError("Random generator stack overflow");
@@ -364,10 +320,6 @@ internal class GesVmState
         var expanded = new GesVmValue[newLength];
         Array.Copy(RegisterSlots, expanded, oldLength);
         RegisterSlots = expanded;
-        for (var i = oldLength; i < RegisterSlots.Length; i++)
-        {
-            RegisterSlots[i].InitRegister(this);
-        }
 
         return true;
     }

@@ -6,7 +6,6 @@ internal sealed class GesVmValueMap
 {
     internal const string HiddenRecordTypeField = "__type";
 
-    private readonly GesVmState _ownerState;
     private readonly string[] _keys;
     private readonly GesVmValue[] _values;
     private readonly int _length;
@@ -14,11 +13,10 @@ internal sealed class GesVmValueMap
     private GesVmValue[]? _valueList;
     private GesVmValue[]? _entries;
 
-    internal GesVmValueMap(GesVmState ownerState, string[] keys, GesVmValue[] values, int count)
+    internal GesVmValueMap(string[] keys, GesVmValue[] values, int count)
     {
-        _ownerState = ownerState;
         _keys = new string[count];
-        _values = ownerState.CreateRegisterArray(count);
+        _values = new GesVmValue[count];
 
         Array.Copy(keys, _keys, count);
         Array.Copy(values, _values, count);
@@ -78,7 +76,7 @@ internal sealed class GesVmValueMap
 
     private GesVmValue[] CreateListOfKeys()
     {
-        var list = _ownerState.CreateList(_length);
+        var list = new GesVmValue[_length];
         var i = 0;
         for (var index = 0; index < _keys.Length; index++)
         {
@@ -91,7 +89,7 @@ internal sealed class GesVmValueMap
 
     private GesVmValue[] CreateListOfValues()
     {
-        var list = _ownerState.CreateList(_length);
+        var list = new GesVmValue[_length];
         var i = 0;
         for (var index = 0; index < _keys.Length; index++)
         {
@@ -103,14 +101,16 @@ internal sealed class GesVmValueMap
 
     private GesVmValue[] CreateListOfEntries()
     {
-        var list = _ownerState.CreateList(_length);
+        var list = new GesVmValue[_length];
         var i = 0;
         for (var index = 0; index < _keys.Length; index++)
         {
             var key = _keys[index];
             if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-            var entry = new GesVmValueMapBuilder(_ownerState, 2);
-            entry.Set("key", _ownerState.CreateTag(key));
+            var entry = new GesVmValueMapBuilder(2);
+            var keyValue = new GesVmValue();
+            keyValue.SetTag(key);
+            entry.Set("key", keyValue);
             entry.Set("value", _values[index]);
             list[i++].SetMap(entry.ToMap());
         }
@@ -122,17 +122,15 @@ internal sealed class GesVmValueMap
 
 internal sealed class GesVmValueMapBuilder
 {
-    private readonly GesVmState _ownerState;
     private string[] _keys;
     private GesVmValue[] _values;
     private int _count;
 
-    internal GesVmValueMapBuilder(GesVmState ownerState, int capacity = 0)
+    internal GesVmValueMapBuilder(int capacity = 0)
     {
-        _ownerState = ownerState;
         var size = capacity <= 0 ? 4 : capacity;
         _keys = new string[size];
-        _values = ownerState.CreateRegisterArray(size);
+        _values = new GesVmValue[size];
     }
 
     internal int Count => _count;
@@ -159,7 +157,7 @@ internal sealed class GesVmValueMapBuilder
         if (_count == _keys.Length)
         {
             var nextKeys = new string[_keys.Length << 1];
-            var nextValues = _ownerState.CreateRegisterArray(_values.Length << 1);
+            var nextValues = new GesVmValue[_values.Length << 1];
             Array.Copy(_keys, nextKeys, _keys.Length);
             Array.Copy(_values, nextValues, _values.Length);
             _keys = nextKeys;
@@ -171,5 +169,5 @@ internal sealed class GesVmValueMapBuilder
         _count++;
     }
 
-    internal GesVmValueMap ToMap() => new(_ownerState, _keys, _values, _count);
+    internal GesVmValueMap ToMap() => new(_keys, _values, _count);
 }

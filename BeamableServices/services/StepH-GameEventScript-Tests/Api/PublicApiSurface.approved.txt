@@ -86,7 +86,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitDegree = 1
   enum-field UnitMeter = 2
   enum-field UnitSecond = 3
-  enum-field UnitNothing = 255
+  enum-field InvalidUnit = 255
 static class StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits
   method static System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static System.Boolean IsQuantityTypeName(System.String typeName)
@@ -258,8 +258,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field FullHouse = 2
   enum-field Straight = 3
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
-  enum-field Invalid = 0
-  enum-field Nothing = 1
+  enum-field Nothing = 0
   enum-field Boolean = 2
   enum-field Integer = 3
   enum-field Float = 4

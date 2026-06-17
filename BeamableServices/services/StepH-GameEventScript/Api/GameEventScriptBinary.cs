@@ -138,7 +138,7 @@ public enum GameEventScriptBytecodeInstructionUnit : byte
     UnitMeter = 2,
     UnitSecond = 3,
 
-    UnitNothing = 255 // Special non-unit type for nothing / void helping to evaluate unions to nothing 
+    UnitInvalid = 255 // Sentinel for invalid or unsupported unit input.
 }
 
 [Flags]
@@ -150,8 +150,7 @@ public enum GameEventScriptInstructionFlag : byte
 
 public enum GameEventScriptBytecodeTypeKind : byte
 {
-    Invalid = 0x00,
-    Nothing = 0x01,
+    Nothing = 0x00,
     Boolean = 0x02,
     Integer = 0x03,
     Float = 0x04,

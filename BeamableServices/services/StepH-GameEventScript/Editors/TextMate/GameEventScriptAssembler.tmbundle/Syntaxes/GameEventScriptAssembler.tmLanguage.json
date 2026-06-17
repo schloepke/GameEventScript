@@ -128,7 +128,7 @@
           "match": "\\b(unit)(:(?:none|degree|meter|second))\\b"
         },
         {
-          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|Stream|Series|Custom|Invalid)\\b",
+          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|Stream|Series|Custom)\\b",
           "name": "support.type.bytecode.gameeventscript.assembler"
         },
         {

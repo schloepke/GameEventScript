@@ -59,7 +59,7 @@ internal struct GesVmValue
     internal void SetNothing()
     {
         Kind = Nothing;
-        Unit = UnitNothing;
+        Unit = UnitNone;
         Flags = None;
         IntegerValue = 0;
         ObjectValue = null;

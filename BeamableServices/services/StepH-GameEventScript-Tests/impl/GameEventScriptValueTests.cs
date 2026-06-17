@@ -90,14 +90,14 @@ public class GameEventScriptValueScenarios
     [TestMethod]
     public void ValuesStoreExplicitUnitSentinels()
     {
-        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNothing, GesNothing().Unit);
+        Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNone, GesNothing().Unit);
         Assert.IsFalse(GesNothing().HasUnit);
 
         var unitlessNumber = GesFloat(1d, null);
         Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNone, unitlessNumber.Unit);
         Assert.IsFalse(unitlessNumber.HasUnit);
 
-        var unitlessVector = GesVector(1d, 2d, 3d, GameEventScriptBytecodeInstructionUnit.UnitNothing);
+        var unitlessVector = GesVector(1d, 2d, 3d, GameEventScriptBytecodeInstructionUnit.UnitInvalid);
         Assert.AreEqual(GameEventScriptBytecodeInstructionUnit.UnitNone, unitlessVector.Unit);
         Assert.IsFalse(unitlessVector.HasUnit);
 

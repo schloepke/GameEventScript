@@ -1990,10 +1990,10 @@ internal static class GesCompiler
                 "handler" => GameEventScriptBytecodeTypeKind.Handler,
                 "map" => GameEventScriptBytecodeTypeKind.Map,
                 "dice" => GameEventScriptBytecodeTypeKind.Dice,
-                _ => GameEventScriptBytecodeTypeKind.Invalid
+                _ => 0
             };
 
-            return typeKind != GameEventScriptBytecodeTypeKind.Invalid;
+            return typeName == "nothing" || typeKind != 0;
         }
 
         private IReadOnlyList<StreamCapture> ResolveStreamCaptures(ExpressionNode expression, string itemIdentifier, LoweringContext context)

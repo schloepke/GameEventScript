@@ -920,7 +920,7 @@ internal readonly struct GesOperand
         string? text = null,
         IReadOnlyList<GesRegisterRef>? registerList = null,
         IReadOnlyList<string>? textList = null,
-        GameEventScriptBytecodeTypeKind typeKind = GameEventScriptBytecodeTypeKind.Invalid,
+        GameEventScriptBytecodeTypeKind typeKind = GameEventScriptBytecodeTypeKind.Nothing,
         ushort uShort = 0,
         short @short = 0)
     {

@@ -132,7 +132,6 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
 
             case Custom:
-            case Invalid:
                 dst.SetNothing();
                 return;
             default:
@@ -236,7 +235,7 @@ internal static class GesVmRegisterTypeCastCheck
         {
             Nothing => xSlot.IsNothing,
             Map => xSlot.Kind is Map or Custom,
-            Invalid or Custom => false,
+            Custom => false,
             _ => xSlot.IsNotNothing && xSlot.Kind == type
         });
     }

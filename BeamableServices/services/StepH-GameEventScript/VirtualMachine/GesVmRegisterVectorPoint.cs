@@ -1,5 +1,6 @@
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
@@ -45,32 +46,47 @@ internal static class GesVmRegisterVectorPoint
         }
 
         ushort i = 0;
-        var unitX = UnitNothing;
-        var unitY = UnitNothing;
-        var unitZ = UnitNothing;
-        var x = start == 0 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
-        var y = start <= 1 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
-        var z = start <= 2 && i < vmState.StageLength ? vmState.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
+        GameEventScriptBytecodeInstructionUnit? unitX = null;
+        GameEventScriptBytecodeInstructionUnit? unitY = null;
+        GameEventScriptBytecodeInstructionUnit? unitZ = null;
+        var x = 0.0d;
+        var y = 0.0d;
+        var z = 0.0d;
+        if (start == 0 && i < vmState.StageLength)
+        {
+            x = vmState.RegisterStaged(i++).AsNumericWithUnit(out var readUnitX);
+            unitX = readUnitX;
+        }
+        if (start <= 1 && i < vmState.StageLength)
+        {
+            y = vmState.RegisterStaged(i++).AsNumericWithUnit(out var readUnitY);
+            unitY = readUnitY;
+        }
+        if (start <= 2 && i < vmState.StageLength)
+        {
+            z = vmState.RegisterStaged(i).AsNumericWithUnit(out var readUnitZ);
+            unitZ = readUnitZ;
+        }
         var unit = unitX;
-        if (unitX is UnitNothing)
+        if (!unitX.HasValue)
         {
-            if (unitY is UnitNothing) unit = unitZ is UnitNothing ? UnitNone : unitZ;
-            else unit = unitZ is UnitNothing || unitY == unitZ ? unitY : UnitNothing;
+            if (!unitY.HasValue) unit = unitZ ?? UnitNone;
+            else unit = !unitZ.HasValue || unitY == unitZ ? unitY : null;
         }
-        else if (unitY is not UnitNothing)
+        else if (unitY.HasValue)
         {
-            if(unitX != unitY || (unitZ is not UnitNothing && unitX != unitZ)) unit = UnitNothing;
-        } else if (unitZ is not UnitNothing && unitX != unitZ)
+            if(unitX != unitY || (unitZ.HasValue && unitX != unitZ)) unit = null;
+        } else if (unitZ.HasValue && unitX != unitZ)
         {
-            unit = UnitNothing;
+            unit = null;
         }
-        if (unit is UnitNothing || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
+        if (!unit.HasValue || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
             vmState.SetNothing(destinationRegister);
         }
         else
         {
-            vmState.SetVector(destinationRegister, x, y, z, unit);
+            vmState.SetVector(destinationRegister, x, y, z, unit.Value);
         }
     }
     internal static void GesVmCreatePoint(this GesVmState vmState, ushort destinationRegister, short start)
@@ -113,32 +129,47 @@ internal static class GesVmRegisterVectorPoint
         }
 
         ushort i = 0;
-        var unitX = UnitNothing;
-        var unitY = UnitNothing;
-        var unitZ = UnitNothing;
-        var x = start == 0 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitX) : 0.0d;
-        var y = start <= 1 && i < vmState.StageLength ? vmState.RegisterStaged(i++).AsNumericWithUnit(out unitY) : 0.0d;
-        var z = start <= 2 && i < vmState.StageLength ? vmState.RegisterStaged(i).AsNumericWithUnit(out unitZ) : 0.0d;
+        GameEventScriptBytecodeInstructionUnit? unitX = null;
+        GameEventScriptBytecodeInstructionUnit? unitY = null;
+        GameEventScriptBytecodeInstructionUnit? unitZ = null;
+        var x = 0.0d;
+        var y = 0.0d;
+        var z = 0.0d;
+        if (start == 0 && i < vmState.StageLength)
+        {
+            x = vmState.RegisterStaged(i++).AsNumericWithUnit(out var readUnitX);
+            unitX = readUnitX;
+        }
+        if (start <= 1 && i < vmState.StageLength)
+        {
+            y = vmState.RegisterStaged(i++).AsNumericWithUnit(out var readUnitY);
+            unitY = readUnitY;
+        }
+        if (start <= 2 && i < vmState.StageLength)
+        {
+            z = vmState.RegisterStaged(i).AsNumericWithUnit(out var readUnitZ);
+            unitZ = readUnitZ;
+        }
         var unit = unitX;
-        if (unitX is UnitNothing)
+        if (!unitX.HasValue)
         {
-            if (unitY is UnitNothing) unit = unitZ is UnitNothing ? UnitNone : unitZ;
-            else unit = unitZ is UnitNothing || unitY == unitZ ? unitY : UnitNothing;
+            if (!unitY.HasValue) unit = unitZ ?? UnitNone;
+            else unit = !unitZ.HasValue || unitY == unitZ ? unitY : null;
         }
-        else if (unitY is not UnitNothing)
+        else if (unitY.HasValue)
         {
-            if(unitX != unitY || (unitZ is not UnitNothing && unitX != unitZ)) unit = UnitNothing;
-        } else if (unitZ is not UnitNothing && unitX != unitZ)
+            if(unitX != unitY || (unitZ.HasValue && unitX != unitZ)) unit = null;
+        } else if (unitZ.HasValue && unitX != unitZ)
         {
-            unit = UnitNothing;
+            unit = null;
         }
-        if (unit is UnitNothing || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
+        if (!unit.HasValue || double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
         {
             vmState.SetNothing(destinationRegister);
         }
         else
         {
-            vmState.SetPoint(destinationRegister, x, y, z, unit);
+            vmState.SetPoint(destinationRegister, x, y, z, unit.Value);
         }
     }
     

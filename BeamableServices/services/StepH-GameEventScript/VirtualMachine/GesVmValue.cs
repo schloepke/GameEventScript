@@ -367,17 +367,6 @@ internal struct GesVmValue
         _ => ReferenceEquals(ObjectValue, other.ObjectValue)
     };
     
-    internal bool TryGetInteger(out long value)
-    {
-        if (Kind != Integer)
-        {
-            value = 0;
-            return false;
-        }
-
-        value = IntegerValue;
-        return true;
-    }
     internal bool TryCreateStream(out IGesVmStream stream)
     {
         switch (Kind)

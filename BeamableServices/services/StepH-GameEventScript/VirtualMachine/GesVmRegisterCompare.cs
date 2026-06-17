@@ -7,10 +7,10 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCompare
 {
-    internal static void GesVmEqual(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing) state.SetNothing(destinationRegister);
-        else state.SetBoolean(destinationRegister, a.Equ(in b));
+        if (a.Kind is Nothing || b.Kind is Nothing) vmState.SetNothing(destinationRegister);
+        else vmState.SetBoolean(destinationRegister, a.Equ(in b));
     }
     private static bool Equ(this in GesVmValue a, in GesVmValue b)
     {
@@ -86,128 +86,128 @@ internal static class GesVmRegisterCompare
         foreach (var v in arr) sum += v;
         return sum;
     }
-    internal static void GesVmNotEqual(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmNotEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
-        if (a.Kind is Nothing || b.Kind is Nothing) state.SetNothing(destinationRegister);
-        else state.SetBoolean(destinationRegister, !a.Equ(in b));
+        if (a.Kind is Nothing || b.Kind is Nothing) vmState.SetNothing(destinationRegister);
+        else vmState.SetBoolean(destinationRegister, !a.Equ(in b));
     }
-    internal static void GesVmLess(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmLess(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Nothing:
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             case Integer when b.Kind is Integer:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue < b.IntegerValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue < b.IntegerValue);
                 return;
             case Float when b.Kind is Float:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue < b.FloatValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue < b.FloatValue);
                 return;
             default:
                 if (b.Kind is Nothing)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 if (a.IsNumeric && b.IsNumeric)
                 {
-                    state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric < b.AsNumeric);
+                    vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric < b.AsNumeric);
                     return;
                 }
 
-                state.SetBoolean(destinationRegister, false);
+                vmState.SetBoolean(destinationRegister, false);
                 return;
         }
     }
-    internal static void GesVmGreater(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmGreater(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Nothing:
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             case Integer when b.Kind is Integer:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue > b.IntegerValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue > b.IntegerValue);
                 return;
             case Float when b.Kind is Float:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue > b.FloatValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue > b.FloatValue);
                 return;
             default:
                 if (b.Kind is Nothing)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 if (a.IsNumeric && b.IsNumeric)
                 {
-                    state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric > b.AsNumeric);
+                    vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric > b.AsNumeric);
                     return;
                 }
 
-                state.SetBoolean(destinationRegister, false);
+                vmState.SetBoolean(destinationRegister, false);
                 return;
         }
     }
-    internal static void GesVmLessOrEqual(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmLessOrEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Nothing:
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             case Integer when b.Kind is Integer:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue <= b.IntegerValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue <= b.IntegerValue);
                 return;
             case Float when b.Kind is Float:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue <= b.FloatValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue <= b.FloatValue);
                 return;
             default:
                 if (b.Kind is Nothing)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 if (a.IsNumeric && b.IsNumeric)
                 {
-                    state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric <= b.AsNumeric);
+                    vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric <= b.AsNumeric);
                     return;
                 }
 
-                state.SetBoolean(destinationRegister, false);
+                vmState.SetBoolean(destinationRegister, false);
                 return;
         }
     }
-    internal static void GesVmGreaterOrEqual(this GesVmState state, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmGreaterOrEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)
         {
             case Nothing:
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             case Integer when b.Kind is Integer:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue >= b.IntegerValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.IntegerValue >= b.IntegerValue);
                 return;
             case Float when b.Kind is Float:
-                state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue >= b.FloatValue);
+                vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.FloatValue >= b.FloatValue);
                 return;
             default:
                 if (b.Kind is Nothing)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
 
                 if (a.IsNumeric && b.IsNumeric)
                 {
-                    state.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric >= b.AsNumeric);
+                    vmState.SetBoolean(destinationRegister, a.Unit == b.Unit && a.AsNumeric >= b.AsNumeric);
                     return;
                 }
 
-                state.SetBoolean(destinationRegister, false);
+                vmState.SetBoolean(destinationRegister, false);
                 return;
         }
     }

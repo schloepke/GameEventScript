@@ -9,11 +9,11 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCustomType
 {
-    internal static void GesVmCreateExternalType(this GesVmState state, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal static void GesVmCreateExternalType(this GesVmState vmState, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         var found = false;
         GameEventScriptBinaryBindEntry bind = default;
-        foreach (var entry in state.Binary.BindTable.Entries)
+        foreach (var entry in vmState.Binary.BindTable.Entries)
         {
             if (entry.Kind != GameEventScriptBinaryBindKind.ExternalType) continue;
             if (entry.Id != externalTypeConstructorBindId) continue;
@@ -24,39 +24,39 @@ internal static class GesVmRegisterCustomType
 
         if (!found)
         {
-            state.SetNothing(destinationRegister);
-            state.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
+            vmState.SetNothing(destinationRegister);
+            vmState.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
             return;
         }
 
-        var argumentNames = state.FetchUInt16SliceTableByPointer(argumentNamesIndex);
-        if (argumentNames.Length != state.StageLength || argumentNames.Length != bind.ArgumentNames.Count)
+        var argumentNames = vmState.FetchUInt16SliceTableByPointer(argumentNamesIndex);
+        if (argumentNames.Length != vmState.StageLength || argumentNames.Length != bind.ArgumentNames.Count)
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
         var labels = argumentNames.Length == 0 ? [] : new string[argumentNames.Length];
         for (var labelIndex = 0; labelIndex < labels.Length; labelIndex++)
         {
-            labels[labelIndex] = state.FetchStringByPointer(argumentNames[labelIndex]);
+            labels[labelIndex] = vmState.FetchStringByPointer(argumentNames[labelIndex]);
             if (!string.Equals(labels[labelIndex], GameEventScriptMessageSignature.UnlabeledParameterName, System.StringComparison.Ordinal)) continue;
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var typeName = state.FetchStringByPointer(bind.Name);
+        var typeName = vmState.FetchStringByPointer(bind.Name);
         var reference = new GameEventScriptExternalTypeConstructorReference(typeName, labels);
         if (!typeRegistry.TryResolve(reference, out var constructor))
         {
-            state.SetNothing(destinationRegister);
-            state.RaiseError($"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{externalTypeConstructorBindId}'.");
+            vmState.SetNothing(destinationRegister);
+            vmState.RaiseError($"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{externalTypeConstructorBindId}'.");
             return;
         }
 
         if (constructor.Definition.Parameters.Count != labels.Length)
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
@@ -74,67 +74,67 @@ internal static class GesVmRegisterCustomType
 
             if (argumentIndex < 0)
             {
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             }
 
-            var converted = state.CreateNothing();
-            var source = state.RegisterStaged((ushort)argumentIndex);
+            var converted = vmState.CreateNothing();
+            var source = vmState.RegisterStaged((ushort)argumentIndex);
             switch (parameter.TypeName)
             {
                 case "nothing":
                     converted.SetNothing();
                     break;
                 case "boolean":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Boolean, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Boolean, vmState, destinationRegister);
                     break;
                 case "number":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Float, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Float, vmState, destinationRegister);
                     break;
                 case "numeric":
-                    GesVmRegisterTypeCastCheck.GesVmCastNumeric(ref converted, in source, state);
+                    GesVmRegisterTypeCastCheck.GesVmCastNumeric(ref converted, in source, vmState);
                     break;
                 case "percentage":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Percentage, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Percentage, vmState, destinationRegister);
                     break;
                 case "tag":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Tag, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Tag, vmState, destinationRegister);
                     break;
                 case "text":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Text, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Text, vmState, destinationRegister);
                     break;
                 case "vector":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Vector, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Vector, vmState, destinationRegister);
                     break;
                 case "point":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Point, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Point, vmState, destinationRegister);
                     break;
                 case "range":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Range, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Range, vmState, destinationRegister);
                     break;
                 case "message":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Message, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Message, vmState, destinationRegister);
                     break;
                 case "handler":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Handler, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Handler, vmState, destinationRegister);
                     break;
                 case "list":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, List, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, List, vmState, destinationRegister);
                     break;
                 case "map":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Map, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Map, vmState, destinationRegister);
                     break;
                 case "dice":
-                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Dice, state, destinationRegister);
+                    GesVmRegisterTypeCastCheck.GesVmCast(ref converted, in source, Dice, vmState, destinationRegister);
                     break;
                 case "degree":
-                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitDegree, state);
+                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitDegree, vmState);
                     break;
                 case "meter":
-                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitMeter, state);
+                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitMeter, vmState);
                     break;
                 case "second":
-                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitSecond, state);
+                    GesVmRegisterTypeCastCheck.GesVmCastUnit(ref converted, in source, UnitSecond, vmState);
                     break;
                 default:
                     converted.SetNothing();
@@ -143,7 +143,7 @@ internal static class GesVmRegisterCustomType
 
             if (converted.IsNothing)
             {
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             }
 
@@ -152,6 +152,6 @@ internal static class GesVmRegisterCustomType
                 parameter);
         }
 
-        state.BindArguments(destinationRegister, constructor.Invoke(arguments));
+        vmState.BindArguments(destinationRegister, constructor.Invoke(arguments));
     }
 }

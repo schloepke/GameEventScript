@@ -6,16 +6,16 @@ internal static class GesVmRegisterDice
 {
     private static readonly int[] EmptyDice = [];
 
-    internal static void GesVmCreateDice(this GesVmState state, ushort destinationRegister, short count, short sides, GameEventScriptSession session)
+    internal static void GesVmCreateDice(this GesVmState vmState, ushort destinationRegister, short count, short sides, GameEventScriptSession session)
     {
         if (count <= 0 || sides <= 0 || !session.RuntimeBudget.TryCheckDice(count, sides))
         {
-            state.SetDice(destinationRegister, EmptyDice);
+            vmState.SetDice(destinationRegister, EmptyDice);
             return;
         }
 
         var dices = new int[count];
-        for (var i = 0; i < count; i++) dices[i] = state.RandomGenerator.NextInclusiveInt(1, sides);
-        state.SetDice(destinationRegister, dices);
+        for (var i = 0; i < count; i++) dices[i] = vmState.RandomGenerator.NextInclusiveInt(1, sides);
+        vmState.SetDice(destinationRegister, dices);
     }
 }

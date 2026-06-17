@@ -7,16 +7,16 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterPatterns
 {
-    internal static void GesVmHasPattern(this GesVmState state, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmHasPattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var result = state.CreateNothing();
+        var result = vmState.CreateNothing();
         if (pattern == CountFace)
         {
-            var face = state.CreateNothing();
-            var unused = state.CreateNothing();
+            var face = vmState.CreateNothing();
+            var unused = vmState.CreateNothing();
             if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
             {
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             }
 
@@ -24,27 +24,27 @@ internal static class GesVmRegisterPatterns
             {
                 case Dice when source.ObjectValue is int[] dice:
                     HasPatternDiceFace(ref result, dice, ref face, count);
-                    state.SetValue(destinationRegister, in result);
+                    vmState.SetValue(destinationRegister, in result);
                     return;
                 case List when source.ObjectValue is GesVmValue[] list:
                     HasPatternListFace(ref result, list, ref face, count);
-                    state.SetValue(destinationRegister, in result);
+                    vmState.SetValue(destinationRegister, in result);
                     return;
                 case Stream when source.ObjectValue is IGesVmStream stream:
                     if (!stream.IsPatternSequence)
                     {
-                        state.SetBoolean(destinationRegister, false);
+                        vmState.SetBoolean(destinationRegister, false);
                         return;
                     }
-                    if (!ReadStream(state, stream, out var items, out var length)) return;
+                    if (!ReadStream(vmState, stream, out var items, out var length)) return;
                     HasPatternBufferFace(ref result, items, length, ref face, count);
-                    state.SetValue(destinationRegister, in result);
+                    vmState.SetValue(destinationRegister, in result);
                     return;
                 case Series:
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 default:
-                    state.SetBoolean(destinationRegister, false);
+                    vmState.SetBoolean(destinationRegister, false);
                     return;
             }
         }
@@ -52,78 +52,78 @@ internal static class GesVmRegisterPatterns
         switch (source.Kind)
         {
             case Dice when source.ObjectValue is int[] dice:
-                HasPatternDice(state, ref result, dice, pattern, count, faceEntryAddress, evaluator);
-                state.SetValue(destinationRegister, in result);
+                HasPatternDice(vmState, ref result, dice, pattern, count, faceEntryAddress, evaluator);
+                vmState.SetValue(destinationRegister, in result);
                 return;
             case List when source.ObjectValue is GesVmValue[] list:
-                HasPatternList(state, ref result, list, pattern, count, faceEntryAddress, evaluator);
-                state.SetValue(destinationRegister, in result);
+                HasPatternList(vmState, ref result, list, pattern, count, faceEntryAddress, evaluator);
+                vmState.SetValue(destinationRegister, in result);
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
                 if (!stream.IsPatternSequence)
                 {
-                    state.SetBoolean(destinationRegister, false);
+                    vmState.SetBoolean(destinationRegister, false);
                     return;
                 }
-                if (!ReadStream(state, stream, out var items, out var length)) return;
-                HasPatternBuffer(state, ref result, items, length, pattern, count, faceEntryAddress, evaluator);
-                state.SetValue(destinationRegister, in result);
+                if (!ReadStream(vmState, stream, out var items, out var length)) return;
+                HasPatternBuffer(vmState, ref result, items, length, pattern, count, faceEntryAddress, evaluator);
+                vmState.SetValue(destinationRegister, in result);
                 return;
             case Series:
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             default:
-                state.SetBoolean(destinationRegister, false);
+                vmState.SetBoolean(destinationRegister, false);
                 return;
         }
     }
 
-    internal static void GesVmTakePattern(this GesVmState state, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    internal static void GesVmTakePattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var result = state.CreateNothing();
+        var result = vmState.CreateNothing();
         if (pattern == CountFace)
         {
-            var face = state.CreateNothing();
-            var unused = state.CreateNothing();
+            var face = vmState.CreateNothing();
+            var unused = vmState.CreateNothing();
             if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
             {
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
             }
 
             switch (source.Kind)
             {
                 case Dice when source.ObjectValue is int[] dice:
-                    var buffer = state.CreateList(dice.Length);
+                    var buffer = vmState.CreateList(dice.Length);
                     for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
                     var found = 0;
                     for (var i = 0; i < buffer.Length; i++) if (buffer[i].EqualsValue(ref face)) found++;
                     if (found < count) result.SetNothing();
-                    else SetTakenByFace(state, ref result, buffer, buffer.Length, ref face, count, diceResult: true);
-                    state.SetValue(destinationRegister, in result);
+                    else SetTakenByFace(vmState, ref result, buffer, buffer.Length, ref face, count, diceResult: true);
+                    vmState.SetValue(destinationRegister, in result);
                     return;
                 case List when source.ObjectValue is GesVmValue[] list:
                     var matches = 0;
                     for (var i = 0; i < list.Length; i++) if (list[i].EqualsValue(ref face)) matches++;
                     if (matches < count) result.SetNothing();
-                    else SetTakenByFace(state, ref result, list, list.Length, ref face, count, diceResult: false);
-                    state.SetValue(destinationRegister, in result);
+                    else SetTakenByFace(vmState, ref result, list, list.Length, ref face, count, diceResult: false);
+                    vmState.SetValue(destinationRegister, in result);
                     return;
                 case Stream when source.ObjectValue is IGesVmStream stream:
                     if (!stream.IsPatternSequence)
                     {
-                        state.SetNothing(destinationRegister);
+                        vmState.SetNothing(destinationRegister);
                         return;
                     }
-                    if (!ReadStream(state, stream, out var items, out var length)) return;
+                    if (!ReadStream(vmState, stream, out var items, out var length)) return;
                     var streamMatches = 0;
                     for (var i = 0; i < length; i++) if (items[i].EqualsValue(ref face)) streamMatches++;
                     if (streamMatches < count) result.SetNothing();
-                    else SetTakenByFace(state, ref result, items, length, ref face, count, diceResult: false);
-                    state.SetValue(destinationRegister, in result);
+                    else SetTakenByFace(vmState, ref result, items, length, ref face, count, diceResult: false);
+                    vmState.SetValue(destinationRegister, in result);
                     return;
                 default:
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
             }
         }
@@ -131,30 +131,30 @@ internal static class GesVmRegisterPatterns
         switch (source.Kind)
         {
             case Dice when source.ObjectValue is int[] dice:
-                TakePatternDice(state, ref result, dice, pattern, count, faceEntryAddress, evaluator);
-                state.SetValue(destinationRegister, in result);
+                TakePatternDice(vmState, ref result, dice, pattern, count, faceEntryAddress, evaluator);
+                vmState.SetValue(destinationRegister, in result);
                 return;
             case List when source.ObjectValue is GesVmValue[] list:
-                TakePatternList(state, ref result, list, pattern, count, faceEntryAddress, evaluator);
-                state.SetValue(destinationRegister, in result);
+                TakePatternList(vmState, ref result, list, pattern, count, faceEntryAddress, evaluator);
+                vmState.SetValue(destinationRegister, in result);
                 return;
             case Stream when source.ObjectValue is IGesVmStream stream:
                 if (!stream.IsPatternSequence)
                 {
-                    state.SetNothing(destinationRegister);
+                    vmState.SetNothing(destinationRegister);
                     return;
                 }
-                if (!ReadStream(state, stream, out var items, out var length)) return;
-                TakePatternBuffer(state, ref result, items, length, pattern, count, faceEntryAddress, evaluator, diceResult: false);
-                state.SetValue(destinationRegister, in result);
+                if (!ReadStream(vmState, stream, out var items, out var length)) return;
+                TakePatternBuffer(vmState, ref result, items, length, pattern, count, faceEntryAddress, evaluator, diceResult: false);
+                vmState.SetValue(destinationRegister, in result);
                 return;
             default:
-                state.SetNothing(destinationRegister);
+                vmState.SetNothing(destinationRegister);
                 return;
         }
     }
 
-    private static void HasPatternDice(GesVmState state, ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    private static void HasPatternDice(GesVmState vmState, ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         switch (pattern)
         {
@@ -173,8 +173,8 @@ internal static class GesVmRegisterPatterns
                 dst.SetBoolean(false);
                 return;
             case CountFace:
-                var face = state.CreateNothing();
-                var unused = state.CreateNothing();
+                var face = vmState.CreateNothing();
+                var unused = vmState.CreateNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -220,7 +220,7 @@ internal static class GesVmRegisterPatterns
         dst.SetBoolean(matches >= count);
     }
 
-    private static void HasPatternList(GesVmState state, ref GesVmValue dst, GesVmValue[] list, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    private static void HasPatternList(GesVmState vmState, ref GesVmValue dst, GesVmValue[] list, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         switch (pattern)
         {
@@ -239,8 +239,8 @@ internal static class GesVmRegisterPatterns
                 dst.SetBoolean(false);
                 return;
             case CountFace:
-                var face = state.CreateNothing();
-                var unused = state.CreateNothing();
+                var face = vmState.CreateNothing();
+                var unused = vmState.CreateNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -270,11 +270,11 @@ internal static class GesVmRegisterPatterns
         dst.SetBoolean(matches >= count);
     }
 
-    private static void HasPatternBuffer(GesVmState state, ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    private static void HasPatternBuffer(GesVmState vmState, ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var list = state.CreateList(length);
+        var list = vmState.CreateList(length);
         for (var i = 0; i < length; i++) list[i] = items[i];
-        HasPatternList(state, ref dst, list, pattern, count, faceEntryAddress, evaluator);
+        HasPatternList(vmState, ref dst, list, pattern, count, faceEntryAddress, evaluator);
     }
 
     private static void HasPatternBufferFace(ref GesVmValue dst, GesVmValue[] items, int length, ref GesVmValue face, short count)
@@ -284,26 +284,26 @@ internal static class GesVmRegisterPatterns
         dst.SetBoolean(matches >= count);
     }
 
-    private static void TakePatternDice(GesVmState state, ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    private static void TakePatternDice(GesVmState vmState, ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        var buffer = state.CreateList(dice.Length);
+        var buffer = vmState.CreateList(dice.Length);
         for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
-        TakePatternBuffer(state, ref dst, buffer, dice.Length, pattern, count, faceEntryAddress, evaluator, diceResult: true);
+        TakePatternBuffer(vmState, ref dst, buffer, dice.Length, pattern, count, faceEntryAddress, evaluator, diceResult: true);
     }
 
-    private static void TakePatternList(GesVmState state, ref GesVmValue dst, GesVmValue[] list, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
+    private static void TakePatternList(GesVmState vmState, ref GesVmValue dst, GesVmValue[] list, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
-        TakePatternBuffer(state, ref dst, list, list.Length, pattern, count, faceEntryAddress, evaluator, diceResult: false);
+        TakePatternBuffer(vmState, ref dst, list, list.Length, pattern, count, faceEntryAddress, evaluator, diceResult: false);
     }
 
-    private static void TakePatternBuffer(GesVmState state, ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool diceResult)
+    private static void TakePatternBuffer(GesVmState vmState, ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool diceResult)
     {
         switch (pattern)
         {
             case CountFace:
             {
-                var face = state.CreateNothing();
-                var unused = state.CreateNothing();
+                var face = vmState.CreateNothing();
+                var unused = vmState.CreateNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -318,7 +318,7 @@ internal static class GesVmRegisterPatterns
                     return;
                 }
 
-                SetTakenByFace(state, ref dst, items, length, ref face, count, diceResult);
+                SetTakenByFace(vmState, ref dst, items, length, ref face, count, diceResult);
                 return;
             }
             case CountAny:
@@ -328,7 +328,7 @@ internal static class GesVmRegisterPatterns
                     for (var j = i + 1; j < length; j++) if (items[i].EqualsValue(ref items[j])) found++;
                     if (found >= count)
                     {
-                        SetTakenByFace(state, ref dst, items, length, ref items[i], count, diceResult);
+                        SetTakenByFace(vmState, ref dst, items, length, ref items[i], count, diceResult);
                         return;
                     }
                 }
@@ -336,10 +336,10 @@ internal static class GesVmRegisterPatterns
                 dst.SetNothing();
                 return;
             case FullHouse:
-                TakeFullHouse(state, ref dst, items, length, diceResult);
+                TakeFullHouse(vmState, ref dst, items, length, diceResult);
                 return;
             case Straight:
-                TakeStraight(state, ref dst, items, length, diceResult);
+                TakeStraight(vmState, ref dst, items, length, diceResult);
                 return;
             default:
                 dst.SetNothing();
@@ -347,7 +347,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    private static void SetTakenByFace(GesVmState state, ref GesVmValue dst, GesVmValue[] items, int length, ref GesVmValue face, int count, bool diceResult)
+    private static void SetTakenByFace(GesVmState vmState, ref GesVmValue dst, GesVmValue[] items, int length, ref GesVmValue face, int count, bool diceResult)
     {
         if (diceResult)
         {
@@ -362,7 +362,7 @@ internal static class GesVmRegisterPatterns
             return;
         }
 
-        var list = state.CreateList(count);
+        var list = vmState.CreateList(count);
         var listIndex = 0;
         for (var i = 0; i < length && listIndex < count; i++)
         {
@@ -373,7 +373,7 @@ internal static class GesVmRegisterPatterns
         dst.SetList(list);
     }
 
-    private static void TakeFullHouse(GesVmState state, ref GesVmValue dst, GesVmValue[] items, int length, bool diceResult)
+    private static void TakeFullHouse(GesVmState vmState, ref GesVmValue dst, GesVmValue[] items, int length, bool diceResult)
     {
         for (var i = 0; i < length; i++)
         {
@@ -397,7 +397,7 @@ internal static class GesVmRegisterPatterns
                     return;
                 }
 
-                var list = state.CreateList(5);
+                var list = vmState.CreateList(5);
                 var li = 0;
                 for (var k = 0; k < length && li < 3; k++) if (items[k].EqualsValue(ref items[i])) list[li++] = items[k];
                 for (var k = 0; k < length && li < 5; k++) if (items[k].EqualsValue(ref items[p])) list[li++] = items[k];
@@ -409,7 +409,7 @@ internal static class GesVmRegisterPatterns
         dst.SetNothing();
     }
 
-    private static void TakeStraight(GesVmState state, ref GesVmValue dst, GesVmValue[] items, int length, bool diceResult)
+    private static void TakeStraight(GesVmState vmState, ref GesVmValue dst, GesVmValue[] items, int length, bool diceResult)
     {
         if (!IsStraightItems(items, length))
         {
@@ -448,7 +448,7 @@ internal static class GesVmRegisterPatterns
             return;
         }
 
-        var list = state.CreateList(uniqueCount);
+        var list = vmState.CreateList(uniqueCount);
         var listIndex = 0;
         for (var i = 0; i < length; i++)
         {
@@ -459,6 +459,7 @@ internal static class GesVmRegisterPatterns
         }
         dst.SetList(list);
     }
+   
     private static bool IsFullHouseDice(int[] dice)
     {
         if (dice.Length != 5) return false;
@@ -564,18 +565,18 @@ internal static class GesVmRegisterPatterns
         return true;
     }
 
-    private static bool ReadStream(GesVmState state, IGesVmStream stream, out GesVmValue[] items, out int length)
+    private static bool ReadStream(GesVmState vmState, IGesVmStream stream, out GesVmValue[] items, out int length)
     {
         var buffer = Array.Empty<GesVmValue>();
         length = 0;
-        var item = state.CreateNothing();
+        var item = vmState.CreateNothing();
         try
         {
             while (stream.TryNext(ref item))
             {
                 if (length == buffer.Length) Array.Resize(ref buffer, buffer.Length == 0 ? 8 : buffer.Length * 2);
                 buffer[length++] = item;
-                item = state.CreateNothing();
+                item = vmState.CreateNothing();
             }
         }
         finally

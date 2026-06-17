@@ -8,63 +8,63 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterMessages
 {
-    internal static void CreateMessageSignature(this GesVmState state, ushort destinationRegister, ReadOnlySpan<ushort> shape)
+    internal static void CreateMessageSignature(this GesVmState vmState, ushort destinationRegister, ReadOnlySpan<ushort> shape)
     {
         if (shape.Length == 0)
         {
-            state.RaiseError("Cannot create message signature from empty shape");
+            vmState.RaiseError("Cannot create message signature from empty shape");
             return;
         }
-        var messageName = state.FetchStringByPointer(shape[0]);
+        var messageName = vmState.FetchStringByPointer(shape[0]);
         var argumentNames = new List<string>(shape.Length - 1);
         for (var index = 1; index < shape.Length; index++)
         {
-            argumentNames.Add(state.FetchStringByPointer(shape[index]));
+            argumentNames.Add(vmState.FetchStringByPointer(shape[index]));
         }
-        state.SetMessageHandler(destinationRegister, GameEventScriptMessageSignature.Create(messageName, argumentNames));
+        vmState.SetMessageHandler(destinationRegister, GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
-    internal static void CreateMessage(this GesVmState state, ushort destinationRegister, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots)
+    internal static void CreateMessage(this GesVmState vmState, ushort destinationRegister, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots)
     {
         if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
         {
-            state.RaiseError("Message signature shape and argument slots mismatch");
+            vmState.RaiseError("Message signature shape and argument slots mismatch");
             return;
         }
-        var messageName = state.FetchStringByPointer(shape[0]);
+        var messageName = vmState.FetchStringByPointer(shape[0]);
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(state.FetchStringByPointer(shape[index + 1]), state.Register(argumentSlots[index]).ToGameEventScriptValue());
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(shape[index + 1]), vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
         }
         try
         {
-            state.SetMessage(destinationRegister, GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
+            vmState.SetMessage(destinationRegister, GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs)));
         }
         catch (ArgumentException)
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
         }
     }
-    internal static void BindHandler(this GesVmState state, ushort destinationRegister, in GesVmValue handler, ReadOnlySpan<ushort> argumentSlots)
+    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesVmValue handler, ReadOnlySpan<ushort> argumentSlots)
     {
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
             return;
         }
 
         var arguments = new GameEventScriptValue[argumentSlots.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
-            arguments[index] = state.Register(argumentSlots[index]).ToGameEventScriptValue();
+            arguments[index] = vmState.Register(argumentSlots[index]).ToGameEventScriptValue();
         }
         if (signature.TryCreateMessage(arguments, out var message))
         {
-            state.SetMessage(destinationRegister, message);
+            vmState.SetMessage(destinationRegister, message);
         }
         else
         {
-            state.SetNothing(destinationRegister);
+            vmState.SetNothing(destinationRegister);
         }
     }
 

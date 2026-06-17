@@ -12,7 +12,6 @@ internal static class GesVmRegisterTypeCastCheck
     internal static void GesVmCastUnit(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeInstructionUnit unit)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmCastUnit(ref dst, in xSlot, unit, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -48,7 +47,6 @@ internal static class GesVmRegisterTypeCastCheck
     internal static void GesVmCast(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmCast(ref dst, in xSlot, type, vmState, destinationRegister, session);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -143,7 +141,6 @@ internal static class GesVmRegisterTypeCastCheck
     internal static void GesVmCastNumeric(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmCastNumeric(ref dst, in xSlot, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -175,7 +172,6 @@ internal static class GesVmRegisterTypeCastCheck
     internal static void GesVmCastCustom(this GesVmState vmState, ushort destinationRegister, in GesVmValue xSlot, ushort typeTextPointer)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         var typeName = vmState.FetchStringByPointer(typeTextPointer);
         if (IsCustomType(in xSlot, typeName))
         {
@@ -397,7 +393,6 @@ internal static class GesVmRegisterTypeCastCheck
                 {
                     if (key.StartsWith("_", StringComparison.Ordinal)) continue;
                     var value = new GesVmValue();
-                    value.SetNothing();
                     value.BindArguments(sourceValue);
                     entries.Set(key, value);
                 }
@@ -408,13 +403,10 @@ internal static class GesVmRegisterTypeCastCheck
             case Vector or Point when xSlot.ObjectValue is GesVmValueVectorPoint triplet:
             {
                 var x = new GesVmValue();
-                x.SetNothing();
                 x.SetFloat(triplet.X, xSlot.Unit);
                 var y = new GesVmValue();
-                y.SetNothing();
                 y.SetFloat(triplet.Y, xSlot.Unit);
                 var z = new GesVmValue();
-                z.SetNothing();
                 z.SetFloat(triplet.Z, xSlot.Unit);
                 var entries = new GesVmValueMapBuilder(3);
                 entries.Set("x", x);

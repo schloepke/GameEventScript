@@ -14,7 +14,6 @@ internal static class GesVmRegisterStreams
     internal static void GesVmStreamNext(this GesVmState vmState, ushort destinationRegister, in GesVmValue stream, ushort noMoreAddress)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         if (stream is { Kind: Stream, ObjectValue: IGesVmStream it } && it.TryNext(ref result))
         {
             vmState.SetValue(destinationRegister, in result);

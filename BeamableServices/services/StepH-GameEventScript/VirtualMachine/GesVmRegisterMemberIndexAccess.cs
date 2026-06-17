@@ -30,7 +30,6 @@ internal static class GesVmRegisterMemberIndexAccess
                         foreach (var argumentKey in message.Arguments.Keys)
                         {
                             var argumentValue = new GesVmValue();
-                            argumentValue.SetNothing();
                             argumentValue.BindArguments(message.Arguments[argumentKey]);
                             entries.Set(argumentKey, argumentValue);
                         }

@@ -11,7 +11,6 @@ internal static class GesVmRegisterSortGroupDistinct
     internal static void GesVmDistinct(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
         var resultValue = new GesVmValue();
-        resultValue.SetNothing();
         switch (source.Kind)
         {
             case Nothing:
@@ -86,7 +85,6 @@ internal static class GesVmRegisterSortGroupDistinct
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
                 var item = new GesVmValue();
-                item.SetNothing();
                 var values = new GesVmValue[16];
                 var count = 0;
                 try
@@ -143,7 +141,6 @@ internal static class GesVmRegisterSortGroupDistinct
                 var values = new GesVmValue[list.Length];
                 var keys = new GesVmValue[list.Length];
                 var key = new GesVmValue();
-                key.SetNothing();
                 var count = 0;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -182,9 +179,7 @@ internal static class GesVmRegisterSortGroupDistinct
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
                 var item = new GesVmValue();
-                item.SetNothing();
                 var key = new GesVmValue();
-                key.SetNothing();
                 var values = new GesVmValue[16];
                 var keys = new GesVmValue[16];
                 var count = 0;
@@ -240,14 +235,12 @@ internal static class GesVmRegisterSortGroupDistinct
     internal static void GesVmGroupBy(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
             {
                 var groups = new GesVmValueGroupBuilder(vmState, list.Length);
                 var key = new GesVmValue();
-                key.SetNothing();
                 for (var i = 0; i < list.Length; i++)
                 {
                     var item = list[i];
@@ -270,7 +263,6 @@ internal static class GesVmRegisterSortGroupDistinct
                 var values = mapSource.ValueList;
                 var groups = new GesVmValueGroupBuilder(vmState, values.Length);
                 var key = new GesVmValue();
-                key.SetNothing();
                 for (var i = 0; i < values.Length; i++)
                 {
                     var item = values[i];
@@ -292,9 +284,7 @@ internal static class GesVmRegisterSortGroupDistinct
             {
                 var groups = new GesVmValueGroupBuilder(vmState);
                 var item = new GesVmValue();
-                item.SetNothing();
                 var key = new GesVmValue();
-                key.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -326,14 +316,12 @@ internal static class GesVmRegisterSortGroupDistinct
     internal static void GesVmSortAscending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         GesVmSort(vmState, ref result, in source, descending: false);
         vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmSortDescending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         GesVmSort(vmState, ref result, in source, descending: true);
         vmState.SetValue(destinationRegister, in result);
     }
@@ -437,7 +425,6 @@ internal static class GesVmRegisterSortGroupDistinct
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
                 var item = new GesVmValue();
-                item.SetNothing();
                 var values = new GesVmValue[16];
                 var count = 0;
                 try
@@ -491,7 +478,6 @@ internal static class GesVmRegisterSortGroupDistinct
                 var values = new GesVmValue[list.Length];
                 var keys = new GesVmValue[list.Length];
                 var key = new GesVmValue();
-                key.SetNothing();
                 for (var i = 0; i < list.Length; i++)
                 {
                     var item = list[i];
@@ -519,9 +505,7 @@ internal static class GesVmRegisterSortGroupDistinct
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
                 var item = new GesVmValue();
-                item.SetNothing();
                 var key = new GesVmValue();
-                key.SetNothing();
                 var values = new GesVmValue[16];
                 var keys = new GesVmValue[16];
                 var count = 0;
@@ -786,7 +770,6 @@ internal sealed class GesVmValueGroupBuilder
             var groupedList = new GesVmValue[itemCount];
             for (var i = 0; i < itemCount; i++) groupedList[i] = _buckets[groupIndex][i];
             var groupedValue = new GesVmValue();
-            groupedValue.SetNothing();
             groupedValue.SetList(groupedList);
             map.Set(_keys[groupIndex], groupedValue);
         }

@@ -249,7 +249,6 @@ internal static class GesVmRegisterCallExternal
                 foreach (var (key, sourceValue) in sourceEntries)
                 {
                     var value = new GesVmValue();
-                    value.SetNothing();
                     value.BindArguments(sourceValue);
                     entries.Set(key, value);
                 }

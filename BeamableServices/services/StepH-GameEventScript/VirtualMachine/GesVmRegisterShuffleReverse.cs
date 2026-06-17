@@ -10,7 +10,6 @@ internal static class GesVmRegisterShuffleReverse
     internal static void GesVmReverse(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -66,7 +65,6 @@ internal static class GesVmRegisterShuffleReverse
     internal static void GesVmShuffle(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GesVmXoshiroRandom randomGenerator)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -150,7 +148,6 @@ internal static class GesVmRegisterShuffleReverse
     private static void ReverseStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var values = new GesVmValue[16];
         var count = 0;
         try
@@ -179,7 +176,6 @@ internal static class GesVmRegisterShuffleReverse
     private static void ShuffleStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var values = new GesVmValue[16];
         var count = 0;
         try

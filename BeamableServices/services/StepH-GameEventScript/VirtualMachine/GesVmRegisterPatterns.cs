@@ -10,13 +10,10 @@ internal static class GesVmRegisterPatterns
     internal static void GesVmHasPattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         if (pattern == CountFace)
         {
             var face = new GesVmValue();
-            face.SetNothing();
             var unused = new GesVmValue();
-            unused.SetNothing();
             if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
             {
                 vmState.SetNothing(destinationRegister);
@@ -84,13 +81,10 @@ internal static class GesVmRegisterPatterns
     internal static void GesVmTakePattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, ushort faceEntryAddress, IGesVmStreamEntryEvaluator evaluator)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         if (pattern == CountFace)
         {
             var face = new GesVmValue();
-            face.SetNothing();
             var unused = new GesVmValue();
-            unused.SetNothing();
             if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
             {
                 vmState.SetNothing(destinationRegister);
@@ -180,9 +174,7 @@ internal static class GesVmRegisterPatterns
                 return;
             case CountFace:
                 var face = new GesVmValue();
-                face.SetNothing();
                 var unused = new GesVmValue();
-                unused.SetNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -248,9 +240,7 @@ internal static class GesVmRegisterPatterns
                 return;
             case CountFace:
                 var face = new GesVmValue();
-                face.SetNothing();
                 var unused = new GesVmValue();
-                unused.SetNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -313,9 +303,7 @@ internal static class GesVmRegisterPatterns
             case CountFace:
             {
                 var face = new GesVmValue();
-                face.SetNothing();
                 var unused = new GesVmValue();
-                unused.SetNothing();
                 if (!evaluator.TryEvaluateStreamEntry(faceEntryAddress, 0, ref unused, null, ref face))
                 {
                     dst.SetNothing();
@@ -582,7 +570,6 @@ internal static class GesVmRegisterPatterns
         var buffer = Array.Empty<GesVmValue>();
         length = 0;
         var item = new GesVmValue();
-        item.SetNothing();
         try
         {
             while (stream.TryNext(ref item))

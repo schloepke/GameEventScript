@@ -108,7 +108,6 @@ internal static class GesVmRegisterCollectionOperators
         for (var i = 0; i < b.IntegerValue; i++)
         {
             var left = new GesVmValue();
-            left.SetNothing();
             if (leftList is not null) left = leftList[i];
             else if (leftDice is not null) left.SetInteger(leftDice[i]);
             else if (leftRange is not null)
@@ -123,8 +122,6 @@ internal static class GesVmRegisterCollectionOperators
             }
 
             var right = new GesVmValue();
-
-            right.SetNothing();
             if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
@@ -230,7 +227,6 @@ internal static class GesVmRegisterCollectionOperators
         {
             var leftIndex = leftOffset + i;
             var left = new GesVmValue();
-            left.SetNothing();
             if (leftList is not null) left = leftList[leftIndex];
             else if (leftDice is not null) left.SetInteger(leftDice[leftIndex]);
             else if (leftRange is not null)
@@ -245,8 +241,6 @@ internal static class GesVmRegisterCollectionOperators
             }
 
             var right = new GesVmValue();
-
-            right.SetNothing();
             if (rightList is not null) right = rightList[i];
             else if (rightDice is not null) right.SetInteger(rightDice[i]);
             else if (rightRange is not null)
@@ -290,7 +284,6 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             case Stream when b.ObjectValue is IGesVmStream stream:
                 var item = new GesVmValue();
-                item.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -341,8 +334,6 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 var value = new GesVmValue();
-
-                value.SetNothing();
                 value.SetFloat(triplet.X, b.Unit);
                 if (value.EqualsValue(a))
                 {
@@ -414,7 +405,6 @@ internal static class GesVmRegisterCollectionOperators
             case Stream when source.ObjectValue is IGesVmStream stream:
             {
                 var item = new GesVmValue();
-                item.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -526,8 +516,6 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 var item = new GesVmValue();
-
-                item.SetNothing();
                 for (var i = 0; i < text.Length; i++)
                 {
                     item.SetText(text[i].ToString());
@@ -659,8 +647,6 @@ internal static class GesVmRegisterCollectionOperators
         }
 
         var candidate = new GesVmValue();
-
-        candidate.SetNothing();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesVmValue[] list:
@@ -799,8 +785,6 @@ internal static class GesVmRegisterCollectionOperators
         }
 
         var candidate = new GesVmValue();
-
-        candidate.SetNothing();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesVmValue[] list:
@@ -862,8 +846,6 @@ internal static class GesVmRegisterCollectionOperators
             }
 
             var item = new GesVmValue();
-
-            item.SetNothing();
             if (!requireAll)
             {
                 while (stream.TryNext(ref item))
@@ -928,8 +910,6 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 var value = new GesVmValue();
-
-                value.SetNothing();
                 value.SetFloat(triplet.X, b.Unit);
                 if (value.EqualsValue(a))
                 {
@@ -1396,7 +1376,6 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < entryKeyCount; i++)
                 {
                     var value = new GesVmValue();
-                    value.SetNothing();
                     value.BindArguments(entryEntries[entryKeys[i]]);
                     var entry = new GesVmValueMapBuilder(2);
                     var keyValue = new GesVmValue();
@@ -1432,7 +1411,6 @@ internal static class GesVmRegisterCollectionOperators
                 return false;
             case Stream when b.ObjectValue is IGesVmStream stream:
                 var item = new GesVmValue();
-                item.SetNothing();
                 try
                 {
                     while (stream.TryNext(ref item))
@@ -1463,7 +1441,6 @@ internal static class GesVmRegisterCollectionOperators
             case Vector or Point when b.ObjectValue is GesVmValueVectorPoint triplet:
                 if (!a.IsNumeric) return false;
                 var value = new GesVmValue();
-                value.SetNothing();
                 value.SetFloat(triplet.X, b.Unit);
                 if (value.EqualsValue(a)) return true;
                 value.SetFloat(triplet.Y, b.Unit);

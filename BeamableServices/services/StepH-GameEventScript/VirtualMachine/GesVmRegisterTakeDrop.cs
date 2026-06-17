@@ -10,7 +10,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmTakeFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case Series when source.ObjectValue is GameEventScriptSeriesValue series:
@@ -41,7 +40,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmOneRandom(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GesVmXoshiroRandom randomGenerator)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -71,7 +69,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmTakeRandom(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count, GesVmXoshiroRandom randomGenerator)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -99,7 +96,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmDropFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case Series when source.ObjectValue is GameEventScriptSeriesValue series:
@@ -130,7 +126,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmTakeLast(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -158,7 +153,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmDropLast(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -186,7 +180,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmTakeHighest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -214,7 +207,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmTakeLowest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -242,7 +234,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmDropHighest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -270,7 +261,6 @@ internal static class GesVmRegisterTakeDrop
     internal static void GesVmDropLowest(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
@@ -506,8 +496,6 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var buffer = new GesVmValue[count < 16 ? count : 16];
         var itemCount = 0;
         try
@@ -528,7 +516,6 @@ internal static class GesVmRegisterTakeDrop
     private static void DropFirstStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var skipped = 0;
         var buffer = new GesVmValue[16];
         var itemCount = 0;
@@ -558,8 +545,6 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -590,7 +575,6 @@ internal static class GesVmRegisterTakeDrop
     private static void DropLastStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -619,8 +603,6 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var buffer = new GesVmValue[count];
         var itemCount = 0;
         try
@@ -651,7 +633,6 @@ internal static class GesVmRegisterTakeDrop
     private static void DropExtremeStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count, bool highest)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
@@ -721,9 +702,7 @@ internal static class GesVmRegisterTakeDrop
     private static void OneRandomStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var chosen = new GesVmValue();
-        chosen.SetNothing();
         var count = 0;
         try
         {
@@ -879,8 +858,6 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try

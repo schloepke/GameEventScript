@@ -15,7 +15,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmAdd(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmAdd(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -597,7 +596,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmDivide(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmDivide(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -730,7 +728,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmPower(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmPower(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -841,7 +838,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmFloorDivide(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmFloorDivide(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -944,7 +940,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmModulo(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmModulo(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1070,7 +1065,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmRemainder(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmRemainder(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1164,7 +1158,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmMin(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmMin(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1388,7 +1381,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmMax(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmMax(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1612,7 +1604,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmNegate(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmNegate(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1654,7 +1645,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmAbs(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmAbs(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1698,7 +1688,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmClamp(this GesVmState vmState, ushort destinationRegister, in GesVmValue value, in GesVmValue min, in GesVmValue max)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmClamp(ref dst, in value, in min, in max, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1801,7 +1790,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmNaturalLog(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmNaturalLog(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
@@ -1853,7 +1841,6 @@ internal static class GesVmRegisterMath
     internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, in GesVmValue termSlot)
     {
         var dst = new GesVmValue();
-        dst.SetNothing();
         GesVmTerm(ref dst, in source, in termSlot, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }

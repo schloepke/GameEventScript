@@ -44,7 +44,6 @@ internal static class GesVmRegisterStreamTerminals
 
         long count = 0;
         var item = new GesVmValue();
-        item.SetNothing();
         try
         {
             while (stream.TryNext(ref item)) count++;
@@ -59,7 +58,6 @@ internal static class GesVmRegisterStreamTerminals
     internal static void GesVmSum(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
@@ -72,7 +70,6 @@ internal static class GesVmRegisterStreamTerminals
 
                 var listSum = list[0];
                 var listNext = new GesVmValue();
-                listNext.SetNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], vmState);
@@ -93,7 +90,6 @@ internal static class GesVmRegisterStreamTerminals
 
                 var mapSum = values[0];
                 var mapNext = new GesVmValue();
-                mapNext.SetNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], vmState);
@@ -161,12 +157,8 @@ internal static class GesVmRegisterStreamTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var sum = new GesVmValue();
-        sum.SetNothing();
         var next = new GesVmValue();
-        next.SetNothing();
         try
         {
             if (!stream.TryNext(ref sum))
@@ -193,7 +185,6 @@ internal static class GesVmRegisterStreamTerminals
     internal static void GesVmAverage(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
     {
         var result = new GesVmValue();
-        result.SetNothing();
         switch (iterator.Kind)
         {
             case List when iterator.ObjectValue is GesVmValue[] list:
@@ -206,7 +197,6 @@ internal static class GesVmRegisterStreamTerminals
 
                 var listSum = list[0];
                 var listNext = new GesVmValue();
-                listNext.SetNothing();
                 for (var i = 1; i < list.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref listNext, in listSum, in list[i], vmState);
@@ -231,7 +221,6 @@ internal static class GesVmRegisterStreamTerminals
 
                 var mapSum = values[0];
                 var mapNext = new GesVmValue();
-                mapNext.SetNothing();
                 for (var i = 1; i < values.Length; i++)
                 {
                     GesVmRegisterMath.GesVmAdd(ref mapNext, in mapSum, in values[i], vmState);
@@ -306,11 +295,8 @@ internal static class GesVmRegisterStreamTerminals
 
         long count = 0;
         var item = new GesVmValue();
-        item.SetNothing();
         var sum = new GesVmValue();
-        sum.SetNothing();
         var next = new GesVmValue();
-        next.SetNothing();
         try
         {
             while (stream.TryNext(ref item))
@@ -365,10 +351,7 @@ internal static class GesVmRegisterStreamTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var weightValue = new GesVmValue();
-        weightValue.SetNothing();
         var items = new GesVmValue[16];
         var weights = new double[16];
         var itemCount = 0;
@@ -444,10 +427,7 @@ internal static class GesVmRegisterStreamTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var weightValue = new GesVmValue();
-        weightValue.SetNothing();
         var items = new GesVmValue[16];
         var weights = new double[16];
         var itemCount = 0;
@@ -531,14 +511,9 @@ internal static class GesVmRegisterStreamTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var projection = new GesVmValue();
-        projection.SetNothing();
         var winner = new GesVmValue();
-        winner.SetNothing();
         var winnerProjection = new GesVmValue();
-        winnerProjection.SetNothing();
         var hasWinner = false;
         try
         {

@@ -14,8 +14,6 @@ internal static class GesVmStreamCollectorTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var count = 0;
         var buffer = new GesVmValue[16];
         try
@@ -50,10 +48,7 @@ internal static class GesVmStreamCollectorTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var keyValue = new GesVmValue();
-        keyValue.SetNothing();
         var map = new GesVmValueMapBuilder();
         try
         {
@@ -91,12 +86,8 @@ internal static class GesVmStreamCollectorTerminals
         }
 
         var item = new GesVmValue();
-
-        item.SetNothing();
         var keyValue = new GesVmValue();
-        keyValue.SetNothing();
         var value = new GesVmValue();
-        value.SetNothing();
         var map = new GesVmValueMapBuilder();
         try
         {
@@ -246,7 +237,6 @@ internal static class GesVmStreamCollectorTerminals
     private static void FirstFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         try
         {
             if (stream.TryNext(ref item)) vmState.SetValue(destinationRegister, in item);
@@ -260,9 +250,7 @@ internal static class GesVmStreamCollectorTerminals
     private static void LastFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         var last = new GesVmValue();
-        last.SetNothing();
         var found = false;
         try
         {
@@ -283,7 +271,6 @@ internal static class GesVmStreamCollectorTerminals
     private static void SingleFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
     {
         var item = new GesVmValue();
-        item.SetNothing();
         try
         {
             if (!stream.TryNext(ref item))
@@ -293,8 +280,6 @@ internal static class GesVmStreamCollectorTerminals
             }
 
             var second = new GesVmValue();
-
-            second.SetNothing();
             if (stream.TryNext(ref second)) vmState.SetNothing(destinationRegister);
             else vmState.SetValue(destinationRegister, in item);
         }

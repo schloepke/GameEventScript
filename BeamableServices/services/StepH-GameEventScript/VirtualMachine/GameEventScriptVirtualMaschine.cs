@@ -342,16 +342,16 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.ClearStage();
                             break;
                         case CreateRange:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateRange(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot));
+                            vmState.GesVmCreateRange(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
                         case CreateRangeWithStep:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateRange(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU));
+                            vmState.GesVmCreateRange(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIterator:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), session);
+                            vmState.GesVmCreateRangeStream(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), session);
                             break;
                         case CreateRangeIteratorWithStep:
-                            vmState.Register(instruction.DestinationSlot).GesVmCreateRangeStream(ref vmState.Register(instruction.XSlot), ref vmState.Register(instruction.YSlot), ref vmState.Register(instruction.AU), session);
+                            vmState.GesVmCreateRangeStream(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), session);
                             break;
                         case CreateRangeIteratorShort:
                             if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))

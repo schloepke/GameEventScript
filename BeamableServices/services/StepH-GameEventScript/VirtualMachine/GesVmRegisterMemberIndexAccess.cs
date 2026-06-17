@@ -6,75 +6,76 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterMemberIndexAccess
 {
-    internal static void GesVmMemberAccess(ref this GesVmValue dst, string key, ref GesVmValue obj)
+    internal static void GesVmMemberAccess(this GesVmState state, ushort destinationRegister, string key, in GesVmValue obj)
     {
         switch (obj.Kind)
         {
             case Map or Custom when obj.ObjectValue is GesVmValueMap map && map.TryGet(key, out var value):
-                dst = value;
+                state.SetValue(destinationRegister, in value);
                 return;
             case Custom when obj.ObjectValue is GameEventScriptValue externalValue && externalValue.TryGetMapMember(key, out var value):
-                dst.BindArguments(value);
+                state.Register(destinationRegister).BindArguments(value);
                 return;
             case Vector or Point when obj.ObjectValue is GesVmValueVectorPoint vp && vp.TryGetComponent(key, out var value):
-                dst.SetFloat(value, obj.Unit);
+                state.SetFloat(destinationRegister, value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
                 switch (key)
                 {
                     case "name":
-                        dst.SetText(message.Name);
+                        state.SetText(destinationRegister, message.Name);
                         return;
                     case "arguments":
-                        var entries = new GesVmValueMapBuilder(dst.OwningState, message.Arguments.Count);
-                        foreach(var argumentKey in message.Arguments.Keys)
+                        var entries = new GesVmValueMapBuilder(state, message.Arguments.Count);
+                        foreach (var argumentKey in message.Arguments.Keys)
                         {
-                            var value = dst.OwningState.CreateNothing();
-                            value.BindArguments(message.Arguments[argumentKey]);
-                            entries.Set(argumentKey, value);
+                            var argumentValue = state.CreateNothing();
+                            argumentValue.BindArguments(message.Arguments[argumentKey]);
+                            entries.Set(argumentKey, argumentValue);
                         }
-                        dst.SetMap(entries.ToMap());
+                        state.SetMap(destinationRegister, entries.ToMap());
                         return;
                     case "tags":
-                        var tagList = dst.OwningState.CreateList(message.Tags.Count);
-                        for(var i = 0; i < tagList.Length; i++) tagList[i].SetTag(message.Tags[i]);
-                        dst.SetList(tagList);
+                        var tagList = state.CreateList(message.Tags.Count);
+                        for (var i = 0; i < tagList.Length; i++) tagList[i].SetTag(message.Tags[i]);
+                        state.SetList(destinationRegister, tagList);
                         return;
                     case "signature":
-                        dst.SetText(message.SignatureId);
+                        state.SetText(destinationRegister, message.SignatureId);
                         return;
                     default:
-                        dst.SetNothing();
+                        state.SetNothing(destinationRegister);
                         return;
                 }
             case Handler when obj.ObjectValue is GameEventScriptMessageSignature signature:
                 switch (key)
                 {
                     case "name":
-                        dst.SetText(signature.Name);
+                        state.SetText(destinationRegister, signature.Name);
                         return;
                     case "parameters":
-                        var list = dst.OwningState.CreateList(signature.Parameters.Count);
+                        var list = state.CreateList(signature.Parameters.Count);
                         for (var i = 0; i < list.Length; i++) list[i].SetText(signature.Parameters[i]);
-                        dst.SetList(list);
+                        state.SetList(destinationRegister, list);
                         return;
                     case "signature":
-                        dst.SetText(signature.SignatureId);
+                        state.SetText(destinationRegister, signature.SignatureId);
                         return;
                     default:
-                        dst.SetNothing();
+                        state.SetNothing(destinationRegister);
                         return;
                 }
             default:
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
         }
     }
-    internal static void GesVmIndexAccess(ref this GesVmValue dst, long indexIn, ref GesVmValue obj)
+
+    internal static void GesVmIndexAccess(this GesVmState state, ushort destinationRegister, long indexIn, in GesVmValue obj)
     {
         if (indexIn <= 0)
         {
-            dst.SetNothing();
+            state.SetNothing(destinationRegister);
             return;
         }
 
@@ -82,64 +83,65 @@ internal static class GesVmRegisterMemberIndexAccess
         switch (obj.Kind)
         {
             case List when obj.ObjectValue is GesVmValue[] list:
-                if (index < list.Length) dst = list[index];
-                else dst.SetNothing();
+                if (index < list.Length) state.SetValue(destinationRegister, in list[index]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Dice when obj.ObjectValue is int[] dices:
-                if (index < dices.Length) dst.SetInteger(dices[index]);
-                else dst.SetNothing();
+                if (index < dices.Length) state.SetInteger(destinationRegister, dices[index]);
+                else state.SetNothing(destinationRegister);
                 return;
             case Vector or Point when obj.ObjectValue is GesVmValueVectorPoint vp:
                 switch (index)
                 {
                     case 0:
-                        dst.SetFloat(vp.X, obj.Unit);
+                        state.SetFloat(destinationRegister, vp.X, obj.Unit);
                         break;
                     case 1:
-                        dst.SetFloat(vp.Y, obj.Unit);
+                        state.SetFloat(destinationRegister, vp.Y, obj.Unit);
                         break;
                     case 2:
-                        dst.SetFloat(vp.Z, obj.Unit);
+                        state.SetFloat(destinationRegister, vp.Z, obj.Unit);
                         break;
                     default:
-                        dst.SetNothing();
+                        state.SetNothing(destinationRegister);
                         break;
                 }
                 return;
             case Range when obj.ObjectValue is GesVmValueRangeInteger integerRange:
                 var intRangeValue = integerRange.From + index * integerRange.Step;
-                if (integerRange.Step > 0 && intRangeValue <= integerRange.To || integerRange.Step < 0 && intRangeValue >= integerRange.To) dst.SetInteger(intRangeValue);
-                else dst.SetNothing();
+                if (integerRange.Step > 0 && intRangeValue <= integerRange.To || integerRange.Step < 0 && intRangeValue >= integerRange.To) state.SetInteger(destinationRegister, intRangeValue);
+                else state.SetNothing(destinationRegister);
                 return;
             case Range when obj.ObjectValue is GesVmValueRangeFloat floatRange:
                 var floatRangeValue = floatRange.From + index * floatRange.Step;
-                if (floatRange.Step > 0 && floatRangeValue <= floatRange.To || floatRange.Step < 0 && floatRangeValue >= floatRange.To) dst.SetFloat(floatRangeValue);
-                else dst.SetNothing();
+                if (floatRange.Step > 0 && floatRangeValue <= floatRange.To || floatRange.Step < 0 && floatRangeValue >= floatRange.To) state.SetFloat(destinationRegister, floatRangeValue);
+                else state.SetNothing(destinationRegister);
                 return;
             case Text or Tag when obj is { IsStorageObject: true, ObjectValue: string text }:
-                if (index < text.Length) dst.SetText(text[index].ToString());
-                else dst.SetNothing();
+                if (index < text.Length) state.SetText(destinationRegister, text[index].ToString());
+                else state.SetNothing(destinationRegister);
                 return;
             default:
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
         }
     }
-    internal static void GesVmPropertyAccess(ref this GesVmValue dst, ref GesVmValue property, ref GesVmValue obj)
+
+    internal static void GesVmPropertyAccess(this GesVmState state, ushort destinationRegister, in GesVmValue property, in GesVmValue obj)
     {
         if (property.TryGetInteger(out var indexIn))
         {
-            dst.GesVmIndexAccess(indexIn, ref obj);
+            state.GesVmIndexAccess(destinationRegister, indexIn, in obj);
             return;
         }
 
         switch (property.Kind)
         {
             case Text or Tag when property.ObjectValue is string key:
-                dst.GesVmMemberAccess(key, ref obj);
+                state.GesVmMemberAccess(destinationRegister, key, in obj);
                 return;
             default:
-                dst.SetNothing();
+                state.SetNothing(destinationRegister);
                 return;
         }
     }

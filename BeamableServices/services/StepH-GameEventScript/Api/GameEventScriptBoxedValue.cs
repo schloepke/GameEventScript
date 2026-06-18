@@ -13,7 +13,7 @@ namespace StepH.GameEventScript.Api;
 /// <summary>
 /// Migration value type backed by the same compact storage used by the virtual machine.
 /// </summary>
-public sealed class GameEventScriptBoxedValue
+public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedValue>
 {
     private readonly GesVmValue _value;
 
@@ -102,10 +102,18 @@ public sealed class GameEventScriptBoxedValue
     /// </summary>
     public double AsNumeric() => _value.AsNumeric;
 
+    public long AsInteger() => Integer;
+
+    public double AsNumber() => Number;
+
+    public bool AsBoolean() => Boolean;
+
     /// <summary>
     /// Reads the value as text using the VM formatting rules.
     /// </summary>
     public string AsText() => _value.ConvertToText();
+
+    public bool IsNumericUnit(GameEventScriptBytecodeInstructionUnit unit) => Unit == unit && unit.IsNumericUnit();
 
     public IReadOnlyList<GameEventScriptBoxedValue> AsList()
     {
@@ -125,6 +133,24 @@ public sealed class GameEventScriptBoxedValue
 
     public IReadOnlyDictionary<string, GameEventScriptBoxedValue> AsMap()
     {
+        if (_value.ObjectValue is GameEventScriptValue externalValue)
+        {
+            var externalMap = externalValue.AsMap();
+            if (externalMap.Count == 0)
+            {
+                return new Dictionary<string, GameEventScriptBoxedValue>(0, StringComparer.Ordinal);
+            }
+
+            var externalResult = new Dictionary<string, GameEventScriptBoxedValue>(externalMap.Count, StringComparer.Ordinal);
+            foreach (var pair in externalMap)
+            {
+                if (pair.Key.StartsWith("_", StringComparison.Ordinal)) continue;
+                externalResult[pair.Key] = FromGameEventScriptValue(pair.Value);
+            }
+
+            return externalResult;
+        }
+
         if (_value.ObjectValue is not GesVmValueMap map)
         {
             return new Dictionary<string, GameEventScriptBoxedValue>(0, StringComparer.Ordinal);
@@ -171,6 +197,12 @@ public sealed class GameEventScriptBoxedValue
 
     public bool TryGetCustomTypeName(out string typeName)
     {
+        if (_value.ObjectValue is IGameEventScriptCustomTypeValue custom)
+        {
+            typeName = custom.CustomTypeName;
+            return true;
+        }
+
         if (_value.Kind is Custom &&
             _value.ObjectValue is GesVmValueMap map &&
             map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) &&
@@ -244,6 +276,18 @@ public sealed class GameEventScriptBoxedValue
     }
 
     internal ref readonly GesVmValue GetVmValue() => ref _value;
+
+    public bool Equals(GameEventScriptBoxedValue? other)
+        => other is not null && _value.EqualsValue(in other._value);
+
+    public override bool Equals(object? obj)
+        => obj is GameEventScriptBoxedValue other && Equals(other);
+
+    public override int GetHashCode()
+        => _value.GetValueHashCode();
+
+    public override string ToString()
+        => _value.ConvertToText();
 
     public static GameEventScriptBoxedValue Nothing()
     {

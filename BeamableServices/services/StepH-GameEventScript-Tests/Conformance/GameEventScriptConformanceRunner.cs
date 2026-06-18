@@ -305,11 +305,11 @@ internal static class GameEventScriptConformanceRunner
                     foreach (var emit in subscriber.Emit ?? [])
                     {
                         ValidateRequired(emit.Name, "external subscriber emit name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-                        var args = emit.ForwardArguments
+                        Dictionary<string, GameEventScriptBoxedValue> args = emit.ForwardArguments
                             ? message.Arguments.ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal)
                             : emit.Args.ValueKind == JsonValueKind.Undefined
-                                ? new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
-                                : GameEventScriptConformanceValueCodec.DecodeArguments(emit.Args);
+                                ? new Dictionary<string, GameEventScriptBoxedValue>(StringComparer.Ordinal)
+                                : GameEventScriptConformanceValueCodec.DecodeBoxedArguments(emit.Args);
 
                         context.Emit(GameEventScriptMessage.Create(emit.Name!, args));
                     }

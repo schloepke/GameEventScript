@@ -350,14 +350,137 @@ internal struct GesVmValue
         return AsNumeric;
     }
 
-    internal bool EqualsValue(in GesVmValue other) => Unit == other.Unit && Kind == other.Kind && Kind switch
+    internal bool EqualsValue(in GesVmValue other)
     {
-        Integer => IntegerValue == other.IntegerValue,
-        Float or Percentage => FloatValue == other.FloatValue,
-        GameEventScriptBytecodeTypeKind.Boolean => IsTrue == other.IsTrue,
-        Text or Tag => string.Equals(TextValue, other.TextValue, StringComparison.Ordinal),
-        _ => ReferenceEquals(ObjectValue, other.ObjectValue)
-    };
+        if (Unit != other.Unit || Kind != other.Kind)
+        {
+            return false;
+        }
+
+        switch (Kind)
+        {
+            case Nothing:
+                return true;
+            case Integer:
+                return IntegerValue == other.IntegerValue;
+            case Float or Percentage:
+                return FloatValue.Equals(other.FloatValue);
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                return IsTrue == other.IsTrue;
+            case Text or Tag:
+                return string.Equals(TextValue, other.TextValue, StringComparison.Ordinal);
+            case Vector or Point when ObjectValue is GesVmValueVectorPoint left && other.ObjectValue is GesVmValueVectorPoint right:
+                return left.X.Equals(right.X) && left.Y.Equals(right.Y) && left.Z.Equals(right.Z);
+            case Dice when ObjectValue is int[] left && other.ObjectValue is int[] right:
+                if (left.Length != right.Length) return false;
+                for (var i = 0; i < left.Length; i++)
+                {
+                    if (left[i] != right[i]) return false;
+                }
+
+                return true;
+            case List when ObjectValue is GesVmValue[] left && other.ObjectValue is GesVmValue[] right:
+                if (left.Length != right.Length) return false;
+                for (var i = 0; i < left.Length; i++)
+                {
+                    if (!left[i].EqualsValue(in right[i])) return false;
+                }
+
+                return true;
+            case Map or Custom when ObjectValue is GesVmValueMap left && other.ObjectValue is GesVmValueMap right:
+                if (left.StorageLength != right.StorageLength || left.Length != right.Length) return false;
+                for (var i = 0; i < left.StorageLength; i++)
+                {
+                    if (!string.Equals(left.KeyAt(i), right.KeyAt(i), StringComparison.Ordinal)) return false;
+                    var leftValue = left.ValueAt(i);
+                    var rightValue = right.ValueAt(i);
+                    if (!leftValue.EqualsValue(in rightValue)) return false;
+                }
+
+                return true;
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger left && other.ObjectValue is GesVmValueRangeInteger right:
+                return left.From == right.From && left.To == right.To && left.Step == right.Step;
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat left && other.ObjectValue is GesVmValueRangeFloat right:
+                return left.From.Equals(right.From) && left.To.Equals(right.To) && left.Step.Equals(right.Step);
+            case Handler when ObjectValue is GameEventScriptMessageSignature left && other.ObjectValue is GameEventScriptMessageSignature right:
+                return left.Equals(right);
+            case Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
+                return left.Equals(right);
+            case Series when ObjectValue is GameEventScriptSeriesValue left && other.ObjectValue is GameEventScriptSeriesValue right:
+                return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
+            default:
+                return ReferenceEquals(ObjectValue, other.ObjectValue);
+        }
+    }
+
+    internal int GetValueHashCode()
+    {
+        var hash = new HashCode();
+        hash.Add(Kind);
+        hash.Add(Unit);
+        switch (Kind)
+        {
+            case Nothing:
+                break;
+            case Integer:
+                hash.Add(IntegerValue);
+                break;
+            case Float or Percentage:
+                hash.Add(FloatValue);
+                break;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                hash.Add(IsTrue);
+                break;
+            case Text or Tag:
+                hash.Add(TextValue, StringComparer.Ordinal);
+                break;
+            case Vector or Point when ObjectValue is GesVmValueVectorPoint vector:
+                hash.Add(vector.X);
+                hash.Add(vector.Y);
+                hash.Add(vector.Z);
+                break;
+            case Dice when ObjectValue is int[] dice:
+                for (var i = 0; i < dice.Length; i++) hash.Add(dice[i]);
+                break;
+            case List when ObjectValue is GesVmValue[] list:
+                for (var i = 0; i < list.Length; i++) hash.Add(list[i].GetValueHashCode());
+                break;
+            case Map or Custom when ObjectValue is GesVmValueMap map:
+                for (var i = 0; i < map.StorageLength; i++)
+                {
+                    hash.Add(map.KeyAt(i), StringComparer.Ordinal);
+                    var value = map.ValueAt(i);
+                    hash.Add(value.GetValueHashCode());
+                }
+
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range:
+                hash.Add(range.From);
+                hash.Add(range.To);
+                hash.Add(range.Step);
+                break;
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range:
+                hash.Add(range.From);
+                hash.Add(range.To);
+                hash.Add(range.Step);
+                break;
+            case Handler when ObjectValue is GameEventScriptMessageSignature signature:
+                hash.Add(signature);
+                break;
+            case Message when ObjectValue is GameEventScriptMessage message:
+                hash.Add(message);
+                break;
+            case Series when ObjectValue is GameEventScriptSeriesValue series:
+                hash.Add(series.SignatureId, StringComparer.Ordinal);
+                hash.Add(series.Offset);
+                break;
+            default:
+                hash.Add(ObjectValue);
+                break;
+        }
+
+        return hash.ToHashCode();
+    }
     
     internal bool TryCreateStream(out IGesVmStream stream)
     {

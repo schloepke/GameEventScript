@@ -29,9 +29,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         var entries = new GesVmValueMapBuilder(message.Arguments.Count);
                         foreach (var argumentKey in message.Arguments.Keys)
                         {
-                            var argumentValue = new GesVmValue();
-                            argumentValue.BindArguments(message.Arguments[argumentKey]);
-                            entries.Set(argumentKey, argumentValue);
+                            entries.Set(argumentKey, message.Arguments[argumentKey].GetVmValue());
                         }
                         vmState.SetMap(destinationRegister, entries.ToMap());
                         return;

@@ -21,7 +21,6 @@ public enum GameEventScriptValueKind
     Boolean,
     Series,
     Range,
-    Message,
     Handler,
     List,
     Map,
@@ -59,7 +58,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
     public bool IsMap() => Kind == GameEventScriptValueKind.Map;
     public bool IsDice() => Kind == GameEventScriptValueKind.Dice;
     public bool IsRange() => Kind == GameEventScriptValueKind.Range;
-    public bool IsMessage() => Kind == GameEventScriptValueKind.Message;
     public bool IsHandler() => Kind == GameEventScriptValueKind.Handler;
 
     public virtual string AsText() => string.Empty;
@@ -137,7 +135,7 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
 
     protected virtual GameEventScriptValue LookupCore(GameEventScriptValue selector)
     {
-        if (Kind is GameEventScriptValueKind.Map or GameEventScriptValueKind.Message or GameEventScriptValueKind.Handler)
+        if (Kind is GameEventScriptValueKind.Map or GameEventScriptValueKind.Handler)
         {
             return GameEventScriptNothingValue.Instance;
         }
@@ -209,7 +207,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Boolean => ":Boolean",
             GameEventScriptValueKind.Series => ":Series",
             GameEventScriptValueKind.Range => ":Range",
-            GameEventScriptValueKind.Message => ":Message",
             GameEventScriptValueKind.Handler => ":Handler",
             GameEventScriptValueKind.List => ":List",
             GameEventScriptValueKind.Map => ":Map",
@@ -232,7 +229,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Boolean => AsBoolean().ToString(),
             GameEventScriptValueKind.Series => $"series[{((GameEventScriptSeriesValue)this).SignatureId} offset {((GameEventScriptSeriesValue)this).Offset}]",
             GameEventScriptValueKind.Range => FormatRange((GameEventScriptRangeValue)this),
-            GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.ToString(),
             GameEventScriptValueKind.Handler => $"handler {((GameEventScriptHandlerValue)this).Signature.SignatureId}",
             GameEventScriptValueKind.List => $"[{string.Join(", ", AsList().Select(x => x.ToString()))}]",
             GameEventScriptValueKind.Map => $"map[{string.Join(", ", AsMap().Select(x => $"{x.Key}: {x.Value}"))}]",
@@ -284,7 +280,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Range => ((GameEventScriptRangeValue)this).FromNumber == ((GameEventScriptRangeValue)other).FromNumber &&
                                               ((GameEventScriptRangeValue)this).ToNumber == ((GameEventScriptRangeValue)other).ToNumber &&
                                               ((GameEventScriptRangeValue)this).StepNumber == ((GameEventScriptRangeValue)other).StepNumber,
-            GameEventScriptValueKind.Message => ((GameEventScriptMessageValue)this).Value.Equals(((GameEventScriptMessageValue)other).Value),
             GameEventScriptValueKind.Handler => ((GameEventScriptHandlerValue)this).Signature.SignatureId == ((GameEventScriptHandlerValue)other).Signature.SignatureId,
             GameEventScriptValueKind.List => AsList().SequenceEqual(other.AsList()),
             GameEventScriptValueKind.Map => EqualsDictionary(AsMap(), other.AsMap()),
@@ -357,9 +352,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 hash.Add(range.StepNumber);
                 break;
             }
-            case GameEventScriptValueKind.Message:
-                hash.Add(((GameEventScriptMessageValue)this).Value);
-                break;
             case GameEventScriptValueKind.Handler:
                 hash.Add(((GameEventScriptHandlerValue)this).Signature.SignatureId, StringComparer.Ordinal);
                 break;
@@ -407,11 +399,10 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptValueKind.Boolean => 6,
             GameEventScriptValueKind.Series => 7,
             GameEventScriptValueKind.Range => 8,
-            GameEventScriptValueKind.Message => 9,
-            GameEventScriptValueKind.Handler => 10,
-            GameEventScriptValueKind.List => 11,
-            GameEventScriptValueKind.Map => 12,
-            GameEventScriptValueKind.Dice => 13,
+            GameEventScriptValueKind.Handler => 9,
+            GameEventScriptValueKind.List => 10,
+            GameEventScriptValueKind.Map => 11,
+            GameEventScriptValueKind.Dice => 12,
             _ => 8
         };
     }
@@ -606,7 +597,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptValueKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
                 GameEventScriptValueKind.Series => CompareSeries((GameEventScriptSeriesValue)left, (GameEventScriptSeriesValue)right),
                 GameEventScriptValueKind.Range => CompareRange((GameEventScriptRangeValue)left, (GameEventScriptRangeValue)right),
-                GameEventScriptValueKind.Message => CompareMessage((GameEventScriptMessageValue)left, (GameEventScriptMessageValue)right),
                 GameEventScriptValueKind.Handler => CompareHandler((GameEventScriptHandlerValue)left, (GameEventScriptHandlerValue)right),
                 GameEventScriptValueKind.List => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptValueKind.Map => CompareDictionary(left.AsMap(), right.AsMap()),
@@ -643,28 +633,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             if (byFrom != 0) return byFrom;
             var byTo = left.ToNumber.CompareTo(right.ToNumber);
             return byTo != 0 ? byTo : left.StepNumber.CompareTo(right.StepNumber);
-        }
-
-        private static int CompareMessage(GameEventScriptMessageValue left, GameEventScriptMessageValue right)
-        {
-            var bySignature = StringComparer.Ordinal.Compare(left.Value.SignatureId, right.Value.SignatureId);
-            if (bySignature != 0) return bySignature;
-            var byArguments = CompareDictionary(left.Value.Arguments, right.Value.Arguments);
-            return byArguments != 0 ? byArguments : CompareTags(left.Value.Tags, right.Value.Tags);
-        }
-
-        private static int CompareTags(IReadOnlyList<string> left, IReadOnlyList<string> right)
-        {
-            var byCount = left.Count.CompareTo(right.Count);
-            if (byCount != 0) return byCount;
-
-            for (var i = 0; i < left.Count; i++)
-            {
-                var byTag = StringComparer.Ordinal.Compare(left[i], right[i]);
-                if (byTag != 0) return byTag;
-            }
-
-            return 0;
         }
 
         private static int CompareHandler(GameEventScriptHandlerValue left, GameEventScriptHandlerValue right) =>

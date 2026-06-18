@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Api;
 
@@ -122,7 +121,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <returns>A message with this signature's name and parameter names.</returns>
-    public GameEventScriptMessage WithArguments(params GameEventScriptValue[] arguments) => !TryCreateMessage(arguments, out var message)
+    public GameEventScriptMessage WithArguments(params GameEventScriptBoxedValue[] arguments) => !TryCreateMessage(arguments, out var message)
         ? throw new ArgumentException($"Message signature '{SignatureId}' expects {Parameters.Count} argument(s) but received {arguments.Length}.", nameof(arguments))
         : message;
 
@@ -132,7 +131,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <param name="message">The created message when the argument count matches; otherwise undefined.</param>
     /// <returns><c>true</c> when the argument count matches the signature; otherwise <c>false</c>.</returns>
-    public bool TryCreateMessage(IReadOnlyList<GameEventScriptValue> arguments, out GameEventScriptMessage message)
+    public bool TryCreateMessage(IReadOnlyList<GameEventScriptBoxedValue> arguments, out GameEventScriptMessage message)
     {
         message = default!;
         if (Name.Length == 0) return false;
@@ -142,10 +141,10 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             message = GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.Empty, SignatureId);
             return true;
         }
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[arguments.Count];
+        var pairs = new KeyValuePair<string, GameEventScriptBoxedValue>[arguments.Count];
         for (var index = 0; index < arguments.Count; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(Parameters[index], arguments[index] ?? GameEventScriptNothingValue.Instance);
+            pairs[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(Parameters[index], arguments[index] ?? GameEventScriptBoxedValue.Nothing());
         }
 
         message = GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.CreateOrdered(pairs, Parameters), SignatureId);

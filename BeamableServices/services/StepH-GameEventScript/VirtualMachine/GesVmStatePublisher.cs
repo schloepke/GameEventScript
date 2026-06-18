@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -14,10 +13,10 @@ internal static class GesVmStatePublisher
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentSlots.Length != signature.ArgumentNames.Count) return false;
         var messageName = vmState.FetchStringByPointer(signature.Name);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
+        var pairs = new KeyValuePair<string, GameEventScriptBoxedValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+            pairs[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptBoxedValue.FromVmValue(in vmState.Register(argumentSlots[index])));
         }
 
         try
@@ -36,16 +35,16 @@ internal static class GesVmStatePublisher
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentSlots.Length != signature.ArgumentNames.Count) return false;
         var messageName = vmState.FetchStringByPointer(signature.Name);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
+        var pairs = new KeyValuePair<string, GameEventScriptBoxedValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+            pairs[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptBoxedValue.FromVmValue(in vmState.Register(argumentSlots[index])));
         }
 
         var tags = new List<string>(tagSlots.Length);
         for (var index = 0; index < tagSlots.Length; index++)
         {
-            AddTagsToList(tags, vmState.Register(tagSlots[index]).ToGameEventScriptValue());
+            AddTagsToList(tags, GameEventScriptBoxedValue.FromVmValue(in vmState.Register(tagSlots[index])));
         }
 
         try
@@ -72,19 +71,19 @@ internal static class GesVmStatePublisher
         var tags = new List<string>(tagSlots.Length);
         for (var index = 0; index < tagSlots.Length; index++)
         {
-            AddTagsToList(tags, vmState.Register(tagSlots[index]).ToGameEventScriptValue());
+            AddTagsToList(tags, GameEventScriptBoxedValue.FromVmValue(in vmState.Register(tagSlots[index])));
         }
         return publish ? session.Publish(msg.WithTags(tags)) : session.Emit(msg.WithTags(tags));
     }
-    private static void AddTagsToList(List<string> tags, GameEventScriptValue value)
+    private static void AddTagsToList(List<string> tags, GameEventScriptBoxedValue value)
     {
-        if (value.IsList())
+        if (value.Kind is List)
         {
-            foreach (var j in value.AsEnumerable()) AddTagsToList(tags, j);
+            foreach (var j in value.AsList()) AddTagsToList(tags, j);
         }
         else
         {
-            tags.Add(value.AsText());
+            tags.Add(value.Text);
         }
     }
 }

@@ -94,7 +94,7 @@ internal class GesVmState
             var arguments = message.Arguments;
             if (!EnsureRegisterCapacity(arguments.Count)) return false;
             RegisterFrameLength = (ushort)arguments.Count;
-            for (var i = 0; i < RegisterFrameLength; i++) RegisterSlots[i].BindArguments(arguments[i]);
+            for (var i = 0; i < RegisterFrameLength; i++) this.BindArguments((ushort)i, arguments[i]);
         }
         else
         {

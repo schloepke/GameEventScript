@@ -1228,7 +1228,7 @@ internal static class GesAstOptimizer
                 converted = value.IsRange() ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "message":
-                converted = value.Kind == GameEventScriptValueKind.Message ? value : GameEventScriptNothingValue.Instance;
+                converted = GameEventScriptNothingValue.Instance;
                 return true;
             case "handler":
                 converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptNothingValue.Instance;

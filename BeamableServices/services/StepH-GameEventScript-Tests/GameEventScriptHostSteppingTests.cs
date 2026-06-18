@@ -62,7 +62,7 @@ public sealed class GameEventScriptHostSteppingTests
 
         var session = host.StartSession();
 
-        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)))));
+        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GameEventScriptBoxedValue.FromInteger(7)))));
         CollectionAssert.AreEqual(new[] { "Ping(amount)" }, calls);
     }
 
@@ -516,15 +516,15 @@ public sealed class GameEventScriptHostSteppingTests
 
         host.Publish(Create(
             "Start",
-            ("values", GameEventScriptValueFactory.GesList(Enumerable.Range(1, 3).Select(value => GameEventScriptValueFactory.GesInteger(value)))),
-            ("seed", GameEventScriptValueFactory.GesInteger(7))));
+            ("values", GameEventScriptBoxedValue.FromList(Enumerable.Range(1, 3).Select(value => GameEventScriptBoxedValue.FromInteger(value)))),
+            ("seed", GameEventScriptBoxedValue.FromInteger(7))));
 
         var steps = DrainWithTinyBudget(host);
 
         Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
         Assert.HasCount(1, published);
-        Assert.AreEqual(GameEventScriptValueFactory.GesInteger(7), published[0].Arguments["total"]);
-        Assert.AreEqual(GameEventScriptValueFactory.GesText("high"), published[0].Arguments["label"]);
+        Assert.AreEqual(7, published[0].Arguments["total"].AsInteger());
+        Assert.AreEqual("high", published[0].Arguments["label"].Text);
     }
 
     [TestMethod]

@@ -153,6 +153,9 @@ internal static class GesVmRegisterCallExternal
         destination.BindArguments(argument);
     }
 
+    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptBoxedValue argument)
+        => state.SetValue(destinationRegister, in argument.GetVmValue());
+
     internal static void BindArguments(ref this GesVmValue destination, GameEventScriptValue argument)
     {
         switch (argument.Kind)
@@ -183,9 +186,6 @@ internal static class GesVmRegisterCallExternal
             case GameEventScriptValueKind.Range when argument is GameEventScriptRangeValue range:
                 if (range.IsIntegerRange) destination.SetRange(range.From, range.To, range.Step);
                 else destination.SetRange(range.FromNumber, range.ToNumber, range.StepNumber);
-                break;
-            case GameEventScriptValueKind.Message when argument is GameEventScriptMessageValue message:
-                destination.SetMessage(message.Value);
                 break;
             case GameEventScriptValueKind.Handler when argument is GameEventScriptHandlerValue handler:
                 destination.SetMessageHandler(handler.Signature);
@@ -263,7 +263,7 @@ internal static class GesVmRegisterCallExternal
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
         Series when a.ObjectValue is GameEventScriptSeriesValue series => series,
         Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
-        Message when a.ObjectValue is GameEventScriptMessage message => GameEventScriptValueFactory.GesMessage(message),
+        Message => GameEventScriptValueFactory.GesNothing(),
         _ => GameEventScriptValueFactory.GesNothing(),
     };
 

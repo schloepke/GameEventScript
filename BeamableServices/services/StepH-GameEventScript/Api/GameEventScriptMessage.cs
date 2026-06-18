@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Api;
 
@@ -24,10 +23,10 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// </summary>
     /// <param name="name">The name of the message. This is used to identify the message within the system.</param>
     /// <param name="arguments">A dictionary containing the named arguments for the message, where keys
-    /// represent argument names, and values are the corresponding <see cref="GameEventScriptValue"/> instances.
+    /// represent argument names, and values are the corresponding <see cref="GameEventScriptBoxedValue"/> instances.
     /// This parameter can be null if no arguments are provided.</param>
     /// <returns>Returns a <see cref="GameEventScriptMessage"/> object encapsulating the specified name and arguments.</returns>
-    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments) => new(name, GameEventScriptNamedArguments.Create(arguments));
+    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptBoxedValue>? arguments) => new(name, GameEventScriptNamedArguments.Create(arguments));
 
     /// <summary>
     /// Creates a new message with the provided arguments and delivery tags. Tags are metadata and are not part of the message signature.
@@ -36,7 +35,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// <param name="arguments">The named message arguments.</param>
     /// <param name="tags">Delivery tags associated with the message.</param>
     /// <returns>A new message instance.</returns>
-    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags) => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
+    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptBoxedValue>? arguments, IEnumerable<string>? tags) => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
 
     /// <summary>
     /// Constructs a <see cref="GameEventScriptMessage"/> instance with a specified name and associated arguments.
@@ -46,11 +45,11 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// <param name="name">The name of the message, used to identify its purpose or type.</param>
     /// <param name="arguments">
     /// A collection of key-value pairs where each key represents the argument's name and
-    /// the value is a <see cref="GameEventScriptValue"/> associated with that argument.
+    /// the value is a <see cref="GameEventScriptBoxedValue"/> associated with that argument.
     /// </param>
     /// <returns>A new instance of the <see cref="GameEventScriptMessage"/> class constructed with the specified name and arguments.</returns>
-    public static GameEventScriptMessage Create(string name, params (string name, GameEventScriptValue value)[] arguments)
-        => new(name, GameEventScriptNamedArguments.CreateOrdered(arguments.Select(pair => new KeyValuePair<string, GameEventScriptValue>(pair.name, pair.value)).ToArray()));
+    public static GameEventScriptMessage Create(string name, params (string name, GameEventScriptBoxedValue value)[] arguments)
+        => new(name, GameEventScriptNamedArguments.CreateOrdered(arguments.Select(pair => new KeyValuePair<string, GameEventScriptBoxedValue>(pair.name, pair.value)).ToArray()));
 
     /// <summary>
     /// Gets the name of the message associated with the GameEventScriptMessage instance.

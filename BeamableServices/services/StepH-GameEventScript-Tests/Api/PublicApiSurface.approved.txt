@@ -39,6 +39,10 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryHeader.GameEventScriptBinary
   enum-field Optimization = 1
   enum-field Debug = 2
 sealed class StepH.GameEventScript.Api.GameEventScriptBoxedValue
+  method System.Boolean AsBoolean()
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptBoxedValue other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method System.Boolean TryGetCustomTypeName(System.String& typeName)
   method System.Boolean TryGetExternalObject(System.Type objectType, System.Object& value)
   method System.Boolean TryGetExternalObject<T>(T& value)
@@ -48,8 +52,12 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBoxedValue
   method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> AsMap()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBoxedValue> AsList()
   method System.Collections.Generic.IReadOnlyList<System.Int32> AsDice()
+  method System.Double AsNumber()
   method System.Double AsNumeric()
+  method System.Int32 GetHashCode()
+  method System.Int64 AsInteger()
   method System.String AsText()
+  method System.String ToString()
   method static StepH.GameEventScript.Api.GameEventScriptBoxedValue FromBoolean(System.Boolean boolean)
   method static StepH.GameEventScript.Api.GameEventScriptBoxedValue FromDice(System.Collections.Generic.IEnumerable<System.Int32> rolls)
   method static StepH.GameEventScript.Api.GameEventScriptBoxedValue FromFloat(System.Double number, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
@@ -393,9 +401,9 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method System.Boolean HasTag(System.String tag)
   method System.Int32 GetHashCode()
   method System.String ToString()
-  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments)
-  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
-  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Types.GameEventScriptValue>[] arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue>[] arguments)
   property StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
   property System.String Name { get }
@@ -412,11 +420,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor
 sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   field static StepH.GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
-  method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Types.GameEventScriptValue[] arguments)
+  method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Api.GameEventScriptBoxedValue[] arguments)
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptMessageSignature other)
   method System.Boolean Equals(System.Object obj)
   method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
+  method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBoxedValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
   method System.Int32 GetHashCode()
   method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
   method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
@@ -427,15 +435,15 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   property System.String SignatureId { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptNamedArguments
   method System.Boolean ContainsKey(System.String key)
-  method System.Boolean TryGetValue(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
-  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Types.GameEventScriptValue>> GetEnumerator()
+  method System.Boolean TryGetValue(System.String key, StepH.GameEventScript.Api.GameEventScriptBoxedValue& value)
+  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue>> GetEnumerator()
   method System.String ToString()
-  method static StepH.GameEventScript.Api.GameEventScriptNamedArguments Create(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> values)
-  method static System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> Normalize(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> values)
+  method static StepH.GameEventScript.Api.GameEventScriptNamedArguments Create(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> values)
+  method static System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> Normalize(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> values)
+  property StepH.GameEventScript.Api.GameEventScriptBoxedValue Item { get }
+  property StepH.GameEventScript.Api.GameEventScriptBoxedValue Item { get }
   property StepH.GameEventScript.Api.GameEventScriptNamedArguments Empty { get }
-  property StepH.GameEventScript.Types.GameEventScriptValue Item { get }
-  property StepH.GameEventScript.Types.GameEventScriptValue Item { get }
-  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> Values { get }
+  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptBoxedValue> Values { get }
   property System.Collections.Generic.IEnumerable<System.String> Keys { get }
   property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
   property System.Int32 Count { get }
@@ -468,12 +476,12 @@ sealed class StepH.GameEventScript.Api.GameEventScriptSession
   method System.Boolean DispatchToCompletion(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Emit(System.String message)
-  method System.Boolean Emit(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> args)
-  method System.Boolean Emit(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Types.GameEventScriptValue>[] args)
+  method System.Boolean Emit(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> args)
+  method System.Boolean Emit(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue>[] args)
   method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Publish(System.String message)
-  method System.Boolean Publish(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> args)
-  method System.Boolean Publish(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Types.GameEventScriptValue>[] args)
+  method System.Boolean Publish(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue> args)
+  method System.Boolean Publish(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Api.GameEventScriptBoxedValue>[] args)
   property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
   property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
   property StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
@@ -537,7 +545,6 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesList(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> values)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesMap(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> values)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesMaybe(StepH.GameEventScript.Types.GameEventScriptValue value)
-  method static StepH.GameEventScript.Types.GameEventScriptValue GesMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesMeter(System.Double meters)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesNothing()
   method static StepH.GameEventScript.Types.GameEventScriptValue GesNumber(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? unit)
@@ -788,14 +795,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptMapValue
   property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> EmptyView { get }
   property System.Collections.ObjectModel.ReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> VisibleView { get }
-sealed class StepH.GameEventScript.Types.GameEventScriptMessageValue
-  method System.Boolean TryGetMapMember(System.String key, StepH.GameEventScript.Types.GameEventScriptValue& value)
-  method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> AsMap()
-  method System.String AsText()
-  method static StepH.GameEventScript.Types.GameEventScriptMessageValue Create(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  property StepH.GameEventScript.Api.GameEventScriptMessage Value { get }
-  property StepH.GameEventScript.Types.GameEventScriptValueKind Kind { get }
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Types.GameEventScriptValue> Members { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptNothingValue
   field static StepH.GameEventScript.Types.GameEventScriptNothingValue Instance
   method StepH.GameEventScript.Types.GameEventScriptDiceValue AsDice()
@@ -933,7 +932,6 @@ abstract class StepH.GameEventScript.Types.GameEventScriptValue
   method System.Boolean IsInteger()
   method System.Boolean IsList()
   method System.Boolean IsMap()
-  method System.Boolean IsMessage()
   method System.Boolean IsNaN()
   method System.Boolean IsNegativeInfinity()
   method System.Boolean IsNothing()
@@ -983,11 +981,10 @@ enum StepH.GameEventScript.Types.GameEventScriptValueKind
   enum-field Boolean = 7
   enum-field Series = 8
   enum-field Range = 9
-  enum-field Message = 10
-  enum-field Handler = 11
-  enum-field List = 12
-  enum-field Map = 13
-  enum-field Dice = 14
+  enum-field Handler = 10
+  enum-field List = 11
+  enum-field Map = 12
+  enum-field Dice = 13
 sealed class StepH.GameEventScript.Types.GameEventScriptVectorValue
   field static StepH.GameEventScript.Types.GameEventScriptVectorValue Zero
   method System.Boolean AsBoolean()

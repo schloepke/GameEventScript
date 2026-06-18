@@ -27,11 +27,11 @@ internal static class GameEventScriptConformanceValueCodec
     {
         RequireObject(element, "message");
         var name = RequireString(element, "name", "message name");
-        var args = new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal);
+        var args = new Dictionary<string, GameEventScriptBoxedValue>(StringComparer.Ordinal);
 
         if (TryGetProperty(element, "args", out var argsElement))
         {
-            args = DecodeArguments(argsElement);
+            args = DecodeBoxedArguments(argsElement);
         }
 
         var tags = TryGetProperty(element, "tags", out var tagsElement)
@@ -51,6 +51,70 @@ internal static class GameEventScriptConformanceValueCodec
         }
 
         return args;
+    }
+
+    public static Dictionary<string, GameEventScriptBoxedValue> DecodeBoxedArguments(JsonElement element)
+    {
+        RequireObject(element, "message args");
+        var args = new Dictionary<string, GameEventScriptBoxedValue>(StringComparer.Ordinal);
+        foreach (var property in element.EnumerateObject())
+        {
+            args[property.Name] = DecodeBoxedValue(property.Value);
+        }
+
+        return args;
+    }
+
+    public static GameEventScriptBoxedValue DecodeBoxedValue(JsonElement element)
+    {
+        RequireObject(element, "value");
+        var type = RequireCanonicalTypeName(element, "type", "value type");
+        switch (type)
+        {
+            case ":nothing":
+                return GameEventScriptBoxedValue.Nothing();
+            case ":text":
+                return GameEventScriptBoxedValue.FromText(RequireString(element, "value", "text value"));
+            case ":tag":
+                return GameEventScriptBoxedValue.FromTag(RequireString(element, "value", "tag value"));
+            case ":boolean":
+                return GameEventScriptBoxedValue.FromBoolean(RequireBoolean(element, "value", "boolean value"));
+            case ":integer":
+                return GameEventScriptBoxedValue.FromInteger(
+                    RequireInt64(element, "value", "integer value"),
+                    DecodeOptionalNumericUnit(element) ?? GameEventScriptBytecodeInstructionUnit.UnitNone);
+            case ":float":
+                return DecodeBoxedFloatValue(element);
+            case ":percentage":
+                return GameEventScriptBoxedValue.FromPercentage(RequireFloat(element, "value", "percentage ratio"));
+            case ":vector":
+                return GameEventScriptBoxedValue.FromVector(
+                    RequireFloat(element, "x", "vector x component"),
+                    RequireFloat(element, "y", "vector y component"),
+                    RequireFloat(element, "z", "vector z component"),
+                    DecodeOptionalNumericUnit(element) ?? GameEventScriptBytecodeInstructionUnit.UnitNone);
+            case ":point":
+                return GameEventScriptBoxedValue.FromPoint(
+                    RequireFloat(element, "x", "point x component"),
+                    RequireFloat(element, "y", "point y component"),
+                    RequireFloat(element, "z", "point z component"),
+                    DecodeOptionalNumericUnit(element) ?? GameEventScriptBytecodeInstructionUnit.UnitNone);
+            case ":list":
+                return GameEventScriptBoxedValue.FromList(RequireArray(element, "items", "list items").EnumerateArray().Select(DecodeBoxedValue));
+            case ":map":
+                return GameEventScriptBoxedValue.FromMap(DecodeBoxedEntries(element));
+            case ":dice":
+                return GameEventScriptBoxedValue.FromDice(RequireArray(element, "rolls", "dice rolls").EnumerateArray().Select(ReadInt32));
+            case ":range":
+                return GameEventScriptBoxedValue.FromFloatRange(
+                    RequireFloat(element, "from", "range start"),
+                    RequireFloat(element, "to", "range end"),
+                    TryGetProperty(element, "step", out var stepElement) ? ReadFloat(stepElement, "range step") : 1d);
+            case ":message":
+                return GameEventScriptBoxedValue.FromMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
+            default:
+                return GameEventScriptBoxedValue.FromRecord(type[1..], DecodeBoxedEntries(element));
+        }
     }
 
     public static GameEventScriptValue DecodeValue(JsonElement element)
@@ -98,8 +162,6 @@ internal static class GameEventScriptConformanceValueCodec
                     RequireFloat(element, "from", "range start"),
                     RequireFloat(element, "to", "range end"),
                     TryGetProperty(element, "step", out var stepElement) ? ReadFloat(stepElement, "range step") : 1d);
-            case ":message":
-                return GameEventScriptValueFactory.GesMessage(DecodeMessage(RequireObjectProperty(element, "message", "message value")));
             default:
                 return GameEventScriptValueFactory.GesCustomType(type[1..], DecodeEntries(element));
         }
@@ -118,6 +180,9 @@ internal static class GameEventScriptConformanceValueCodec
         => ToMessageArrayJson(messages).ToJsonString(PrettyJsonOptions);
 
     public static string ToCanonicalJson(GameEventScriptValue value)
+        => ToValueJson(value).ToJsonString(CompactJsonOptions);
+
+    public static string ToCanonicalJson(GameEventScriptBoxedValue value)
         => ToValueJson(value).ToJsonString(CompactJsonOptions);
 
     public static string ToPrettyJson(GameEventScriptValue value)
@@ -181,11 +246,65 @@ internal static class GameEventScriptConformanceValueCodec
             GameEventScriptValueKind.Map => new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) },
             GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
             GameEventScriptValueKind.Range => ToRangeJson(value),
-            GameEventScriptValueKind.Message => new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(GetInternalProperty<GameEventScriptMessage>(value, "Value")) },
             GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
             GameEventScriptValueKind.Series => throw new NotSupportedException("Series values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
         };
+    }
+
+    public static JsonObject ToValueJson(GameEventScriptBoxedValue value)
+    {
+        if (value.IsNothing)
+        {
+            return new JsonObject { ["type"] = ":nothing" };
+        }
+
+        if (value.TryGetCustomTypeName(out var customTypeName))
+        {
+            return new JsonObject
+            {
+                ["type"] = ToCanonicalTypeName(customTypeName),
+                ["entries"] = ToEntriesJson(value.AsMap())
+            };
+        }
+
+        switch (value.Kind)
+        {
+            case GameEventScriptBytecodeTypeKind.Nothing:
+                return new JsonObject { ["type"] = ":nothing" };
+            case GameEventScriptBytecodeTypeKind.Text:
+                return new JsonObject { ["type"] = ":text", ["value"] = value.Text };
+            case GameEventScriptBytecodeTypeKind.Tag:
+                return new JsonObject { ["type"] = ":tag", ["value"] = value.Text };
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                return new JsonObject { ["type"] = ":boolean", ["value"] = value.Boolean };
+            case GameEventScriptBytecodeTypeKind.Integer:
+                return ToIntegerJson(value);
+            case GameEventScriptBytecodeTypeKind.Float:
+                return ToFloatJson(value);
+            case GameEventScriptBytecodeTypeKind.Percentage:
+                return new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.Number) };
+            case GameEventScriptBytecodeTypeKind.Vector:
+                return ToVectorJson(value, ":vector");
+            case GameEventScriptBytecodeTypeKind.Point:
+                return ToVectorJson(value, ":point");
+            case GameEventScriptBytecodeTypeKind.List:
+                return new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) };
+            case GameEventScriptBytecodeTypeKind.Map:
+                return new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) };
+            case GameEventScriptBytecodeTypeKind.Dice:
+                return new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice()) };
+            case GameEventScriptBytecodeTypeKind.Range:
+                return ToRangeJson(value);
+            case GameEventScriptBytecodeTypeKind.Message when value.Message is { } message:
+                return new JsonObject { ["type"] = ":message", ["message"] = ToMessageJson(message) };
+            case GameEventScriptBytecodeTypeKind.Handler:
+                throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format.");
+            case GameEventScriptBytecodeTypeKind.Series:
+                throw new NotSupportedException("Series values are not part of the conformance JSON value wire format.");
+            default:
+                throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.");
+        }
     }
 
     private static GameEventScriptValue DecodeFloatValue(JsonElement element)
@@ -199,6 +318,20 @@ internal static class GameEventScriptConformanceValueCodec
             "Infinity" => GameEventScriptValueFactory.GesFloatInfinity(),
             "-Infinity" => GameEventScriptValueFactory.GesFloatNegativeInfinity(),
             _ => GameEventScriptValueFactory.GesFloat(double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
+        };
+    }
+
+    private static GameEventScriptBoxedValue DecodeBoxedFloatValue(JsonElement element)
+    {
+        var value = RequireString(element, "value", "float value");
+        var unit = DecodeOptionalNumericUnit(element) ?? GameEventScriptBytecodeInstructionUnit.UnitNone;
+
+        return value switch
+        {
+            "NaN" => GameEventScriptBoxedValue.Nothing(),
+            "Infinity" => GameEventScriptBoxedValue.FromFloat(double.PositiveInfinity, unit),
+            "-Infinity" => GameEventScriptBoxedValue.FromFloat(double.NegativeInfinity, unit),
+            _ => GameEventScriptBoxedValue.FromFloat(double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
         };
     }
 
@@ -261,6 +394,18 @@ internal static class GameEventScriptConformanceValueCodec
         return entries;
     }
 
+    private static IReadOnlyDictionary<string, GameEventScriptBoxedValue> DecodeBoxedEntries(JsonElement element)
+    {
+        var entriesElement = RequireObjectProperty(element, "entries", "dictionary entries");
+        var entries = new Dictionary<string, GameEventScriptBoxedValue>(StringComparer.Ordinal);
+        foreach (var property in entriesElement.EnumerateObject())
+        {
+            entries[property.Name] = DecodeBoxedValue(property.Value);
+        }
+
+        return entries;
+    }
+
     private static JsonArray ToMessageArrayJson(IEnumerable<GameEventScriptMessage> messages)
     {
         var array = new JsonArray();
@@ -273,6 +418,17 @@ internal static class GameEventScriptConformanceValueCodec
     }
 
     private static JsonArray ToValueArrayJson(IEnumerable<GameEventScriptValue> values)
+    {
+        var array = new JsonArray();
+        foreach (var value in values)
+        {
+            array.Add(ToValueJson(value));
+        }
+
+        return array;
+    }
+
+    private static JsonArray ToValueArrayJson(IEnumerable<GameEventScriptBoxedValue> values)
     {
         var array = new JsonArray();
         foreach (var value in values)
@@ -305,6 +461,17 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
+    private static JsonObject ToEntriesJson(IReadOnlyDictionary<string, GameEventScriptBoxedValue> entries)
+    {
+        var node = new JsonObject();
+        foreach (var pair in entries.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+        {
+            node[pair.Key] = ToValueJson(pair.Value);
+        }
+
+        return node;
+    }
+
     private static JsonObject ToRangeJson(GameEventScriptValue value)
         => new()
         {
@@ -313,6 +480,33 @@ internal static class GameEventScriptConformanceValueCodec
             ["to"] = FormatFloat(GetInternalProperty<double>(value, "ToNumber")),
             ["step"] = FormatFloat(GetInternalProperty<double>(value, "StepNumber"))
         };
+
+    private static JsonObject ToRangeJson(GameEventScriptBoxedValue value)
+    {
+        if (value.TryGetIntegerRange(out var from, out var to, out var step))
+        {
+            return new JsonObject
+            {
+                ["type"] = ":range",
+                ["from"] = from.ToString(CultureInfo.InvariantCulture),
+                ["to"] = to.ToString(CultureInfo.InvariantCulture),
+                ["step"] = step.ToString(CultureInfo.InvariantCulture)
+            };
+        }
+
+        if (value.TryGetFloatRange(out var fromFloat, out var toFloat, out var stepFloat))
+        {
+            return new JsonObject
+            {
+                ["type"] = ":range",
+                ["from"] = FormatFloat(fromFloat),
+                ["to"] = FormatFloat(toFloat),
+                ["step"] = FormatFloat(stepFloat)
+            };
+        }
+
+        return new JsonObject { ["type"] = ":nothing" };
+    }
 
     private static JsonObject ToNumberJson(GameEventScriptNumberValue value)
         => value.IsIntegerValue ? ToIntegerJson(value) : ToFloatJson(value);
@@ -333,12 +527,44 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
+    private static JsonObject ToFloatJson(GameEventScriptBoxedValue value)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = ":float",
+            ["value"] = FormatFloat(value.Number)
+        };
+
+        if (value.Unit.IsNumericUnit() && double.IsFinite(value.Number))
+        {
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
+        }
+
+        return node;
+    }
+
     private static JsonObject ToIntegerJson(GameEventScriptNumberValue value)
     {
         var node = new JsonObject
         {
             ["type"] = ":integer",
             ["value"] = value.IntegerValue.ToString(CultureInfo.InvariantCulture)
+        };
+
+        if (value.Unit.IsNumericUnit())
+        {
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
+        }
+
+        return node;
+    }
+
+    private static JsonObject ToIntegerJson(GameEventScriptBoxedValue value)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = ":integer",
+            ["value"] = value.Integer.ToString(CultureInfo.InvariantCulture)
         };
 
         if (value.Unit.IsNumericUnit())
@@ -385,6 +611,24 @@ internal static class GameEventScriptConformanceValueCodec
         return node;
     }
 
+    private static JsonObject ToVectorJson(GameEventScriptBoxedValue value, string type)
+    {
+        var node = new JsonObject
+        {
+            ["type"] = type,
+            ["x"] = FormatFloat(value.X),
+            ["y"] = FormatFloat(value.Y),
+            ["z"] = FormatFloat(value.Z)
+        };
+
+        if (value.Unit.IsNumericUnit())
+        {
+            node["unit"] = ToCanonicalTypeName(value.Unit.ToTypeName());
+        }
+
+        return node;
+    }
+
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;
 
@@ -404,7 +648,12 @@ internal static class GameEventScriptConformanceValueCodec
     }
 
     private static string FormatFloat(double value)
-        => value == 0d ? "0" : value.ToString("0.############################", CultureInfo.InvariantCulture);
+    {
+        if (double.IsPositiveInfinity(value)) return "Infinity";
+        if (double.IsNegativeInfinity(value)) return "-Infinity";
+        if (double.IsNaN(value)) return "NaN";
+        return value == 0d ? "0" : value.ToString("0.############################", CultureInfo.InvariantCulture);
+    }
 
     private static T GetInternalProperty<T>(GameEventScriptValue value, string propertyName)
     {

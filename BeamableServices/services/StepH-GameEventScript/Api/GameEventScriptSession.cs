@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Api;
 
@@ -66,17 +65,17 @@ public sealed class GameEventScriptSession
 
     public bool Emit(string message) => Emit(GameEventScriptMessage.Create(message));
 
-    public bool Emit(string message, IReadOnlyDictionary<string, GameEventScriptValue> args) => Emit(GameEventScriptMessage.Create(message, args));
+    public bool Emit(string message, IReadOnlyDictionary<string, GameEventScriptBoxedValue> args) => Emit(GameEventScriptMessage.Create(message, args));
 
-    public bool Emit(string message, params (string name, GameEventScriptValue value)[] args) => Emit(GameEventScriptMessage.Create(message, args));
+    public bool Emit(string message, params (string name, GameEventScriptBoxedValue value)[] args) => Emit(GameEventScriptMessage.Create(message, args));
 
     public bool Publish(GameEventScriptMessage message) => !string.IsNullOrWhiteSpace(message.Name) && _publish(message);
 
     public bool Publish(string message) => Publish(GameEventScriptMessage.Create(message));
 
-    public bool Publish(string message, IReadOnlyDictionary<string, GameEventScriptValue> args) => Publish(GameEventScriptMessage.Create(message, args));
+    public bool Publish(string message, IReadOnlyDictionary<string, GameEventScriptBoxedValue> args) => Publish(GameEventScriptMessage.Create(message, args));
 
-    public bool Publish(string message, params (string name, GameEventScriptValue value)[] args) => Publish(GameEventScriptMessage.Create(message, args));
+    public bool Publish(string message, params (string name, GameEventScriptBoxedValue value)[] args) => Publish(GameEventScriptMessage.Create(message, args));
 
     internal void RecordRuntimeLimitReached(string limitName, string detail, int limit)
         => _runtimeObserver?.RuntimeLimitReached(limitName, detail, limit);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -31,10 +30,10 @@ internal static class GesVmRegisterMessages
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
+        var pairs = new KeyValuePair<string, GameEventScriptBoxedValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(shape[index + 1]), vmState.Register(argumentSlots[index]).ToGameEventScriptValue());
+            pairs[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(vmState.FetchStringByPointer(shape[index + 1]), GameEventScriptBoxedValue.FromVmValue(in vmState.Register(argumentSlots[index])));
         }
         try
         {
@@ -53,10 +52,10 @@ internal static class GesVmRegisterMessages
             return;
         }
 
-        var arguments = new GameEventScriptValue[argumentSlots.Length];
+        var arguments = new GameEventScriptBoxedValue[argumentSlots.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
-            arguments[index] = vmState.Register(argumentSlots[index]).ToGameEventScriptValue();
+            arguments[index] = GameEventScriptBoxedValue.FromVmValue(in vmState.Register(argumentSlots[index]));
         }
         if (signature.TryCreateMessage(arguments, out var message))
         {

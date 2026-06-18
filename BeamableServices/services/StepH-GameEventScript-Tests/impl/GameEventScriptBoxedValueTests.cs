@@ -117,7 +117,7 @@ public sealed class GameEventScriptBoxedValueTests
     {
         var intRange = GameEventScriptBoxedValue.FromIntegerRange(1, 5, 2);
         var floatRange = GameEventScriptBoxedValue.FromFloatRange(1.5d, 2.5d, 0.5d);
-        var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)));
+        var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptBoxedValue.FromInteger(7)));
         var messageValue = GameEventScriptBoxedValue.FromMessage(message);
         var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
         var handler = GameEventScriptBoxedValue.FromHandler(signature);

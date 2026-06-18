@@ -198,14 +198,6 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesRange(double from, double to, double step = 1d) => GameEventScriptRangeValue.Create(from, to, step);
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a message value.
-    /// </summary>
-    /// <param name="message">The message to encapsulate. Cannot be null.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance containing the message value.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesMessage(GameEventScriptMessage message) => GameEventScriptMessageValue.Create(message);
-
-    /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptValue"/> representing a handler value.
     /// </summary>
     /// <param name="signature">The message signature used to create the handler value. Cannot be null.</param>

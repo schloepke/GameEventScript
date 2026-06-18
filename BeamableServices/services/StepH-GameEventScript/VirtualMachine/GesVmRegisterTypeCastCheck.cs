@@ -385,16 +385,15 @@ internal static class GesVmRegisterTypeCastCheck
                 dst.SetMap(visibleEntries.ToMap());
                 return;
             }
-            case Custom when xSlot.ObjectValue is GameEventScriptValue externalValue:
+            case Custom when xSlot.ObjectValue is GesVmExternalObject externalObject:
             {
-                var sourceEntries = externalValue.AsMap();
-                var entries = new GesVmValueMapBuilder(sourceEntries.Count);
-                foreach (var (key, sourceValue) in sourceEntries)
+                var sourceEntries = externalObject.ToMap();
+                var entries = new GesVmValueMapBuilder(sourceEntries.Length);
+                for (var i = 0; i < sourceEntries.StorageLength; i++)
                 {
+                    var key = sourceEntries.KeyAt(i);
                     if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-                    var value = new GesVmValue();
-                    value.BindArguments(sourceValue);
-                    entries.Set(key, value);
+                    entries.Set(key, sourceEntries.ValueAt(i));
                 }
 
                 dst.SetMap(entries.ToMap());
@@ -584,7 +583,7 @@ internal static class GesVmRegisterTypeCastCheck
     }
     private static bool IsCustomType(in GesVmValue value, string typeName)
     {
-        if (value.ObjectValue is IGameEventScriptCustomTypeValue custom) return string.Equals(custom.CustomTypeName, typeName, StringComparison.Ordinal);
+        if (value.ObjectValue is GesVmExternalObject externalObject) return string.Equals(externalObject.CustomTypeName, typeName, StringComparison.Ordinal);
         return value.Kind switch
         {
             Custom when value.ObjectValue is string customTypeName => string.Equals(customTypeName, typeName, StringComparison.Ordinal),

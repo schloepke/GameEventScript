@@ -68,9 +68,9 @@ steps=1
 compile.elapsedMs=15.0000
 compile.allocatedKb=2500.000
 run.elapsedMs=2139.8539
-run.allocatedKb=66000.000
+run.allocatedKb=67000.000
 run.perInvokeElapsedMs=2.1399
-run.perInvokeAllocatedKb=66.000
+run.perInvokeAllocatedKb=67.000
 run.emittedMessages=1000
 run.outboundPublishedMessages=0
 

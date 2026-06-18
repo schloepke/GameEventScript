@@ -197,9 +197,9 @@ internal static class GesVmRegisterCallExternal
                 destination.SetList(list);
                 break;
             case GameEventScriptValueKind.Map:
-                if (argument is IGameEventScriptExternalObjectValue)
+                if (argument is GameEventScriptExternalObjectValue externalObject)
                 {
-                    destination.SetExternalCustomType(argument);
+                    destination.SetExternalCustomType(new GesVmExternalObject(externalObject.Instance, externalObject.Definition));
                     break;
                 }
 
@@ -256,7 +256,7 @@ internal static class GesVmRegisterCallExternal
         Tag => GameEventScriptValueFactory.GesTag(a.TextValue),
         List when a.ObjectValue is GesVmValue[] list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
         Map when a.ObjectValue is GesVmValueMap map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
-        Custom when a.ObjectValue is GameEventScriptValue custom => custom,
+        Custom when a.ObjectValue is GesVmExternalObject externalObject => GameEventScriptValueFactory.GesCustomType(externalObject.CustomTypeName, externalObject.ToMap().ToGameEventScriptValues()),
         Custom when a.ObjectValue is GesVmValueMap map => map.ToGameEventScriptCustomTypeValue(),
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),

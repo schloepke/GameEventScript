@@ -230,12 +230,12 @@ internal struct GesVmValue
         ObjectValue = record;
     }
 
-    internal void SetExternalCustomType(GameEventScriptValue value)
+    internal void SetExternalCustomType(GesVmExternalObject value)
     {
         Kind = Custom;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = value.Definition.Fields.Count;
         ObjectValue = value;
     }
 

@@ -141,7 +141,7 @@ internal class GesVmState
     internal void SetList(ushort index, GesVmValue[] list) => Register(index).SetList(list);
     internal void SetMap(ushort index, GesVmValueMap valueMap) => Register(index).SetMap(valueMap);
     internal void SetRecord(ushort index, GesVmValueMap record) => Register(index).SetRecord(record);
-    internal void SetExternalCustomType(ushort index, GameEventScriptValue value) => Register(index).SetExternalCustomType(value);
+    internal void SetExternalCustomType(ushort index, GesVmExternalObject value) => Register(index).SetExternalCustomType(value);
     internal void SetRange(ushort index, long from, long to, long step) => Register(index).SetRange(from, to, step);
     internal void SetRange(ushort index, double from, double to, double step) => Register(index).SetRange(from, to, step);
     internal void SetMessageHandler(ushort index, GameEventScriptMessageSignature handler) => Register(index).SetMessageHandler(handler);

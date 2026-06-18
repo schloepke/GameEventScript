@@ -1305,20 +1305,8 @@ internal static class GesVmRegisterCollectionOperators
             case Map or Custom when a.ObjectValue is GesVmValueMap map:
                 vmState.SetList(dst, map.ValueList);
                 break;
-            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
-                var valueEntries = externalValue.AsMap();
-                var valueKeys = new string[valueEntries.Count];
-                var valueKeyCount = 0;
-                foreach (var key in valueEntries.Keys)
-                {
-                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-                    valueKeys[valueKeyCount++] = key;
-                }
-
-                Array.Sort(valueKeys, 0, valueKeyCount, StringComparer.Ordinal);
-                var values = new GesVmValue[valueKeyCount];
-                for (var i = 0; i < valueKeyCount; i++) values[i].BindArguments(valueEntries[valueKeys[i]]);
-                vmState.SetList(dst, values);
+            case Custom when a.ObjectValue is GesVmExternalObject externalObject:
+                vmState.SetList(dst, externalObject.ToMap().ValueList);
                 break;
             default:
                 vmState.SetNothing(dst);
@@ -1333,20 +1321,8 @@ internal static class GesVmRegisterCollectionOperators
             case Map or Custom when a.ObjectValue is GesVmValueMap map:
                 vmState.SetList(dst, map.KeyList);
                 break;
-            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
-                var keyEntries = externalValue.AsMap();
-                var keyKeys = new string[keyEntries.Count];
-                var keyCount = 0;
-                foreach (var key in keyEntries.Keys)
-                {
-                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-                    keyKeys[keyCount++] = key;
-                }
-
-                Array.Sort(keyKeys, 0, keyCount, StringComparer.Ordinal);
-                var keys = new GesVmValue[keyCount];
-                for (var i = 0; i < keyCount; i++) keys[i].SetTag(keyKeys[i]);
-                vmState.SetList(dst, keys);
+            case Custom when a.ObjectValue is GesVmExternalObject externalObject:
+                vmState.SetList(dst, externalObject.ToMap().KeyList);
                 break;
             default:
                 vmState.SetNothing(dst);
@@ -1361,31 +1337,8 @@ internal static class GesVmRegisterCollectionOperators
             case Map or Custom when a.ObjectValue is GesVmValueMap map:
                 vmState.SetList(dst, map.EntryList);
                 break;
-            case Custom when a.ObjectValue is GameEventScriptValue externalValue:
-                var entryEntries = externalValue.AsMap();
-                var entryKeys = new string[entryEntries.Count];
-                var entryKeyCount = 0;
-                foreach (var key in entryEntries.Keys)
-                {
-                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-                    entryKeys[entryKeyCount++] = key;
-                }
-
-                Array.Sort(entryKeys, 0, entryKeyCount, StringComparer.Ordinal);
-                var entries = new GesVmValue[entryKeyCount];
-                for (var i = 0; i < entryKeyCount; i++)
-                {
-                    var value = new GesVmValue();
-                    value.BindArguments(entryEntries[entryKeys[i]]);
-                    var entry = new GesVmValueMapBuilder(2);
-                    var keyValue = new GesVmValue();
-                    keyValue.SetTag(entryKeys[i]);
-                    entry.Set("key", keyValue);
-                    entry.Set("value", value);
-                    entries[i].SetMap(entry.ToMap());
-                }
-
-                vmState.SetList(dst, entries);
+            case Custom when a.ObjectValue is GesVmExternalObject externalObject:
+                vmState.SetList(dst, externalObject.ToMap().EntryList);
                 break;
             default:
                 vmState.SetNothing(dst);

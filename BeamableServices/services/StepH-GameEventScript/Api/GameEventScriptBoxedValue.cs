@@ -133,25 +133,19 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
 
     public IReadOnlyDictionary<string, GameEventScriptBoxedValue> AsMap()
     {
-        if (_value.ObjectValue is GameEventScriptValue externalValue)
+        if (_value.ObjectValue is not GesVmValueMap map)
         {
-            var externalMap = externalValue.AsMap();
-            if (externalMap.Count == 0)
+            if (_value.ObjectValue is GesVmExternalObject externalObject)
+            {
+                map = externalObject.ToMap();
+            }
+            else
             {
                 return new Dictionary<string, GameEventScriptBoxedValue>(0, StringComparer.Ordinal);
             }
-
-            var externalResult = new Dictionary<string, GameEventScriptBoxedValue>(externalMap.Count, StringComparer.Ordinal);
-            foreach (var pair in externalMap)
-            {
-                if (pair.Key.StartsWith("_", StringComparison.Ordinal)) continue;
-                externalResult[pair.Key] = FromGameEventScriptValue(pair.Value);
-            }
-
-            return externalResult;
         }
 
-        if (_value.ObjectValue is not GesVmValueMap map)
+        if (map.Length == 0)
         {
             return new Dictionary<string, GameEventScriptBoxedValue>(0, StringComparer.Ordinal);
         }
@@ -185,7 +179,14 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
 
     public bool TryGetMapValue(string key, out GameEventScriptBoxedValue value)
     {
-        if (_value.ObjectValue is GesVmValueMap map && map.TryGet(key, out var mapValue) && !key.StartsWith("_", StringComparison.Ordinal))
+        var map = _value.ObjectValue switch
+        {
+            GesVmValueMap vmMap => vmMap,
+            GesVmExternalObject externalObject => externalObject.ToMap(),
+            _ => null
+        };
+
+        if (map is not null && map.TryGet(key, out var mapValue) && !key.StartsWith("_", StringComparison.Ordinal))
         {
             value = FromVmValue(in mapValue);
             return true;
@@ -197,9 +198,9 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
 
     public bool TryGetCustomTypeName(out string typeName)
     {
-        if (_value.ObjectValue is IGameEventScriptCustomTypeValue custom)
+        if (_value.ObjectValue is GesVmExternalObject externalObject)
         {
-            typeName = custom.CustomTypeName;
+            typeName = externalObject.CustomTypeName;
             return true;
         }
 
@@ -264,7 +265,7 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
     public bool TryGetExternalObject(Type objectType, out object value)
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
-        if (_value.ObjectValue is IGameEventScriptExternalObjectValue externalObject &&
+        if (_value.ObjectValue is GesVmExternalObject externalObject &&
             objectType.IsInstanceOfType(externalObject.Instance))
         {
             value = externalObject.Instance;

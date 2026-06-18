@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
+using System.Collections.Generic;
 using StepH.GameEventScript.VirtualMachine;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -86,6 +87,16 @@ public sealed class GameEventScriptBoxedValue
 
     public bool IsIntegerNumber => Kind is GameEventScriptBytecodeTypeKind.Integer;
 
+    public int Length => _value.IntegerValue < 0 ? 0 : _value.IntegerValue > int.MaxValue ? int.MaxValue : (int)_value.IntegerValue;
+
+    public GameEventScriptMessage? Message => _value.ObjectValue as GameEventScriptMessage;
+
+    public GameEventScriptMessageSignature? Handler => _value.ObjectValue as GameEventScriptMessageSignature;
+
+    public bool IsIntegerRange => _value.ObjectValue is GesVmValueRangeInteger;
+
+    public bool IsFloatRange => _value.ObjectValue is GesVmValueRangeFloat;
+
     /// <summary>
     /// Reads the value as a numeric value or <see cref="double.NaN"/> when it is not numeric.
     /// </summary>
@@ -95,6 +106,115 @@ public sealed class GameEventScriptBoxedValue
     /// Reads the value as text using the VM formatting rules.
     /// </summary>
     public string AsText() => _value.ConvertToText();
+
+    public IReadOnlyList<GameEventScriptBoxedValue> AsList()
+    {
+        if (_value.ObjectValue is not GesVmValue[] source)
+        {
+            return [];
+        }
+
+        var list = new GameEventScriptBoxedValue[source.Length];
+        for (var index = 0; index < source.Length; index++)
+        {
+            list[index] = FromVmValue(in source[index]);
+        }
+
+        return list;
+    }
+
+    public IReadOnlyDictionary<string, GameEventScriptBoxedValue> AsMap()
+    {
+        if (_value.ObjectValue is not GesVmValueMap map)
+        {
+            return new Dictionary<string, GameEventScriptBoxedValue>(0, StringComparer.Ordinal);
+        }
+
+        var result = new Dictionary<string, GameEventScriptBoxedValue>(map.Length, StringComparer.Ordinal);
+        for (var index = 0; index < map.StorageLength; index++)
+        {
+            if (!map.IsVisibleAt(index))
+            {
+                continue;
+            }
+
+            var mapValue = map.ValueAt(index);
+            result[map.KeyAt(index)] = FromVmValue(in mapValue);
+        }
+
+        return result;
+    }
+
+    public IReadOnlyList<int> AsDice()
+    {
+        if (_value.ObjectValue is not int[] rolls)
+        {
+            return [];
+        }
+
+        var result = new int[rolls.Length];
+        Array.Copy(rolls, result, rolls.Length);
+        return result;
+    }
+
+    public bool TryGetMapValue(string key, out GameEventScriptBoxedValue value)
+    {
+        if (_value.ObjectValue is GesVmValueMap map && map.TryGet(key, out var mapValue) && !key.StartsWith("_", StringComparison.Ordinal))
+        {
+            value = FromVmValue(in mapValue);
+            return true;
+        }
+
+        value = Nothing();
+        return false;
+    }
+
+    public bool TryGetCustomTypeName(out string typeName)
+    {
+        if (_value.Kind is Custom &&
+            _value.ObjectValue is GesVmValueMap map &&
+            map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) &&
+            marker.Kind is Tag)
+        {
+            typeName = marker.TextValue;
+            return true;
+        }
+
+        typeName = string.Empty;
+        return false;
+    }
+
+    public bool TryGetIntegerRange(out long from, out long to, out long step)
+    {
+        if (_value.ObjectValue is GesVmValueRangeInteger range)
+        {
+            from = range.From;
+            to = range.To;
+            step = range.Step;
+            return true;
+        }
+
+        from = 0;
+        to = 0;
+        step = 0;
+        return false;
+    }
+
+    public bool TryGetFloatRange(out double from, out double to, out double step)
+    {
+        if (_value.ObjectValue is GesVmValueRangeFloat range)
+        {
+            from = range.From;
+            to = range.To;
+            step = range.Step;
+            return true;
+        }
+
+        from = 0d;
+        to = 0d;
+        step = 0d;
+        return false;
+    }
 
     public bool TryGetExternalObject<T>(out T value)
     {
@@ -187,6 +307,68 @@ public sealed class GameEventScriptBoxedValue
         return new GameEventScriptBoxedValue(in value);
     }
 
+    public static GameEventScriptBoxedValue FromList(IEnumerable<GameEventScriptBoxedValue>? items)
+    {
+        var source = items is null ? [] : ToArray(items);
+        var list = new GesVmValue[source.Length];
+        for (var index = 0; index < source.Length; index++)
+        {
+            list[index] = source[index].GetVmValue();
+        }
+
+        var value = new GesVmValue();
+        value.SetList(list);
+        return new GameEventScriptBoxedValue(in value);
+    }
+
+    public static GameEventScriptBoxedValue FromMap(IEnumerable<KeyValuePair<string, GameEventScriptBoxedValue>>? entries)
+    {
+        var builder = new GesVmValueMapBuilder();
+        if (entries is not null)
+        {
+            foreach (var entry in entries)
+            {
+                builder.Set(entry.Key, entry.Value.GetVmValue());
+            }
+        }
+
+        var value = new GesVmValue();
+        value.SetMap(builder.ToMap());
+        return new GameEventScriptBoxedValue(in value);
+    }
+
+    public static GameEventScriptBoxedValue FromRecord(string typeName, IEnumerable<KeyValuePair<string, GameEventScriptBoxedValue>>? fields)
+    {
+        var builder = new GesVmValueMapBuilder();
+        var marker = new GesVmValue();
+        marker.SetTag(typeName ?? string.Empty);
+        builder.Set(GesVmValueMap.HiddenRecordTypeField, marker);
+        if (fields is not null)
+        {
+            foreach (var field in fields)
+            {
+                if (string.Equals(field.Key, GesVmValueMap.HiddenRecordTypeField, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                builder.Set(field.Key, field.Value.GetVmValue());
+            }
+        }
+
+        var value = new GesVmValue();
+        value.SetRecord(builder.ToMap());
+        return new GameEventScriptBoxedValue(in value);
+    }
+
+    public static GameEventScriptBoxedValue FromDice(IEnumerable<int>? rolls)
+    {
+        var values = rolls is null ? [] : ToArray(rolls);
+        var value = new GesVmValue();
+        value.SetDice(values);
+        return new GameEventScriptBoxedValue(in value);
+    }
+
     public static GameEventScriptBoxedValue FromIntegerRange(long from, long to, long step = 1)
     {
         var value = new GesVmValue();
@@ -223,4 +405,52 @@ public sealed class GameEventScriptBoxedValue
     }
 
     internal static GameEventScriptBoxedValue FromVmValue(in GesVmValue value) => new(in value);
+
+    private static GameEventScriptBoxedValue[] ToArray(IEnumerable<GameEventScriptBoxedValue> values)
+    {
+        if (values is GameEventScriptBoxedValue[] array)
+        {
+            return array;
+        }
+
+        if (values is ICollection<GameEventScriptBoxedValue> collection)
+        {
+            var result = new GameEventScriptBoxedValue[collection.Count];
+            collection.CopyTo(result, 0);
+            return result;
+        }
+
+        var list = new List<GameEventScriptBoxedValue>();
+        foreach (var value in values)
+        {
+            list.Add(value);
+        }
+
+        return list.ToArray();
+    }
+
+    private static int[] ToArray(IEnumerable<int> values)
+    {
+        if (values is int[] array)
+        {
+            var copy = new int[array.Length];
+            Array.Copy(array, copy, array.Length);
+            return copy;
+        }
+
+        if (values is ICollection<int> collection)
+        {
+            var result = new int[collection.Count];
+            collection.CopyTo(result, 0);
+            return result;
+        }
+
+        var list = new List<int>();
+        foreach (var value in values)
+        {
+            list.Add(value);
+        }
+
+        return list.ToArray();
+    }
 }

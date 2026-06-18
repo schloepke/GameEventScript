@@ -68,4 +68,69 @@ public sealed class GameEventScriptBoxedValueTests
         Assert.IsTrue(nan.IsNothing);
         Assert.IsFalse(nan.HasValue);
     }
+
+    [TestMethod]
+    public void ListAndDiceExposeDataCopies()
+    {
+        var list = GameEventScriptBoxedValue.FromList([
+            GameEventScriptBoxedValue.FromInteger(1),
+            GameEventScriptBoxedValue.FromText("two")
+        ]);
+        var dice = GameEventScriptBoxedValue.FromDice([3, 6, 1]);
+
+        Assert.AreEqual(GameEventScriptBytecodeTypeKind.List, list.Kind);
+        Assert.AreEqual(2, list.Length);
+        Assert.AreEqual(1, list.AsList()[0].Integer);
+        Assert.AreEqual("two", list.AsList()[1].Text);
+        Assert.AreEqual(GameEventScriptBytecodeTypeKind.Dice, dice.Kind);
+        CollectionAssert.AreEqual(new[] { 6, 3, 1 }, dice.AsDice().ToArray());
+    }
+
+    [TestMethod]
+    public void MapAndRecordExposeVisibleSortedData()
+    {
+        var map = GameEventScriptBoxedValue.FromMap([
+            new KeyValuePair<string, GameEventScriptBoxedValue>("z", GameEventScriptBoxedValue.FromInteger(3)),
+            new KeyValuePair<string, GameEventScriptBoxedValue>("a", GameEventScriptBoxedValue.FromInteger(1))
+        ]);
+        var record = GameEventScriptBoxedValue.FromRecord("unit", [
+            new KeyValuePair<string, GameEventScriptBoxedValue>("hp", GameEventScriptBoxedValue.FromInteger(10)),
+            new KeyValuePair<string, GameEventScriptBoxedValue>("_hidden", GameEventScriptBoxedValue.FromText("secret"))
+        ]);
+
+        Assert.AreEqual(GameEventScriptBytecodeTypeKind.Map, map.Kind);
+        Assert.AreEqual(2, map.Length);
+        Assert.IsTrue(map.TryGetMapValue("a", out var a));
+        Assert.AreEqual(1, a.Integer);
+        CollectionAssert.AreEqual(new[] { "a", "z" }, map.AsMap().Keys.ToArray());
+        Assert.AreEqual(GameEventScriptBytecodeTypeKind.Custom, record.Kind);
+        Assert.AreEqual(1, record.Length);
+        Assert.IsTrue(record.TryGetCustomTypeName(out var typeName));
+        Assert.AreEqual("unit", typeName);
+        Assert.IsTrue(record.TryGetMapValue("hp", out var hp));
+        Assert.AreEqual(10, hp.Integer);
+        Assert.IsFalse(record.AsMap().ContainsKey("_hidden"));
+    }
+
+    [TestMethod]
+    public void RangesMessagesAndHandlersExposeStoredObjects()
+    {
+        var intRange = GameEventScriptBoxedValue.FromIntegerRange(1, 5, 2);
+        var floatRange = GameEventScriptBoxedValue.FromFloatRange(1.5d, 2.5d, 0.5d);
+        var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)));
+        var messageValue = GameEventScriptBoxedValue.FromMessage(message);
+        var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
+        var handler = GameEventScriptBoxedValue.FromHandler(signature);
+
+        Assert.IsTrue(intRange.TryGetIntegerRange(out var from, out var to, out var step));
+        Assert.AreEqual(1, from);
+        Assert.AreEqual(5, to);
+        Assert.AreEqual(2, step);
+        Assert.IsTrue(floatRange.TryGetFloatRange(out var fromFloat, out var toFloat, out var stepFloat));
+        Assert.AreEqual(1.5d, fromFloat);
+        Assert.AreEqual(2.5d, toFloat);
+        Assert.AreEqual(0.5d, stepFloat);
+        Assert.AreSame(message, messageValue.Message);
+        Assert.AreSame(signature, handler.Handler);
+    }
 }

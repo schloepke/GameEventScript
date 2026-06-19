@@ -234,20 +234,20 @@ internal static class GameEventScriptConformanceValueCodec
 
         return value.Kind switch
         {
-            GameEventScriptValueKind.Nothing => new JsonObject { ["type"] = ":nothing" },
-            GameEventScriptValueKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
-            GameEventScriptValueKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
-            GameEventScriptValueKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
-            GameEventScriptValueKind.Number => ToNumberJson((GameEventScriptNumberValue)value),
-            GameEventScriptValueKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
-            GameEventScriptValueKind.Vector => ToVectorJson((GameEventScriptVectorValue)value),
-            GameEventScriptValueKind.Point => ToPointJson((GameEventScriptPointValue)value),
-            GameEventScriptValueKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
-            GameEventScriptValueKind.Map => new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) },
-            GameEventScriptValueKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
-            GameEventScriptValueKind.Range => ToRangeJson(value),
-            GameEventScriptValueKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
-            GameEventScriptValueKind.Series => throw new NotSupportedException("Series values are not part of the conformance JSON value wire format."),
+            GameEventScriptBytecodeTypeKind.Nothing => new JsonObject { ["type"] = ":nothing" },
+            GameEventScriptBytecodeTypeKind.Text => new JsonObject { ["type"] = ":text", ["value"] = value.AsText() },
+            GameEventScriptBytecodeTypeKind.Tag => new JsonObject { ["type"] = ":tag", ["value"] = value.AsText() },
+            GameEventScriptBytecodeTypeKind.Boolean => new JsonObject { ["type"] = ":boolean", ["value"] = value.AsBoolean() },
+            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float => ToNumberJson((GameEventScriptNumberValue)value),
+            GameEventScriptBytecodeTypeKind.Percentage => new JsonObject { ["type"] = ":percentage", ["value"] = FormatFloat(value.AsNumber()) },
+            GameEventScriptBytecodeTypeKind.Vector => ToVectorJson((GameEventScriptVectorValue)value),
+            GameEventScriptBytecodeTypeKind.Point => ToPointJson((GameEventScriptPointValue)value),
+            GameEventScriptBytecodeTypeKind.List => new JsonObject { ["type"] = ":list", ["items"] = ToValueArrayJson(value.AsList()) },
+            GameEventScriptBytecodeTypeKind.Map => new JsonObject { ["type"] = ":map", ["entries"] = ToEntriesJson(value.AsMap()) },
+            GameEventScriptBytecodeTypeKind.Dice => new JsonObject { ["type"] = ":dice", ["rolls"] = ToIntegerArrayJson(value.AsDice().Rolls) },
+            GameEventScriptBytecodeTypeKind.Range => ToRangeJson(value),
+            GameEventScriptBytecodeTypeKind.Handler => throw new NotSupportedException("Handler values are not part of the conformance JSON value wire format."),
+            GameEventScriptBytecodeTypeKind.Series => throw new NotSupportedException("Series values are not part of the conformance JSON value wire format."),
             _ => throw new NotSupportedException($"Unsupported GameEventScript value type '{value.Kind}'.")
         };
     }

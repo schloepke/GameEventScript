@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -51,7 +52,7 @@ public sealed class GameEventScriptRangeValue : GameEventScriptValue
     public double StepNumber { get; }
     public bool IsIntegerRange { get; }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Range;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Range;
 
     public override string AsText() => ToString();
 

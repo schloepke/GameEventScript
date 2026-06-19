@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Types;
@@ -18,7 +19,7 @@ internal sealed class GameEventScriptExternalObjectValue : GameEventScriptValue,
         Definition = definition ?? throw new ArgumentNullException(nameof(definition));
     }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Map;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Map;
 
     public object Instance { get; }
 

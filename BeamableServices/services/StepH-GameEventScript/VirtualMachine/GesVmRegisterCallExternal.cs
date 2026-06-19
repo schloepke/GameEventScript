@@ -160,43 +160,44 @@ internal static class GesVmRegisterCallExternal
     {
         switch (argument.Kind)
         {
-            case GameEventScriptValueKind.Tag:
+            case GameEventScriptBytecodeTypeKind.Tag:
                 destination.SetTag(argument.AsText());
                 break;
-            case GameEventScriptValueKind.Text:
+            case GameEventScriptBytecodeTypeKind.Text:
                 destination.SetText(argument.AsText());
                 break;
-            case GameEventScriptValueKind.Percentage:
+            case GameEventScriptBytecodeTypeKind.Percentage:
                 destination.SetPercentage(argument.AsNumber());
                 break;
-            case GameEventScriptValueKind.Vector when argument is GameEventScriptVectorValue vector:
+            case GameEventScriptBytecodeTypeKind.Vector when argument is GameEventScriptVectorValue vector:
                 destination.SetVector(vector.X, vector.Y, vector.Z, vector.Unit);
                 break;
-            case GameEventScriptValueKind.Point when argument is GameEventScriptPointValue point:
+            case GameEventScriptBytecodeTypeKind.Point when argument is GameEventScriptPointValue point:
                 destination.SetPoint(point.X, point.Y, point.Z, point.Unit);
                 break;
-            case GameEventScriptValueKind.Number:
+            case GameEventScriptBytecodeTypeKind.Integer:
+            case GameEventScriptBytecodeTypeKind.Float:
                 if (argument.IsInteger()) destination.SetInteger(argument.AsInteger(), argument.Unit);
                 else if (argument.IsInfinity()) destination.SetFloat(argument.IsNegativeInfinity() ? double.NegativeInfinity : double.PositiveInfinity, argument.Unit);
                 else destination.SetFloat(argument.AsNumber(), argument.Unit);
                 break;
-            case GameEventScriptValueKind.Boolean:
+            case GameEventScriptBytecodeTypeKind.Boolean:
                 destination.SetBoolean(argument.AsBoolean());
                 break;
-            case GameEventScriptValueKind.Range when argument is GameEventScriptRangeValue range:
+            case GameEventScriptBytecodeTypeKind.Range when argument is GameEventScriptRangeValue range:
                 if (range.IsIntegerRange) destination.SetRange(range.From, range.To, range.Step);
                 else destination.SetRange(range.FromNumber, range.ToNumber, range.StepNumber);
                 break;
-            case GameEventScriptValueKind.Handler when argument is GameEventScriptHandlerValue handler:
+            case GameEventScriptBytecodeTypeKind.Handler when argument is GameEventScriptHandlerValue handler:
                 destination.SetMessageHandler(handler.Signature);
                 break;
-            case GameEventScriptValueKind.List:
+            case GameEventScriptBytecodeTypeKind.List:
                 var sourceItems = argument.AsList();
                 var list = new GesVmValue[sourceItems.Count];
                 for (var index = 0; index < sourceItems.Count; index++) list[index].BindArguments(sourceItems[index]);
                 destination.SetList(list);
                 break;
-            case GameEventScriptValueKind.Map:
+            case GameEventScriptBytecodeTypeKind.Map:
                 if (argument is GameEventScriptExternalObjectValue externalObject)
                 {
                     destination.SetExternalCustomType(new GesVmExternalObject(externalObject.Instance, externalObject.Definition));
@@ -223,7 +224,7 @@ internal static class GesVmRegisterCallExternal
                 if (isCustomType) destination.SetRecord(entries.ToMap());
                 else destination.SetMap(entries.ToMap());
                 break;
-            case GameEventScriptValueKind.Dice:
+            case GameEventScriptBytecodeTypeKind.Dice:
                 var sourceDice = argument.AsDice().Rolls;
                 var rolls = new int[sourceDice.Count];
                 for (var index = 0; index < sourceDice.Count; index++)
@@ -233,11 +234,11 @@ internal static class GesVmRegisterCallExternal
 
                 destination.SetDice(rolls);
                 break;
-            case GameEventScriptValueKind.Series when argument is GameEventScriptSeriesValue series:
+            case GameEventScriptBytecodeTypeKind.Series when argument is GameEventScriptSeriesValue series:
                 destination.SetSeries(series);
                 break;
-            case GameEventScriptValueKind.Series:
-            case GameEventScriptValueKind.Nothing:
+            case GameEventScriptBytecodeTypeKind.Series:
+            case GameEventScriptBytecodeTypeKind.Nothing:
             default:
                 destination.SetNothing();
                 break;

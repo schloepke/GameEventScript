@@ -99,31 +99,31 @@ internal static class GesValueOperations
             return true;
         }
 
-        if (left.Kind == GameEventScriptValueKind.List)
+        if (left.Kind == GameEventScriptBytecodeTypeKind.List)
         {
             value = GameEventScriptValueFactory.GesList(left.AsList().Append(right));
             return true;
         }
 
-        if (right.Kind == GameEventScriptValueKind.List)
+        if (right.Kind == GameEventScriptBytecodeTypeKind.List)
         {
             value = GameEventScriptValueFactory.GesList(new[] { left }.Concat(right.AsList()));
             return true;
         }
 
-        if (left.Kind == GameEventScriptValueKind.Dice && IsUnitlessInteger(right, out var rightRoll) && rightRoll > 0)
+        if (left.Kind == GameEventScriptBytecodeTypeKind.Dice && IsUnitlessInteger(right, out var rightRoll) && rightRoll > 0)
         {
             value = GameEventScriptValueFactory.GesDice(left.AsDice().Rolls.Append(rightRoll));
             return true;
         }
 
-        if (right.Kind == GameEventScriptValueKind.Dice && IsUnitlessInteger(left, out var leftRoll) && leftRoll > 0)
+        if (right.Kind == GameEventScriptBytecodeTypeKind.Dice && IsUnitlessInteger(left, out var leftRoll) && leftRoll > 0)
         {
             value = GameEventScriptValueFactory.GesDice(new[] { leftRoll }.Concat(right.AsDice().Rolls));
             return true;
         }
 
-        if (left.Kind == GameEventScriptValueKind.Dice || right.Kind == GameEventScriptValueKind.Dice || left.Kind == GameEventScriptValueKind.Map || right.Kind == GameEventScriptValueKind.Map)
+        if (left.Kind == GameEventScriptBytecodeTypeKind.Dice || right.Kind == GameEventScriptBytecodeTypeKind.Dice || left.Kind == GameEventScriptBytecodeTypeKind.Map || right.Kind == GameEventScriptBytecodeTypeKind.Map)
         {
             value = GameEventScriptNothingValue.Instance;
             return true;
@@ -141,28 +141,28 @@ internal static class GesValueOperations
             return true;
         }
 
-        if (left.Kind == GameEventScriptValueKind.List)
+        if (left.Kind == GameEventScriptBytecodeTypeKind.List)
         {
-            if (right.Kind == GameEventScriptValueKind.Map)
+            if (right.Kind == GameEventScriptBytecodeTypeKind.Map)
             {
                 value = GameEventScriptNothingValue.Instance;
                 return true;
             }
 
-            var remaining = right.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice ? right.AsList().ToList() : [right];
+            var remaining = right.Kind is GameEventScriptBytecodeTypeKind.List or GameEventScriptBytecodeTypeKind.Dice ? right.AsList().ToList() : [right];
             value = GameEventScriptValueFactory.GesList(MultisetSubtract(left.AsList(), remaining));
             return true;
         }
 
-        if (left.Kind == GameEventScriptValueKind.Dice)
+        if (left.Kind == GameEventScriptBytecodeTypeKind.Dice)
         {
-            if (right.Kind == GameEventScriptValueKind.Dice)
+            if (right.Kind == GameEventScriptBytecodeTypeKind.Dice)
             {
                 value = GameEventScriptValueFactory.GesDice(MultisetSubtract(left.AsList(), right.AsList()).Select(item => checked((int)item.AsInteger())));
                 return true;
             }
 
-            if (right.Kind == GameEventScriptValueKind.List)
+            if (right.Kind == GameEventScriptBytecodeTypeKind.List)
             {
                 value = GameEventScriptValueFactory.GesList(MultisetSubtract(left.AsList(), right.AsList()));
                 return true;
@@ -178,22 +178,22 @@ internal static class GesValueOperations
             return true;
         }
 
-        if (left.Kind == GameEventScriptValueKind.Map)
+        if (left.Kind == GameEventScriptBytecodeTypeKind.Map)
         {
             var keys = new HashSet<string>(StringComparer.Ordinal);
-            if (right.Kind == GameEventScriptValueKind.Map)
+            if (right.Kind == GameEventScriptBytecodeTypeKind.Map)
             {
                 keys.UnionWith(right.AsMap().Keys);
             }
-            else if (right.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag)
+            else if (right.Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag)
             {
                 keys.Add(right.AsText());
             }
-            else if (right.Kind == GameEventScriptValueKind.List)
+            else if (right.Kind == GameEventScriptBytecodeTypeKind.List)
             {
                 foreach (var item in right.AsList())
                 {
-                    if (item.Kind is not (GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag))
+                    if (item.Kind is not (GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag))
                     {
                         value = GameEventScriptNothingValue.Instance;
                         return true;
@@ -213,13 +213,13 @@ internal static class GesValueOperations
             return true;
         }
 
-        if (right.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice)
+        if (right.Kind is GameEventScriptBytecodeTypeKind.List or GameEventScriptBytecodeTypeKind.Dice)
         {
             value = GameEventScriptNothingValue.Instance;
             return true;
         }
 
-        if (right.Kind == GameEventScriptValueKind.Map)
+        if (right.Kind == GameEventScriptBytecodeTypeKind.Map)
         {
             value = GameEventScriptNothingValue.Instance;
             return true;
@@ -234,18 +234,18 @@ internal static class GesValueOperations
         if (left.IsNothing() || right.IsNothing()) return GameEventScriptNothingValue.Instance;
         switch (left.Kind)
         {
-            case GameEventScriptValueKind.Map when right.Kind == GameEventScriptValueKind.Map: return EvaluateDictionaryCombine(left, right);
-            case GameEventScriptValueKind.Map:
+            case GameEventScriptBytecodeTypeKind.Map when right.Kind == GameEventScriptBytecodeTypeKind.Map: return EvaluateDictionaryCombine(left, right);
+            case GameEventScriptBytecodeTypeKind.Map:
             {
                 if (!TryReadKeyList(right, out var keys)) return GameEventScriptNothingValue.Instance;
                 var map = new Dictionary<string, GameEventScriptValue>(left.AsMap(), StringComparer.Ordinal);
                 foreach (var key in keys) map.TryAdd(key, GameEventScriptValueFactory.GesBoolean(true));
                 return GameEventScriptValueFactory.GesMap(map);
             }
-            case GameEventScriptValueKind.List when right.Kind == GameEventScriptValueKind.List:
-            case GameEventScriptValueKind.List when right.Kind == GameEventScriptValueKind.Dice:
-            case GameEventScriptValueKind.Dice when right.Kind == GameEventScriptValueKind.List: return GameEventScriptValueFactory.GesList(left.AsList().Concat(right.AsList()));
-            case GameEventScriptValueKind.Dice when right.Kind == GameEventScriptValueKind.Dice: return GameEventScriptValueFactory.GesDice(left.AsDice().Rolls.Concat(right.AsDice().Rolls));
+            case GameEventScriptBytecodeTypeKind.List when right.Kind == GameEventScriptBytecodeTypeKind.List:
+            case GameEventScriptBytecodeTypeKind.List when right.Kind == GameEventScriptBytecodeTypeKind.Dice:
+            case GameEventScriptBytecodeTypeKind.Dice when right.Kind == GameEventScriptBytecodeTypeKind.List: return GameEventScriptValueFactory.GesList(left.AsList().Concat(right.AsList()));
+            case GameEventScriptBytecodeTypeKind.Dice when right.Kind == GameEventScriptBytecodeTypeKind.Dice: return GameEventScriptValueFactory.GesDice(left.AsDice().Rolls.Concat(right.AsDice().Rolls));
             default: return GameEventScriptNothingValue.Instance;
         }
     }
@@ -255,7 +255,7 @@ internal static class GesValueOperations
         if (left.IsNothing() || right.IsNothing()) return GameEventScriptNothingValue.Instance;
         switch (left.Kind)
         {
-            case GameEventScriptValueKind.Map when right.Kind == GameEventScriptValueKind.Map:
+            case GameEventScriptBytecodeTypeKind.Map when right.Kind == GameEventScriptBytecodeTypeKind.Map:
             {
                 var rightKeys = new HashSet<string>(right.AsMap().Keys, StringComparer.Ordinal);
                 var map = left.AsMap()
@@ -263,7 +263,7 @@ internal static class GesValueOperations
                     .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
                 return GameEventScriptValueFactory.GesMap(map);
             }
-            case GameEventScriptValueKind.Map when TryReadKeyList(right, out var keys):
+            case GameEventScriptBytecodeTypeKind.Map when TryReadKeyList(right, out var keys):
             {
                 var keySet = new HashSet<string>(keys, StringComparer.Ordinal);
                 var map = left.AsMap()
@@ -271,11 +271,11 @@ internal static class GesValueOperations
                     .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.Ordinal);
                 return GameEventScriptValueFactory.GesMap(map);
             }
-            case GameEventScriptValueKind.List or GameEventScriptValueKind.Dice when
-                right.Kind is GameEventScriptValueKind.List or GameEventScriptValueKind.Dice:
+            case GameEventScriptBytecodeTypeKind.List or GameEventScriptBytecodeTypeKind.Dice when
+                right.Kind is GameEventScriptBytecodeTypeKind.List or GameEventScriptBytecodeTypeKind.Dice:
             {
                 var result = MultisetIntersect(left.AsList(), right.AsList());
-                return left.Kind == GameEventScriptValueKind.Dice && right.Kind == GameEventScriptValueKind.Dice
+                return left.Kind == GameEventScriptBytecodeTypeKind.Dice && right.Kind == GameEventScriptBytecodeTypeKind.Dice
                     ? GameEventScriptValueFactory.GesDice(result.Select(item => checked((int)item.AsInteger())))
                     : GameEventScriptValueFactory.GesList(result);
             }
@@ -286,7 +286,7 @@ internal static class GesValueOperations
 
     public static GameEventScriptValue EvaluateCollectionZip(GameEventScriptValue left, GameEventScriptValue right)
     {
-        if (left.Kind != GameEventScriptValueKind.List || right.Kind != GameEventScriptValueKind.List) return GameEventScriptNothingValue.Instance;
+        if (left.Kind != GameEventScriptBytecodeTypeKind.List || right.Kind != GameEventScriptBytecodeTypeKind.List) return GameEventScriptNothingValue.Instance;
         var leftItems = left.AsList();
         var rightItems = right.AsList();
         var count = Math.Min(leftItems.Count, rightItems.Count);
@@ -346,7 +346,7 @@ internal static class GesValueOperations
 
     private static bool TryReadKeyList(GameEventScriptValue value, out IReadOnlyList<string> keys)
     {
-        if (value.Kind != GameEventScriptValueKind.List)
+        if (value.Kind != GameEventScriptBytecodeTypeKind.List)
         {
             keys = [];
             return false;
@@ -355,7 +355,7 @@ internal static class GesValueOperations
         var result = new List<string>();
         foreach (var item in value.AsList())
         {
-            if (item.Kind is not (GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag))
+            if (item.Kind is not (GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag))
             {
                 keys = [];
                 return false;
@@ -410,22 +410,23 @@ internal static class GesValueOperations
         if (value is GameEventScriptTagValue && value.TryConvertToNumber(out var convertedTag)) return TryCoerceNumericForOperation(convertedTag, out number);
         switch (value.Kind)
         {
-            case GameEventScriptValueKind.Number when value.IsNaN():
+            case GameEventScriptBytecodeTypeKind.Float when value.IsNaN():
                 number = NumericValue.NaN();
                 return true;
-            case GameEventScriptValueKind.Number when value.IsInfinity():
+            case GameEventScriptBytecodeTypeKind.Float when value.IsInfinity():
                 number = value.IsNegativeInfinity() ? NumericValue.NegativeInfinity() : NumericValue.PositiveInfinity();
                 return true;
-            case GameEventScriptValueKind.Number:
+            case GameEventScriptBytecodeTypeKind.Integer:
+            case GameEventScriptBytecodeTypeKind.Float:
                 number = NumericValue.Finite(value.AsNumber());
                 return true;
-            case GameEventScriptValueKind.Percentage:
+            case GameEventScriptBytecodeTypeKind.Percentage:
                 number = NumericValue.Finite(value.AsNumber());
                 return true;
-            case GameEventScriptValueKind.Dice:
+            case GameEventScriptBytecodeTypeKind.Dice:
                 number = NumericValue.Finite(value.AsDice().Sum());
                 return true;
-            case GameEventScriptValueKind.Boolean:
+            case GameEventScriptBytecodeTypeKind.Boolean:
                 number = NumericValue.Finite(value.AsBoolean() ? 1d : 0d);
                 return true;
             default:
@@ -966,7 +967,7 @@ internal static class GesValueOperations
     {
         if (operand.IsNothing()) return GameEventScriptNothingValue.Instance;
         if (GameEventScriptValue.TryGetNumericUnit(operand, out var unit) && unit != GameEventScriptBytecodeInstructionUnit.UnitDegree) return GameEventScriptValueFactory.GesFloatNaN();
-        if (operand.Kind is GameEventScriptValueKind.Number && TryCoerceNumericForOperation(operand, out var number) && number.IsFinite) return GameEventScriptValueFactory.GesDegree(GameEventScriptValue.WrapDegrees(number.Value));
+        if (operand.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float && TryCoerceNumericForOperation(operand, out var number) && number.IsFinite) return GameEventScriptValueFactory.GesDegree(GameEventScriptValue.WrapDegrees(number.Value));
         return GameEventScriptValueFactory.GesFloatNaN();
     }
 
@@ -1529,9 +1530,9 @@ internal static class GesValueOperations
         if (value.IsNothing()) return string.Empty;
         return value.Kind switch
         {
-            GameEventScriptValueKind.Text => value.AsText(),
-            GameEventScriptValueKind.Number => value.ToString(),
-            GameEventScriptValueKind.Boolean => value.AsBoolean().ToString(),
+            GameEventScriptBytecodeTypeKind.Text => value.AsText(),
+            GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float => value.ToString(),
+            GameEventScriptBytecodeTypeKind.Boolean => value.AsBoolean().ToString(),
             _ => value.ToString()
         };
     }

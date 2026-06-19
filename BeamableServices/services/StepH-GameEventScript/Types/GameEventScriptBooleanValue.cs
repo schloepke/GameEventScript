@@ -1,5 +1,6 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -18,7 +19,7 @@ public sealed class GameEventScriptBooleanValue : GameEventScriptValue
 
     public bool Value { get; }
     
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Boolean;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Boolean;
 
     public override string AsText() => ToString();
 

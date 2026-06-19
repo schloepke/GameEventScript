@@ -40,7 +40,7 @@ public sealed class GameEventScriptPointValue : GameEventScriptValue
     public double Y { get; }
     public double Z { get; }
     public override GameEventScriptBytecodeInstructionUnit Unit { get; }
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Point;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Point;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }
     private IReadOnlyDictionary<string, GameEventScriptValue> Members { get; }

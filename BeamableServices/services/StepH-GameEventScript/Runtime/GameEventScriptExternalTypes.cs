@@ -26,14 +26,14 @@ public sealed class GesFieldAttribute : Attribute
         TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
     }
 
-    public GesFieldAttribute(string name, GameEventScriptValueKind kind)
+    public GesFieldAttribute(string name, GameEventScriptBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit: null);
         Kind = kind;
     }
 
-    public GesFieldAttribute(string name, GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit unit)
+    public GesFieldAttribute(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -45,7 +45,7 @@ public sealed class GesFieldAttribute : Attribute
 
     public string TypeName { get; }
 
-    public GameEventScriptValueKind? Kind { get; }
+    public GameEventScriptBytecodeTypeKind? Kind { get; }
 
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
@@ -62,14 +62,14 @@ public sealed class GesParamAttribute : Attribute
         TypeName = typeName ?? throw new ArgumentNullException(nameof(typeName));
     }
 
-    public GesParamAttribute(string name, GameEventScriptValueKind kind)
+    public GesParamAttribute(string name, GameEventScriptBytecodeTypeKind kind)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit: null);
         Kind = kind;
     }
 
-    public GesParamAttribute(string name, GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit unit)
+    public GesParamAttribute(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
     {
         Name = name ?? throw new ArgumentNullException(nameof(name));
         TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -81,7 +81,7 @@ public sealed class GesParamAttribute : Attribute
 
     public string TypeName { get; }
 
-    public GameEventScriptValueKind? Kind { get; }
+    public GameEventScriptBytecodeTypeKind? Kind { get; }
 
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
@@ -175,17 +175,17 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
         Unit = unit.ToStoredUnit();
     }
 
-    public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind kind)
+    public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptBytecodeTypeKind kind)
         : this(name, kind, unit: null)
     {
     }
 
-    public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit unit)
+    public GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
         : this(name, kind, (GameEventScriptBytecodeInstructionUnit?)unit)
     {
     }
 
-    internal GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptValueKind? kind, GameEventScriptBytecodeInstructionUnit? unit)
+    internal GameEventScriptExternalTypeFieldDefinition(string name, GameEventScriptBytecodeTypeKind? kind, GameEventScriptBytecodeInstructionUnit? unit)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
         TypeName = kind is { } resolvedKind
@@ -199,7 +199,7 @@ public sealed class GameEventScriptExternalTypeFieldDefinition
 
     public string TypeName { get; }
 
-    public GameEventScriptValueKind? Kind { get; }
+    public GameEventScriptBytecodeTypeKind? Kind { get; }
 
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
@@ -215,17 +215,17 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
         Unit = unit.ToStoredUnit();
     }
 
-    public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind kind)
+    public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptBytecodeTypeKind kind)
         : this(name, kind, unit: null)
     {
     }
 
-    public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit unit)
+    public GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit unit)
         : this(name, kind, (GameEventScriptBytecodeInstructionUnit?)unit)
     {
     }
 
-    internal GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptValueKind? kind, GameEventScriptBytecodeInstructionUnit? unit)
+    internal GameEventScriptExternalTypeParameterDefinition(string name, GameEventScriptBytecodeTypeKind? kind, GameEventScriptBytecodeInstructionUnit? unit)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
         TypeName = kind is { } resolvedKind
@@ -239,7 +239,7 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
 
     public string TypeName { get; }
 
-    public GameEventScriptValueKind? Kind { get; }
+    public GameEventScriptBytecodeTypeKind? Kind { get; }
 
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
@@ -557,58 +557,58 @@ internal static class GameEventScriptExternalTypeRuntime
 
 internal static class GameEventScriptExternalTypeNames
 {
-    public static string ToTypeName(GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit? unit)
+    public static string ToTypeName(GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit? unit)
     {
         unit = unit is { } numericUnit && numericUnit.IsNumericUnit() ? numericUnit : null;
 
-        if (unit is not null && kind is not (GameEventScriptValueKind.Number or GameEventScriptValueKind.Vector or GameEventScriptValueKind.Point))
+        if (unit is not null && kind is not (GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point))
         {
             throw new ArgumentException($"External GameEventScript type '{kind}' cannot declare a numeric unit.", nameof(unit));
         }
 
         return kind switch
         {
-            GameEventScriptValueKind.Nothing => "nothing",
-            GameEventScriptValueKind.Tag => "tag",
-            GameEventScriptValueKind.Text => "text",
-            GameEventScriptValueKind.Percentage => "percentage",
-            GameEventScriptValueKind.Vector => "vector",
-            GameEventScriptValueKind.Point => "point",
-            GameEventScriptValueKind.Number => unit?.ToTypeName() ?? "number",
-            GameEventScriptValueKind.Boolean => "boolean",
-            GameEventScriptValueKind.Series => "series",
-            GameEventScriptValueKind.Range => "range",
-            GameEventScriptValueKind.Handler => "handler",
-            GameEventScriptValueKind.List => "list",
-            GameEventScriptValueKind.Map => "map",
-            GameEventScriptValueKind.Dice => "dice",
+            GameEventScriptBytecodeTypeKind.Nothing => "nothing",
+            GameEventScriptBytecodeTypeKind.Tag => "tag",
+            GameEventScriptBytecodeTypeKind.Text => "text",
+            GameEventScriptBytecodeTypeKind.Percentage => "percentage",
+            GameEventScriptBytecodeTypeKind.Vector => "vector",
+            GameEventScriptBytecodeTypeKind.Point => "point",
+            GameEventScriptBytecodeTypeKind.Float => unit?.ToTypeName() ?? "number",
+            GameEventScriptBytecodeTypeKind.Boolean => "boolean",
+            GameEventScriptBytecodeTypeKind.Series => "series",
+            GameEventScriptBytecodeTypeKind.Range => "range",
+            GameEventScriptBytecodeTypeKind.Handler => "handler",
+            GameEventScriptBytecodeTypeKind.List => "list",
+            GameEventScriptBytecodeTypeKind.Map => "map",
+            GameEventScriptBytecodeTypeKind.Dice => "dice",
             _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown GameEventScript value kind.")
         };
     }
 
-    public static (GameEventScriptValueKind? Kind, GameEventScriptBytecodeInstructionUnit? Unit) GetKindAndUnit(string typeName)
+    public static (GameEventScriptBytecodeTypeKind? Kind, GameEventScriptBytecodeInstructionUnit? Unit) GetKindAndUnit(string typeName)
     {
         if (GameEventScriptBytecodeInstructionUnits.TryParseTypeName(typeName, out var unit))
         {
-            return (GameEventScriptValueKind.Number, unit);
+            return (GameEventScriptBytecodeTypeKind.Float, unit);
         }
 
         return typeName switch
         {
-            "nothing" => (GameEventScriptValueKind.Nothing, null),
-            "tag" => (GameEventScriptValueKind.Tag, null),
-            "text" => (GameEventScriptValueKind.Text, null),
-            "percentage" => (GameEventScriptValueKind.Percentage, null),
-            "vector" => (GameEventScriptValueKind.Vector, null),
-            "point" => (GameEventScriptValueKind.Point, null),
-            "number" => (GameEventScriptValueKind.Number, null),
-            "boolean" => (GameEventScriptValueKind.Boolean, null),
-            "series" => (GameEventScriptValueKind.Series, null),
-            "range" => (GameEventScriptValueKind.Range, null),
-            "handler" => (GameEventScriptValueKind.Handler, null),
-            "list" => (GameEventScriptValueKind.List, null),
-            "map" => (GameEventScriptValueKind.Map, null),
-            "dice" => (GameEventScriptValueKind.Dice, null),
+            "nothing" => (GameEventScriptBytecodeTypeKind.Nothing, null),
+            "tag" => (GameEventScriptBytecodeTypeKind.Tag, null),
+            "text" => (GameEventScriptBytecodeTypeKind.Text, null),
+            "percentage" => (GameEventScriptBytecodeTypeKind.Percentage, null),
+            "vector" => (GameEventScriptBytecodeTypeKind.Vector, null),
+            "point" => (GameEventScriptBytecodeTypeKind.Point, null),
+            "number" => (GameEventScriptBytecodeTypeKind.Float, null),
+            "boolean" => (GameEventScriptBytecodeTypeKind.Boolean, null),
+            "series" => (GameEventScriptBytecodeTypeKind.Series, null),
+            "range" => (GameEventScriptBytecodeTypeKind.Range, null),
+            "handler" => (GameEventScriptBytecodeTypeKind.Handler, null),
+            "list" => (GameEventScriptBytecodeTypeKind.List, null),
+            "map" => (GameEventScriptBytecodeTypeKind.Map, null),
+            "dice" => (GameEventScriptBytecodeTypeKind.Dice, null),
             _ => (null, null)
         };
     }
@@ -700,25 +700,25 @@ internal static class GameEventScriptExternalTypeValueConverter
 
     private static GameEventScriptValue CoerceToDeclaredType(
         GameEventScriptValue value,
-        GameEventScriptValueKind? kind,
+        GameEventScriptBytecodeTypeKind? kind,
         GameEventScriptBytecodeInstructionUnit? unit,
         string typeName)
     {
-        if (kind == GameEventScriptValueKind.Vector &&
+        if (kind == GameEventScriptBytecodeTypeKind.Vector &&
             unit is not null &&
             value is GameEventScriptVectorValue vector)
         {
             return GesVector(vector.X, vector.Y, vector.Z, unit);
         }
 
-        if (kind == GameEventScriptValueKind.Point &&
+        if (kind == GameEventScriptBytecodeTypeKind.Point &&
             unit is not null &&
             value is GameEventScriptPointValue point)
         {
             return GesPoint(point.X, point.Y, point.Z, unit);
         }
 
-        if (kind == GameEventScriptValueKind.Number &&
+        if (kind == GameEventScriptBytecodeTypeKind.Float &&
             unit is not null)
         {
             return GesFloat(value.AsNumber(), unit);
@@ -748,13 +748,13 @@ internal static class GameEventScriptExternalTypeValueConverter
 
     private static GameEventScriptValue CoerceToTag(GameEventScriptValue value)
     {
-        if (value.Kind == GameEventScriptValueKind.Boolean)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Boolean)
         {
             return GesTag(value.AsBoolean() ? "true" : "false");
         }
 
         var text = value.AsText();
-        if (value.Kind == GameEventScriptValueKind.Text)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
             return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
                 ? GesTag(normalized)

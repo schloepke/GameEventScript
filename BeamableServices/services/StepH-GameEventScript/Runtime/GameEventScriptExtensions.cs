@@ -50,13 +50,13 @@ public sealed class GesExtensionAttribute(string name) : Attribute
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class GesFunctionAttribute(string name) : Attribute
 {
-    public GesFunctionAttribute(string name, GameEventScriptValueKind returnKind) : this(name)
+    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit: null);
         ReturnKind = returnKind;
     }
 
-    public GesFunctionAttribute(string name, GameEventScriptValueKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
+    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
     {
         ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
         ReturnKind = returnKind;
@@ -67,7 +67,7 @@ public sealed class GesFunctionAttribute(string name) : Attribute
 
     public string? ReturnTypeName { get; }
 
-    public GameEventScriptValueKind? ReturnKind { get; }
+    public GameEventScriptBytecodeTypeKind? ReturnKind { get; }
 
     public GameEventScriptBytecodeInstructionUnit ReturnUnit { get; }
 }
@@ -174,25 +174,25 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         if (parameterType == typeof(double))
         {
-            RequireParameterKind(method, definition, GameEventScriptValueKind.Number, allowUnitTypes: true);
+            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Float, allowUnitTypes: true);
             return FloatArgumentReader.Instance;
         }
 
         if (parameterType == typeof(long))
         {
-            RequireParameterKind(method, definition, GameEventScriptValueKind.Number, allowUnitTypes: false);
+            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Float, allowUnitTypes: false);
             return LongArgumentReader.Instance;
         }
 
         if (parameterType == typeof(int))
         {
-            RequireParameterKind(method, definition, GameEventScriptValueKind.Number, allowUnitTypes: false);
+            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Float, allowUnitTypes: false);
             return IntArgumentReader.Instance;
         }
 
         if (parameterType == typeof(bool))
         {
-            RequireParameterKind(method, definition, GameEventScriptValueKind.Boolean, allowUnitTypes: false);
+            RequireParameterKind(method, definition, GameEventScriptBytecodeTypeKind.Boolean, allowUnitTypes: false);
             return BoolArgumentReader.Instance;
         }
 
@@ -220,7 +220,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
     private static void RequireParameterKind(
         MethodInfo method,
         ExtensionParameterDefinition definition,
-        GameEventScriptValueKind kind,
+        GameEventScriptBytecodeTypeKind kind,
         bool allowUnitTypes)
     {
         if (definition.Kind is null)
@@ -233,7 +233,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return;
         }
 
-        if (allowUnitTypes && definition.Kind == GameEventScriptValueKind.Number)
+        if (allowUnitTypes && definition.Kind == GameEventScriptBytecodeTypeKind.Float)
         {
             return;
         }
@@ -257,31 +257,31 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         if (typeof(IGameEventScriptSeries).IsAssignableFrom(returnType))
         {
-            RequireReturnKind(method, attribute, GameEventScriptValueKind.Series);
+            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Series);
             return Activator.CreateInstance(typeof(SeriesReturnConverter<>).MakeGenericType(returnType))!;
         }
 
         if (returnType == typeof(double))
         {
-            RequireReturnKind(method, attribute, GameEventScriptValueKind.Number);
+            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
             return new FloatReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(long))
         {
-            RequireReturnKind(method, attribute, GameEventScriptValueKind.Number);
+            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
             return new LongReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(int))
         {
-            RequireReturnKind(method, attribute, GameEventScriptValueKind.Number);
+            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
             return new IntReturnConverter(attribute.ReturnUnit);
         }
 
         if (returnType == typeof(bool))
         {
-            RequireReturnKind(method, attribute, GameEventScriptValueKind.Boolean);
+            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Boolean);
             return BoolReturnConverter.Instance;
         }
 
@@ -298,7 +298,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         throw new ArgumentException($"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' is not extension-compatible.");
     }
 
-    private static void RequireReturnKind(MethodInfo method, GesFunctionAttribute attribute, GameEventScriptValueKind kind)
+    private static void RequireReturnKind(MethodInfo method, GesFunctionAttribute attribute, GameEventScriptBytecodeTypeKind kind)
     {
         if (attribute.ReturnKind is not null && attribute.ReturnKind != kind)
         {
@@ -382,7 +382,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             Unit = unit.ToStoredUnit();
         }
 
-        public ExtensionParameterDefinition(string name, GameEventScriptValueKind kind, GameEventScriptBytecodeInstructionUnit? unit)
+        public ExtensionParameterDefinition(string name, GameEventScriptBytecodeTypeKind kind, GameEventScriptBytecodeInstructionUnit? unit)
         {
             Name = NormalizeName(name);
             TypeName = GameEventScriptExternalTypeNames.ToTypeName(kind, unit);
@@ -394,7 +394,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
 
         public string TypeName { get; }
 
-        public GameEventScriptValueKind? Kind { get; }
+        public GameEventScriptBytecodeTypeKind? Kind { get; }
 
         public GameEventScriptBytecodeInstructionUnit Unit { get; }
 

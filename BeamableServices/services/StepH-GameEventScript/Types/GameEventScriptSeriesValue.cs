@@ -38,7 +38,7 @@ public sealed class GameEventScriptSeriesValue : GameEventScriptValue
 
     public string SignatureId => Series.SignatureId;
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Series;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Series;
 
     public GameEventScriptSeriesValue Drop(long count)
     {

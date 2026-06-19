@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -34,7 +35,7 @@ public sealed class GameEventScriptDiceValue : GameEventScriptValue
 
     public IReadOnlyList<int> Rolls { get; }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Dice;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Dice;
 
     public override string AsText() => ToString();
 

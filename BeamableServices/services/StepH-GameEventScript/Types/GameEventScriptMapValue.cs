@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Types;
 
@@ -51,7 +52,7 @@ public sealed class GameEventScriptMapValue : GameEventScriptValue
     internal Dictionary<string, GameEventScriptValue> Storage { get; }
     public ReadOnlyDictionary<string, GameEventScriptValue> VisibleView { get; }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Map;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Map;
 
     public override IReadOnlyDictionary<string, GameEventScriptValue> AsMap() => VisibleView;
 
@@ -60,7 +61,7 @@ public sealed class GameEventScriptMapValue : GameEventScriptValue
     public override bool IsSemanticallyEmpty() => VisibleView.Count == 0;
 
     public override bool Contains(GameEventScriptValue needle)
-        => needle.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+        => needle.Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag &&
             VisibleView.ContainsKey(needle.AsText());
 
     public override bool ContainsValue(GameEventScriptValue needle) => VisibleView.Values.Any(value => value.Equals(needle));

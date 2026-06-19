@@ -15,7 +15,7 @@ public sealed class GameEventScriptNothingValue : GameEventScriptValue
     {
     }
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Nothing;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Nothing;
 
     public override GameEventScriptBytecodeInstructionUnit Unit => GameEventScriptBytecodeInstructionUnit.UnitNone;
 

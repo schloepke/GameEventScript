@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -65,7 +66,7 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
     }
 
     public string Value { get; }
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Tag;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Tag;
 
     public override string AsText() => Value;
 
@@ -100,11 +101,11 @@ public sealed class GameEventScriptTagValue : GameEventScriptValue
         => Value.Contains(ToComparableText(needle), StringComparison.Ordinal);
 
     public override bool StartsWith(GameEventScriptValue prefix)
-        => prefix.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+        => prefix.Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag &&
            Value.StartsWith(prefix.AsText(), StringComparison.Ordinal);
 
     public override bool EndsWith(GameEventScriptValue suffix)
-        => suffix.Kind is GameEventScriptValueKind.Text or GameEventScriptValueKind.Tag &&
+        => suffix.Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag &&
            Value.EndsWith(suffix.AsText(), StringComparison.Ordinal);
 
     internal override bool TryConvertToNumber(out GameEventScriptValue value)

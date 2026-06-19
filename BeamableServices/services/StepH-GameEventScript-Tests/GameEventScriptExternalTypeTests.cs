@@ -161,10 +161,10 @@ public sealed class GameEventScriptExternalTypeTests
     {
         [GesConstruct]
         public AimValue(
-            [GesParam("bearing", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
-            [GesParam("range", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
-            [GesParam("steps", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptValueKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptVectorValue direction)
+            [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
+            [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
+            [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
+            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptVectorValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -173,38 +173,38 @@ public sealed class GameEventScriptExternalTypeTests
             Checksum = (int)(bearing + range + steps);
         }
 
-        [GesField("bearing", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
+        [GesField("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
         public double Bearing { get; }
 
-        [GesField("range", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        [GesField("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
         public double Range { get; }
 
-        [GesField("steps", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        [GesField("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
         public int Steps { get; }
 
-        [GesField("direction", GameEventScriptValueKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
         public GameEventScriptVectorValue Direction { get; }
 
-        [GesField("checksum", GameEventScriptValueKind.Number)]
+        [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
         public int Checksum { get; }
     }
 
     [GesExtension("aim")]
     private static class AimExtensionFunctions
     {
-        [GesFunction("score", GameEventScriptValueKind.Number)]
+        [GesFunction("score", GameEventScriptBytecodeTypeKind.Float)]
         public static long Score([GesParam("_", "aim")] AimValue aim) => aim.Checksum;
 
-        [GesFunction("lead", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
-        public static double Lead([GesParam("heading", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double heading)
+        [GesFunction("lead", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
+        public static double Lead([GesParam("heading", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double heading)
             => heading + 5d;
 
         [GesFunction("distance")]
-        public static (double, GameEventScriptBytecodeInstructionUnit) Distance([GesParam("value", GameEventScriptValueKind.Number)] double value)
+        public static (double, GameEventScriptBytecodeInstructionUnit) Distance([GesParam("value", GameEventScriptBytecodeTypeKind.Float)] double value)
             => (value, GameEventScriptBytecodeInstructionUnit.UnitMeter);
 
-        [GesFunction("integerDistance", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public static long IntegerDistance([GesParam("value", GameEventScriptValueKind.Number, GameEventScriptBytecodeInstructionUnit.UnitMeter)] long value)
+        [GesFunction("integerDistance", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
+        public static long IntegerDistance([GesParam("value", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] long value)
             => value + 1;
     }
 
@@ -212,7 +212,7 @@ public sealed class GameEventScriptExternalTypeTests
     private static class BoxedExtensionFunctions
     {
         [GesFunction("value")]
-        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptValueKind.Number)] GameEventScriptBoxedValue value)
+        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptBoxedValue value)
             => value;
     }
 
@@ -220,7 +220,7 @@ public sealed class GameEventScriptExternalTypeTests
     private static class PolymorphicValueExtensionFunctions
     {
         [GesFunction("value")]
-        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptValueKind.Number)] GameEventScriptValue value)
+        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptValue value)
             => GameEventScriptBoxedValue.Nothing();
     }
 }

@@ -216,7 +216,7 @@ public static class GameEventScriptValueFactory
         source ??= GesNothing();
         return source.IsNothing()
             ? GesNothing()
-            : source.Kind == GameEventScriptValueKind.Map
+            : source.Kind == GameEventScriptBytecodeTypeKind.Map
                 ? GesList(EnumerateValues(source))
                 : GesNothing();
     }
@@ -232,7 +232,7 @@ public static class GameEventScriptValueFactory
         source ??= GesNothing();
         return source.IsNothing()
             ? GesNothing()
-            : source.Kind == GameEventScriptValueKind.Map
+            : source.Kind == GameEventScriptBytecodeTypeKind.Map
                 ? GesList(EnumerateKeys(source))
                 : GesNothing();
     }
@@ -249,7 +249,7 @@ public static class GameEventScriptValueFactory
         source ??= GesNothing();
         return source.IsNothing()
             ? GesNothing()
-            : source.Kind == GameEventScriptValueKind.Map
+            : source.Kind == GameEventScriptBytecodeTypeKind.Map
                 ? GesList(EnumerateEntries(source))
                 : GesNothing();
     }
@@ -282,7 +282,7 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateValues(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.Kind != GameEventScriptValueKind.Map)
+        if (source.Kind != GameEventScriptBytecodeTypeKind.Map)
         {
             yield break;
         }
@@ -296,7 +296,7 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateKeys(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.Kind != GameEventScriptValueKind.Map)
+        if (source.Kind != GameEventScriptBytecodeTypeKind.Map)
         {
             yield break;
         }
@@ -310,7 +310,7 @@ public static class GameEventScriptValueFactory
     private static IEnumerable<GameEventScriptValue> EnumerateEntries(GameEventScriptValue? source)
     {
         source ??= GesNothing();
-        if (source.Kind != GameEventScriptValueKind.Map)
+        if (source.Kind != GameEventScriptBytecodeTypeKind.Map)
         {
             yield break;
         }

@@ -1165,10 +1165,10 @@ internal static class GesAstOptimizer
         => !IsTruthIndeterminate(value) && !value.AsBoolean();
 
     private static bool IsTruthIndeterminate(GameEventScriptValue value)
-        => value.Kind is GameEventScriptValueKind.Nothing or
-            GameEventScriptValueKind.List or
-            GameEventScriptValueKind.Map or
-            GameEventScriptValueKind.Dice;
+        => value.Kind is GameEventScriptBytecodeTypeKind.Nothing or
+            GameEventScriptBytecodeTypeKind.List or
+            GameEventScriptBytecodeTypeKind.Map or
+            GameEventScriptBytecodeTypeKind.Dice;
 
     private static GameEventScriptValue EvaluateNumericComparison(GameEventScriptValue left, GameEventScriptValue right, Func<int, bool> predicate)
     {
@@ -1231,7 +1231,7 @@ internal static class GesAstOptimizer
                 converted = GameEventScriptNothingValue.Instance;
                 return true;
             case "handler":
-                converted = value.Kind == GameEventScriptValueKind.Handler ? value : GameEventScriptNothingValue.Instance;
+                converted = value.Kind == GameEventScriptBytecodeTypeKind.Handler ? value : GameEventScriptNothingValue.Instance;
                 return true;
             case "map":
                 converted = GameEventScriptValueFactory.GesMap(value.AsMap());
@@ -1340,13 +1340,13 @@ internal static class GesAstOptimizer
 
     private static GameEventScriptValue ConvertToTag(GameEventScriptValue value)
     {
-        if (value.Kind == GameEventScriptValueKind.Boolean)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Boolean)
         {
             return GameEventScriptValueFactory.GesTag(value.AsBoolean() ? "true" : "false");
         }
 
         var text = value.AsText();
-        if (value.Kind == GameEventScriptValueKind.Text)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
             return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
                 ? GameEventScriptValueFactory.GesTag(normalized)
@@ -1418,7 +1418,7 @@ internal static class GesAstOptimizer
             return GameEventScriptValueFactory.GesInteger(GameEventScriptValue.ToIntegerSaturated(integerNumber), unit);
         }
 
-        if (unwrapped.Kind == GameEventScriptValueKind.Number &&
+        if (unwrapped.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float &&
             TryCoerceNumeric(unwrapped, out var number, out var isFinite) &&
             isFinite)
         {
@@ -1516,11 +1516,12 @@ internal static class GesAstOptimizer
 
         switch (value.Kind)
         {
-            case GameEventScriptValueKind.Number when value.IsInteger():
+            case GameEventScriptBytecodeTypeKind.Integer:
+            case GameEventScriptBytecodeTypeKind.Float when value.IsInteger():
                 number = value.AsInteger();
                 isFinite = true;
                 return true;
-            case GameEventScriptValueKind.Number:
+            case GameEventScriptBytecodeTypeKind.Float:
                 if (!value.IsNaN() && !value.IsInfinity())
                 {
                     number = value.AsNumber();
@@ -1529,22 +1530,22 @@ internal static class GesAstOptimizer
                 }
 
                 return true;
-            case GameEventScriptValueKind.Percentage:
+            case GameEventScriptBytecodeTypeKind.Percentage:
                 number = value.AsNumber();
                 isFinite = true;
                 return true;
-            case GameEventScriptValueKind.Tag:
+            case GameEventScriptBytecodeTypeKind.Tag:
                 if (double.TryParse(value.AsText(), out var parsed))
                 {
                     number = parsed;
                     isFinite = true;
                 }
                 return true;
-            case GameEventScriptValueKind.Dice:
+            case GameEventScriptBytecodeTypeKind.Dice:
                 number = value.AsDice().Sum();
                 isFinite = true;
                 return true;
-            case GameEventScriptValueKind.Boolean:
+            case GameEventScriptBytecodeTypeKind.Boolean:
                 number = value.AsBoolean() ? 1d : 0d;
                 isFinite = true;
                 return true;
@@ -1588,7 +1589,7 @@ internal static class GesAstOptimizer
             return TryCoerceNumericForOperation(convertedTag, out number);
         }
 
-        if (value.Kind == GameEventScriptValueKind.Number)
+        if (value.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float)
         {
             if (value.IsNaN())
             {
@@ -1608,19 +1609,19 @@ internal static class GesAstOptimizer
             return true;
         }
 
-        if (value.Kind == GameEventScriptValueKind.Percentage)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Percentage)
         {
             number = NumericValue.Finite(value.AsNumber());
             return true;
         }
 
-        if (value.Kind == GameEventScriptValueKind.Dice)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Dice)
         {
             number = NumericValue.Finite(value.AsDice().Sum());
             return true;
         }
 
-        if (value.Kind == GameEventScriptValueKind.Boolean)
+        if (value.Kind == GameEventScriptBytecodeTypeKind.Boolean)
         {
             number = NumericValue.Finite(value.AsBoolean() ? 1d : 0d);
             return true;
@@ -1937,18 +1938,19 @@ internal static class GesAstOptimizer
     {
         switch (value.Kind)
         {
-            case GameEventScriptValueKind.Nothing:
+            case GameEventScriptBytecodeTypeKind.Nothing:
                 expression = new NothingLiteralExpressionNode();
                 return true;
-            case GameEventScriptValueKind.Boolean:
+            case GameEventScriptBytecodeTypeKind.Boolean:
                 expression = new BooleanLiteralExpressionNode(value.AsBoolean());
                 return true;
-            case GameEventScriptValueKind.Number when value.IsInteger():
+            case GameEventScriptBytecodeTypeKind.Integer:
+            case GameEventScriptBytecodeTypeKind.Float when value.IsInteger():
                 expression = value is GameEventScriptNumberValue { Unit: var integerUnit } && integerUnit.IsNumericUnit()
                     ? new UnitIntegerLiteralExpressionNode(value.AsInteger(), integerUnit.ToTypeName())
                     : new IntegerLiteralExpressionNode(value.AsInteger());
                 return true;
-            case GameEventScriptValueKind.Number:
+            case GameEventScriptBytecodeTypeKind.Float:
                 if (value.IsNaN() || value.IsInfinity())
                 {
                     expression = default!;
@@ -1959,16 +1961,16 @@ internal static class GesAstOptimizer
                     ? new UnitFloatLiteralExpressionNode(value.AsNumber(), unit.ToTypeName())
                     : new FloatLiteralExpressionNode(value.AsNumber());
                 return true;
-            case GameEventScriptValueKind.Percentage:
+            case GameEventScriptBytecodeTypeKind.Percentage:
                 expression = new PercentageLiteralExpressionNode(value.AsNumber() * 100d);
                 return true;
-            case GameEventScriptValueKind.Text:
+            case GameEventScriptBytecodeTypeKind.Text:
                 expression = new TextLiteralExpressionNode(value.AsText());
                 return true;
-            case GameEventScriptValueKind.Tag:
+            case GameEventScriptBytecodeTypeKind.Tag:
                 expression = new TagLiteralExpressionNode(value.AsText());
                 return true;
-            case GameEventScriptValueKind.Vector:
+            case GameEventScriptBytecodeTypeKind.Vector:
             {
                 var vector = (GameEventScriptVectorValue)value;
                 expression = new TypeConstructorExpressionNode(
@@ -1980,7 +1982,7 @@ internal static class GesAstOptimizer
                     ]));
                 return true;
             }
-            case GameEventScriptValueKind.Point:
+            case GameEventScriptBytecodeTypeKind.Point:
             {
                 var point = (GameEventScriptPointValue)value;
                 expression = new TypeConstructorExpressionNode(
@@ -1992,7 +1994,7 @@ internal static class GesAstOptimizer
                     ]));
                 return true;
             }
-            case GameEventScriptValueKind.List:
+            case GameEventScriptBytecodeTypeKind.List:
             {
                 var items = new List<ExpressionNode>();
                 foreach (var item in value.AsList())
@@ -2009,7 +2011,7 @@ internal static class GesAstOptimizer
                 expression = new ListLiteralExpressionNode(items);
                 return true;
             }
-            case GameEventScriptValueKind.Map:
+            case GameEventScriptBytecodeTypeKind.Map:
             {
                 var entries = new List<MapEntryNode>();
                 foreach (var entry in value.AsMap())

@@ -40,7 +40,7 @@ public sealed class GameEventScriptVectorValue : GameEventScriptValue
     public double Y { get; }
     public double Z { get; }
     public override GameEventScriptBytecodeInstructionUnit Unit { get; }
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Vector;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Vector;
 
     private IReadOnlyList<GameEventScriptValue> Components { get; }
     private IReadOnlyDictionary<string, GameEventScriptValue> Members { get; }

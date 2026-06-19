@@ -33,7 +33,7 @@ public sealed class GameEventScriptHandlerValue : GameEventScriptValue
 
     public IReadOnlyDictionary<string, GameEventScriptValue> Members => _members;
 
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.Handler;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.Handler;
 
     public override string AsText() => ToString();
 

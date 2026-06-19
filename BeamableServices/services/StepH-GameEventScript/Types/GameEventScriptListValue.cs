@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Types;
@@ -27,7 +28,7 @@ public sealed class GameEventScriptListValue : GameEventScriptValue
     }
 
     internal ReadOnlyCollection<GameEventScriptValue> Items { get; }
-    public override GameEventScriptValueKind Kind => GameEventScriptValueKind.List;
+    public override GameEventScriptBytecodeTypeKind Kind => GameEventScriptBytecodeTypeKind.List;
 
     public override IReadOnlyList<GameEventScriptValue> AsList() => Items;
 

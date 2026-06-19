@@ -235,7 +235,7 @@ internal static class GesVmRegisterCallExternal
                 destination.SetDice(rolls);
                 break;
             case GameEventScriptBytecodeTypeKind.Series when argument is GameEventScriptSeriesValue series:
-                destination.SetSeries(series);
+                destination.SetSeries(GesVmSeries.FromExternal(series.Series).Drop(series.Offset));
                 break;
             case GameEventScriptBytecodeTypeKind.Series:
             case GameEventScriptBytecodeTypeKind.Nothing:
@@ -262,7 +262,15 @@ internal static class GesVmRegisterCallExternal
         Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
         GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
-        Series when a.ObjectValue is GameEventScriptSeriesValue series => series,
+        Series when a.ObjectValue is GesVmSeries series => GameEventScriptValueFactory.GesSeries(
+            series.SignatureId,
+            index =>
+            {
+                var term = new GesVmValue();
+                return series.TryGetTerm(index, ref term)
+                    ? term.ToGameEventScriptValue()
+                    : GameEventScriptValueFactory.GesNothing();
+            }),
         Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
         Message => GameEventScriptValueFactory.GesNothing(),
         _ => GameEventScriptValueFactory.GesNothing(),

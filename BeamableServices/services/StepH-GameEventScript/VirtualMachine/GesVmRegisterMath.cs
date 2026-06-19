@@ -1911,7 +1911,7 @@ internal static class GesVmRegisterMath
                 break;
         }
 
-        if (source.Kind is not Series || source.ObjectValue is not GameEventScriptSeriesValue series || !ret) dst.SetNothing();
-        else dst.BindArguments(series.GetTerm(index));
+        if (source.Kind is not Series || source.ObjectValue is not GesVmSeries series || !ret) dst.SetNothing();
+        else series.TryGetTerm(index, ref dst);
     }
 }

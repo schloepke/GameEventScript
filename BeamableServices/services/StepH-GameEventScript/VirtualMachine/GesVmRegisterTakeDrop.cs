@@ -12,7 +12,7 @@ internal static class GesVmRegisterTakeDrop
         var dst = new GesVmValue();
         switch (source.Kind)
         {
-            case Series when source.ObjectValue is GameEventScriptSeriesValue series:
+            case Series when source.ObjectValue is GesVmSeries series:
                 TakeFirstSeries(vmState, ref dst, series, count);
                 break;
             case List when source.ObjectValue is GesVmValue[] list:
@@ -98,7 +98,7 @@ internal static class GesVmRegisterTakeDrop
         var dst = new GesVmValue();
         switch (source.Kind)
         {
-            case Series when source.ObjectValue is GameEventScriptSeriesValue series:
+            case Series when source.ObjectValue is GesVmSeries series:
                 dst.SetSeries(count <= 0 ? series : series.Drop(count));
                 break;
             case List when source.ObjectValue is GesVmValue[] list:
@@ -285,7 +285,7 @@ internal static class GesVmRegisterTakeDrop
 
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void TakeFirstSeries(GesVmState vmState, ref GesVmValue dst, GameEventScriptSeriesValue series, short count)
+    private static void TakeFirstSeries(GesVmState vmState, ref GesVmValue dst, GesVmSeries series, short count)
     {
         if (count <= 0)
         {
@@ -294,7 +294,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var list = new GesVmValue[count];
-        for (var i = 0; i < count; i++) list[i].BindArguments(series.GetTerm(i));
+        for (var i = 0; i < count; i++) series.TryGetTerm(i, ref list[i]);
         dst.SetList(list);
     }
     private static void TakeFirstList(GesVmState vmState, ref GesVmValue dst, GesVmValue[] source, short count)

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using StepH.GameEventScript.VirtualMachine;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -62,13 +63,13 @@ internal static class GesStandardExtensions
             switch (functionName)
             {
                 case "fibonacci" when shape.Count == 2:
-                    value = GameEventScriptBoxedValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Fibonacci());
+                    value = GameEventScriptBoxedValue.FromSeries(GesVmSeries.Fibonacci());
                     return true;
                 case "factorial" when shape.Count == 2:
-                    value = GameEventScriptBoxedValue.FromGameEventScriptValue(GameEventScriptSeriesValue.Factorial());
+                    value = GameEventScriptBoxedValue.FromSeries(GesVmSeries.Factorial());
                     return true;
                 case "natural" when IsNaturalSeriesSignature(stringPool, shape):
-                    value = GameEventScriptBoxedValue.FromGameEventScriptValue(EvaluateNaturalSeries(stringPool, shape, argument0, argument1, argumentCount));
+                    value = GameEventScriptBoxedValue.FromSeries(EvaluateNaturalSeries(stringPool, shape, argument0, argument1, argumentCount));
                     return true;
             }
         }
@@ -180,16 +181,16 @@ internal static class GesStandardExtensions
     {
         var series = reference.FunctionName switch
         {
-            "fibonacci" => GameEventScriptSeriesValue.Fibonacci(),
-            "factorial" => GameEventScriptSeriesValue.Factorial(),
+            "fibonacci" => GesVmSeries.Fibonacci(),
+            "factorial" => GesVmSeries.Factorial(),
             "natural" => EvaluateNaturalSeries(reference.ArgumentLabels, arguments),
-            _ => GameEventScriptNothingValue.Instance
+            _ => null
         };
 
-        return GameEventScriptBoxedValue.FromGameEventScriptValue(series);
+        return series is null ? GameEventScriptBoxedValue.Nothing() : GameEventScriptBoxedValue.FromSeries(series);
     }
 
-    private static GameEventScriptValue EvaluateNaturalSeries(IReadOnlyList<string> labels, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
+    private static GesVmSeries EvaluateNaturalSeries(IReadOnlyList<string> labels, ReadOnlySpan<GameEventScriptBoxedValue> arguments)
     {
         long start = 0;
         long step = 1;
@@ -206,10 +207,10 @@ internal static class GesStandardExtensions
             }
         }
 
-        return GameEventScriptSeriesValue.Natural(start, step);
+        return GesVmSeries.Natural(start, step);
     }
 
-    private static GameEventScriptValue EvaluateNaturalSeries(
+    private static GesVmSeries EvaluateNaturalSeries(
         IReadOnlyList<string> stringPool,
         IReadOnlyList<ushort> shape,
         GameEventScriptBoxedValue argument0,
@@ -233,7 +234,7 @@ internal static class GesStandardExtensions
             }
         }
 
-        return GameEventScriptSeriesValue.Natural(start, step);
+        return GesVmSeries.Natural(start, step);
     }
 
     private static bool TryReadStringPool(IReadOnlyList<string> stringPool, int index, out string value)

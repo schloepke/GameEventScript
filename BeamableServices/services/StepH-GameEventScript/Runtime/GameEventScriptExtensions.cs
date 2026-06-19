@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Types;
+using StepH.GameEventScript.VirtualMachine;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Runtime;
@@ -503,9 +504,9 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         where T : IGameEventScriptSeries
     {
         public GameEventScriptBoxedValue Convert(T value)
-            => GameEventScriptBoxedValue.FromGameEventScriptValue(value is null
-                ? GameEventScriptNothingValue.Instance
-                : GameEventScriptValueFactory.GesSeries(value));
+            => value is null
+                ? GameEventScriptBoxedValue.Nothing()
+                : GameEventScriptBoxedValue.FromSeries(GesVmSeries.FromExternal(value));
     }
 
     private sealed class FloatReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<double>

@@ -302,7 +302,7 @@ internal struct GesVmValue
         ObjectValue = message;
     }
 
-    internal void SetSeries(GameEventScriptSeriesValue series)
+    internal void SetSeries(GesVmSeries series)
     {
         Kind = Series;
         Flags = StorageObjectFlag | HasValueFlag;
@@ -406,7 +406,7 @@ internal struct GesVmValue
                 return left.Equals(right);
             case Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
                 return left.Equals(right);
-            case Series when ObjectValue is GameEventScriptSeriesValue left && other.ObjectValue is GameEventScriptSeriesValue right:
+            case Series when ObjectValue is GesVmSeries left && other.ObjectValue is GesVmSeries right:
                 return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
             default:
                 return ReferenceEquals(ObjectValue, other.ObjectValue);
@@ -470,7 +470,7 @@ internal struct GesVmValue
             case Message when ObjectValue is GameEventScriptMessage message:
                 hash.Add(message);
                 break;
-            case Series when ObjectValue is GameEventScriptSeriesValue series:
+            case Series when ObjectValue is GesVmSeries series:
                 hash.Add(series.SignatureId, StringComparer.Ordinal);
                 hash.Add(series.Offset);
                 break;
@@ -531,7 +531,7 @@ internal struct GesVmValue
             Map when ObjectValue is GesVmValueMap map => FormatMap(map),
             GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
             GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
-            Series when ObjectValue is GameEventScriptSeriesValue series => $"series[{series.SignatureId} offset {series.Offset}]",
+            Series when ObjectValue is GesVmSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
             Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
             Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
             _ => Kind.ToString()

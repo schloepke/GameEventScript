@@ -160,9 +160,9 @@ internal static class GesVmRegisterTypeCastCheck
             return;
         }
 
-        if (xSlot.Kind is Series && xSlot.ObjectValue is GameEventScriptSeriesValue series)
+        if (xSlot.Kind is Series && xSlot.ObjectValue is GesVmSeries series)
         {
-            dst.BindArguments(series.FirstTerm);
+            series.TryGetTerm(0, ref dst);
             GesVmCastNumeric(ref dst, in dst, state);
             return;
         }

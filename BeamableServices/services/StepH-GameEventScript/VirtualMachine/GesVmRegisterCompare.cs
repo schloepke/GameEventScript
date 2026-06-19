@@ -1,6 +1,5 @@
 using System;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -54,7 +53,7 @@ internal static class GesVmRegisterCompare
                 return ar.From == br.From && ar.To == br.To && ar.Step == br.Step;
             case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmValueRangeFloat ar && b.ObjectValue is GesVmValueRangeFloat br:
                 return DoubleEqualsUlp(ar.From, br.From) && DoubleEqualsUlp(ar.To, br.To) && DoubleEqualsUlp(ar.Step, br.Step);
-            case Series when b.Kind is Series && a.ObjectValue is GameEventScriptSeriesValue aseries && b.ObjectValue is GameEventScriptSeriesValue bseries:
+            case Series when b.Kind is Series && a.ObjectValue is GesVmSeries aseries && b.ObjectValue is GesVmSeries bseries:
                 return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
             case Map or Custom when b.Kind is Map or Custom && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmValueMap bm:
                 if (am.Length != bm.Length) return false;

@@ -449,6 +449,13 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
         return new GameEventScriptBoxedValue(in value);
     }
 
+    internal static GameEventScriptBoxedValue FromSeries(GesVmSeries series)
+    {
+        var value = new GesVmValue();
+        value.SetSeries(series);
+        return new GameEventScriptBoxedValue(in value);
+    }
+
     internal static GameEventScriptBoxedValue FromGameEventScriptValue(GameEventScriptValue? source)
     {
         var value = new GesVmValue();

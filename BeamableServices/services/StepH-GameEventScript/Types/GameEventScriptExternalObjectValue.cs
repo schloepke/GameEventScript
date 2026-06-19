@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.VirtualMachine;
 
 namespace StepH.GameEventScript.Types;
 
@@ -41,7 +42,16 @@ internal sealed class GameEventScriptExternalObjectValue : GameEventScriptValue,
         => AsMap().Values.Any(value => value.Equals(needle));
 
     public override bool TryGetMapMember(string key, out GameEventScriptValue value)
-        => Definition.TryGetField(key, Instance, out value);
+    {
+        if (Definition.TryGetField(key, Instance, out var boxedValue))
+        {
+            value = ToGameEventScriptValue(boxedValue);
+            return true;
+        }
+
+        value = GameEventScriptNothingValue.Instance;
+        return false;
+    }
 
     private IReadOnlyDictionary<string, GameEventScriptValue> MaterializeDictionary()
     {
@@ -55,11 +65,17 @@ internal sealed class GameEventScriptExternalObjectValue : GameEventScriptValue,
         {
             if (Definition.TryGetField(field.Name, Instance, out var value))
             {
-                map[field.Name] = value;
+                map[field.Name] = ToGameEventScriptValue(value);
             }
         }
 
         return new ReadOnlyDictionary<string, GameEventScriptValue>(map);
+    }
+
+    private static GameEventScriptValue ToGameEventScriptValue(GameEventScriptBoxedValue value)
+    {
+        ref readonly var vmValue = ref value.GetVmValue();
+        return vmValue.ToGameEventScriptValue();
     }
 }
 

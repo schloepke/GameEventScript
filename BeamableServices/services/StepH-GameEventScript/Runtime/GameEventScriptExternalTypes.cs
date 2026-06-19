@@ -97,7 +97,7 @@ public interface IGameEventScriptExternalTypeConstructor
 {
     GameEventScriptExternalTypeConstructorDefinition Definition { get; }
 
-    GameEventScriptValue Invoke(ReadOnlySpan<GameEventScriptValue> arguments);
+    GameEventScriptBoxedValue Invoke(ReadOnlySpan<GameEventScriptBoxedValue> arguments);
 }
 
 public sealed class GameEventScriptExternalTypeDefinition
@@ -110,7 +110,7 @@ public sealed class GameEventScriptExternalTypeDefinition
             name,
             (fields ?? throw new ArgumentNullException(nameof(fields))).ToArray(),
             (constructors ?? throw new ArgumentNullException(nameof(constructors))).ToArray(),
-            new Dictionary<string, Func<object, GameEventScriptValue>>(StringComparer.Ordinal),
+            new Dictionary<string, Func<object, GameEventScriptBoxedValue>>(StringComparer.Ordinal),
             new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal))
     {
     }
@@ -119,7 +119,7 @@ public sealed class GameEventScriptExternalTypeDefinition
         string name,
         IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> fields,
         IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> constructors,
-        IReadOnlyDictionary<string, Func<object, GameEventScriptValue>> fieldReaders,
+        IReadOnlyDictionary<string, Func<object, GameEventScriptBoxedValue>> fieldReaders,
         IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> constructorBindings)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
@@ -135,7 +135,7 @@ public sealed class GameEventScriptExternalTypeDefinition
 
     public IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> Constructors { get; }
 
-    internal IReadOnlyDictionary<string, Func<object, GameEventScriptValue>> FieldReaders { get; }
+    internal IReadOnlyDictionary<string, Func<object, GameEventScriptBoxedValue>> FieldReaders { get; }
 
     internal IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> ConstructorBindings { get; }
 
@@ -151,7 +151,7 @@ public sealed class GameEventScriptExternalTypeDefinition
         return Constructors.Any(constructorDefinition => string.Equals(constructorDefinition.SignatureId, signatureId, StringComparison.Ordinal));
     }
 
-    internal bool TryGetField(string fieldName, object instance, out GameEventScriptValue value)
+    internal bool TryGetField(string fieldName, object instance, out GameEventScriptBoxedValue value)
     {
         if (FieldReaders.TryGetValue(fieldName, out var reader))
         {
@@ -159,7 +159,7 @@ public sealed class GameEventScriptExternalTypeDefinition
             return true;
         }
 
-        value = GameEventScriptNothingValue.Instance;
+        value = GameEventScriptBoxedValue.Nothing();
         return false;
     }
 }
@@ -361,6 +361,11 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
                 throw new ArgumentException($"External GameEventScript field '{property.Name}' on '{clrType.FullName}' must be a readable non-indexer property.");
             }
 
+            if (property.PropertyType == typeof(GameEventScriptValue) || property.PropertyType.IsSubclassOf(typeof(GameEventScriptValue)))
+            {
+                throw new ArgumentException($"External GameEventScript field '{property.Name}' on '{clrType.FullName}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
+            }
+
             fields.Add(CreateFieldBinding(attribute, instance => property.GetValue(instance)));
         }
 
@@ -370,6 +375,11 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             if (attribute is null)
             {
                 continue;
+            }
+
+            if (field.FieldType == typeof(GameEventScriptValue) || field.FieldType.IsSubclassOf(typeof(GameEventScriptValue)))
+            {
+                throw new ArgumentException($"External GameEventScript field '{field.Name}' on '{clrType.FullName}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
             }
 
             fields.Add(CreateFieldBinding(attribute, instance => field.GetValue(instance)));
@@ -393,7 +403,7 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             : new GameEventScriptExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
         return new ExternalFieldBinding(
             definition,
-            instance => GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(reader(instance).ToGameEventScriptValue(), definition));
+            instance => GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(GameEventScriptExternalTypeValueConverter.ToBoxedValue(reader(instance)), definition));
     }
 
     private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames)
@@ -419,6 +429,11 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             if (method.ReturnType == typeof(void))
             {
                 throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' must return a value.");
+            }
+
+            if (method.ReturnType == typeof(GameEventScriptValue) || method.ReturnType.IsSubclassOf(typeof(GameEventScriptValue)))
+            {
+                throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' cannot return boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
             }
 
             constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, values)));
@@ -458,6 +473,12 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
     {
         var attribute = parameter.GetCustomAttribute<GesParamAttribute>() ??
                         throw new ArgumentException($"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameter.Name}' must declare GesParamAttribute.");
+        if (parameter.ParameterType == typeof(GameEventScriptValue) || parameter.ParameterType.IsSubclassOf(typeof(GameEventScriptValue)))
+        {
+            throw new ArgumentException(
+                $"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameter.Name}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
+        }
+
         var definition = attribute.Kind is { } kind
             ? new GameEventScriptExternalTypeParameterDefinition(attribute.Name, kind, attribute.Unit)
             : new GameEventScriptExternalTypeParameterDefinition(attribute.Name, attribute.TypeName);
@@ -469,7 +490,7 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
         return new ExternalParameterBinding(definition, parameter.ParameterType);
     }
 
-    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GameEventScriptValue> Reader);
+    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GameEventScriptBoxedValue> Reader);
 
     private sealed record ExternalParameterBinding(GameEventScriptExternalTypeParameterDefinition Definition, Type ClrType);
 
@@ -480,11 +501,11 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
 
-        public GameEventScriptValue Invoke(ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptBoxedValue Invoke(ReadOnlySpan<GameEventScriptBoxedValue> arguments)
         {
             if (arguments.Length != parameters.Count)
             {
-                return GameEventScriptNothingValue.Instance;
+                return GameEventScriptBoxedValue.Nothing();
             }
 
             var converted = new object?[arguments.Length];
@@ -494,22 +515,19 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             }
 
             var result = invoke(converted);
-            if (result is null)
+            if (result is null) return GameEventScriptBoxedValue.Nothing();
+            if (result is GameEventScriptBoxedValue boxedValue) return boxedValue;
+            if (result is GameEventScriptValue)
             {
-                return GameEventScriptNothingValue.Instance;
-            }
-
-            if (result is GameEventScriptValue scriptValue)
-            {
-                return scriptValue;
+                throw new InvalidOperationException($"External GameEventScript constructor '{Definition.SignatureId}' returned a boxed GameEventScriptValue. Use GameEventScriptBoxedValue instead.");
             }
 
             if (GameEventScriptExternalTypeRuntime.TryGetDefinitionForInstance(result, out var externalDefinition))
             {
-                return new GameEventScriptExternalObjectValue(result, externalDefinition);
+                return GameEventScriptBoxedValue.FromExternalObject(result, externalDefinition);
             }
 
-            return result.ToGameEventScriptValue();
+            return GameEventScriptExternalTypeValueConverter.ToBoxedValue(result);
         }
     }
 }
@@ -686,96 +704,136 @@ internal static class GameEventScriptExternalTypeNames
 
 internal static class GameEventScriptExternalTypeValueConverter
 {
-    public static GameEventScriptValue CoerceToDeclaredType(GameEventScriptValue value, GameEventScriptExternalTypeFieldDefinition definition)
+    public static GameEventScriptBoxedValue CoerceToDeclaredType(GameEventScriptBoxedValue value, GameEventScriptExternalTypeFieldDefinition definition)
         => CoerceToDeclaredType(value, definition.Kind, definition.Unit, definition.TypeName);
 
-    public static GameEventScriptValue CoerceToDeclaredType(GameEventScriptValue value, GameEventScriptExternalTypeParameterDefinition definition)
+    public static GameEventScriptBoxedValue CoerceToDeclaredType(GameEventScriptBoxedValue value, GameEventScriptExternalTypeParameterDefinition definition)
         => CoerceToDeclaredType(value, definition.Kind, definition.Unit, definition.TypeName);
 
-    public static GameEventScriptValue CoerceToDeclaredType(GameEventScriptValue value, string typeName)
+    public static GameEventScriptBoxedValue CoerceToDeclaredType(GameEventScriptBoxedValue value, string typeName)
     {
         var (kind, unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(typeName);
         return CoerceToDeclaredType(value, kind, unit, typeName);
     }
 
-    private static GameEventScriptValue CoerceToDeclaredType(
-        GameEventScriptValue value,
+    private static GameEventScriptBoxedValue CoerceToDeclaredType(
+        GameEventScriptBoxedValue value,
         GameEventScriptBytecodeTypeKind? kind,
         GameEventScriptBytecodeInstructionUnit? unit,
         string typeName)
     {
         if (kind == GameEventScriptBytecodeTypeKind.Vector &&
-            unit is not null &&
-            value is GameEventScriptVectorValue vector)
+            unit is not null)
         {
-            return GesVector(vector.X, vector.Y, vector.Z, unit);
+            return GameEventScriptBoxedValue.FromVector(value.X, value.Y, value.Z, unit.ToStoredUnit());
         }
 
         if (kind == GameEventScriptBytecodeTypeKind.Point &&
-            unit is not null &&
-            value is GameEventScriptPointValue point)
+            unit is not null)
         {
-            return GesPoint(point.X, point.Y, point.Z, unit);
+            return GameEventScriptBoxedValue.FromPoint(value.X, value.Y, value.Z, unit.ToStoredUnit());
         }
 
         if (kind == GameEventScriptBytecodeTypeKind.Float &&
             unit is not null)
         {
-            return GesFloat(value.AsNumber(), unit);
+            return GameEventScriptBoxedValue.FromFloat(value.AsNumber(), unit.ToStoredUnit());
         }
 
         return CoerceToDeclaredTypeCore(value, typeName);
     }
 
-    private static GameEventScriptValue CoerceToDeclaredTypeCore(GameEventScriptValue value, string typeName)
+    private static GameEventScriptBoxedValue CoerceToDeclaredTypeCore(GameEventScriptBoxedValue value, string typeName)
     {
         return typeName switch
         {
-            "nothing" => GesNothing(),
+            "nothing" => GameEventScriptBoxedValue.Nothing(),
             "tag" => CoerceToTag(value),
-            "text" => GesText(GesValueOperations.ToText(value)),
-            "percentage" => GesPercentage(value.AsNumber()),
-            "degree" => GesDegree(value.AsNumber()),
-            "meter" => GesMeter(value.AsNumber()),
-            "second" => GesSeconds(value.AsNumber()),
-            "number" => GesFloat(value.AsNumber()),
-            "boolean" => GesBoolean(value.AsBoolean()),
-            "map" => GesMap(value.AsMap()),
-            "list" => GesList(value.AsList()),
+            "text" => GameEventScriptBoxedValue.FromText(value.AsText()),
+            "percentage" => GameEventScriptBoxedValue.FromPercentage(value.AsNumber()),
+            "degree" => GameEventScriptBoxedValue.FromFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitDegree),
+            "meter" => GameEventScriptBoxedValue.FromFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitMeter),
+            "second" => GameEventScriptBoxedValue.FromFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitSecond),
+            "number" => GameEventScriptBoxedValue.FromFloat(value.AsNumber()),
+            "boolean" => GameEventScriptBoxedValue.FromBoolean(value.AsBoolean()),
+            "map" => GameEventScriptBoxedValue.FromMap(value.AsMap()),
+            "list" => GameEventScriptBoxedValue.FromList(value.AsList()),
             _ => value
         };
     }
 
-    private static GameEventScriptValue CoerceToTag(GameEventScriptValue value)
+    private static GameEventScriptBoxedValue CoerceToTag(GameEventScriptBoxedValue value)
     {
         if (value.Kind == GameEventScriptBytecodeTypeKind.Boolean)
         {
-            return GesTag(value.AsBoolean() ? "true" : "false");
+            return GameEventScriptBoxedValue.FromTag(value.AsBoolean() ? "true" : "false");
         }
 
         var text = value.AsText();
         if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
             return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
-                ? GesTag(normalized)
-                : GesNothing();
+                ? GameEventScriptBoxedValue.FromTag(normalized)
+                : GameEventScriptBoxedValue.Nothing();
         }
 
         return GameEventScriptTagValue.IsValidTagName(text)
-            ? GesTag(text)
-            : GesNothing();
+            ? GameEventScriptBoxedValue.FromTag(text)
+            : GameEventScriptBoxedValue.Nothing();
     }
 
-    public static object? ToClrValue(GameEventScriptValue value, Type targetType)
+    public static GameEventScriptBoxedValue ToBoxedValue(object? value)
     {
-        if (targetType == typeof(GameEventScriptValue) || targetType.IsAssignableFrom(value.GetType()))
+        switch (value)
         {
-            return value;
+            case null:
+                return GameEventScriptBoxedValue.Nothing();
+            case GameEventScriptBoxedValue boxed:
+                return boxed;
+            case GameEventScriptValue:
+                throw new InvalidOperationException("External GameEventScript reflection cannot materialize boxed GameEventScriptValue values. Use GameEventScriptBoxedValue instead.");
+            case bool boolean:
+                return GameEventScriptBoxedValue.FromBoolean(boolean);
+            case string text:
+                return GameEventScriptBoxedValue.FromText(text);
+            case double number:
+                return GameEventScriptBoxedValue.FromFloat(number);
+            case float number:
+                return GameEventScriptBoxedValue.FromFloat(number);
+            case decimal number:
+                return GameEventScriptBoxedValue.FromFloat((double)number);
+            case long integer:
+                return GameEventScriptBoxedValue.FromInteger(integer);
+            case int integer:
+                return GameEventScriptBoxedValue.FromInteger(integer);
+            case short integer:
+                return GameEventScriptBoxedValue.FromInteger(integer);
+            case byte integer:
+                return GameEventScriptBoxedValue.FromInteger(integer);
+            case GameEventScriptMessage message:
+                return GameEventScriptBoxedValue.FromMessage(message);
+            case GameEventScriptMessageSignature signature:
+                return GameEventScriptBoxedValue.FromHandler(signature);
+        }
+
+        if (GameEventScriptExternalTypeRuntime.TryGetDefinitionForInstance(value, out var externalDefinition))
+        {
+            return GameEventScriptBoxedValue.FromExternalObject(value, externalDefinition);
+        }
+
+        throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GameEventScriptBoxedValue.");
+    }
+
+    public static object? ToClrValue(GameEventScriptBoxedValue value, Type targetType)
+    {
+        if (targetType == typeof(GameEventScriptValue) || targetType.IsSubclassOf(typeof(GameEventScriptValue)))
+        {
+            throw new InvalidOperationException($"Cannot convert GameEventScriptBoxedValue to boxed GameEventScriptValue CLR type '{targetType.FullName}'. Use GameEventScriptBoxedValue instead.");
         }
 
         if (targetType == typeof(GameEventScriptBoxedValue))
         {
-            return GameEventScriptBoxedValue.FromGameEventScriptValue(value);
+            return value;
         }
 
         if (targetType == typeof(string))
@@ -791,16 +849,6 @@ internal static class GameEventScriptExternalTypeValueConverter
         if (targetType == typeof(double))
         {
             return value.AsNumber();
-        }
-
-        if (targetType == typeof(double))
-        {
-            return (double)value.AsNumber();
-        }
-
-        if (targetType == typeof(double))
-        {
-            return (double)value.AsNumber();
         }
 
         if (targetType == typeof(long))
@@ -823,14 +871,9 @@ internal static class GameEventScriptExternalTypeValueConverter
             return checked((byte)value.AsInteger());
         }
 
-        if (targetType == typeof(GameEventScriptVectorValue) && value is GameEventScriptVectorValue vector)
+        if (value.TryGetExternalObject(targetType, out var externalObject))
         {
-            return vector;
-        }
-
-        if (targetType == typeof(GameEventScriptPointValue) && value is GameEventScriptPointValue point)
-        {
-            return point;
+            return externalObject;
         }
 
         if (targetType == typeof(object))
@@ -838,6 +881,6 @@ internal static class GameEventScriptExternalTypeValueConverter
             return value;
         }
 
-        throw new InvalidOperationException($"Cannot convert GameEventScript value '{value.DescribeType()}' to CLR type '{targetType.FullName}'.");
+        throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.Kind}' to CLR type '{targetType.FullName}'.");
     }
 }

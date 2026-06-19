@@ -278,6 +278,13 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
 
     internal ref readonly GesVmValue GetVmValue() => ref _value;
 
+    internal static GameEventScriptBoxedValue FromExternalObject(object instance, GameEventScriptExternalTypeDefinition definition)
+    {
+        var value = new GesVmValue();
+        value.SetExternalCustomType(new GesVmExternalObject(instance, definition));
+        return new GameEventScriptBoxedValue(in value);
+    }
+
     public bool Equals(GameEventScriptBoxedValue? other)
         => other is not null && _value.EqualsValue(in other._value);
 

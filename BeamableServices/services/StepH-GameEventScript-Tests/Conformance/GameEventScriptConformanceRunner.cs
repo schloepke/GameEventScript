@@ -455,7 +455,7 @@ internal static class GameEventScriptConformanceRunner
             [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
             [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
             [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptVectorValue direction)
+            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptBoxedValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -474,7 +474,7 @@ internal static class GameEventScriptConformanceRunner
         public int Steps { get; }
 
         [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public GameEventScriptVectorValue Direction { get; }
+        public GameEventScriptBoxedValue Direction { get; }
 
         [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
         public int Checksum { get; }

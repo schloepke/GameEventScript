@@ -723,7 +723,7 @@ interface StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction
 interface StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry
   method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExtensionReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction& function)
 interface StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor
-  method StepH.GameEventScript.Types.GameEventScriptValue Invoke(System.ReadOnlySpan<StepH.GameEventScript.Types.GameEventScriptValue> arguments)
+  method StepH.GameEventScript.Api.GameEventScriptBoxedValue Invoke(System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptBoxedValue> arguments)
   property StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorDefinition Definition { get }
 interface StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry
   method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor& constructor)

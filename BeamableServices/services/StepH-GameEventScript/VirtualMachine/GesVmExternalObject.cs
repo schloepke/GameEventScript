@@ -1,5 +1,4 @@
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
@@ -28,9 +27,7 @@ internal sealed class GesVmExternalObject(object instance, GameEventScriptExtern
                 continue;
             }
 
-            var value = new GesVmValue();
-            value.BindArguments(sourceValue);
-            builder.Set(field.Name, value);
+            builder.Set(field.Name, sourceValue.GetVmValue());
         }
 
         _map = builder.ToMap();

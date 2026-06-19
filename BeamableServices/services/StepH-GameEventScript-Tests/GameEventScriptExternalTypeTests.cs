@@ -156,6 +156,15 @@ public sealed class GameEventScriptExternalTypeTests
         StringAssert.Contains(exception.Message, "cannot use boxed GameEventScriptValue");
     }
 
+    [TestMethod]
+    public void AnnotatedExtensionsRejectPolymorphicValueReturns()
+    {
+        var exception = Assert.ThrowsExactly<ArgumentException>(() =>
+            GameEventScriptExtensionRegistry.Create(typeof(PolymorphicValueReturnExtensionFunctions)));
+
+        StringAssert.Contains(exception.Message, "cannot use boxed GameEventScriptValue");
+    }
+
     [GesType("aim")]
     private sealed class AimValue
     {
@@ -164,7 +173,7 @@ public sealed class GameEventScriptExternalTypeTests
             [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
             [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
             [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptVectorValue direction)
+            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptBoxedValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -183,7 +192,7 @@ public sealed class GameEventScriptExternalTypeTests
         public int Steps { get; }
 
         [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public GameEventScriptVectorValue Direction { get; }
+        public GameEventScriptBoxedValue Direction { get; }
 
         [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
         public int Checksum { get; }
@@ -222,5 +231,13 @@ public sealed class GameEventScriptExternalTypeTests
         [GesFunction("value")]
         public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptValue value)
             => GameEventScriptBoxedValue.Nothing();
+    }
+
+    [GesExtension("polymorphicReturn")]
+    private static class PolymorphicValueReturnExtensionFunctions
+    {
+        [GesFunction("value")]
+        public static GameEventScriptValue Value()
+            => GameEventScriptValueFactory.GesNothing();
     }
 }

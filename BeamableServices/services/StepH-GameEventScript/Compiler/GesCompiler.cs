@@ -6,6 +6,7 @@ using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
+using StepH.GameEventScript.VirtualMachine;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 
 namespace StepH.GameEventScript.Compiler;
@@ -94,7 +95,7 @@ internal static class GesCompiler
 
                 _builder.StageTag(type.Name);
                 var map = state.AllocateTemporary(_builder, context);
-                _builder.CreateMap(map, type.Fields.Select(field => field.Name).Concat([GameEventScriptValue.HiddenTypeKey]).ToArray());
+                _builder.CreateMap(map, type.Fields.Select(field => field.Name).Concat([GesVmValueMap.HiddenRecordTypeField]).ToArray());
                 var record = state.AllocateTemporary(_builder, context);
                 _builder.CastCustom(record, map, type.Name);
                 _builder.ReturnValue(record);

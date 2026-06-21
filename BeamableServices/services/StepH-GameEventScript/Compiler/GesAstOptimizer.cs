@@ -425,12 +425,12 @@ internal static class GesAstOptimizer
         var arguments = new GameEventScriptBoxedValue[extensionCall.Arguments.Count];
         for (var index = 0; index < extensionCall.Arguments.Count; index++)
         {
-            if (!TryEvaluateConstant(extensionCall.Arguments[index].Expression, out var argument))
+            if (!TryEvaluateConstantBoxed(extensionCall.Arguments[index].Expression, out var argument))
             {
                 return false;
             }
 
-            arguments[index] = GameEventScriptBoxedValue.FromGameEventScriptValue(argument);
+            arguments[index] = argument;
         }
 
         if (!GesStandardExtensions.TryInvoke(reference, arguments, out var value))
@@ -438,8 +438,81 @@ internal static class GesAstOptimizer
             return false;
         }
 
-        ref readonly var vmValue = ref value.GetVmValue();
-        return TryConvertValueToLiteral(vmValue.ToGameEventScriptValue(), out folded);
+        return TryConvertBoxedValueToLiteral(value, out folded);
+    }
+
+    private static bool TryEvaluateConstantBoxed(ExpressionNode expression, out GameEventScriptBoxedValue value)
+    {
+        switch (expression)
+        {
+            case BooleanLiteralExpressionNode booleanLiteral:
+                value = GameEventScriptBoxedValue.FromBoolean(booleanLiteral.Value);
+                return true;
+            case NothingLiteralExpressionNode:
+                value = GameEventScriptBoxedValue.Nothing();
+                return true;
+            case IntegerLiteralExpressionNode integerLiteral:
+                value = GameEventScriptBoxedValue.FromInteger(integerLiteral.Value);
+                return true;
+            case UnitIntegerLiteralExpressionNode unitIntegerLiteral:
+                value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitIntegerLiteral.UnitName, out var integerUnit)
+                    ? GameEventScriptBoxedValue.FromInteger(unitIntegerLiteral.Value, integerUnit)
+                    : GameEventScriptBoxedValue.Nothing();
+                return true;
+            case FloatLiteralExpressionNode floatLiteral:
+                value = GameEventScriptBoxedValue.FromFloat(floatLiteral.Value);
+                return true;
+            case UnitFloatLiteralExpressionNode unitFloatLiteral:
+                value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloatLiteral.UnitName, out var unit)
+                    ? GameEventScriptBoxedValue.FromFloat(unitFloatLiteral.Value, unit)
+                    : GameEventScriptBoxedValue.Nothing();
+                return true;
+            case PercentageLiteralExpressionNode percentageLiteral:
+                value = GameEventScriptBoxedValue.FromPercentage(percentageLiteral.PercentValue / 100d);
+                return true;
+            case TextLiteralExpressionNode textLiteral:
+                value = GameEventScriptBoxedValue.FromText(textLiteral.Value);
+                return true;
+            case TagLiteralExpressionNode tagLiteral:
+                value = GameEventScriptBoxedValue.FromTag(tagLiteral.Name);
+                return true;
+            case ListLiteralExpressionNode listLiteral:
+            {
+                var items = new GameEventScriptBoxedValue[listLiteral.Items.Count];
+                for (var index = 0; index < listLiteral.Items.Count; index++)
+                {
+                    if (!TryEvaluateConstantBoxed(listLiteral.Items[index], out items[index]))
+                    {
+                        value = GameEventScriptBoxedValue.Nothing();
+                        return false;
+                    }
+                }
+
+                value = GameEventScriptBoxedValue.FromList(items);
+                return true;
+            }
+            case MapLiteralExpressionNode mapLiteral:
+            {
+                var entries = new KeyValuePair<string, GameEventScriptBoxedValue>[mapLiteral.Entries.Count];
+                for (var index = 0; index < mapLiteral.Entries.Count; index++)
+                {
+                    var entry = mapLiteral.Entries[index];
+                    if (!TryEvaluateConstantBoxed(entry.Value, out var entryValue))
+                    {
+                        value = GameEventScriptBoxedValue.Nothing();
+                        return false;
+                    }
+
+                    entries[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(entry.Key, entryValue);
+                }
+
+                value = GameEventScriptBoxedValue.FromMap(entries);
+                return true;
+            }
+            default:
+                value = GameEventScriptBoxedValue.Nothing();
+                return false;
+        }
     }
 
     private static bool TryEvaluateConstant(ExpressionNode expression, out GameEventScriptValue value)
@@ -2017,6 +2090,99 @@ internal static class GesAstOptimizer
                 foreach (var entry in value.AsMap())
                 {
                     if (!TryConvertValueToLiteral(entry.Value, out var itemLiteral))
+                    {
+                        expression = default!;
+                        return false;
+                    }
+
+                    entries.Add(new MapEntryNode(entry.Key, itemLiteral));
+                }
+
+                expression = new MapLiteralExpressionNode(entries);
+                return true;
+            }
+            default:
+                expression = default!;
+                return false;
+        }
+    }
+
+    private static bool TryConvertBoxedValueToLiteral(GameEventScriptBoxedValue value, out ExpressionNode expression)
+    {
+        switch (value.Kind)
+        {
+            case GameEventScriptBytecodeTypeKind.Nothing:
+                expression = new NothingLiteralExpressionNode();
+                return true;
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                expression = new BooleanLiteralExpressionNode(value.Boolean);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Integer:
+                expression = value.Unit.IsNumericUnit()
+                    ? new UnitIntegerLiteralExpressionNode(value.Integer, value.Unit.ToTypeName())
+                    : new IntegerLiteralExpressionNode(value.Integer);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Float:
+                if (double.IsNaN(value.Number) || double.IsInfinity(value.Number))
+                {
+                    expression = default!;
+                    return false;
+                }
+
+                expression = value.Unit.IsNumericUnit()
+                    ? new UnitFloatLiteralExpressionNode(value.Number, value.Unit.ToTypeName())
+                    : new FloatLiteralExpressionNode(value.Number);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Percentage:
+                expression = new PercentageLiteralExpressionNode(value.Number * 100d);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Text:
+                expression = new TextLiteralExpressionNode(value.Text);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Tag:
+                expression = new TagLiteralExpressionNode(value.Text);
+                return true;
+            case GameEventScriptBytecodeTypeKind.Vector:
+                expression = new TypeConstructorExpressionNode(
+                    "vector",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, CreateFloatLiteral(value.X, value.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
+                    ]));
+                return true;
+            case GameEventScriptBytecodeTypeKind.Point:
+                expression = new TypeConstructorExpressionNode(
+                    "point",
+                    new ArgumentListNode([
+                        new ArgumentNode(null, CreateFloatLiteral(value.X, value.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(value.Y, value.Unit)),
+                        new ArgumentNode(null, CreateFloatLiteral(value.Z, value.Unit))
+                    ]));
+                return true;
+            case GameEventScriptBytecodeTypeKind.List:
+            {
+                var items = new List<ExpressionNode>();
+                foreach (var item in value.AsList())
+                {
+                    if (!TryConvertBoxedValueToLiteral(item, out var itemLiteral))
+                    {
+                        expression = default!;
+                        return false;
+                    }
+
+                    items.Add(itemLiteral);
+                }
+
+                expression = new ListLiteralExpressionNode(items);
+                return true;
+            }
+            case GameEventScriptBytecodeTypeKind.Map:
+            {
+                var entries = new List<MapEntryNode>();
+                foreach (var entry in value.AsMap())
+                {
+                    if (!TryConvertBoxedValueToLiteral(entry.Value, out var itemLiteral))
                     {
                         expression = default!;
                         return false;

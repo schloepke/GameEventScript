@@ -1,5 +1,4 @@
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
@@ -286,15 +285,6 @@ public class GameEventScriptValueScenarios
 
         CollectionAssert.AreEqual(new[] { long.MaxValue - 1, long.MaxValue }, ascending);
         CollectionAssert.AreEqual(new[] { long.MinValue + 1, long.MinValue }, descending);
-    }
-
-    [TestMethod]
-    public void ClrDictionariesWithNonTextKeysDoNotThrow()
-    {
-        var value = new Dictionary<int, string> { [1] = "a" }.ToGameEventScriptValue();
-
-        Assert.AreEqual(GameEventScriptBytecodeTypeKind.Map, value.Kind);
-        Assert.HasCount(0, value.AsMap());
     }
 
     private static GameEventScriptValue EvaluatePercentageBinary(GameEventScriptValue left, string operation, GameEventScriptValue right)

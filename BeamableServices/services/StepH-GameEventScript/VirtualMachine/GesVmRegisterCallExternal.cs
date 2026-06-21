@@ -1,6 +1,5 @@
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
@@ -198,12 +197,6 @@ internal static class GesVmRegisterCallExternal
                 destination.SetList(list);
                 break;
             case GameEventScriptBytecodeTypeKind.Map:
-                if (argument is GameEventScriptExternalObjectValue externalObject)
-                {
-                    destination.SetExternalCustomType(new GesVmExternalObject(externalObject.Instance, externalObject.Definition));
-                    break;
-                }
-
                 var sourceEntries = argument.AsMap();
                 var isCustomType = argument.TryGetCustomTypeName(out var customTypeName);
                 var entries = new GesVmValueMapBuilder(sourceEntries.Count + (isCustomType ? 1 : 0));
@@ -245,74 +238,4 @@ internal static class GesVmRegisterCallExternal
         }
     }
 
-    internal static GameEventScriptValue ToGameEventScriptValue(this in GesVmValue a) => a.Kind switch
-    {
-        Integer => GameEventScriptValueFactory.GesInteger(a.IntegerValue, a.Unit),
-        Float => double.IsNaN(a.FloatValue) ? GameEventScriptValueFactory.GesNothing() : GameEventScriptValueFactory.GesFloat(a.FloatValue, a.Unit),
-        Percentage => GameEventScriptValueFactory.GesPercentage(a.FloatValue),
-        Vector when a.ObjectValue is GesVmValueVectorPoint vector => GameEventScriptValueFactory.GesVector(vector.X, vector.Y, vector.Z, a.Unit),
-        Point when a.ObjectValue is GesVmValueVectorPoint point => GameEventScriptValueFactory.GesPoint(point.X, point.Y, point.Z, a.Unit),
-        GameEventScriptBytecodeTypeKind.Boolean => GameEventScriptValueFactory.GesBoolean(a.IsTrue),
-        Text => GameEventScriptValueFactory.GesText(a.TextValue),
-        Tag => GameEventScriptValueFactory.GesTag(a.TextValue),
-        List when a.ObjectValue is GesVmValue[] list => GameEventScriptValueFactory.GesList(list.ToGameEventScriptValues()),
-        Map when a.ObjectValue is GesVmValueMap map => GameEventScriptValueFactory.GesMap(map.ToGameEventScriptValues()),
-        Custom when a.ObjectValue is GesVmExternalObject externalObject => GameEventScriptValueFactory.GesCustomType(externalObject.CustomTypeName, externalObject.ToMap().ToGameEventScriptValues()),
-        Custom when a.ObjectValue is GesVmValueMap map => map.ToGameEventScriptCustomTypeValue(),
-        Dice when a.ObjectValue is int[] dice => GameEventScriptValueFactory.GesDice(dice),
-        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeInteger r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
-        GameEventScriptBytecodeTypeKind.Range when a.ObjectValue is GesVmValueRangeFloat r => GameEventScriptValueFactory.GesRange(r.From, r.To, r.Step),
-        Series when a.ObjectValue is GesVmSeries series => GameEventScriptValueFactory.GesSeries(
-            series.SignatureId,
-            index =>
-            {
-                var term = new GesVmValue();
-                return series.TryGetTerm(index, ref term)
-                    ? term.ToGameEventScriptValue()
-                    : GameEventScriptValueFactory.GesNothing();
-            }),
-        Handler when a.ObjectValue is GameEventScriptMessageSignature signature => GameEventScriptValueFactory.GesHandler(signature),
-        Message => GameEventScriptValueFactory.GesNothing(),
-        _ => GameEventScriptValueFactory.GesNothing(),
-    };
-
-    private static List<GameEventScriptValue> ToGameEventScriptValues(this GesVmValue[] list)
-    {
-        var result = new List<GameEventScriptValue>(list.Length);
-        for (var i = 0; i < list.Length; i++)
-        {
-            ref readonly var value = ref list[i];
-            result.Add(value.ToGameEventScriptValue());
-        }
-
-        return result;
-    }
-
-    private static Dictionary<string, GameEventScriptValue> ToGameEventScriptValues(this GesVmValueMap valueMap)
-    {
-        var result = new Dictionary<string, GameEventScriptValue>(valueMap.Length, StringComparer.Ordinal);
-        for (var i = 0; i < valueMap.StorageLength; i++)
-        {
-            var key = valueMap.KeyAt(i);
-            if (!valueMap.IsVisibleAt(i)) continue;
-            var value = valueMap.ValueAt(i);
-            result.Add(key, value.ToGameEventScriptValue());
-        }
-
-        return result;
-    }
-
-    private static GameEventScriptValue ToGameEventScriptCustomTypeValue(this GesVmValueMap valueMap)
-    {
-        var typeName = string.Empty;
-        if (valueMap.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) && marker.Kind is Tag)
-        {
-            typeName = marker.TextValue;
-        }
-
-        return string.IsNullOrEmpty(typeName)
-            ? GameEventScriptValueFactory.GesNothing()
-            : GameEventScriptValueFactory.GesCustomType(typeName, valueMap.ToGameEventScriptValues());
-    }
-    
 }

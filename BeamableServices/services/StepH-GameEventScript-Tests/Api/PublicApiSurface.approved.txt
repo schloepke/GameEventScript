@@ -574,8 +574,6 @@ static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses, System.String scriptSource)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.String scriptSource)
-static class StepH.GameEventScript.Extensions.GameEventScriptClrValueConverter
-  method static StepH.GameEventScript.Types.GameEventScriptValue ToGameEventScriptValue(System.Object value)
 static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptBinary Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()

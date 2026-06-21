@@ -456,13 +456,6 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
         return new GameEventScriptBoxedValue(in value);
     }
 
-    internal static GameEventScriptBoxedValue FromGameEventScriptValue(GameEventScriptValue? source)
-    {
-        var value = new GesVmValue();
-        value.BindArguments(source ?? GameEventScriptNothingValue.Instance);
-        return new GameEventScriptBoxedValue(in value);
-    }
-
     internal static GameEventScriptBoxedValue FromVmValue(in GesVmValue value) => new(in value);
 
     private static GameEventScriptBoxedValue[] ToArray(IEnumerable<GameEventScriptBoxedValue> values)

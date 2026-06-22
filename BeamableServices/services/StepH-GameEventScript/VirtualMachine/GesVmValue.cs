@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.VirtualMachine.GesVmMathConstants;

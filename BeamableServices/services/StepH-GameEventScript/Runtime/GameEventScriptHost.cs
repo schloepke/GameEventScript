@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 
 namespace StepH.GameEventScript.Runtime;

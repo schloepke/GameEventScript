@@ -5,9 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using StepH.GameEventScript.VirtualMachine;
-using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -197,12 +195,6 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
             return BoolArgumentReader.Instance;
         }
 
-        if (parameterType == typeof(GameEventScriptValue) || parameterType.IsSubclassOf(typeof(GameEventScriptValue)))
-        {
-            throw new ArgumentException(
-                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' parameter '{definition.Name}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
-        }
-
         if (parameterType.IsValueType)
         {
             throw new ArgumentException(
@@ -249,12 +241,6 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         if (returnType == typeof(GameEventScriptBoxedValue))
         {
             return BoxedValueReturnConverter.Instance;
-        }
-
-        if (typeof(GameEventScriptValue).IsAssignableFrom(returnType))
-        {
-            throw new ArgumentException(
-                $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
         }
 
         if (returnType == typeof(double))

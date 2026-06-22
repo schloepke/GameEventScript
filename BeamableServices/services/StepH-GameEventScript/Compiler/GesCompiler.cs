@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 using StepH.GameEventScript.VirtualMachine;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 

@@ -8,7 +8,6 @@ using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 

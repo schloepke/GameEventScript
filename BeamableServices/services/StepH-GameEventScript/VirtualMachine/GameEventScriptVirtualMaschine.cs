@@ -6,7 +6,6 @@ using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;

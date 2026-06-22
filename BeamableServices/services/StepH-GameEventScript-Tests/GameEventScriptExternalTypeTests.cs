@@ -2,7 +2,6 @@ using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests;
@@ -147,24 +146,6 @@ public sealed class GameEventScriptExternalTypeTests
         Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("boxed", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
     }
 
-    [TestMethod]
-    public void AnnotatedExtensionsRejectPolymorphicValueParameters()
-    {
-        var exception = Assert.ThrowsExactly<ArgumentException>(() =>
-            GameEventScriptExtensionRegistry.Create(typeof(PolymorphicValueExtensionFunctions)));
-
-        StringAssert.Contains(exception.Message, "cannot use boxed GameEventScriptValue");
-    }
-
-    [TestMethod]
-    public void AnnotatedExtensionsRejectPolymorphicValueReturns()
-    {
-        var exception = Assert.ThrowsExactly<ArgumentException>(() =>
-            GameEventScriptExtensionRegistry.Create(typeof(PolymorphicValueReturnExtensionFunctions)));
-
-        StringAssert.Contains(exception.Message, "cannot use boxed GameEventScriptValue");
-    }
-
     [GesType("aim")]
     private sealed class AimValue
     {
@@ -225,19 +206,4 @@ public sealed class GameEventScriptExternalTypeTests
             => value;
     }
 
-    [GesExtension("polymorphic")]
-    private static class PolymorphicValueExtensionFunctions
-    {
-        [GesFunction("value")]
-        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptValue value)
-            => GameEventScriptBoxedValue.Nothing();
-    }
-
-    [GesExtension("polymorphicReturn")]
-    private static class PolymorphicValueReturnExtensionFunctions
-    {
-        [GesFunction("value")]
-        public static GameEventScriptValue Value()
-            => GameEventScriptValueFactory.GesNothing();
-    }
 }

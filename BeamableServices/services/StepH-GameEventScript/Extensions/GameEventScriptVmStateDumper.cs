@@ -4,7 +4,6 @@ using System.Globalization;
 using System.Text;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.VirtualMachine;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.Extensions;
 

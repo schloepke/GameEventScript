@@ -1,6 +1,4 @@
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH_GameEventScript_Tests.Api;
 
@@ -51,9 +49,9 @@ public sealed class GameEventScriptMessageSignatureTests
     [TestMethod]
     public void HandlerValuesCompareBySignature()
     {
-        var left = GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
-        var right = GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
-        var different = GesHandler(GameEventScriptMessageSignature.Create("Ping", ["value"]));
+        var left = GameEventScriptBoxedValue.FromHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
+        var right = GameEventScriptBoxedValue.FromHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
+        var different = GameEventScriptBoxedValue.FromHandler(GameEventScriptMessageSignature.Create("Ping", ["value"]));
 
         Assert.AreEqual(left, right);
         Assert.AreEqual(left.GetHashCode(), right.GetHashCode());

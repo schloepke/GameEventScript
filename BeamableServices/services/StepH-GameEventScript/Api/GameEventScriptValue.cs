@@ -50,9 +50,9 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
     public long Integer => Kind switch
     {
         GameEventScriptBytecodeTypeKind.Integer => _value.IntegerValue,
-        Float or Percentage => GameEventScriptNumericRules.ToIntegerSaturated(_value.FloatValue),
+        Float or Percentage => ToIntegerSaturated(_value.FloatValue),
         GameEventScriptBytecodeTypeKind.Boolean => _value.IsTrue ? 1 : 0,
-        _ => GameEventScriptNumericRules.ToIntegerSaturated(_value.AsNumeric)
+        _ => ToIntegerSaturated(_value.AsNumeric)
     };
 
     public double Number => Kind switch
@@ -284,4 +284,13 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public override string ToString()
         => _value.ToText;
+
+    private static long ToIntegerSaturated(double number)
+    {
+        if (double.IsNaN(number)) return 0;
+        var truncated = Math.Truncate(number);
+        if (truncated > long.MaxValue) return long.MaxValue;
+        if (truncated < long.MinValue) return long.MinValue;
+        return (long)truncated;
+    }
 }

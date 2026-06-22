@@ -12,10 +12,7 @@ public enum GameEventScriptRunState
     RuntimeLimitReached
 }
 
-public sealed record GameEventScriptRunStepResult(
-    GameEventScriptRunState State,
-    int ExecutedOpcodes,
-    int PublishedMessages);
+public sealed record GameEventScriptRunStepResult(GameEventScriptRunState State, int ExecutedOpcodes, int PublishedMessages);
 
 public sealed class GameEventScriptRun : IDisposable
 {
@@ -25,10 +22,7 @@ public sealed class GameEventScriptRun : IDisposable
     private bool _canceled;
     private bool _disposed;
 
-    internal GameEventScriptRun(
-        Func<GameEventScriptHostRunState, int, GameEventScriptRunStepResult> drainSlice,
-        GameEventScriptHostRunState state,
-        bool accepted)
+    internal GameEventScriptRun(Func<GameEventScriptHostRunState, int, GameEventScriptRunStepResult> drainSlice, GameEventScriptHostRunState state, bool accepted)
     {
         _drainSlice = drainSlice ?? throw new ArgumentNullException(nameof(drainSlice));
         _state = state ?? throw new ArgumentNullException(nameof(state));
@@ -43,16 +37,8 @@ public sealed class GameEventScriptRun : IDisposable
 
     public GameEventScriptRunStepResult Step(int maxOpcodes)
     {
-        if (_disposed)
-        {
-            throw new ObjectDisposedException(nameof(GameEventScriptRun));
-        }
-
-        if (!_accepted || _canceled)
-        {
-            return new GameEventScriptRunStepResult(GameEventScriptRunState.Completed, 0, 0);
-        }
-
+        if (_disposed) throw new ObjectDisposedException(nameof(GameEventScriptRun));
+        if (!_accepted || _canceled) return new GameEventScriptRunStepResult(GameEventScriptRunState.Completed, 0, 0);
         return _drainSlice(_state, maxOpcodes);
     }
 
@@ -60,11 +46,7 @@ public sealed class GameEventScriptRun : IDisposable
 
     public void Dispose()
     {
-        if (_disposed)
-        {
-            return;
-        }
-
+        if (_disposed) return;
         _disposed = true;
         Cancel();
     }

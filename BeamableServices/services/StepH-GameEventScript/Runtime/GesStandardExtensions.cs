@@ -5,7 +5,6 @@ using StepH.GameEventScript.VirtualMachine;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
-using static StepH.GameEventScript.Api.GameEventScriptNumericRules;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Runtime;
@@ -96,17 +95,17 @@ internal static class GesStandardExtensions
     private static GameEventScriptValue EvaluateInteger(string functionName, GameEventScriptValue input)
     {
         if (!TryReadNumeric(input, out var number)) return GesInteger(input.Integer);
-        if (number.IsNaN) return GesInteger(0);
-        if (number.IsPositiveInfinity) return GesInteger(long.MaxValue);
-        if (number.IsNegativeInfinity) return GesInteger(long.MinValue);
+        if (double.IsNaN(number)) return GesInteger(0);
+        if (double.IsPositiveInfinity(number)) return GesInteger(long.MaxValue);
+        if (double.IsNegativeInfinity(number)) return GesInteger(long.MinValue);
         return GesInteger(ToIntegerSaturated(functionName switch
         {
-            "floor" => Math.Floor(number.Value),
-            "ceil" => Math.Ceiling(number.Value),
-            "truncate" => Math.Truncate(number.Value),
-            "halfEven" => Math.Round(number.Value, 0, MidpointRounding.ToEven),
-            "halfUp" => Math.Round(number.Value, 0, MidpointRounding.AwayFromZero),
-            "halfDown" => RoundHalfTowardZero(number.Value),
+            "floor" => Math.Floor(number),
+            "ceil" => Math.Ceiling(number),
+            "truncate" => Math.Truncate(number),
+            "halfEven" => Math.Round(number, 0, MidpointRounding.ToEven),
+            "halfUp" => Math.Round(number, 0, MidpointRounding.AwayFromZero),
+            "halfDown" => RoundHalfTowardZero(number),
             _ => 0d
         }));
     }
@@ -122,15 +121,18 @@ internal static class GesStandardExtensions
     private static GameEventScriptValue EvaluateDegreeWrap(GameEventScriptValue input)
     {
         if (input.Unit.IsNumericUnit() && input.Unit != UnitDegree) return GesNothing();
-        return input.Kind is Integer or Float ? GesFloat(WrapDegrees(input.Number), UnitDegree) : GesNothing();
+        if (input.Kind is not (Integer or Float)) return GesNothing();
+        var wrapped = input.Number % 360d;
+        if (wrapped < 0d) wrapped += 360d;
+        return GesFloat(wrapped == 360d ? 0d : wrapped, UnitDegree);
     }
 
     private static GameEventScriptValue EvaluateDegreeToRadians(GameEventScriptValue input)
     {
-        if (!TryReadUnitlessOrDegreeNumeric(input, out var number) || !number.IsFinite) return GesNothing();
+        if (!TryReadUnitlessOrDegreeNumeric(input, out var number) || !double.IsFinite(number)) return GesNothing();
         try
         {
-            return GesFloat(number.Value / 180d * Pi);
+            return GesFloat(number / 180d * Pi);
         }
         catch (OverflowException)
         {
@@ -140,10 +142,10 @@ internal static class GesStandardExtensions
 
     private static GameEventScriptValue EvaluateDegreeFromRadians(GameEventScriptValue input)
     {
-        if (!TryReadUnitlessNumeric(input, out var number) || !number.IsFinite) return GesNothing();
+        if (!TryReadUnitlessNumeric(input, out var number) || !double.IsFinite(number)) return GesNothing();
         try
         {
-            return GesFloat(number.Value / Pi * 180d, UnitDegree);
+            return GesFloat(number / Pi * 180d, UnitDegree);
         }
         catch (OverflowException)
         {
@@ -151,39 +153,45 @@ internal static class GesStandardExtensions
         }
     }
 
-    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptValue input, out NumericValue number)
+    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptValue input, out double number)
     {
         if (!input.Unit.IsNumericUnit() || input.Unit == UnitDegree) return TryReadNumeric(input, out number);
-        number = NumericValue.NaN();
+        number = double.NaN;
         return false;
     }
 
-    private static bool TryReadUnitlessNumeric(GameEventScriptValue input, out NumericValue number)
+    private static bool TryReadUnitlessNumeric(GameEventScriptValue input, out double number)
     {
         if (!input.Unit.IsNumericUnit()) return TryReadNumeric(input, out number);
-        number = NumericValue.NaN();
+        number = double.NaN;
         return false;
     }
 
-    private static bool TryReadNumeric(GameEventScriptValue input, out NumericValue number)
+    private static bool TryReadNumeric(GameEventScriptValue input, out double number)
     {
         switch (input.Kind)
         {
             case Integer:
             case Percentage:
             case GameEventScriptBytecodeTypeKind.Boolean:
-                number = NumericValue.Finite(input.Number);
+                number = input.Number;
                 return true;
             case Float:
-                var value = input.Number;
-                if (double.IsPositiveInfinity(value)) number = NumericValue.PositiveInfinity();
-                else if (double.IsNegativeInfinity(value)) number = NumericValue.NegativeInfinity();
-                else number = double.IsNaN(value) ? NumericValue.NaN() : NumericValue.Finite(value);
+                number = input.Number;
                 return true;
             default:
-                number = default;
+                number = double.NaN;
                 return false;
         }
+    }
+
+    private static long ToIntegerSaturated(double number)
+    {
+        if (double.IsNaN(number)) return 0;
+        var truncated = Math.Truncate(number);
+        if (truncated > long.MaxValue) return long.MaxValue;
+        if (truncated < long.MinValue) return long.MinValue;
+        return (long)truncated;
     }
 
     private static double RoundHalfTowardZero(double value)

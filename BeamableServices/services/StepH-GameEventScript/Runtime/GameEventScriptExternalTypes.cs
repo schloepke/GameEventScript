@@ -6,8 +6,6 @@ using System.Linq;
 using System.Reflection;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Extensions;
-using StepH.GameEventScript.Types;
-using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -361,11 +359,6 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
                 throw new ArgumentException($"External GameEventScript field '{property.Name}' on '{clrType.FullName}' must be a readable non-indexer property.");
             }
 
-            if (property.PropertyType == typeof(GameEventScriptValue) || property.PropertyType.IsSubclassOf(typeof(GameEventScriptValue)))
-            {
-                throw new ArgumentException($"External GameEventScript field '{property.Name}' on '{clrType.FullName}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
-            }
-
             fields.Add(CreateFieldBinding(attribute, instance => property.GetValue(instance)));
         }
 
@@ -375,11 +368,6 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             if (attribute is null)
             {
                 continue;
-            }
-
-            if (field.FieldType == typeof(GameEventScriptValue) || field.FieldType.IsSubclassOf(typeof(GameEventScriptValue)))
-            {
-                throw new ArgumentException($"External GameEventScript field '{field.Name}' on '{clrType.FullName}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
             }
 
             fields.Add(CreateFieldBinding(attribute, instance => field.GetValue(instance)));
@@ -431,11 +419,6 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
                 throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' must return a value.");
             }
 
-            if (method.ReturnType == typeof(GameEventScriptValue) || method.ReturnType.IsSubclassOf(typeof(GameEventScriptValue)))
-            {
-                throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' cannot return boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
-            }
-
             constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, values)));
         }
 
@@ -473,12 +456,6 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
     {
         var attribute = parameter.GetCustomAttribute<GesParamAttribute>() ??
                         throw new ArgumentException($"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameter.Name}' must declare GesParamAttribute.");
-        if (parameter.ParameterType == typeof(GameEventScriptValue) || parameter.ParameterType.IsSubclassOf(typeof(GameEventScriptValue)))
-        {
-            throw new ArgumentException(
-                $"External GameEventScript constructor '{method.DeclaringType?.FullName}.{method.Name}' parameter '{parameter.Name}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
-        }
-
         var definition = attribute.Kind is { } kind
             ? new GameEventScriptExternalTypeParameterDefinition(attribute.Name, kind, attribute.Unit)
             : new GameEventScriptExternalTypeParameterDefinition(attribute.Name, attribute.TypeName);
@@ -517,10 +494,6 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             var result = invoke(converted);
             if (result is null) return GameEventScriptBoxedValue.Nothing();
             if (result is GameEventScriptBoxedValue boxedValue) return boxedValue;
-            if (result is GameEventScriptValue)
-            {
-                throw new InvalidOperationException($"External GameEventScript constructor '{Definition.SignatureId}' returned a boxed GameEventScriptValue. Use GameEventScriptBoxedValue instead.");
-            }
 
             if (GameEventScriptExternalTypeRuntime.TryGetDefinitionForInstance(result, out var externalDefinition))
             {
@@ -790,8 +763,6 @@ internal static class GameEventScriptExternalTypeValueConverter
                 return GameEventScriptBoxedValue.Nothing();
             case GameEventScriptBoxedValue boxed:
                 return boxed;
-            case GameEventScriptValue:
-                throw new InvalidOperationException("External GameEventScript reflection cannot materialize boxed GameEventScriptValue values. Use GameEventScriptBoxedValue instead.");
             case bool boolean:
                 return GameEventScriptBoxedValue.FromBoolean(boolean);
             case string text:
@@ -826,11 +797,6 @@ internal static class GameEventScriptExternalTypeValueConverter
 
     public static object? ToClrValue(GameEventScriptBoxedValue value, Type targetType)
     {
-        if (targetType == typeof(GameEventScriptValue) || targetType.IsSubclassOf(typeof(GameEventScriptValue)))
-        {
-            throw new InvalidOperationException($"Cannot convert GameEventScriptBoxedValue to boxed GameEventScriptValue CLR type '{targetType.FullName}'. Use GameEventScriptBoxedValue instead.");
-        }
-
         if (targetType == typeof(GameEventScriptBoxedValue))
         {
             return value;

@@ -1,5 +1,6 @@
 using System;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.VirtualMachine.GesVmMathConstants;

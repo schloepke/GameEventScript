@@ -1,4 +1,6 @@
 using System;
+using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -136,11 +138,11 @@ internal static class GesVmStreamCollectorTerminals
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetInteger(destinationRegister, range.From);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetInteger(destinationRegister, range.From);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetFloat(destinationRegister, range.From);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetFloat(destinationRegister, range.From);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:
@@ -174,11 +176,11 @@ internal static class GesVmStreamCollectorTerminals
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastInteger)) vmState.SetInteger(destinationRegister, lastInteger);
+                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastInteger)) vmState.SetInteger(destinationRegister, lastInteger);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastFloat)) vmState.SetFloat(destinationRegister, lastFloat);
+                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastFloat)) vmState.SetFloat(destinationRegister, lastFloat);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:
@@ -212,11 +214,11 @@ internal static class GesVmStreamCollectorTerminals
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetInteger(destinationRegister, range.From);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetInteger(destinationRegister, range.From);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
-                if (StepH.GameEventScript.Types.GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetFloat(destinationRegister, range.From);
+                if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetFloat(destinationRegister, range.From);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Map or Custom when source.ObjectValue is GesVmValueMap map:

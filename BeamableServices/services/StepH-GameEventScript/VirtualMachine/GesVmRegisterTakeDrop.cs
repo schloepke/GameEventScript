@@ -43,11 +43,11 @@ internal static class GesVmRegisterTakeDrop
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesVmValue[] list:
-                if (list.Length > 0) dst = list[randomGenerator.NextInclusiveInt(0, list.Length - 1)];
+                if (list.Length > 0) dst = list[randomGenerator.NextInclusiveInteger(0, list.Length - 1)];
                 else dst.SetNothing();
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length > 0) dst.SetInteger(dice[randomGenerator.NextInclusiveInt(0, dice.Length - 1)]);
+                if (dice.Length > 0) dst.SetInteger(dice[randomGenerator.NextInclusiveInteger(0, dice.Length - 1)]);
                 else dst.SetNothing();
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
@@ -709,7 +709,7 @@ internal static class GesVmRegisterTakeDrop
             while (stream.TryNext(ref item))
             {
                 count++;
-                if (randomGenerator.NextInclusiveInt(1, count) == 1) chosen = item;
+                if (randomGenerator.NextInclusiveInteger(1, count) == 1) chosen = item;
             }
 
             if (count > 0) dst = chosen;
@@ -893,7 +893,7 @@ internal static class GesVmRegisterTakeDrop
         var remainingLength = sourceLength;
         for (var i = 0; i < prefixLength; i++)
         {
-            var selected = randomGenerator.NextInclusiveInt(0, remainingLength - 1);
+            var selected = randomGenerator.NextInclusiveInteger(0, remainingLength - 1);
             var value = indices[selected];
             if (selected < remainingLength - 1)
             {

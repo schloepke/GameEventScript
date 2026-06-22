@@ -206,7 +206,7 @@ internal static class GesVmRegisterShuffleReverse
     {
         for (var i = list.Length - 1; i > 0; i--)
         {
-            var swapIndex = randomGenerator.NextInclusiveInt(0, i);
+            var swapIndex = randomGenerator.NextInclusiveInteger(0, i);
             (list[i], list[swapIndex]) = (list[swapIndex], list[i]);
         }
     }

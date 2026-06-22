@@ -512,30 +512,29 @@ internal struct GesVmValue
                 return false;
         }
     }
-    internal string ConvertToText()
+    
+    internal string ToText => Kind switch
     {
-        return Kind switch
-        {
-            Nothing => string.Empty,
-            Integer => FormatNumber(IntegerValue, Unit),
-            Float => FormatNumber(FloatValue, Unit),
-            Percentage => $"{(FloatValue * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%",
-            GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
-            Text => TextValue,
-            Tag => ":" + TextValue,
-            Vector when ObjectValue is GesVmValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
-            Point when ObjectValue is GesVmValueVectorPoint point => FormatTriplet("point", point, Unit),
-            Dice when ObjectValue is int[] dice => FormatDice(dice),
-            List when ObjectValue is GesVmValue[] list => FormatList(list),
-            Map when ObjectValue is GesVmValueMap map => FormatMap(map),
-            GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
-            GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
-            Series when ObjectValue is GesVmSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
-            Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
-            Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
-            _ => Kind.ToString()
-        };
-    }
+        Nothing => string.Empty,
+        Integer => FormatNumber(IntegerValue, Unit),
+        Float => FormatNumber(FloatValue, Unit),
+        Percentage => $"{(FloatValue * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%",
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
+        Text => TextValue,
+        Tag => ":" + TextValue,
+        Vector when ObjectValue is GesVmValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
+        Point when ObjectValue is GesVmValueVectorPoint point => FormatTriplet("point", point, Unit),
+        Dice when ObjectValue is int[] dice => FormatDice(dice),
+        List when ObjectValue is GesVmValue[] list => FormatList(list),
+        Map when ObjectValue is GesVmValueMap map => FormatMap(map),
+        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
+        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
+        Series when ObjectValue is GesVmSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
+        Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
+        Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
+        _ => Kind.ToString()
+    };
+
     private static string FormatNumber(long value, GameEventScriptBytecodeInstructionUnit unit)
         => unit.IsNumericUnit()
             ? $"{value.ToString(CultureInfo.InvariantCulture)}{unit.ToSuffix()}"
@@ -567,7 +566,7 @@ internal struct GesVmValue
         for (var i = 0; i < list.Length; i++)
         {
             if (i > 0) builder.Append(", ");
-            builder.Append(list[i].ConvertToText());
+            builder.Append(list[i].ToText);
         }
 
         builder.Append(']');
@@ -583,7 +582,8 @@ internal struct GesVmValue
             first = false;
             builder.Append(valueMap.KeyAt(i));
             builder.Append(": ");
-            builder.Append(valueMap.ValueAt(i).ConvertToText());
+            GesVmValue tempQualifier = valueMap.ValueAt(i);
+            builder.Append(tempQualifier.ToText);
         }
 
         builder.Append(']');

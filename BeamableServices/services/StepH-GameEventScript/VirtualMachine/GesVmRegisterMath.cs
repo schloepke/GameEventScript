@@ -54,10 +54,10 @@ internal static class GesVmRegisterMath
                 dst.SetFloat(double.NaN);
                 break;
             case Text when b.Kind is not Nothing:
-                dst.SetText(a.TextValue + b.ConvertToText());
+                dst.SetText(a.TextValue + b.ToText);
                 break;
             case not Nothing when b.Kind is Text:
-                dst.SetText(a.ConvertToText() + b.TextValue);
+                dst.SetText(a.ToText + b.TextValue);
                 break;
             case List when b.Kind is not Nothing && a.ObjectValue is GesVmValue[] aList:
             {

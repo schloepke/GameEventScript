@@ -59,7 +59,7 @@ internal static class GesVmRegisterCustomType
             return;
         }
 
-        var arguments = labels.Length == 0 ? [] : new GameEventScriptBoxedValue[labels.Length];
+        var arguments = labels.Length == 0 ? [] : new GameEventScriptValue[labels.Length];
         for (var parameterIndex = 0; parameterIndex < constructor.Definition.Parameters.Count; parameterIndex++)
         {
             var parameter = constructor.Definition.Parameters[parameterIndex];
@@ -147,7 +147,7 @@ internal static class GesVmRegisterCustomType
             }
 
             arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(
-                GameEventScriptBoxedValue.FromVmValue(in converted),
+                GameEventScriptValueFactory.FromVmValue(in converted),
                 parameter);
         }
 

@@ -7,11 +7,6 @@ internal struct GesVmSplitMix
 {
     private ulong _state;
 
-    internal GesVmSplitMix(long seed)
-    {
-        _state = unchecked((ulong)seed);
-    }
-
     internal GesVmSplitMix(ulong seed)
     {
         _state = seed;
@@ -52,9 +47,13 @@ internal sealed class GesVmXoshiroRandom
         Seed(seed);
     }
 
-    internal void Seed(long seed) => Seed(unchecked((ulong)seed));
+    internal long NextInclusiveInteger(long minInclusive, long maxInclusive) => NextLong(minInclusive, maxInclusive);
 
-    internal void Seed(ulong seed)
+    internal double NextInclusiveFloat(double minInclusive, double maxInclusive) => NextDouble(minInclusive, maxInclusive);
+
+    private void Seed(long seed) => Seed(unchecked((ulong)seed));
+
+    private void Seed(ulong seed)
     {
         var splitMix = new GesVmSplitMix(seed);
         _s0 = splitMix.NextUInt64();
@@ -64,27 +63,24 @@ internal sealed class GesVmXoshiroRandom
         if ((_s0 | _s1 | _s2 | _s3) == 0UL) _s0 = 0x9E3779B97F4A7C15UL;
     }
 
-    internal ulong NextUInt64()
+    private ulong NextUInt64()
     {
         if (_external != null) return unchecked((ulong)_external.NextInclusiveInteger(long.MinValue, long.MaxValue));
         unchecked
         {
             var result = RotateLeft(_s1 * 5UL, 7) * 9UL;
             var t = _s1 << 17;
-
             _s2 ^= _s0;
             _s3 ^= _s1;
             _s1 ^= _s2;
             _s0 ^= _s3;
-
             _s2 ^= t;
             _s3 = RotateLeft(_s3, 45);
-
             return result;
         }
     }
 
-    internal long NextLong(long minInclusive, long maxInclusive)
+    private long NextLong(long minInclusive, long maxInclusive)
     {
         if (_external != null) return _external.NextInclusiveInteger(minInclusive, maxInclusive);
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
@@ -94,17 +90,7 @@ internal sealed class GesVmXoshiroRandom
         return unchecked(minInclusive + (long)offset);
     }
 
-    internal int NextInclusiveInt(int minInclusive, int maxInclusive) => (int)NextLong(minInclusive, maxInclusive);
-
-    internal long NextInclusiveInteger(long minInclusive, long maxInclusive) => NextLong(minInclusive, maxInclusive);
-
-    internal ushort NextUShort(ushort minInclusive, ushort maxInclusive)
-    {
-        if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        return (ushort)NextLong(minInclusive, maxInclusive);
-    }
-
-    internal double NextDouble(double minInclusive, double maxInclusive)
+    private double NextDouble(double minInclusive, double maxInclusive)
     {
         if (_external != null) return _external.NextInclusiveFloat(minInclusive, maxInclusive);
         if (double.IsNaN(minInclusive) || double.IsNaN(maxInclusive)) return double.NaN;
@@ -113,7 +99,6 @@ internal sealed class GesVmXoshiroRandom
         return minInclusive + (maxInclusive - minInclusive) * NextUnitDouble();
     }
 
-    internal double NextInclusiveFloat(double minInclusive, double maxInclusive) => NextDouble(minInclusive, maxInclusive);
 
     private ulong NextUInt64Below(ulong exclusiveUpperBound)
     {

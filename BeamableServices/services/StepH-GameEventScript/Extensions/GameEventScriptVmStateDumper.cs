@@ -96,7 +96,7 @@ internal static class GameEventScriptVmStateDumper
         var index = 0;
         foreach (var argument in message.Arguments)
         {
-            var value = argument.Value ?? GameEventScriptBoxedValue.Nothing();
+            var value = argument.Value ?? GameEventScriptValueFactory.GesNothing();
             builder
                 .Append("  #").Append(index.ToString(CultureInfo.InvariantCulture))
                 .Append(' ')
@@ -210,7 +210,7 @@ internal static class GameEventScriptVmStateDumper
             .Append(" unit=")
             .Append(value.Unit)
             .Append(" value=\"")
-            .Append(Escape(value.ConvertToText()))
+            .Append(Escape(value.ToText))
             .Append('"');
 
         return builder.ToString();

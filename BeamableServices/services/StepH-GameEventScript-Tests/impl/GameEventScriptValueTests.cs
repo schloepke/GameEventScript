@@ -3,15 +3,15 @@ using StepH.GameEventScript.Api;
 namespace StepH_GameEventScript_Tests.impl;
 
 [TestClass]
-public sealed class GameEventScriptBoxedValueTests
+public sealed class GameEventScriptValueTests
 {
     [TestMethod]
     public void PrimitiveValuesExposeFastReadersAndUnits()
     {
-        var boolean = GameEventScriptBoxedValue.FromBoolean(true);
-        var integer = GameEventScriptBoxedValue.FromInteger(42);
-        var meter = GameEventScriptBoxedValue.FromFloat(12.5d, GameEventScriptBytecodeInstructionUnit.UnitMeter);
-        var percentage = GameEventScriptBoxedValue.FromPercentage(0.25d);
+        var boolean = GameEventScriptValueFactory.GesBoolean(true);
+        var integer = GameEventScriptValueFactory.GesInteger(42);
+        var meter = GameEventScriptValueFactory.GesFloat(12.5d, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+        var percentage = GameEventScriptValueFactory.GesPercentage(0.25d);
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Boolean, boolean.Kind);
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Integer, integer.Kind);
@@ -29,7 +29,7 @@ public sealed class GameEventScriptBoxedValueTests
     [TestMethod]
     public void VectorsExposeComponentsAndUnits()
     {
-        var vector = GameEventScriptBoxedValue.FromVector(3d, 4d, 5d, GameEventScriptBytecodeInstructionUnit.UnitMeter);
+        var vector = GameEventScriptValueFactory.GesVector(3d, 4d, 5d, GameEventScriptBytecodeInstructionUnit.UnitMeter);
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Vector, vector.Kind);
         Assert.AreEqual(3d, vector.X);
@@ -42,7 +42,7 @@ public sealed class GameEventScriptBoxedValueTests
     [TestMethod]
     public void PointsExposeComponentsAndUnits()
     {
-        var point = GameEventScriptBoxedValue.FromPoint(1d, 2d, 3d, GameEventScriptBytecodeInstructionUnit.UnitSecond);
+        var point = GameEventScriptValueFactory.GesPoint(1d, 2d, 3d, GameEventScriptBytecodeInstructionUnit.UnitSecond);
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Point, point.Kind);
         Assert.AreEqual(1d, point.X);
@@ -55,9 +55,9 @@ public sealed class GameEventScriptBoxedValueTests
     [TestMethod]
     public void TextAndNothingExposeBoundarySemantics()
     {
-        var text = GameEventScriptBoxedValue.FromText("hello");
-        var tag = GameEventScriptBoxedValue.FromTag("pi");
-        var nan = GameEventScriptBoxedValue.FromFloat(double.NaN);
+        var text = GameEventScriptValueFactory.GesText("hello");
+        var tag = GameEventScriptValueFactory.GesTag("pi");
+        var nan = GameEventScriptValueFactory.GesFloat(double.NaN);
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Text, text.Kind);
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Tag, tag.Kind);
@@ -72,11 +72,11 @@ public sealed class GameEventScriptBoxedValueTests
     [TestMethod]
     public void ListAndDiceExposeDataCopies()
     {
-        var list = GameEventScriptBoxedValue.FromList([
-            GameEventScriptBoxedValue.FromInteger(1),
-            GameEventScriptBoxedValue.FromText("two")
+        var list = GameEventScriptValueFactory.GesList([
+            GameEventScriptValueFactory.GesInteger(1),
+            GameEventScriptValueFactory.GesText("two")
         ]);
-        var dice = GameEventScriptBoxedValue.FromDice([3, 6, 1]);
+        var dice = GameEventScriptValueFactory.GesDice([3, 6, 1]);
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.List, list.Kind);
         Assert.AreEqual(2, list.Length);
@@ -89,13 +89,13 @@ public sealed class GameEventScriptBoxedValueTests
     [TestMethod]
     public void MapAndRecordExposeVisibleSortedData()
     {
-        var map = GameEventScriptBoxedValue.FromMap([
-            new KeyValuePair<string, GameEventScriptBoxedValue>("z", GameEventScriptBoxedValue.FromInteger(3)),
-            new KeyValuePair<string, GameEventScriptBoxedValue>("a", GameEventScriptBoxedValue.FromInteger(1))
+        var map = GameEventScriptValueFactory.GesMap([
+            new KeyValuePair<string, GameEventScriptValue>("z", GameEventScriptValueFactory.GesInteger(3)),
+            new KeyValuePair<string, GameEventScriptValue>("a", GameEventScriptValueFactory.GesInteger(1))
         ]);
-        var record = GameEventScriptBoxedValue.FromRecord("unit", [
-            new KeyValuePair<string, GameEventScriptBoxedValue>("hp", GameEventScriptBoxedValue.FromInteger(10)),
-            new KeyValuePair<string, GameEventScriptBoxedValue>("_hidden", GameEventScriptBoxedValue.FromText("secret"))
+        var record = GameEventScriptValueFactory.GesRecord("unit", [
+            new KeyValuePair<string, GameEventScriptValue>("hp", GameEventScriptValueFactory.GesInteger(10)),
+            new KeyValuePair<string, GameEventScriptValue>("_hidden", GameEventScriptValueFactory.GesText("secret"))
         ]);
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Map, map.Kind);
@@ -115,12 +115,12 @@ public sealed class GameEventScriptBoxedValueTests
     [TestMethod]
     public void RangesMessagesAndHandlersExposeStoredObjects()
     {
-        var intRange = GameEventScriptBoxedValue.FromIntegerRange(1, 5, 2);
-        var floatRange = GameEventScriptBoxedValue.FromFloatRange(1.5d, 2.5d, 0.5d);
-        var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptBoxedValue.FromInteger(7)));
-        var messageValue = GameEventScriptBoxedValue.FromMessage(message);
+        var intRange = GameEventScriptValueFactory.GesRange(1, 5, 2);
+        var floatRange = GameEventScriptValueFactory.GesRange(1.5d, 2.5d, 0.5d);
+        var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)));
+        var messageValue = GameEventScriptValueFactory.GesMessage(message);
         var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
-        var handler = GameEventScriptBoxedValue.FromHandler(signature);
+        var handler = GameEventScriptValueFactory.GesHandler(signature);
 
         Assert.IsTrue(intRange.TryGetIntegerRange(out var from, out var to, out var step));
         Assert.AreEqual(1, from);

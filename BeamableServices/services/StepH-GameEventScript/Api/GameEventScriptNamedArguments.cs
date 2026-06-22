@@ -9,13 +9,13 @@ namespace StepH.GameEventScript.Api;
 /// Provides functionality for accessing arguments by name or index,
 /// as well as normalizing argument collections to ensure consistent formatting.
 /// </summary>
-public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, GameEventScriptBoxedValue>
+public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, GameEventScriptValue>
 {
     /// Represents an empty instance of the GameEventScriptNamedArguments class.
     /// Provides a shared, immutable, and pre-initialized empty object that can be used
     /// wherever an empty set of named arguments is required, avoiding the overhead of
     /// creating new instances.
-    public static GameEventScriptNamedArguments Empty { get; } = new([], [], new Dictionary<string, GameEventScriptBoxedValue>(StringComparer.Ordinal));
+    public static GameEventScriptNamedArguments Empty { get; } = new([], [], new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal));
 
     /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptNamedArguments"/> by normalizing
@@ -27,14 +27,14 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// <returns>A new instance of <see cref="GameEventScriptNamedArguments"/>
     /// containing normalized arguments. If the input dictionary is null or empty,
     /// the predefined empty instance is returned.</returns>
-    public static GameEventScriptNamedArguments Create(IReadOnlyDictionary<string, GameEventScriptBoxedValue>? values)
+    public static GameEventScriptNamedArguments Create(IReadOnlyDictionary<string, GameEventScriptValue>? values)
     {
         if (values is null || values.Count == 0) return Empty;
-        var orderedPairs = new KeyValuePair<string, GameEventScriptBoxedValue>[values.Count];
+        var orderedPairs = new KeyValuePair<string, GameEventScriptValue>[values.Count];
         var index = 0;
         foreach (var pair in values)
         {
-            orderedPairs[index++] = new KeyValuePair<string, GameEventScriptBoxedValue>(pair.Key, pair.Value ?? GameEventScriptBoxedValue.Nothing());
+            orderedPairs[index++] = new KeyValuePair<string, GameEventScriptValue>(pair.Key, pair.Value ?? GameEventScriptValueFactory.GesNothing());
         }
 
         return CreateOrdered(orderedPairs);
@@ -49,8 +49,8 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// <param name="values">The collection of named arguments to be normalized. Can be null.</param>
     /// <returns>A normalized read-only dictionary where null values are replaced with "Nothing".
     /// If the input collection is null or empty, an empty collection is returned.</returns>
-    public static IReadOnlyDictionary<string, GameEventScriptBoxedValue> Normalize(IReadOnlyDictionary<string, GameEventScriptBoxedValue>? values)
-        => values is null || values.Count == 0 ? Empty : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptBoxedValue.Nothing(), StringComparer.Ordinal);
+    public static IReadOnlyDictionary<string, GameEventScriptValue> Normalize(IReadOnlyDictionary<string, GameEventScriptValue>? values)
+        => values is null || values.Count == 0 ? Empty : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptValueFactory.GesNothing(), StringComparer.Ordinal);
 
     /// <summary>
     /// Retrieves the value associated with the specified key from the collection of named arguments.
@@ -59,13 +59,13 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// </summary>
     /// <param name="key">The key identifying the argument to retrieve.</param>
     /// <returns>The value associated with the specified key.</returns>
-    public GameEventScriptBoxedValue this[string key] => _values[key];
+    public GameEventScriptValue this[string key] => _values[key];
 
     /// <summary>
     /// Provides access to the value at the specified index within a collection of ordered arguments.
     /// Allows retrieval of a game event script value by its positional index.
     /// </summary>
-    public GameEventScriptBoxedValue this[int index] => _orderedPairs[index].Value;
+    public GameEventScriptValue this[int index] => _orderedPairs[index].Value;
 
     /// Represents a collection of keys from the ordered pairs of named arguments in a game event script.
     /// Provides an enumerable sequence of keys, maintaining the order in which the arguments were defined.
@@ -79,7 +79,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
 
     /// Provides an enumerable collection of values associated with the named arguments in a game event script.
     /// Each value corresponds to the argument at a specific position, maintaining the order of the argument collection.
-    public IEnumerable<GameEventScriptBoxedValue> Values => _orderedPairs.Select(pair => pair.Value);
+    public IEnumerable<GameEventScriptValue> Values => _orderedPairs.Select(pair => pair.Value);
 
     /// Gets the total number of key-value pairs contained in the instance.
     /// This property reflects the combined count of all ordered named arguments,
@@ -98,11 +98,11 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// </summary>
     /// <param name="key">The key of the value to retrieve. Must not be null.</param>
     /// <param name="value">When this method returns, contains the value associated with the specified key
-    /// if the key is found; otherwise, the default value for <see cref="GameEventScriptBoxedValue"/>.
+    /// if the key is found; otherwise, the default value for <see cref="GameEventScriptValue"/>.
     /// This parameter is passed uninitialized.</param>
     /// <returns><c>true</c> if the object that implements <see cref="IReadOnlyDictionary{TKey, TValue}"/> contains
     /// an element with the specified key; otherwise, <c>false</c>.</returns>
-    public bool TryGetValue(string key, out GameEventScriptBoxedValue value) => _values.TryGetValue(key, out value!);
+    public bool TryGetValue(string key, out GameEventScriptValue value) => _values.TryGetValue(key, out value!);
 
     /// <summary>
     /// Returns an enumerator that iterates through the key-value pairs
@@ -111,7 +111,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// </summary>
     /// <returns>An enumerator for iterating through the key-value pairs
     /// in the collection.</returns>
-    public IEnumerator<KeyValuePair<string, GameEventScriptBoxedValue>> GetEnumerator() => _orderedPairs.GetEnumerator();
+    public IEnumerator<KeyValuePair<string, GameEventScriptValue>> GetEnumerator() => _orderedPairs.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -124,21 +124,21 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// string if the collection contains no elements.</returns>
     public override string ToString() => _orderedPairs.Count == 0 ? "" : _orderedPairs.Select(pair => $"{pair.Key}: {pair.Value}").Aggregate((a, b) => a + ", " + b);
 
-    private GameEventScriptNamedArguments(IReadOnlyList<KeyValuePair<string, GameEventScriptBoxedValue>> orderedPairs, IReadOnlyList<string> signatureLabels,
-        IReadOnlyDictionary<string, GameEventScriptBoxedValue> values)
+    private GameEventScriptNamedArguments(IReadOnlyList<KeyValuePair<string, GameEventScriptValue>> orderedPairs, IReadOnlyList<string> signatureLabels,
+        IReadOnlyDictionary<string, GameEventScriptValue> values)
     {
         _orderedPairs = orderedPairs;
         SignatureLabels = signatureLabels;
         _values = values;
     }
 
-    private readonly IReadOnlyList<KeyValuePair<string, GameEventScriptBoxedValue>> _orderedPairs;
-    private readonly IReadOnlyDictionary<string, GameEventScriptBoxedValue> _values;
+    private readonly IReadOnlyList<KeyValuePair<string, GameEventScriptValue>> _orderedPairs;
+    private readonly IReadOnlyDictionary<string, GameEventScriptValue> _values;
 
-    internal static GameEventScriptNamedArguments CreateOrdered(KeyValuePair<string, GameEventScriptBoxedValue>[] orderedPairs)
+    internal static GameEventScriptNamedArguments CreateOrdered(KeyValuePair<string, GameEventScriptValue>[] orderedPairs)
         => CreateOrdered(orderedPairs, orderedPairs.Select(pair => GameEventScriptMessageSignature.NormalizeParameterName(pair.Key)).ToArray());
 
-    internal static GameEventScriptNamedArguments CreateOrdered(KeyValuePair<string, GameEventScriptBoxedValue>[] orderedPairs, IReadOnlyList<string> signatureLabels)
+    internal static GameEventScriptNamedArguments CreateOrdered(KeyValuePair<string, GameEventScriptValue>[] orderedPairs, IReadOnlyList<string> signatureLabels)
     {
         if (orderedPairs.Length == 0)
         {
@@ -150,15 +150,15 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
             throw new ArgumentException("Signature label count must match argument count.", nameof(signatureLabels));
         }
 
-        var values = new Dictionary<string, GameEventScriptBoxedValue>(orderedPairs.Length, StringComparer.Ordinal);
+        var values = new Dictionary<string, GameEventScriptValue>(orderedPairs.Length, StringComparer.Ordinal);
         var normalizedSignatureLabels = new string[signatureLabels.Count];
         for (var index = 0; index < orderedPairs.Length; index++)
         {
             var pair = orderedPairs[index];
-            var value = pair.Value ?? GameEventScriptBoxedValue.Nothing();
+            var value = pair.Value ?? GameEventScriptValueFactory.GesNothing();
             if (!ReferenceEquals(value, pair.Value))
             {
-                pair = new KeyValuePair<string, GameEventScriptBoxedValue>(pair.Key, value);
+                pair = new KeyValuePair<string, GameEventScriptValue>(pair.Key, value);
                 orderedPairs[index] = pair;
             }
 
@@ -166,7 +166,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
             var storageName = string.IsNullOrEmpty(pair.Key) ? normalizedName : pair.Key;
             if (!string.Equals(storageName, pair.Key, StringComparison.Ordinal))
             {
-                pair = new KeyValuePair<string, GameEventScriptBoxedValue>(storageName, value);
+                pair = new KeyValuePair<string, GameEventScriptValue>(storageName, value);
                 orderedPairs[index] = pair;
             }
 

@@ -21,14 +21,14 @@ internal static class GesVmRegisterCallExternal
         }
 
         var argumentCount = argumentSlots.Length;
-        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptBoxedValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
                 ref readonly var argument = ref state.Register(argumentSlots[argumentIndex]);
-                arguments[argumentIndex] = GameEventScriptBoxedValue.FromVmValue(in argument);
+                arguments[argumentIndex] = GameEventScriptValueFactory.FromVmValue(in argument);
             }
 
             var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
@@ -57,7 +57,7 @@ internal static class GesVmRegisterCallExternal
             if (argumentCount > 0)
             {
                 Array.Clear(arguments, 0, argumentCount);
-                ArrayPool<GameEventScriptBoxedValue>.Shared.Return(arguments);
+                ArrayPool<GameEventScriptValue>.Shared.Return(arguments);
             }
         }
     }
@@ -117,14 +117,14 @@ internal static class GesVmRegisterCallExternal
             return;
         }
 
-        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptBoxedValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
                 ref readonly var argument = ref state.Register(argumentSlots[argumentIndex]);
-                arguments[argumentIndex] = GameEventScriptBoxedValue.FromVmValue(in argument);
+                arguments[argumentIndex] = GameEventScriptValueFactory.FromVmValue(in argument);
             }
 
             var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
@@ -140,11 +140,11 @@ internal static class GesVmRegisterCallExternal
             if (argumentCount > 0)
             {
                 Array.Clear(arguments, 0, argumentCount);
-                ArrayPool<GameEventScriptBoxedValue>.Shared.Return(arguments);
+                ArrayPool<GameEventScriptValue>.Shared.Return(arguments);
             }
         }
     }
 
-    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptBoxedValue argument)
+    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptValue argument)
         => state.SetValue(destinationRegister, in argument.GetVmValue());
 }

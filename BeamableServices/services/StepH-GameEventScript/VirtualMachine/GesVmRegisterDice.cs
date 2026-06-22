@@ -15,7 +15,7 @@ internal static class GesVmRegisterDice
         }
 
         var dices = new int[count];
-        for (var i = 0; i < count; i++) dices[i] = vmState.RandomGenerator.NextInclusiveInt(1, sides);
+        for (var i = 0; i < count; i++) dices[i] = (int)vmState.RandomGenerator.NextInclusiveInteger(1, sides);
         vmState.SetDice(destinationRegister, dices);
     }
 }

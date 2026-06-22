@@ -62,7 +62,7 @@ public sealed class GameEventScriptHostSteppingTests
 
         var session = host.StartSession();
 
-        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GameEventScriptBoxedValue.FromInteger(7)))));
+        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)))));
         CollectionAssert.AreEqual(new[] { "Ping(amount)" }, calls);
     }
 
@@ -516,8 +516,8 @@ public sealed class GameEventScriptHostSteppingTests
 
         host.Publish(Create(
             "Start",
-            ("values", GameEventScriptBoxedValue.FromList(Enumerable.Range(1, 3).Select(value => GameEventScriptBoxedValue.FromInteger(value)))),
-            ("seed", GameEventScriptBoxedValue.FromInteger(7))));
+            ("values", GameEventScriptValueFactory.GesList(Enumerable.Range(1, 3).Select(value => GameEventScriptValueFactory.GesInteger(value)))),
+            ("seed", GameEventScriptValueFactory.GesInteger(7))));
 
         var steps = DrainWithTinyBudget(host);
 

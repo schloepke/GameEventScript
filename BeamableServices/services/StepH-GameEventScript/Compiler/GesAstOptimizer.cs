@@ -259,8 +259,8 @@ internal static class GesAstOptimizer
             return false;
         }
 
-        return TryEvaluateConstantBoxed(expression, out var value) &&
-               TryConvertBoxedValueToLiteral(value, out folded);
+        return TryEvaluateConstantValue(expression, out var value) &&
+               TryConvertValueToLiteral(value, out folded);
     }
 
     private static CollectionSelectorNode OptimizeSelector(CollectionSelectorNode selector, ISet<string> knownTypeNames)
@@ -375,10 +375,10 @@ internal static class GesAstOptimizer
             return false;
         }
 
-        var arguments = new GameEventScriptBoxedValue[extensionCall.Arguments.Count];
+        var arguments = new GameEventScriptValue[extensionCall.Arguments.Count];
         for (var index = 0; index < extensionCall.Arguments.Count; index++)
         {
-            if (!TryEvaluateConstantBoxed(extensionCall.Arguments[index].Expression, out var argument))
+            if (!TryEvaluateConstantValue(extensionCall.Arguments[index].Expression, out var argument))
             {
                 return false;
             }
@@ -391,94 +391,94 @@ internal static class GesAstOptimizer
             return false;
         }
 
-        return TryConvertBoxedValueToLiteral(value, out folded);
+        return TryConvertValueToLiteral(value, out folded);
     }
 
-    private static bool TryEvaluateConstantBoxed(ExpressionNode expression, out GameEventScriptBoxedValue value)
+    private static bool TryEvaluateConstantValue(ExpressionNode expression, out GameEventScriptValue value)
     {
         switch (expression)
         {
             case BooleanLiteralExpressionNode booleanLiteral:
-                value = GameEventScriptBoxedValue.FromBoolean(booleanLiteral.Value);
+                value = GameEventScriptValueFactory.GesBoolean(booleanLiteral.Value);
                 return true;
             case NothingLiteralExpressionNode:
-                value = GameEventScriptBoxedValue.Nothing();
+                value = GameEventScriptValueFactory.GesNothing();
                 return true;
             case IntegerLiteralExpressionNode integerLiteral:
-                value = GameEventScriptBoxedValue.FromInteger(integerLiteral.Value);
+                value = GameEventScriptValueFactory.GesInteger(integerLiteral.Value);
                 return true;
             case UnitIntegerLiteralExpressionNode unitIntegerLiteral:
                 value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitIntegerLiteral.UnitName, out var integerUnit)
-                    ? GameEventScriptBoxedValue.FromInteger(unitIntegerLiteral.Value, integerUnit)
-                    : GameEventScriptBoxedValue.Nothing();
+                    ? GameEventScriptValueFactory.GesInteger(unitIntegerLiteral.Value, integerUnit)
+                    : GameEventScriptValueFactory.GesNothing();
                 return true;
             case FloatLiteralExpressionNode floatLiteral:
-                value = GameEventScriptBoxedValue.FromFloat(floatLiteral.Value);
+                value = GameEventScriptValueFactory.GesFloat(floatLiteral.Value);
                 return true;
             case UnitFloatLiteralExpressionNode unitFloatLiteral:
                 value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloatLiteral.UnitName, out var unit)
-                    ? GameEventScriptBoxedValue.FromFloat(unitFloatLiteral.Value, unit)
-                    : GameEventScriptBoxedValue.Nothing();
+                    ? GameEventScriptValueFactory.GesFloat(unitFloatLiteral.Value, unit)
+                    : GameEventScriptValueFactory.GesNothing();
                 return true;
             case PercentageLiteralExpressionNode percentageLiteral:
-                value = GameEventScriptBoxedValue.FromPercentage(percentageLiteral.PercentValue / 100d);
+                value = GameEventScriptValueFactory.GesPercentage(percentageLiteral.PercentValue / 100d);
                 return true;
             case TextLiteralExpressionNode textLiteral:
-                value = GameEventScriptBoxedValue.FromText(textLiteral.Value);
+                value = GameEventScriptValueFactory.GesText(textLiteral.Value);
                 return true;
             case TagLiteralExpressionNode tagLiteral:
-                value = GameEventScriptBoxedValue.FromTag(tagLiteral.Name);
+                value = GameEventScriptValueFactory.GesTag(tagLiteral.Name);
                 return true;
             case ListLiteralExpressionNode listLiteral:
             {
-                var items = new GameEventScriptBoxedValue[listLiteral.Items.Count];
+                var items = new GameEventScriptValue[listLiteral.Items.Count];
                 for (var index = 0; index < listLiteral.Items.Count; index++)
                 {
-                    if (!TryEvaluateConstantBoxed(listLiteral.Items[index], out items[index]))
+                    if (!TryEvaluateConstantValue(listLiteral.Items[index], out items[index]))
                     {
-                        value = GameEventScriptBoxedValue.Nothing();
+                        value = GameEventScriptValueFactory.GesNothing();
                         return false;
                     }
                 }
 
-                value = GameEventScriptBoxedValue.FromList(items);
+                value = GameEventScriptValueFactory.GesList(items);
                 return true;
             }
             case MapLiteralExpressionNode mapLiteral:
             {
-                var entries = new KeyValuePair<string, GameEventScriptBoxedValue>[mapLiteral.Entries.Count];
+                var entries = new KeyValuePair<string, GameEventScriptValue>[mapLiteral.Entries.Count];
                 for (var index = 0; index < mapLiteral.Entries.Count; index++)
                 {
                     var entry = mapLiteral.Entries[index];
-                    if (!TryEvaluateConstantBoxed(entry.Value, out var entryValue))
+                    if (!TryEvaluateConstantValue(entry.Value, out var entryValue))
                     {
-                        value = GameEventScriptBoxedValue.Nothing();
+                        value = GameEventScriptValueFactory.GesNothing();
                         return false;
                     }
 
-                    entries[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(entry.Key, entryValue);
+                    entries[index] = new KeyValuePair<string, GameEventScriptValue>(entry.Key, entryValue);
                 }
 
-                value = GameEventScriptBoxedValue.FromMap(entries);
+                value = GameEventScriptValueFactory.GesMap(entries);
                 return true;
             }
             case TypeCastExpressionNode typeCastExpression:
-                return TryEvaluateConstantTypeCastBoxed(typeCastExpression, out value);
+                return TryEvaluateConstantTypeCastValue(typeCastExpression, out value);
             case UnaryExpressionNode unaryExpression:
-                return TryEvaluateConstantUnaryBoxed(unaryExpression, out value);
+                return TryEvaluateConstantUnaryValue(unaryExpression, out value);
             case BinaryExpressionNode binaryExpression:
-                return TryEvaluateConstantBinaryBoxed(binaryExpression, out value);
+                return TryEvaluateConstantBinaryValue(binaryExpression, out value);
             default:
-                value = GameEventScriptBoxedValue.Nothing();
+                value = GameEventScriptValueFactory.GesNothing();
                 return false;
         }
     }
 
-    private static bool TryEvaluateConstantTypeCastBoxed(TypeCastExpressionNode typeCast, out GameEventScriptBoxedValue value)
+    private static bool TryEvaluateConstantTypeCastValue(TypeCastExpressionNode typeCast, out GameEventScriptValue value)
     {
-        if (!TryEvaluateConstantBoxed(typeCast.Value, out var source))
+        if (!TryEvaluateConstantValue(typeCast.Value, out var source))
         {
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return false;
         }
 
@@ -490,23 +490,23 @@ internal static class GesAstOptimizer
                 {
                     value = double.IsFinite(number)
                         ? CreateNumber(number, unit, Math.Truncate(number) == number)
-                        : GameEventScriptBoxedValue.FromFloat(number, unit);
+                        : GameEventScriptValueFactory.GesFloat(number, unit);
                     return true;
                 }
 
-                value = GameEventScriptBoxedValue.Nothing();
+                value = GameEventScriptValueFactory.GesNothing();
                 return true;
             default:
-                value = GameEventScriptBoxedValue.Nothing();
+                value = GameEventScriptValueFactory.GesNothing();
                 return false;
         }
     }
 
-    private static bool TryEvaluateConstantUnaryBoxed(UnaryExpressionNode unary, out GameEventScriptBoxedValue value)
+    private static bool TryEvaluateConstantUnaryValue(UnaryExpressionNode unary, out GameEventScriptValue value)
     {
-        if (!TryEvaluateConstantBoxed(unary.Operand, out var operand))
+        if (!TryEvaluateConstantValue(unary.Operand, out var operand))
         {
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return false;
         }
 
@@ -517,32 +517,32 @@ internal static class GesAstOptimizer
                     GameEventScriptBytecodeTypeKind.List or
                     GameEventScriptBytecodeTypeKind.Map or
                     GameEventScriptBytecodeTypeKind.Dice
-                    ? GameEventScriptBoxedValue.Nothing()
-                    : GameEventScriptBoxedValue.FromBoolean(!operand.Boolean);
+                    ? GameEventScriptValueFactory.GesNothing()
+                    : GameEventScriptValueFactory.GesBoolean(!operand.Boolean);
                 return true;
             case GesUnaryOperator.HasValue:
-                value = GameEventScriptBoxedValue.FromBoolean(operand.HasValue);
+                value = GameEventScriptValueFactory.GesBoolean(operand.HasValue);
                 return true;
             case GesUnaryOperator.Empty:
-                value = GameEventScriptBoxedValue.FromBoolean(!operand.HasValue);
+                value = GameEventScriptValueFactory.GesBoolean(!operand.HasValue);
                 return true;
             case GesUnaryOperator.Negate
                 when operand.Kind == GameEventScriptBytecodeTypeKind.Integer &&
                      operand.Integer != long.MinValue:
-                value = GameEventScriptBoxedValue.FromInteger(-operand.Integer, operand.Unit);
+                value = GameEventScriptValueFactory.GesInteger(-operand.Integer, operand.Unit);
                 return true;
             default:
-                value = GameEventScriptBoxedValue.Nothing();
+                value = GameEventScriptValueFactory.GesNothing();
                 return false;
         }
     }
 
-    private static bool TryEvaluateConstantBinaryBoxed(BinaryExpressionNode binary, out GameEventScriptBoxedValue value)
+    private static bool TryEvaluateConstantBinaryValue(BinaryExpressionNode binary, out GameEventScriptValue value)
     {
-        if (!TryEvaluateConstantBoxed(binary.Left, out var left) ||
-            !TryEvaluateConstantBoxed(binary.Right, out var right))
+        if (!TryEvaluateConstantValue(binary.Left, out var left) ||
+            !TryEvaluateConstantValue(binary.Right, out var right))
         {
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return false;
         }
 
@@ -560,11 +560,11 @@ internal static class GesAstOptimizer
             case GesBinaryOperator.Xor:
                 if (IsTruthIndeterminate(left) || IsTruthIndeterminate(right))
                 {
-                    value = GameEventScriptBoxedValue.Nothing();
+                    value = GameEventScriptValueFactory.GesNothing();
                     return true;
                 }
 
-                value = GameEventScriptBoxedValue.FromBoolean(left.Boolean ^ right.Boolean);
+                value = GameEventScriptValueFactory.GesBoolean(left.Boolean ^ right.Boolean);
                 return true;
             case GesBinaryOperator.Implies:
                 value = EvaluateConstantImplies(left, right);
@@ -573,14 +573,14 @@ internal static class GesAstOptimizer
 
         if (left.IsNothing || right.IsNothing)
         {
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return true;
         }
 
         if (!TryReadFiniteNumber(left, out var leftNumber) ||
             !TryReadFiniteNumber(right, out var rightNumber))
         {
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return false;
         }
 
@@ -591,27 +591,27 @@ internal static class GesAstOptimizer
         {
             case GesBinaryOperator.Equal:
                 if (!bothIntegers || !sameUnit) goto default;
-                value = GameEventScriptBoxedValue.FromBoolean(left.Integer == right.Integer);
+                value = GameEventScriptValueFactory.GesBoolean(left.Integer == right.Integer);
                 return true;
             case GesBinaryOperator.NotEqual:
                 if (!bothIntegers || !sameUnit) goto default;
-                value = GameEventScriptBoxedValue.FromBoolean(left.Integer != right.Integer);
+                value = GameEventScriptValueFactory.GesBoolean(left.Integer != right.Integer);
                 return true;
             case GesBinaryOperator.Less:
                 if (!bothIntegers || !sameUnit) goto default;
-                value = GameEventScriptBoxedValue.FromBoolean(left.Integer < right.Integer);
+                value = GameEventScriptValueFactory.GesBoolean(left.Integer < right.Integer);
                 return true;
             case GesBinaryOperator.Greater:
                 if (!bothIntegers || !sameUnit) goto default;
-                value = GameEventScriptBoxedValue.FromBoolean(left.Integer > right.Integer);
+                value = GameEventScriptValueFactory.GesBoolean(left.Integer > right.Integer);
                 return true;
             case GesBinaryOperator.LessOrEqual:
                 if (!bothIntegers || !sameUnit) goto default;
-                value = GameEventScriptBoxedValue.FromBoolean(left.Integer <= right.Integer);
+                value = GameEventScriptValueFactory.GesBoolean(left.Integer <= right.Integer);
                 return true;
             case GesBinaryOperator.GreaterOrEqual:
                 if (!bothIntegers || !sameUnit) goto default;
-                value = GameEventScriptBoxedValue.FromBoolean(left.Integer >= right.Integer);
+                value = GameEventScriptValueFactory.GesBoolean(left.Integer >= right.Integer);
                 return true;
             case GesBinaryOperator.Add:
                 return TryFoldAdd(left, right, leftNumber, rightNumber, out value);
@@ -622,7 +622,7 @@ internal static class GesAstOptimizer
             case GesBinaryOperator.Divide when rightNumber != 0d && sameUnit:
                 if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float)
                 {
-                    value = GameEventScriptBoxedValue.FromPercentage(leftNumber / rightNumber);
+                    value = GameEventScriptValueFactory.GesPercentage(leftNumber / rightNumber);
                     return true;
                 }
 
@@ -652,48 +652,48 @@ internal static class GesAstOptimizer
                 value = CreateNumber(Math.Pow(leftNumber, rightNumber), left.Unit, false);
                 return true;
             default:
-                value = GameEventScriptBoxedValue.Nothing();
+                value = GameEventScriptValueFactory.GesNothing();
                 return false;
         }
     }
 
-    private static GameEventScriptBoxedValue EvaluateConstantOr(GameEventScriptBoxedValue left, GameEventScriptBoxedValue right)
+    private static GameEventScriptValue EvaluateConstantOr(GameEventScriptValue left, GameEventScriptValue right)
     {
         if (!IsTruthIndeterminate(left) && left.Boolean || !IsTruthIndeterminate(right) && right.Boolean)
         {
-            return GameEventScriptBoxedValue.FromBoolean(true);
+            return GameEventScriptValueFactory.GesBoolean(true);
         }
 
         return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
-            ? GameEventScriptBoxedValue.Nothing()
-            : GameEventScriptBoxedValue.FromBoolean(false);
+            ? GameEventScriptValueFactory.GesNothing()
+            : GameEventScriptValueFactory.GesBoolean(false);
     }
 
-    private static GameEventScriptBoxedValue EvaluateConstantAnd(GameEventScriptBoxedValue left, GameEventScriptBoxedValue right)
+    private static GameEventScriptValue EvaluateConstantAnd(GameEventScriptValue left, GameEventScriptValue right)
     {
         if (!IsTruthIndeterminate(left) && !left.Boolean || !IsTruthIndeterminate(right) && !right.Boolean)
         {
-            return GameEventScriptBoxedValue.FromBoolean(false);
+            return GameEventScriptValueFactory.GesBoolean(false);
         }
 
         return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
-            ? GameEventScriptBoxedValue.Nothing()
-            : GameEventScriptBoxedValue.FromBoolean(true);
+            ? GameEventScriptValueFactory.GesNothing()
+            : GameEventScriptValueFactory.GesBoolean(true);
     }
 
-    private static GameEventScriptBoxedValue EvaluateConstantImplies(GameEventScriptBoxedValue left, GameEventScriptBoxedValue right)
+    private static GameEventScriptValue EvaluateConstantImplies(GameEventScriptValue left, GameEventScriptValue right)
     {
         if (!IsTruthIndeterminate(left) && !left.Boolean || !IsTruthIndeterminate(right) && right.Boolean)
         {
-            return GameEventScriptBoxedValue.FromBoolean(true);
+            return GameEventScriptValueFactory.GesBoolean(true);
         }
 
         return IsTruthIndeterminate(left) || IsTruthIndeterminate(right)
-            ? GameEventScriptBoxedValue.Nothing()
-            : GameEventScriptBoxedValue.FromBoolean(false);
+            ? GameEventScriptValueFactory.GesNothing()
+            : GameEventScriptValueFactory.GesBoolean(false);
     }
 
-    private static bool IsTruthIndeterminate(GameEventScriptBoxedValue value)
+    private static bool IsTruthIndeterminate(GameEventScriptValue value)
         => value.Kind is GameEventScriptBytecodeTypeKind.Nothing or
             GameEventScriptBytecodeTypeKind.List or
             GameEventScriptBytecodeTypeKind.Map or
@@ -704,26 +704,26 @@ internal static class GesAstOptimizer
         long right,
         GameEventScriptBytecodeInstructionUnit unit,
         Func<long, long, long> operation,
-        out GameEventScriptBoxedValue value)
+        out GameEventScriptValue value)
     {
         try
         {
-            value = GameEventScriptBoxedValue.FromInteger(operation(left, right), unit);
+            value = GameEventScriptValueFactory.GesInteger(operation(left, right), unit);
             return true;
         }
         catch (OverflowException)
         {
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return false;
         }
     }
 
     private static bool TryFoldAdd(
-        GameEventScriptBoxedValue left,
-        GameEventScriptBoxedValue right,
+        GameEventScriptValue left,
+        GameEventScriptValue right,
         double leftNumber,
         double rightNumber,
-        out GameEventScriptBoxedValue value)
+        out GameEventScriptValue value)
     {
         if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
@@ -742,7 +742,7 @@ internal static class GesAstOptimizer
 
         if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
         {
-            value = GameEventScriptBoxedValue.FromPercentage(leftNumber + rightNumber);
+            value = GameEventScriptValueFactory.GesPercentage(leftNumber + rightNumber);
             return true;
         }
 
@@ -752,16 +752,16 @@ internal static class GesAstOptimizer
             return true;
         }
 
-        value = GameEventScriptBoxedValue.Nothing();
+        value = GameEventScriptValueFactory.GesNothing();
         return false;
     }
 
     private static bool TryFoldSubtract(
-        GameEventScriptBoxedValue left,
-        GameEventScriptBoxedValue right,
+        GameEventScriptValue left,
+        GameEventScriptValue right,
         double leftNumber,
         double rightNumber,
-        out GameEventScriptBoxedValue value)
+        out GameEventScriptValue value)
     {
         if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
@@ -780,7 +780,7 @@ internal static class GesAstOptimizer
 
         if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
         {
-            value = GameEventScriptBoxedValue.FromPercentage(leftNumber - rightNumber);
+            value = GameEventScriptValueFactory.GesPercentage(leftNumber - rightNumber);
             return true;
         }
 
@@ -790,16 +790,16 @@ internal static class GesAstOptimizer
             return true;
         }
 
-        value = GameEventScriptBoxedValue.Nothing();
+        value = GameEventScriptValueFactory.GesNothing();
         return false;
     }
 
     private static bool TryFoldMultiply(
-        GameEventScriptBoxedValue left,
-        GameEventScriptBoxedValue right,
+        GameEventScriptValue left,
+        GameEventScriptValue right,
         double leftNumber,
         double rightNumber,
-        out GameEventScriptBoxedValue value)
+        out GameEventScriptValue value)
     {
         if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             right.Kind == GameEventScriptBytecodeTypeKind.Integer)
@@ -815,13 +815,13 @@ internal static class GesAstOptimizer
                 return true;
             }
 
-            value = GameEventScriptBoxedValue.Nothing();
+            value = GameEventScriptValueFactory.GesNothing();
             return false;
         }
 
         if (left.Kind == GameEventScriptBytecodeTypeKind.Percentage && right.Kind == GameEventScriptBytecodeTypeKind.Percentage)
         {
-            value = GameEventScriptBoxedValue.FromPercentage(leftNumber * rightNumber);
+            value = GameEventScriptValueFactory.GesPercentage(leftNumber * rightNumber);
             return true;
         }
 
@@ -843,11 +843,11 @@ internal static class GesAstOptimizer
             return true;
         }
 
-        value = GameEventScriptBoxedValue.Nothing();
+        value = GameEventScriptValueFactory.GesNothing();
         return false;
     }
 
-    private static bool TryReadNumberForCast(GameEventScriptBoxedValue value, out double number, out GameEventScriptBytecodeInstructionUnit unit)
+    private static bool TryReadNumberForCast(GameEventScriptValue value, out double number, out GameEventScriptBytecodeInstructionUnit unit)
     {
         unit = value.Unit;
         switch (value.Kind)
@@ -872,7 +872,7 @@ internal static class GesAstOptimizer
         }
     }
 
-    private static bool TryReadFiniteNumber(GameEventScriptBoxedValue value, out double number)
+    private static bool TryReadFiniteNumber(GameEventScriptValue value, out double number)
     {
         switch (value.Kind)
         {
@@ -890,11 +890,11 @@ internal static class GesAstOptimizer
         }
     }
 
-    private static GameEventScriptBoxedValue CreateNumber(double number, GameEventScriptBytecodeInstructionUnit unit, bool preferInteger)
+    private static GameEventScriptValue CreateNumber(double number, GameEventScriptBytecodeInstructionUnit unit, bool preferInteger)
     {
         if (!double.IsFinite(number))
         {
-            return GameEventScriptBoxedValue.Nothing();
+            return GameEventScriptValueFactory.GesNothing();
         }
 
         if (preferInteger &&
@@ -902,10 +902,10 @@ internal static class GesAstOptimizer
             number <= long.MaxValue &&
             Math.Truncate(number) == number)
         {
-            return GameEventScriptBoxedValue.FromInteger((long)number, unit);
+            return GameEventScriptValueFactory.GesInteger((long)number, unit);
         }
 
-        return GameEventScriptBoxedValue.FromFloat(number, unit);
+        return GameEventScriptValueFactory.GesFloat(number, unit);
     }
 
     private static bool TryProductUnit(
@@ -926,7 +926,7 @@ internal static class GesAstOptimizer
     private static GameEventScriptBytecodeInstructionUnit DivideResultUnit(GameEventScriptBytecodeInstructionUnit unit)
         => unit.IsNumericUnit() ? GameEventScriptBytecodeInstructionUnit.UnitNone : unit;
 
-    private static bool TryConvertBoxedValueToLiteral(GameEventScriptBoxedValue value, out ExpressionNode expression)
+    private static bool TryConvertValueToLiteral(GameEventScriptValue value, out ExpressionNode expression)
     {
         switch (value.Kind)
         {
@@ -984,7 +984,7 @@ internal static class GesAstOptimizer
                 var items = new List<ExpressionNode>();
                 foreach (var item in value.AsList())
                 {
-                    if (!TryConvertBoxedValueToLiteral(item, out var itemLiteral))
+                    if (!TryConvertValueToLiteral(item, out var itemLiteral))
                     {
                         expression = default!;
                         return false;
@@ -1001,7 +1001,7 @@ internal static class GesAstOptimizer
                 var entries = new List<MapEntryNode>();
                 foreach (var entry in value.AsMap())
                 {
-                    if (!TryConvertBoxedValueToLiteral(entry.Value, out var itemLiteral))
+                    if (!TryConvertValueToLiteral(entry.Value, out var itemLiteral))
                     {
                         expression = default!;
                         return false;

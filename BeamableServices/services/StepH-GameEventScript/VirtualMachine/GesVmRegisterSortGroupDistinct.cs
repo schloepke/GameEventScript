@@ -250,7 +250,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         return;
                     }
 
-                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ConvertToText();
+                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ToText;
                     groups.Add(keyText, item);
                 }
 
@@ -272,7 +272,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         return;
                     }
 
-                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ConvertToText();
+                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ToText;
                     groups.Add(keyText, item);
                 }
 
@@ -295,7 +295,7 @@ internal static class GesVmRegisterSortGroupDistinct
                             return;
                         }
 
-                        var keyText = key.Kind is Text or Tag ? key.TextValue : key.ConvertToText();
+                        var keyText = key.Kind is Text or Tag ? key.TextValue : key.ToText;
                         groups.Add(keyText, item);
                     }
                 }

@@ -66,7 +66,7 @@ internal static class GesVmStreamCollectorTerminals
                 {
                     Text or Tag => keyValue.TextValue,
                     Nothing => string.Empty,
-                    _ => keyValue.ConvertToText()
+                    _ => keyValue.ToText
                 };
                 if (key.Length == 0) continue;
                 map.Set(key, item);
@@ -105,7 +105,7 @@ internal static class GesVmStreamCollectorTerminals
                 {
                     Text or Tag => keyValue.TextValue,
                     Nothing => string.Empty,
-                    _ => keyValue.ConvertToText()
+                    _ => keyValue.ToText
                 };
                 if (key.Length == 0) continue;
 

@@ -139,11 +139,11 @@ public sealed class GameEventScriptExternalTypeTests
     }
 
     [TestMethod]
-    public void AnnotatedExtensionsAllowBoxedValueParameters()
+    public void AnnotatedExtensionsAllowValueParameters()
     {
-        var registry = GameEventScriptExtensionRegistry.Create(typeof(BoxedExtensionFunctions));
+        var registry = GameEventScriptExtensionRegistry.Create(typeof(ValueExtensionFunctions));
 
-        Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("boxed", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
+        Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("value", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
     }
 
     [GesType("aim")]
@@ -154,7 +154,7 @@ public sealed class GameEventScriptExternalTypeTests
             [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
             [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
             [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptBoxedValue direction)
+            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -173,7 +173,7 @@ public sealed class GameEventScriptExternalTypeTests
         public int Steps { get; }
 
         [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public GameEventScriptBoxedValue Direction { get; }
+        public GameEventScriptValue Direction { get; }
 
         [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
         public int Checksum { get; }
@@ -198,11 +198,11 @@ public sealed class GameEventScriptExternalTypeTests
             => value + 1;
     }
 
-    [GesExtension("boxed")]
-    private static class BoxedExtensionFunctions
+    [GesExtension("value")]
+    private static class ValueExtensionFunctions
     {
         [GesFunction("value")]
-        public static GameEventScriptBoxedValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptBoxedValue value)
+        public static GameEventScriptValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptValue value)
             => value;
     }
 

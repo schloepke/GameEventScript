@@ -95,7 +95,7 @@ public interface IGameEventScriptExternalTypeConstructor
 {
     GameEventScriptExternalTypeConstructorDefinition Definition { get; }
 
-    GameEventScriptBoxedValue Invoke(ReadOnlySpan<GameEventScriptBoxedValue> arguments);
+    GameEventScriptValue Invoke(ReadOnlySpan<GameEventScriptValue> arguments);
 }
 
 public sealed class GameEventScriptExternalTypeDefinition
@@ -108,7 +108,7 @@ public sealed class GameEventScriptExternalTypeDefinition
             name,
             (fields ?? throw new ArgumentNullException(nameof(fields))).ToArray(),
             (constructors ?? throw new ArgumentNullException(nameof(constructors))).ToArray(),
-            new Dictionary<string, Func<object, GameEventScriptBoxedValue>>(StringComparer.Ordinal),
+            new Dictionary<string, Func<object, GameEventScriptValue>>(StringComparer.Ordinal),
             new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal))
     {
     }
@@ -117,7 +117,7 @@ public sealed class GameEventScriptExternalTypeDefinition
         string name,
         IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> fields,
         IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> constructors,
-        IReadOnlyDictionary<string, Func<object, GameEventScriptBoxedValue>> fieldReaders,
+        IReadOnlyDictionary<string, Func<object, GameEventScriptValue>> fieldReaders,
         IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> constructorBindings)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
@@ -133,7 +133,7 @@ public sealed class GameEventScriptExternalTypeDefinition
 
     public IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> Constructors { get; }
 
-    internal IReadOnlyDictionary<string, Func<object, GameEventScriptBoxedValue>> FieldReaders { get; }
+    internal IReadOnlyDictionary<string, Func<object, GameEventScriptValue>> FieldReaders { get; }
 
     internal IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> ConstructorBindings { get; }
 
@@ -149,7 +149,7 @@ public sealed class GameEventScriptExternalTypeDefinition
         return Constructors.Any(constructorDefinition => string.Equals(constructorDefinition.SignatureId, signatureId, StringComparison.Ordinal));
     }
 
-    internal bool TryGetField(string fieldName, object instance, out GameEventScriptBoxedValue value)
+    internal bool TryGetField(string fieldName, object instance, out GameEventScriptValue value)
     {
         if (FieldReaders.TryGetValue(fieldName, out var reader))
         {
@@ -157,7 +157,7 @@ public sealed class GameEventScriptExternalTypeDefinition
             return true;
         }
 
-        value = GameEventScriptBoxedValue.Nothing();
+        value = GameEventScriptValueFactory.GesNothing();
         return false;
     }
 }
@@ -391,7 +391,7 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             : new GameEventScriptExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
         return new ExternalFieldBinding(
             definition,
-            instance => GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(GameEventScriptExternalTypeValueConverter.ToBoxedValue(reader(instance)), definition));
+            instance => GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(GameEventScriptExternalTypeValueConverter.ToValue(reader(instance)), definition));
     }
 
     private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames)
@@ -467,7 +467,7 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
         return new ExternalParameterBinding(definition, parameter.ParameterType);
     }
 
-    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GameEventScriptBoxedValue> Reader);
+    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GameEventScriptValue> Reader);
 
     private sealed record ExternalParameterBinding(GameEventScriptExternalTypeParameterDefinition Definition, Type ClrType);
 
@@ -478,11 +478,11 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
 
-        public GameEventScriptBoxedValue Invoke(ReadOnlySpan<GameEventScriptBoxedValue> arguments)
+        public GameEventScriptValue Invoke(ReadOnlySpan<GameEventScriptValue> arguments)
         {
             if (arguments.Length != parameters.Count)
             {
-                return GameEventScriptBoxedValue.Nothing();
+                return GameEventScriptValueFactory.GesNothing();
             }
 
             var converted = new object?[arguments.Length];
@@ -492,15 +492,15 @@ public sealed class GameEventScriptExternalTypeRegistry : IGameEventScriptExtern
             }
 
             var result = invoke(converted);
-            if (result is null) return GameEventScriptBoxedValue.Nothing();
-            if (result is GameEventScriptBoxedValue boxedValue) return boxedValue;
+            if (result is null) return GameEventScriptValueFactory.GesNothing();
+            if (result is GameEventScriptValue scriptValue) return scriptValue;
 
             if (GameEventScriptExternalTypeRuntime.TryGetDefinitionForInstance(result, out var externalDefinition))
             {
-                return GameEventScriptBoxedValue.FromExternalObject(result, externalDefinition);
+                return GameEventScriptValueFactory.GesExternalObject(result, externalDefinition);
             }
 
-            return GameEventScriptExternalTypeValueConverter.ToBoxedValue(result);
+            return GameEventScriptExternalTypeValueConverter.ToValue(result);
         }
     }
 }
@@ -677,20 +677,20 @@ internal static class GameEventScriptExternalTypeNames
 
 internal static class GameEventScriptExternalTypeValueConverter
 {
-    public static GameEventScriptBoxedValue CoerceToDeclaredType(GameEventScriptBoxedValue value, GameEventScriptExternalTypeFieldDefinition definition)
+    public static GameEventScriptValue CoerceToDeclaredType(GameEventScriptValue value, GameEventScriptExternalTypeFieldDefinition definition)
         => CoerceToDeclaredType(value, definition.Kind, definition.Unit, definition.TypeName);
 
-    public static GameEventScriptBoxedValue CoerceToDeclaredType(GameEventScriptBoxedValue value, GameEventScriptExternalTypeParameterDefinition definition)
+    public static GameEventScriptValue CoerceToDeclaredType(GameEventScriptValue value, GameEventScriptExternalTypeParameterDefinition definition)
         => CoerceToDeclaredType(value, definition.Kind, definition.Unit, definition.TypeName);
 
-    public static GameEventScriptBoxedValue CoerceToDeclaredType(GameEventScriptBoxedValue value, string typeName)
+    public static GameEventScriptValue CoerceToDeclaredType(GameEventScriptValue value, string typeName)
     {
         var (kind, unit) = GameEventScriptExternalTypeNames.GetKindAndUnit(typeName);
         return CoerceToDeclaredType(value, kind, unit, typeName);
     }
 
-    private static GameEventScriptBoxedValue CoerceToDeclaredType(
-        GameEventScriptBoxedValue value,
+    private static GameEventScriptValue CoerceToDeclaredType(
+        GameEventScriptValue value,
         GameEventScriptBytecodeTypeKind? kind,
         GameEventScriptBytecodeInstructionUnit? unit,
         string typeName)
@@ -698,106 +698,106 @@ internal static class GameEventScriptExternalTypeValueConverter
         if (kind == GameEventScriptBytecodeTypeKind.Vector &&
             unit is not null)
         {
-            return GameEventScriptBoxedValue.FromVector(value.X, value.Y, value.Z, unit.ToStoredUnit());
+            return GameEventScriptValueFactory.GesVector(value.X, value.Y, value.Z, unit.ToStoredUnit());
         }
 
         if (kind == GameEventScriptBytecodeTypeKind.Point &&
             unit is not null)
         {
-            return GameEventScriptBoxedValue.FromPoint(value.X, value.Y, value.Z, unit.ToStoredUnit());
+            return GameEventScriptValueFactory.GesPoint(value.X, value.Y, value.Z, unit.ToStoredUnit());
         }
 
         if (kind == GameEventScriptBytecodeTypeKind.Float &&
             unit is not null)
         {
-            return GameEventScriptBoxedValue.FromFloat(value.AsNumber(), unit.ToStoredUnit());
+            return GameEventScriptValueFactory.GesFloat(value.AsNumber(), unit.ToStoredUnit());
         }
 
         return CoerceToDeclaredTypeCore(value, typeName);
     }
 
-    private static GameEventScriptBoxedValue CoerceToDeclaredTypeCore(GameEventScriptBoxedValue value, string typeName)
+    private static GameEventScriptValue CoerceToDeclaredTypeCore(GameEventScriptValue value, string typeName)
     {
         return typeName switch
         {
-            "nothing" => GameEventScriptBoxedValue.Nothing(),
+            "nothing" => GameEventScriptValueFactory.GesNothing(),
             "tag" => CoerceToTag(value),
-            "text" => GameEventScriptBoxedValue.FromText(value.AsText()),
-            "percentage" => GameEventScriptBoxedValue.FromPercentage(value.AsNumber()),
-            "degree" => GameEventScriptBoxedValue.FromFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitDegree),
-            "meter" => GameEventScriptBoxedValue.FromFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitMeter),
-            "second" => GameEventScriptBoxedValue.FromFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitSecond),
-            "number" => GameEventScriptBoxedValue.FromFloat(value.AsNumber()),
-            "boolean" => GameEventScriptBoxedValue.FromBoolean(value.AsBoolean()),
-            "map" => GameEventScriptBoxedValue.FromMap(value.AsMap()),
-            "list" => GameEventScriptBoxedValue.FromList(value.AsList()),
+            "text" => GameEventScriptValueFactory.GesText(value.AsText()),
+            "percentage" => GameEventScriptValueFactory.GesPercentage(value.AsNumber()),
+            "degree" => GameEventScriptValueFactory.GesFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitDegree),
+            "meter" => GameEventScriptValueFactory.GesFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitMeter),
+            "second" => GameEventScriptValueFactory.GesFloat(value.AsNumber(), GameEventScriptBytecodeInstructionUnit.UnitSecond),
+            "number" => GameEventScriptValueFactory.GesFloat(value.AsNumber()),
+            "boolean" => GameEventScriptValueFactory.GesBoolean(value.AsBoolean()),
+            "map" => GameEventScriptValueFactory.GesMap(value.AsMap()),
+            "list" => GameEventScriptValueFactory.GesList(value.AsList()),
             _ => value
         };
     }
 
-    private static GameEventScriptBoxedValue CoerceToTag(GameEventScriptBoxedValue value)
+    private static GameEventScriptValue CoerceToTag(GameEventScriptValue value)
     {
         if (value.Kind == GameEventScriptBytecodeTypeKind.Boolean)
         {
-            return GameEventScriptBoxedValue.FromTag(value.AsBoolean() ? "true" : "false");
+            return GameEventScriptValueFactory.GesTag(value.AsBoolean() ? "true" : "false");
         }
 
         var text = value.AsText();
         if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
             return GameEventScriptTagRules.TryNormalizeTextCast(text, out var normalized)
-                ? GameEventScriptBoxedValue.FromTag(normalized)
-                : GameEventScriptBoxedValue.Nothing();
+                ? GameEventScriptValueFactory.GesTag(normalized)
+                : GameEventScriptValueFactory.GesNothing();
         }
 
         return GameEventScriptTagRules.IsValidTagName(text)
-            ? GameEventScriptBoxedValue.FromTag(text)
-            : GameEventScriptBoxedValue.Nothing();
+            ? GameEventScriptValueFactory.GesTag(text)
+            : GameEventScriptValueFactory.GesNothing();
     }
 
-    public static GameEventScriptBoxedValue ToBoxedValue(object? value)
+    public static GameEventScriptValue ToValue(object? value)
     {
         switch (value)
         {
             case null:
-                return GameEventScriptBoxedValue.Nothing();
-            case GameEventScriptBoxedValue boxed:
-                return boxed;
+                return GameEventScriptValueFactory.GesNothing();
+            case GameEventScriptValue scriptValue:
+                return scriptValue;
             case bool boolean:
-                return GameEventScriptBoxedValue.FromBoolean(boolean);
+                return GameEventScriptValueFactory.GesBoolean(boolean);
             case string text:
-                return GameEventScriptBoxedValue.FromText(text);
+                return GameEventScriptValueFactory.GesText(text);
             case double number:
-                return GameEventScriptBoxedValue.FromFloat(number);
+                return GameEventScriptValueFactory.GesFloat(number);
             case float number:
-                return GameEventScriptBoxedValue.FromFloat(number);
+                return GameEventScriptValueFactory.GesFloat(number);
             case decimal number:
-                return GameEventScriptBoxedValue.FromFloat((double)number);
+                return GameEventScriptValueFactory.GesFloat((double)number);
             case long integer:
-                return GameEventScriptBoxedValue.FromInteger(integer);
+                return GameEventScriptValueFactory.GesInteger(integer);
             case int integer:
-                return GameEventScriptBoxedValue.FromInteger(integer);
+                return GameEventScriptValueFactory.GesInteger(integer);
             case short integer:
-                return GameEventScriptBoxedValue.FromInteger(integer);
+                return GameEventScriptValueFactory.GesInteger(integer);
             case byte integer:
-                return GameEventScriptBoxedValue.FromInteger(integer);
+                return GameEventScriptValueFactory.GesInteger(integer);
             case GameEventScriptMessage message:
-                return GameEventScriptBoxedValue.FromMessage(message);
+                return GameEventScriptValueFactory.GesMessage(message);
             case GameEventScriptMessageSignature signature:
-                return GameEventScriptBoxedValue.FromHandler(signature);
+                return GameEventScriptValueFactory.GesHandler(signature);
         }
 
         if (GameEventScriptExternalTypeRuntime.TryGetDefinitionForInstance(value, out var externalDefinition))
         {
-            return GameEventScriptBoxedValue.FromExternalObject(value, externalDefinition);
+            return GameEventScriptValueFactory.GesExternalObject(value, externalDefinition);
         }
 
-        throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GameEventScriptBoxedValue.");
+        throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GameEventScriptValue.");
     }
 
-    public static object? ToClrValue(GameEventScriptBoxedValue value, Type targetType)
+    public static object? ToClrValue(GameEventScriptValue value, Type targetType)
     {
-        if (targetType == typeof(GameEventScriptBoxedValue))
+        if (targetType == typeof(GameEventScriptValue))
         {
             return value;
         }

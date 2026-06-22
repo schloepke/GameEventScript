@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 
@@ -269,7 +270,7 @@ internal static class GesVmRegisterTypeCastCheck
             return;
         }
 
-        dst.SetText(xSlot.ConvertToText());
+        dst.SetText(xSlot.ToText);
     }
     private static void CastList(GesVmState vmState, ref GesVmValue dst, in GesVmValue xSlot, GameEventScriptSession? session)
     {

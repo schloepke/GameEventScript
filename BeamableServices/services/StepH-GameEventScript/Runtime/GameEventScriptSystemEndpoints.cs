@@ -26,6 +26,6 @@ internal static class GameEventScriptSystemEndpoints
         => GameEventScriptMessage.Create(InitializationName);
 
     public static GameEventScriptMessage CreateMessageDispatchMessage(GameEventScriptMessage original)
-        => GameEventScriptMessage.Create(original.Name, new Dictionary<string, GameEventScriptBoxedValue> { [MessageArgumentName] = GameEventScriptBoxedValue.FromMessage(original) }, original.Tags);
+        => GameEventScriptMessage.Create(original.Name, new Dictionary<string, GameEventScriptValue> { [MessageArgumentName] = GameEventScriptValueFactory.GesMessage(original) }, original.Tags);
 
 }

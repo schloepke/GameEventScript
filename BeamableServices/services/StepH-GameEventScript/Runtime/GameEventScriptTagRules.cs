@@ -1,4 +1,4 @@
-namespace StepH.GameEventScript.Api;
+namespace StepH.GameEventScript.Runtime;
 
 internal static class GameEventScriptTagRules
 {

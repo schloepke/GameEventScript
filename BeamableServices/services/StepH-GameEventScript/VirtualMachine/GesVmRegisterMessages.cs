@@ -30,10 +30,10 @@ internal static class GesVmRegisterMessages
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
-        var pairs = new KeyValuePair<string, GameEventScriptBoxedValue>[argumentSlots.Length];
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
         for (var index = 0; index < argumentSlots.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptBoxedValue>(vmState.FetchStringByPointer(shape[index + 1]), GameEventScriptBoxedValue.FromVmValue(in vmState.Register(argumentSlots[index])));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(shape[index + 1]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentSlots[index])));
         }
         try
         {
@@ -52,10 +52,10 @@ internal static class GesVmRegisterMessages
             return;
         }
 
-        var arguments = new GameEventScriptBoxedValue[argumentSlots.Length];
+        var arguments = new GameEventScriptValue[argumentSlots.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
-            arguments[index] = GameEventScriptBoxedValue.FromVmValue(in vmState.Register(argumentSlots[index]));
+            arguments[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentSlots[index]));
         }
         if (signature.TryCreateMessage(arguments, out var message))
         {

@@ -21,19 +21,6 @@ public sealed class GameEventScriptRandomGenerator
     public static GameEventScriptRandomGenerator Create() => new(CreateDefaultSeed());
 
     /// <summary>
-    /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c> using
-    /// the specified <c>System.Random</c> instance for generating random values.
-    /// </summary>
-    /// <param name="random">
-    /// An instance of <c>System.Random</c> used for generating random values.
-    /// </param>
-    /// <returns>
-    /// A new <c>GameEventScriptRandomGenerator</c> initialized with the specified
-    /// <c>System.Random</c> instance.
-    /// </returns>
-    public static GameEventScriptRandomGenerator FromRandom(Random random) => new(random);
-
-    /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c>
     /// initialized with the specified deterministic seed.
     /// </summary>
@@ -75,24 +62,6 @@ public sealed class GameEventScriptRandomGenerator
     public static GameEventScriptRandomGenerator FromSequence(params double[] values) => new(values);
 
     /// <summary>
-    /// Generates a random integer between the specified minimum and maximum values, inclusive.
-    /// This method ensures that the generated value falls within the provided range,
-    /// swapping the bounds if the minimum value is greater than the maximum.
-    /// </summary>
-    /// <param name="minInclusive">
-    /// The inclusive lower bound of the random number to generate.
-    /// If greater than <paramref name="maxInclusive"/>, the values are swapped.
-    /// </param>
-    /// <param name="maxInclusive">
-    /// The inclusive upper bound of the random number to generate.
-    /// If less than <paramref name="minInclusive"/>, the values are swapped.
-    /// </param>
-    /// <returns>
-    /// A random integer within the range defined by <paramref name="minInclusive"/> and <paramref name="maxInclusive"/>.
-    /// </returns>
-    public int NextInclusiveInt(int minInclusive, int maxInclusive) => (int)NextInclusiveInteger(minInclusive, maxInclusive);
-
-    /// <summary>
     /// Generates a random 64-bit signed integer between the specified minimum and maximum values, inclusive.
     /// This method ensures that the generated value falls within the provided range,
     /// swapping the bounds if the minimum value is greater than the maximum.
@@ -111,12 +80,7 @@ public sealed class GameEventScriptRandomGenerator
     public long NextInclusiveInteger(long minInclusive, long maxInclusive)
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
-        if (_xoshiro != null) return _xoshiro.NextInclusiveInteger(minInclusive, maxInclusive);
-        if (minInclusive == maxInclusive) return minInclusive;
-        var span = unchecked((ulong)(maxInclusive - minInclusive) + 1UL);
-        var offset = NextUInt64Below(span);
-        return unchecked(minInclusive + (long)offset);
+        return TryDequeueSequenceValue(out var queuedValue) ? Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive) : _xoshiro.NextInclusiveInteger(minInclusive, maxInclusive);
     }
 
     /// <summary>
@@ -136,16 +100,7 @@ public sealed class GameEventScriptRandomGenerator
     {
         if (double.IsNaN(minInclusive) || double.IsNaN(maxInclusive)) return double.NaN;
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        if (TryDequeueSequenceValue(out var queuedValue)) return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
-        if (_xoshiro != null) return _xoshiro.NextInclusiveFloat(minInclusive, maxInclusive);
-        if (minInclusive == maxInclusive) return minInclusive;
-        var sample = NextUnitFloat();
-        return minInclusive + (maxInclusive - minInclusive) * sample;
-    }
-
-    private GameEventScriptRandomGenerator(Random random)
-    {
-        _random = random;
+        return TryDequeueSequenceValue(out var queuedValue) ? Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive) : _xoshiro.NextInclusiveFloat(minInclusive, maxInclusive);
     }
 
     private GameEventScriptRandomGenerator(long seed)
@@ -159,10 +114,8 @@ public sealed class GameEventScriptRandomGenerator
         _xoshiro = new GesVmXoshiroRandom(CreateDefaultSeed());
     }
 
-    private readonly GesVmXoshiroRandom? _xoshiro;
-    private readonly Random? _random;
+    private readonly GesVmXoshiroRandom _xoshiro;
     private readonly double[]? _sequence;
-    private readonly byte[] _uint64Buffer = new byte[8];
     private int _sequenceIndex;
 
     private bool TryDequeueSequenceValue(out double value)
@@ -175,38 +128,6 @@ public sealed class GameEventScriptRandomGenerator
 
         value = _sequence[_sequenceIndex++];
         return true;
-    }
-
-    private ulong NextUInt64Below(ulong exclusiveUpperBound)
-    {
-        if (exclusiveUpperBound == 0UL)
-        {
-            return NextUInt64();
-        }
-
-        var threshold = unchecked(0UL - exclusiveUpperBound) % exclusiveUpperBound;
-        while (true)
-        {
-            var value = NextUInt64();
-            if (value >= threshold)
-            {
-                return value % exclusiveUpperBound;
-            }
-        }
-    }
-
-    private ulong NextUInt64()
-    {
-        if (_xoshiro != null) return _xoshiro.NextUInt64();
-        if (_random == null) return 0;
-        _random.NextBytes(_uint64Buffer);
-        return BitConverter.ToUInt64(_uint64Buffer, 0);
-    }
-
-    private double NextUnitFloat()
-    {
-        if (_xoshiro != null) return _xoshiro.NextInclusiveFloat(0, 1);
-        return _random?.NextDouble() ?? 0;
     }
 
     private static long ToLongSaturated(double value) => value switch

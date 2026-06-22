@@ -257,12 +257,6 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
                 $"GameEventScript extension function '{method.DeclaringType?.FullName}.{method.Name}' return type '{returnType.FullName}' cannot use boxed GameEventScriptValue types. Use GameEventScriptBoxedValue instead.");
         }
 
-        if (typeof(IGameEventScriptSeries).IsAssignableFrom(returnType))
-        {
-            RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Series);
-            return Activator.CreateInstance(typeof(SeriesReturnConverter<>).MakeGenericType(returnType))!;
-        }
-
         if (returnType == typeof(double))
         {
             RequireReturnKind(method, attribute, GameEventScriptBytecodeTypeKind.Float);
@@ -498,15 +492,6 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
         public static readonly BoxedValueReturnConverter Instance = new();
 
         public GameEventScriptBoxedValue Convert(GameEventScriptBoxedValue value) => value;
-    }
-
-    private sealed class SeriesReturnConverter<T> : IExtensionReturnConverter<T>
-        where T : IGameEventScriptSeries
-    {
-        public GameEventScriptBoxedValue Convert(T value)
-            => value is null
-                ? GameEventScriptBoxedValue.Nothing()
-                : GameEventScriptBoxedValue.FromSeries(GesVmSeries.FromExternal(value));
     }
 
     private sealed class FloatReturnConverter(GameEventScriptBytecodeInstructionUnit? unit) : IExtensionReturnConverter<double>

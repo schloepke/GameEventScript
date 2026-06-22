@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -146,96 +145,6 @@ internal static class GesVmRegisterCallExternal
         }
     }
 
-    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptValue argument)
-    {
-        ref var destination = ref state.Register(destinationRegister);
-        destination.BindArguments(argument);
-    }
-
     internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptBoxedValue argument)
         => state.SetValue(destinationRegister, in argument.GetVmValue());
-
-    internal static void BindArguments(ref this GesVmValue destination, GameEventScriptValue argument)
-    {
-        switch (argument.Kind)
-        {
-            case GameEventScriptBytecodeTypeKind.Tag:
-                destination.SetTag(argument.AsText());
-                break;
-            case GameEventScriptBytecodeTypeKind.Text:
-                destination.SetText(argument.AsText());
-                break;
-            case GameEventScriptBytecodeTypeKind.Percentage:
-                destination.SetPercentage(argument.AsNumber());
-                break;
-            case GameEventScriptBytecodeTypeKind.Vector when argument is GameEventScriptVectorValue vector:
-                destination.SetVector(vector.X, vector.Y, vector.Z, vector.Unit);
-                break;
-            case GameEventScriptBytecodeTypeKind.Point when argument is GameEventScriptPointValue point:
-                destination.SetPoint(point.X, point.Y, point.Z, point.Unit);
-                break;
-            case GameEventScriptBytecodeTypeKind.Integer:
-            case GameEventScriptBytecodeTypeKind.Float:
-                if (argument.IsInteger()) destination.SetInteger(argument.AsInteger(), argument.Unit);
-                else if (argument.IsInfinity()) destination.SetFloat(argument.IsNegativeInfinity() ? double.NegativeInfinity : double.PositiveInfinity, argument.Unit);
-                else destination.SetFloat(argument.AsNumber(), argument.Unit);
-                break;
-            case GameEventScriptBytecodeTypeKind.Boolean:
-                destination.SetBoolean(argument.AsBoolean());
-                break;
-            case GameEventScriptBytecodeTypeKind.Range when argument is GameEventScriptRangeValue range:
-                if (range.IsIntegerRange) destination.SetRange(range.From, range.To, range.Step);
-                else destination.SetRange(range.FromNumber, range.ToNumber, range.StepNumber);
-                break;
-            case GameEventScriptBytecodeTypeKind.Handler when argument is GameEventScriptHandlerValue handler:
-                destination.SetMessageHandler(handler.Signature);
-                break;
-            case GameEventScriptBytecodeTypeKind.List:
-                var sourceItems = argument.AsList();
-                var list = new GesVmValue[sourceItems.Count];
-                for (var index = 0; index < sourceItems.Count; index++) list[index].BindArguments(sourceItems[index]);
-                destination.SetList(list);
-                break;
-            case GameEventScriptBytecodeTypeKind.Map:
-                var sourceEntries = argument.AsMap();
-                var isCustomType = argument.TryGetCustomTypeName(out var customTypeName);
-                var entries = new GesVmValueMapBuilder(sourceEntries.Count + (isCustomType ? 1 : 0));
-                if (isCustomType)
-                {
-                    var typeName = new GesVmValue();
-                    typeName.SetTag(customTypeName);
-                    entries.Set(GesVmValueMap.HiddenRecordTypeField, typeName);
-                }
-
-                foreach (var (key, sourceValue) in sourceEntries)
-                {
-                    var value = new GesVmValue();
-                    value.BindArguments(sourceValue);
-                    entries.Set(key, value);
-                }
-
-                if (isCustomType) destination.SetRecord(entries.ToMap());
-                else destination.SetMap(entries.ToMap());
-                break;
-            case GameEventScriptBytecodeTypeKind.Dice:
-                var sourceDice = argument.AsDice().Rolls;
-                var rolls = new int[sourceDice.Count];
-                for (var index = 0; index < sourceDice.Count; index++)
-                {
-                    rolls[index] = sourceDice[index];
-                }
-
-                destination.SetDice(rolls);
-                break;
-            case GameEventScriptBytecodeTypeKind.Series when argument is GameEventScriptSeriesValue series:
-                destination.SetSeries(GesVmSeries.FromExternal(series.Series).Drop(series.Offset));
-                break;
-            case GameEventScriptBytecodeTypeKind.Series:
-            case GameEventScriptBytecodeTypeKind.Nothing:
-            default:
-                destination.SetNothing();
-                break;
-        }
-    }
-
 }

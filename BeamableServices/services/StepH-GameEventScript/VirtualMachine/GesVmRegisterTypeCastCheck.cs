@@ -1,7 +1,6 @@
 using System;
 using System.Globalization;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 
@@ -566,11 +565,11 @@ internal static class GesVmRegisterTypeCastCheck
         switch (xSlot.Kind)
         {
             case Tag:
-                if (GameEventScriptTagValue.IsValidTagName(xSlot.TextValue)) dst = xSlot;
+                if (GameEventScriptTagRules.IsValidTagName(xSlot.TextValue)) dst = xSlot;
                 else dst.SetNothing();
                 return;
             case Text when xSlot.ObjectValue is string text:
-                if (GameEventScriptTagValue.TryNormalizeTextCast(text, out var tag)) dst.SetTag(tag);
+                if (GameEventScriptTagRules.TryNormalizeTextCast(text, out var tag)) dst.SetTag(tag);
                 else dst.SetNothing();
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:

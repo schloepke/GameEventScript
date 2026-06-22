@@ -553,8 +553,6 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Types.GameEventScriptValue GesRange(System.Double from, System.Double to, System.Double step)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesSeconds(System.Double seconds)
-  method static StepH.GameEventScript.Types.GameEventScriptValue GesSeries(StepH.GameEventScript.Api.IGameEventScriptSeries series)
-  method static StepH.GameEventScript.Types.GameEventScriptValue GesSeries(System.String signatureId, System.Func<System.Int64, StepH.GameEventScript.Types.GameEventScriptValue> termProvider)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesTag(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesText(System.String value)
   method static StepH.GameEventScript.Types.GameEventScriptValue GesValues(StepH.GameEventScript.Types.GameEventScriptValue source)
@@ -566,9 +564,6 @@ interface StepH.GameEventScript.Api.IGameEventScriptModule
   method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
   property System.String ModuleName { get }
-interface StepH.GameEventScript.Api.IGameEventScriptSeries
-  method System.Boolean TryGetTerm(System.Int64 index, StepH.GameEventScript.Types.GameEventScriptValue& value)
-  property System.String SignatureId { get }
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
@@ -860,29 +855,6 @@ sealed class StepH.GameEventScript.Types.GameEventScriptRangeValue
   property System.Int64 From { get }
   property System.Int64 Step { get }
   property System.Int64 To { get }
-sealed class StepH.GameEventScript.Types.GameEventScriptSeriesValue
-  method StepH.GameEventScript.Types.GameEventScriptDiceValue AsDice()
-  method StepH.GameEventScript.Types.GameEventScriptSeriesValue Drop(System.Int64 count)
-  method StepH.GameEventScript.Types.GameEventScriptValue GetTerm(System.Int64 index)
-  method System.Boolean AsBoolean()
-  method System.Boolean HasSemanticValue()
-  method System.Boolean IsSemanticallyEmpty()
-  method System.Collections.Generic.IEnumerable<StepH.GameEventScript.Types.GameEventScriptValue> AsEnumerable()
-  method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> AsList()
-  method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Types.GameEventScriptValue> Take(System.Int32 count)
-  method System.Double AsNumber()
-  method System.Int64 AsInteger()
-  method System.String AsText()
-  method static StepH.GameEventScript.Types.GameEventScriptSeriesValue Create(StepH.GameEventScript.Api.IGameEventScriptSeries series)
-  method static StepH.GameEventScript.Types.GameEventScriptSeriesValue Create(System.String signatureId, System.Func<System.Int64, StepH.GameEventScript.Types.GameEventScriptValue> termProvider)
-  method static StepH.GameEventScript.Types.GameEventScriptSeriesValue Factorial()
-  method static StepH.GameEventScript.Types.GameEventScriptSeriesValue Fibonacci()
-  method static StepH.GameEventScript.Types.GameEventScriptSeriesValue Natural(System.Int64 start, System.Int64 step)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind Kind { get }
-  property StepH.GameEventScript.Api.IGameEventScriptSeries Series { get }
-  property StepH.GameEventScript.Types.GameEventScriptValue FirstTerm { get }
-  property System.Int64 Offset { get }
-  property System.String SignatureId { get }
 sealed class StepH.GameEventScript.Types.GameEventScriptTagValue
   field static StepH.GameEventScript.Types.GameEventScriptTagValue Empty
   method System.Boolean AsBoolean()

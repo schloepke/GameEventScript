@@ -161,23 +161,6 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesMaybe(GameEventScriptValue? value) => value ?? GesNothing();
 
     /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptSeriesValue"/> from an index-addressed series provider.
-    /// </summary>
-    /// <param name="series">The series provider.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the series.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesSeries(IGameEventScriptSeries series) => GameEventScriptSeriesValue.Create(series);
-
-    /// <summary>
-    /// Creates a new instance of <see cref="GameEventScriptSeriesValue"/> from a term provider delegate.
-    /// </summary>
-    /// <param name="signatureId">A stable identifier for the series and its arguments.</param>
-    /// <param name="termProvider">A function that returns a term for a zero-based index.</param>
-    /// <returns>A new <see cref="GameEventScriptValue"/> instance representing the series.</returns>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static GameEventScriptValue GesSeries(string signatureId, Func<long, GameEventScriptValue> termProvider) => GameEventScriptSeriesValue.Create(signatureId, termProvider);
-
-    /// <summary>
     /// Creates a new instance of <see cref="GameEventScriptRangeValue"/> representing a numeric range.
     /// </summary>
     /// <param name="from">The starting value of the range.</param>

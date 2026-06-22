@@ -772,12 +772,12 @@ internal static class GameEventScriptExternalTypeValueConverter
         var text = value.AsText();
         if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
-            return GameEventScriptTagValue.TryNormalizeTextCast(text, out var normalized)
+            return GameEventScriptTagRules.TryNormalizeTextCast(text, out var normalized)
                 ? GameEventScriptBoxedValue.FromTag(normalized)
                 : GameEventScriptBoxedValue.Nothing();
         }
 
-        return GameEventScriptTagValue.IsValidTagName(text)
+        return GameEventScriptTagRules.IsValidTagName(text)
             ? GameEventScriptBoxedValue.FromTag(text)
             : GameEventScriptBoxedValue.Nothing();
     }

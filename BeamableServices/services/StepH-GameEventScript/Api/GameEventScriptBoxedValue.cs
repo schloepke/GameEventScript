@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.VirtualMachine;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Types;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -55,9 +54,9 @@ public sealed class GameEventScriptBoxedValue : IEquatable<GameEventScriptBoxedV
     public long Integer => Kind switch
     {
         GameEventScriptBytecodeTypeKind.Integer => _value.IntegerValue,
-        GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => GesValueOperations.ToIntegerSaturated(_value.FloatValue),
+        GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => GameEventScriptNumericRules.ToIntegerSaturated(_value.FloatValue),
         GameEventScriptBytecodeTypeKind.Boolean => _value.IsTrue ? 1 : 0,
-        _ => GesValueOperations.ToIntegerSaturated(_value.AsNumeric)
+        _ => GameEventScriptNumericRules.ToIntegerSaturated(_value.AsNumeric)
     };
 
     public double Number => Kind switch

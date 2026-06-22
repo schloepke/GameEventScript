@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 using StepH.GameEventScript.VirtualMachine;
 
 namespace StepH.GameEventScript.Runtime;
@@ -282,7 +281,7 @@ internal static class GesStandardExtensions
             _ => 0d
         };
 
-        return GameEventScriptBoxedValue.FromInteger(GesValueOperations.ToIntegerSaturated(rounded));
+        return GameEventScriptBoxedValue.FromInteger(GameEventScriptNumericRules.ToIntegerSaturated(rounded));
     }
 
     private static GameEventScriptBoxedValue EvaluateDegree(string functionName, GameEventScriptBoxedValue input)
@@ -303,7 +302,7 @@ internal static class GesStandardExtensions
 
         if (input.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float)
         {
-            return GameEventScriptBoxedValue.FromFloat(GameEventScriptValue.WrapDegrees(input.Number), GameEventScriptBytecodeInstructionUnit.UnitDegree);
+            return GameEventScriptBoxedValue.FromFloat(GameEventScriptNumericRules.WrapDegrees(input.Number), GameEventScriptBytecodeInstructionUnit.UnitDegree);
         }
 
         return GameEventScriptBoxedValue.Nothing();
@@ -343,42 +342,42 @@ internal static class GesStandardExtensions
         }
     }
 
-    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptBoxedValue input, out GesValueOperations.NumericValue number)
+    private static bool TryReadUnitlessOrDegreeNumeric(GameEventScriptBoxedValue input, out GameEventScriptNumericRules.NumericValue number)
     {
         if (input.Unit.IsNumericUnit() && input.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree)
         {
-            number = GesValueOperations.NumericValue.NaN();
+            number = GameEventScriptNumericRules.NumericValue.NaN();
             return false;
         }
 
         return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadUnitlessNumeric(GameEventScriptBoxedValue input, out GesValueOperations.NumericValue number)
+    private static bool TryReadUnitlessNumeric(GameEventScriptBoxedValue input, out GameEventScriptNumericRules.NumericValue number)
     {
         if (input.Unit.IsNumericUnit())
         {
-            number = GesValueOperations.NumericValue.NaN();
+            number = GameEventScriptNumericRules.NumericValue.NaN();
             return false;
         }
 
         return TryReadNumeric(input, out number);
     }
 
-    private static bool TryReadNumeric(GameEventScriptBoxedValue input, out GesValueOperations.NumericValue number)
+    private static bool TryReadNumeric(GameEventScriptBoxedValue input, out GameEventScriptNumericRules.NumericValue number)
     {
         switch (input.Kind)
         {
             case GameEventScriptBytecodeTypeKind.Integer:
             case GameEventScriptBytecodeTypeKind.Percentage:
             case GameEventScriptBytecodeTypeKind.Boolean:
-                number = GesValueOperations.NumericValue.Finite(input.Number);
+                number = GameEventScriptNumericRules.NumericValue.Finite(input.Number);
                 return true;
             case GameEventScriptBytecodeTypeKind.Float:
                 var value = input.Number;
-                if (double.IsPositiveInfinity(value)) number = GesValueOperations.NumericValue.PositiveInfinity();
-                else if (double.IsNegativeInfinity(value)) number = GesValueOperations.NumericValue.NegativeInfinity();
-                else number = double.IsNaN(value) ? GesValueOperations.NumericValue.NaN() : GesValueOperations.NumericValue.Finite(value);
+                if (double.IsPositiveInfinity(value)) number = GameEventScriptNumericRules.NumericValue.PositiveInfinity();
+                else if (double.IsNegativeInfinity(value)) number = GameEventScriptNumericRules.NumericValue.NegativeInfinity();
+                else number = double.IsNaN(value) ? GameEventScriptNumericRules.NumericValue.NaN() : GameEventScriptNumericRules.NumericValue.Finite(value);
                 return true;
             default:
                 number = default;

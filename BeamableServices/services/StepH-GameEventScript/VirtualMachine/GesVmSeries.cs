@@ -1,7 +1,5 @@
 using System;
 using System.Globalization;
-using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Types;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
@@ -136,12 +134,6 @@ internal sealed class GesVmSeries
         var checkpoint = default(GesVmSeriesCursor);
         definition.TryCreateCursor(0, ref checkpoint);
         return new GesVmSeries(definition, 0, true, 0, in checkpoint);
-    }
-
-    internal static GesVmSeries FromExternal(IGameEventScriptSeries series)
-    {
-        var checkpoint = default(GesVmSeriesCursor);
-        return new GesVmSeries(new ExternalSeriesDefinition(series), 0, false, 0, in checkpoint);
     }
 
     private static bool TryAddIndex(long left, long right, out long value)
@@ -345,31 +337,6 @@ internal sealed class GesVmSeries
         }
     }
 
-    private sealed class ExternalSeriesDefinition : GesVmSeriesDefinition
-    {
-        private readonly IGameEventScriptSeries _series;
-
-        internal ExternalSeriesDefinition(IGameEventScriptSeries series)
-        {
-            _series = series ?? throw new ArgumentNullException(nameof(series));
-        }
-
-        internal override string SignatureId => string.IsNullOrWhiteSpace(_series.SignatureId) ? "external" : _series.SignatureId;
-
-        internal override bool IsRandomAccess => true;
-
-        internal override bool TryGetRandomTerm(long index, ref GesVmValue value)
-        {
-            if (index < 0 || !_series.TryGetTerm(index, out var term))
-            {
-                value.SetNothing();
-                return false;
-            }
-
-            value.BindArguments(term ?? GameEventScriptNothingValue.Instance);
-            return true;
-        }
-    }
 }
 
 internal struct GesVmSeriesCursor

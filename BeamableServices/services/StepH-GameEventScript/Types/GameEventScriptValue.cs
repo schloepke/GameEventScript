@@ -174,7 +174,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptBytecodeTypeKind.Point => ":Point",
             GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float => ":Number",
             GameEventScriptBytecodeTypeKind.Boolean => ":Boolean",
-            GameEventScriptBytecodeTypeKind.Series => ":Series",
             GameEventScriptBytecodeTypeKind.Range => ":Range",
             GameEventScriptBytecodeTypeKind.Handler => ":Handler",
             GameEventScriptBytecodeTypeKind.List => ":List",
@@ -196,7 +195,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             GameEventScriptBytecodeTypeKind.Point => FormatPoint((GameEventScriptPointValue)this),
             GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float => FormatNumberValue((GameEventScriptNumberValue)this),
             GameEventScriptBytecodeTypeKind.Boolean => AsBoolean().ToString(),
-            GameEventScriptBytecodeTypeKind.Series => $"series[{((GameEventScriptSeriesValue)this).SignatureId} offset {((GameEventScriptSeriesValue)this).Offset}]",
             GameEventScriptBytecodeTypeKind.Range => FormatRange((GameEventScriptRangeValue)this),
             GameEventScriptBytecodeTypeKind.Handler => $"handler {((GameEventScriptHandlerValue)this).Signature.SignatureId}",
             GameEventScriptBytecodeTypeKind.List => $"[{string.Join(", ", AsList().Select(x => x.ToString()))}]",
@@ -244,8 +242,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                                               ((GameEventScriptPointValue)this).Unit == ((GameEventScriptPointValue)other).Unit,
             GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float => AsNumber() == other.AsNumber(),
             GameEventScriptBytecodeTypeKind.Boolean => AsBoolean() == other.AsBoolean(),
-            GameEventScriptBytecodeTypeKind.Series => ((GameEventScriptSeriesValue)this).SignatureId == ((GameEventScriptSeriesValue)other).SignatureId &&
-                                               ((GameEventScriptSeriesValue)this).Offset == ((GameEventScriptSeriesValue)other).Offset,
             GameEventScriptBytecodeTypeKind.Range => ((GameEventScriptRangeValue)this).FromNumber == ((GameEventScriptRangeValue)other).FromNumber &&
                                               ((GameEventScriptRangeValue)this).ToNumber == ((GameEventScriptRangeValue)other).ToNumber &&
                                               ((GameEventScriptRangeValue)this).StepNumber == ((GameEventScriptRangeValue)other).StepNumber,
@@ -306,13 +302,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 hash.Add(((GameEventScriptPointValue)this).Z);
                 hash.Add(((GameEventScriptPointValue)this).Unit);
                 break;
-            case GameEventScriptBytecodeTypeKind.Series:
-            {
-                var series = (GameEventScriptSeriesValue)this;
-                hash.Add(series.SignatureId, StringComparer.Ordinal);
-                hash.Add(series.Offset);
-                break;
-            }
             case GameEventScriptBytecodeTypeKind.Range:
             {
                 var range = (GameEventScriptRangeValue)this;
@@ -564,7 +553,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
                 GameEventScriptBytecodeTypeKind.Vector => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptBytecodeTypeKind.Point => CompareSequence(left.AsList(), right.AsList()),
                 GameEventScriptBytecodeTypeKind.Boolean => left.AsBoolean().CompareTo(right.AsBoolean()),
-                GameEventScriptBytecodeTypeKind.Series => CompareSeries((GameEventScriptSeriesValue)left, (GameEventScriptSeriesValue)right),
                 GameEventScriptBytecodeTypeKind.Range => CompareRange((GameEventScriptRangeValue)left, (GameEventScriptRangeValue)right),
                 GameEventScriptBytecodeTypeKind.Handler => CompareHandler((GameEventScriptHandlerValue)left, (GameEventScriptHandlerValue)right),
                 GameEventScriptBytecodeTypeKind.List => CompareSequence(left.AsList(), right.AsList()),
@@ -588,12 +576,6 @@ public abstract class GameEventScriptValue : IComparable<GameEventScriptValue>, 
             }
 
             return 0;
-        }
-
-        private static int CompareSeries(GameEventScriptSeriesValue left, GameEventScriptSeriesValue right)
-        {
-            var bySignature = StringComparer.Ordinal.Compare(left.SignatureId, right.SignatureId);
-            return bySignature != 0 ? bySignature : left.Offset.CompareTo(right.Offset);
         }
 
         private static int CompareRange(GameEventScriptRangeValue left, GameEventScriptRangeValue right)

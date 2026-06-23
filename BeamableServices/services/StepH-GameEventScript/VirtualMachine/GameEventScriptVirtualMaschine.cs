@@ -18,7 +18,6 @@ public class GameEventScriptVmException(string message) : GameEventScriptFatalRu
 public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 {
     private readonly GesVmState _vmState;
-    private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
 
     public string ModuleName { get; }
     public IEnumerable<GameEventScriptMessageHandlerDescriptor> Handlers { get; }
@@ -29,19 +28,9 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
     public void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
-        _externalTypeRegistry = typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
-        foreach (var bind in _vmState.Binary.BindTable.Entries)
-        {
-            if (bind.Kind is not ExternalType) continue;
-            var typeName = _vmState.FetchStringByPointer(bind.Name);
-            var argumentLabels = bind.ArgumentNames.Select(_vmState.FetchStringByPointer);
-            var reference = new GameEventScriptExternalTypeConstructorReference(typeName, argumentLabels);
-            if (!_externalTypeRegistry.TryResolve(reference, out _))
-            {
-                throw new GameEventScriptDynamicLinkException(
-                    $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound.");
-            }
-        }
+        _vmState.BindDynamicReferences(
+            extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance,
+            typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance);
     }
     
     public static GameEventScriptVirtualMaschine Create(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
@@ -68,7 +57,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         if (_vmState.State is Processing) throw new GameEventScriptVmException("Virtual machine is already processing another message");
         if (_vmState.State != Ready) _vmState.Reset();
         if (!_vmState.PrepareStateForMessage(message, matchArguments, entryAddress, session)) _vmState.RaiseError("Failed to prepare state for message");
-        return new Runner(_vmState, session, _externalTypeRegistry);
+        return new Runner(_vmState, session);
     }
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession session)
@@ -80,7 +69,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         return true;
     }
 
-    private class Runner(GesVmState vmState, GameEventScriptSession session, IGameEventScriptExternalTypeRegistry externalTypeRegistry) : IGameEventScriptMessageInvocation, IGesVmStreamEntryEvaluator
+    private class Runner(GesVmState vmState, GameEventScriptSession session) : IGameEventScriptMessageInvocation, IGesVmStreamEntryEvaluator
     {
         public bool IsCompleted { get; private set; } = false;
 
@@ -365,7 +354,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationSlot);
                             break;
                         case CreateExternalType:
-                            vmState.GesVmCreateExternalType(instruction.DestinationSlot, instruction.BindId, instruction.ListIndex, externalTypeRegistry);
+                            vmState.GesVmCreateExternalType(instruction.DestinationSlot, instruction.BindId, instruction.ListIndex);
                             vmState.ClearStage();
                             break;
 

@@ -56,6 +56,10 @@ internal class GesVmState
     internal string? ErrorMessage { get; private set; }
     internal GameEventScriptBinaryBindEntry[] OutboundMessageSignatures { get; init; }
     internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; init; }
+    internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds { get; init; }
+    internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; init; }
+    internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls { get; private set; }
+    internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; private set; }
 
     internal readonly ushort CodeSegmentSize;
     internal readonly int MaxRegisterSlots;
@@ -77,7 +81,71 @@ internal class GesVmState
         RandomGenerator = new GesVmXoshiroRandom(0);
         OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
         RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
+        ExtensionCallBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExtensionCall);
+        ExternalTypeBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExternalType);
+        BoundExtensionCalls = [];
+        BoundExternalTypeConstructors = [];
     }
+
+    internal void BindDynamicReferences(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
+    {
+        _ = extensionRegistry ?? throw new ArgumentNullException(nameof(extensionRegistry));
+        _ = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
+
+        var boundExtensionCalls = new IGameEventScriptExtensionFunction?[ExtensionCallBinds.Length];
+        for (ushort bindId = 0; bindId < ExtensionCallBinds.Length; bindId++)
+        {
+            var bind = ExtensionCallBinds[bindId];
+            if (bind.Kind != GameEventScriptBinaryBindKind.ExtensionCall || bind.Id != bindId) continue;
+            var fullName = FetchStringByPointer(bind.Name);
+            var separator = fullName.IndexOf('.');
+            if (separator <= 0 || separator >= fullName.Length - 1)
+            {
+                throw new GameEventScriptDynamicLinkException($"External extension reference '{fullName}' has an invalid name.");
+            }
+
+            var labels = bind.ArgumentNames.Count == 0 ? [] : new string[bind.ArgumentNames.Count];
+            for (var labelIndex = 0; labelIndex < labels.Length; labelIndex++)
+            {
+                labels[labelIndex] = FetchStringByPointer(bind.ArgumentNames[labelIndex]);
+            }
+
+            var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], labels);
+            if (!extensionRegistry.TryResolve(reference, out var function))
+            {
+                throw new GameEventScriptDynamicLinkException(
+                    $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+            }
+
+            boundExtensionCalls[bindId] = function;
+        }
+
+        var boundExternalTypeConstructors = new IGameEventScriptExternalTypeConstructor?[ExternalTypeBinds.Length];
+        for (ushort bindId = 0; bindId < ExternalTypeBinds.Length; bindId++)
+        {
+            var bind = ExternalTypeBinds[bindId];
+            if (bind.Kind != GameEventScriptBinaryBindKind.ExternalType || bind.Id != bindId) continue;
+            var typeName = FetchStringByPointer(bind.Name);
+            var labels = bind.ArgumentNames.Count == 0 ? [] : new string[bind.ArgumentNames.Count];
+            for (var labelIndex = 0; labelIndex < labels.Length; labelIndex++)
+            {
+                labels[labelIndex] = FetchStringByPointer(bind.ArgumentNames[labelIndex]);
+            }
+
+            var reference = new GameEventScriptExternalTypeConstructorReference(typeName, labels);
+            if (!typeRegistry.TryResolve(reference, out var constructor))
+            {
+                throw new GameEventScriptDynamicLinkException(
+                    $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+            }
+
+            boundExternalTypeConstructors[bindId] = constructor;
+        }
+
+        BoundExtensionCalls = boundExtensionCalls;
+        BoundExternalTypeConstructors = boundExternalTypeConstructors;
+    }
+
 
     internal bool PrepareStateForMessage(GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptSession session)
     {

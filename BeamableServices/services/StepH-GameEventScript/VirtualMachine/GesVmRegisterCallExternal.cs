@@ -2,7 +2,6 @@ using System;
 using System.Buffers;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -64,26 +63,14 @@ internal static class GesVmRegisterCallExternal
 
     internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
     {
-        var found = false;
-        GameEventScriptBinaryBindEntry bind = default;
-        foreach (var entry in state.Binary.BindTable.Entries)
-        {
-            if (entry.Kind != GameEventScriptBinaryBindKind.ExtensionCall) continue;
-            if (entry.Id == externalBindId)
-            {
-                bind = entry;
-                found = true;
-                break;
-            }
-        }
-
-        if (!found)
+        if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GameEventScriptBinaryBindKind.ExtensionCall)
         {
             state.SetNothing(destinationRegister);
             state.RaiseError($"External extension bind id '{externalBindId}' was not found.");
             return;
         }
 
+        var bind = state.ExtensionCallBinds[externalBindId];
         var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
         if (argumentSlots.Length != bind.ArgumentNames.Count)
         {
@@ -92,31 +79,14 @@ internal static class GesVmRegisterCallExternal
             return;
         }
 
-        var fullName = state.FetchStringByPointer(bind.Name);
-        var separator = fullName.IndexOf('.');
-        if (separator <= 0 || separator >= fullName.Length - 1)
+        if (externalBindId >= state.BoundExtensionCalls.Length || state.BoundExtensionCalls[externalBindId] is not { } function)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError($"External extension reference '{fullName}' has an invalid name.");
+            state.RaiseError($"External extension bind id '{externalBindId}' was not dynamically bound.");
             return;
         }
 
         var argumentCount = argumentSlots.Length;
-        var labels = argumentCount == 0 ? Array.Empty<string>() : new string[argumentCount];
-        for (var labelIndex = 0; labelIndex < argumentCount; labelIndex++)
-        {
-            labels[labelIndex] = state.FetchStringByPointer(bind.ArgumentNames[labelIndex]);
-        }
-
-        var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], labels);
-
-        if (!session.ExtensionRegistry.TryResolve(reference, out var function))
-        {
-            state.SetNothing(destinationRegister);
-            state.RaiseError($"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{externalBindId}'.");
-            return;
-        }
-
         var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptValue>.Shared.Rent(argumentCount);
 
         try

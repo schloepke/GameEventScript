@@ -1,6 +1,5 @@
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
@@ -8,26 +7,16 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCustomType
 {
-    internal static void GesVmCreateExternalType(this GesVmState vmState, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal static void GesVmCreateExternalType(this GesVmState vmState, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex)
     {
-        var found = false;
-        GameEventScriptBinaryBindEntry bind = default;
-        foreach (var entry in vmState.Binary.BindTable.Entries)
-        {
-            if (entry.Kind != GameEventScriptBinaryBindKind.ExternalType) continue;
-            if (entry.Id != externalTypeConstructorBindId) continue;
-            bind = entry;
-            found = true;
-            break;
-        }
-
-        if (!found)
+        if (externalTypeConstructorBindId >= vmState.ExternalTypeBinds.Length || vmState.ExternalTypeBinds[externalTypeConstructorBindId].Kind != GameEventScriptBinaryBindKind.ExternalType)
         {
             vmState.SetNothing(destinationRegister);
             vmState.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
             return;
         }
 
+        var bind = vmState.ExternalTypeBinds[externalTypeConstructorBindId];
         var argumentNames = vmState.FetchUInt16SliceTableByPointer(argumentNamesIndex);
         if (argumentNames.Length != vmState.StageLength || argumentNames.Length != bind.ArgumentNames.Count)
         {
@@ -44,12 +33,10 @@ internal static class GesVmRegisterCustomType
             return;
         }
 
-        var typeName = vmState.FetchStringByPointer(bind.Name);
-        var reference = new GameEventScriptExternalTypeConstructorReference(typeName, labels);
-        if (!typeRegistry.TryResolve(reference, out var constructor))
+        if (externalTypeConstructorBindId >= vmState.BoundExternalTypeConstructors.Length || vmState.BoundExternalTypeConstructors[externalTypeConstructorBindId] is not { } constructor)
         {
             vmState.SetNothing(destinationRegister);
-            vmState.RaiseError($"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{externalTypeConstructorBindId}'.");
+            vmState.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not dynamically bound.");
             return;
         }
 

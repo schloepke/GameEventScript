@@ -6,7 +6,6 @@ using System.Text;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.VirtualMachine.GesVmMathConstants;
 using static StepH.GameEventScript.VirtualMachine.GesVmValue.GesVmValueFlags;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -101,7 +100,7 @@ internal struct GesVmValue
         else
         {
             Kind = Float;
-            Flags = IsNumericFlag | HasValueFlag | (value != 0 && double.IsFinite(value) ? IsTrueFlag : IsFalseFlag);
+            Flags = IsNumericFlag | HasValueFlag | (value != 0 ? IsTrueFlag : IsFalseFlag);
             FloatValue = value;
         }
 
@@ -148,8 +147,7 @@ internal struct GesVmValue
         Kind = Tag;
         Flags = StorageObjectFlag |
                 HasValueFlag |
-                (IsNumericTag(tag) ? IsNumericFlag : None) |
-                (tag is "true" or "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi" ? IsTrueFlag : IsFalseFlag);
+                IsFalseFlag;
         Unit = UnitNone;
         IntegerValue = 0;
         ObjectValue = tag;
@@ -333,7 +331,6 @@ internal struct GesVmValue
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
-        Tag when ObjectValue is string tag => ResolveNumericTagValue(tag),
         Dice when ObjectValue is int[] dices => SumDices(dices),
         _ => double.NaN,
     };

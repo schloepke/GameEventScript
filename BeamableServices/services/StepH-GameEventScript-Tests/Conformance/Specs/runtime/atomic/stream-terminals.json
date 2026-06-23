@@ -9,24 +9,66 @@
       "script": "module AtomicCountTerminals\non Start {\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let map be [b: 2, a: 1, c: 3]\n  let text be 'abba'\n  let emptyList be []\n  emit Done(allValues: values[:count value where true], allValuesBare: values[:count], filteredValues: values[:count value where value > 2], diceHigh: dice[:count value where value >= 4], diceBare: dice[:count], rangeAll: range[:count value where true], rangeBare: range[:count], mapOverOne: map[:count value where value > 1], mapBare: map[:count], textB: text[:count value where value = 'b'], textBare: text[:count], emptyCount: emptyList[:count value where true], emptyBare: emptyList[:count])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "allValues": { "type": ":integer", "value": "4" },
-                "allValuesBare": { "type": ":integer", "value": "4" },
-                "diceHigh": { "type": ":integer", "value": "2" },
-                "diceBare": { "type": ":integer", "value": "3" },
-                "emptyBare": { "type": ":integer", "value": "0" },
-                "emptyCount": { "type": ":integer", "value": "0" },
-                "filteredValues": { "type": ":integer", "value": "2" },
-                "mapBare": { "type": ":integer", "value": "3" },
-                "mapOverOne": { "type": ":integer", "value": "2" },
-                "rangeAll": { "type": ":integer", "value": "4" },
-                "rangeBare": { "type": ":integer", "value": "4" },
-                "textBare": { "type": ":integer", "value": "4" },
-                "textB": { "type": ":integer", "value": "2" }
+                "allValues": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "allValuesBare": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "diceHigh": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "diceBare": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "emptyBare": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyCount": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "filteredValues": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "mapBare": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "mapOverOne": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "rangeAll": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "rangeBare": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "textBare": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "textB": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -39,33 +81,100 @@
       "script": "module AtomicSumAverageTerminals\non Start {\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let map be [b: 2, a: 1, c: 3]\n  let emptyList be []\n  emit Done(sumValues: values[:sum value => value], sumValuesBare: values[:sum], sumFiltered: values[:filter value where value > 2][:sum value => value], sumDice: dice[:sum value => value], sumDiceBare: dice[:sum], sumRange: range[:sum value => value], sumRangeBare: range[:sum], sumMap: map[:sum value => value], sumMapBare: map[:sum], sumEmpty: emptyList[:sum value => value], sumEmptyBare: emptyList[:sum], averageValues: values[:average value => value], averageValuesBare: values[:average], averageFiltered: values[:filter value where value > 2][:average value => value], averageDice: dice[:average value => value], averageDiceBare: dice[:average], averageRange: range[:average value => value], averageRangeBare: range[:average], averageMap: map[:average value => value], averageMapBare: map[:average], averageEmpty: emptyList[:average value => value], averageEmptyBare: emptyList[:average])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "averageDice": { "type": ":integer", "value": "4" },
-                "averageDiceBare": { "type": ":integer", "value": "4" },
-                "averageEmpty": { "type": ":nothing" },
-                "averageEmptyBare": { "type": ":nothing" },
-                "averageFiltered": { "type": ":float", "value": "3.5" },
-                "averageMap": { "type": ":integer", "value": "2" },
-                "averageMapBare": { "type": ":integer", "value": "2" },
-                "averageRange": { "type": ":float", "value": "2.5" },
-                "averageRangeBare": { "type": ":float", "value": "2.5" },
-                "averageValues": { "type": ":float", "value": "2.5" },
-                "averageValuesBare": { "type": ":float", "value": "2.5" },
-                "sumDice": { "type": ":integer", "value": "12" },
-                "sumDiceBare": { "type": ":integer", "value": "12" },
-                "sumEmpty": { "type": ":integer", "value": "0" },
-                "sumEmptyBare": { "type": ":integer", "value": "0" },
-                "sumFiltered": { "type": ":integer", "value": "7" },
-                "sumMap": { "type": ":integer", "value": "6" },
-                "sumMapBare": { "type": ":integer", "value": "6" },
-                "sumRange": { "type": ":integer", "value": "10" },
-                "sumRangeBare": { "type": ":integer", "value": "10" },
-                "sumValues": { "type": ":integer", "value": "10" },
-                "sumValuesBare": { "type": ":integer", "value": "10" }
+                "averageDice": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "averageDiceBare": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "averageEmpty": {
+                  "type": ":nothing"
+                },
+                "averageEmptyBare": {
+                  "type": ":nothing"
+                },
+                "averageFiltered": {
+                  "type": ":float",
+                  "value": "3.5"
+                },
+                "averageMap": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "averageMapBare": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "averageRange": {
+                  "type": ":float",
+                  "value": "2.5"
+                },
+                "averageRangeBare": {
+                  "type": ":float",
+                  "value": "2.5"
+                },
+                "averageValues": {
+                  "type": ":float",
+                  "value": "2.5"
+                },
+                "averageValuesBare": {
+                  "type": ":float",
+                  "value": "2.5"
+                },
+                "sumDice": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "sumDiceBare": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "sumEmpty": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "sumEmptyBare": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "sumFiltered": {
+                  "type": ":integer",
+                  "value": "7"
+                },
+                "sumMap": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "sumMapBare": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "sumRange": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "sumRangeBare": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "sumValues": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "sumValuesBare": {
+                  "type": ":integer",
+                  "value": "10"
+                }
               }
             }
           ]
@@ -78,25 +187,70 @@
       "script": "module AtomicStreamMinMaxTerminals\non Start {\n  let values be [3, 1, 4, 2]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let percentages be [10%, 25%, 5%]\n  let quantities be [3m, 1m, 2m]\n  let booleans be [true, false, true]\n  let emptyList be []\n  emit Done(minValue: values[:min value => value], maxValue: values[:max value => value], minDice: dice[:min value => value], maxDice: dice[:max value => value], minRange: range[:min value => value], maxRange: range[:max value => value], minPercentage: percentages[:min value => value], maxPercentage: percentages[:max value => value], minQuantity: quantities[:min value => value], maxQuantity: quantities[:max value => value], minBoolean: booleans[:min value => value], maxBoolean: booleans[:max value => value], emptyMin: emptyList[:min value => value], emptyMax: emptyList[:max value => value])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "emptyMax": { "type": ":nothing" },
-                "emptyMin": { "type": ":nothing" },
-                "maxBoolean": { "type": ":boolean", "value": true },
-                "maxDice": { "type": ":integer", "value": "6" },
-                "maxPercentage": { "type": ":percentage", "value": "0.25" },
-                "maxQuantity": { "type": ":integer", "unit": ":meter", "value": "3" },
-                "maxRange": { "type": ":integer", "value": "4" },
-                "maxValue": { "type": ":integer", "value": "4" },
-                "minBoolean": { "type": ":boolean", "value": false },
-                "minDice": { "type": ":integer", "value": "2" },
-                "minPercentage": { "type": ":percentage", "value": "0.05" },
-                "minQuantity": { "type": ":integer", "unit": ":meter", "value": "1" },
-                "minRange": { "type": ":integer", "value": "1" },
-                "minValue": { "type": ":integer", "value": "1" }
+                "emptyMax": {
+                  "type": ":nothing"
+                },
+                "emptyMin": {
+                  "type": ":nothing"
+                },
+                "maxBoolean": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "maxDice": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "maxPercentage": {
+                  "type": ":percentage",
+                  "value": "0.25"
+                },
+                "maxQuantity": {
+                  "type": ":integer",
+                  "unit": ":meter",
+                  "value": "3"
+                },
+                "maxRange": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "maxValue": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "minBoolean": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "minDice": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "minPercentage": {
+                  "type": ":percentage",
+                  "value": "0.05"
+                },
+                "minQuantity": {
+                  "type": ":integer",
+                  "unit": ":meter",
+                  "value": "1"
+                },
+                "minRange": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "minValue": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             }
           ]
@@ -106,19 +260,37 @@
     {
       "kind": "scriptApi",
       "name": "stream min and max return winning source item",
-      "script": "module AtomicStreamMinMaxReturnsItem\non Start {\n  let units be [[id: :rook, hp: 10], [id: :mage, hp: 6], [id: :guard, hp: 8]]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp]\n  let transformedMax be [1, 2, 3, 4][:filter value where value < 4][:select value => value * 10][:max value => value]\n  emit Done(weakestId: weakest.id, weakestHp: weakest.hp, strongestId: strongest.id, strongestHp: strongest.hp, transformedMax: transformedMax)\n}",
+      "script": "module AtomicStreamMinMaxReturnsItem\non Start {\n  let units be [[id: #rook, hp: 10], [id: #mage, hp: 6], [id: #guard, hp: 8]]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp]\n  let transformedMax be [1, 2, 3, 4][:filter value where value < 4][:select value => value * 10][:max value => value]\n  emit Done(weakestId: weakest.id, weakestHp: weakest.hp, strongestId: strongest.id, strongestHp: strongest.hp, transformedMax: transformedMax)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "strongestHp": { "type": ":integer", "value": "10" },
-                "strongestId": { "type": ":tag", "value": "rook" },
-                "transformedMax": { "type": ":integer", "value": "30" },
-                "weakestHp": { "type": ":integer", "value": "6" },
-                "weakestId": { "type": ":tag", "value": "mage" }
+                "strongestHp": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "strongestId": {
+                  "type": ":tag",
+                  "value": "rook"
+                },
+                "transformedMax": {
+                  "type": ":integer",
+                  "value": "30"
+                },
+                "weakestHp": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "weakestId": {
+                  "type": ":tag",
+                  "value": "mage"
+                }
               }
             }
           ]

@@ -152,26 +152,26 @@ public sealed class GameEventScriptHostSteppingTests
             .AddScript(
                 """
                 on Start {
-                  let dynamicTags be [:radio, :command, :radio]
-                  emit Local(value: 1) with :local
-                  emit Local(value: 2) with :local, :blocked
-                  emit Local(value: 3) with :other
+                  let dynamicTags be [#radio, #command, #radio]
+                  emit Local(value: 1) with #local
+                  emit Local(value: 2) with #local, #blocked
+                  emit Local(value: 3) with #other
                   emit Remote(value: 4) with dynamicTags
                 }
 
-                on Local(value) matching :local without :blocked {
+                on Local(value) matching #local without #blocked {
                   emit Seen(value: value)
                 }
 
-                on Local(value) without :local {
+                on Local(value) without #local {
                   emit Seen(value: value + 100)
                 }
 
-                on Remote(value) matching :radio, :command {
+                on Remote(value) matching #radio, #command {
                   emit Seen(value: value + 10)
                 }
 
-                on Remote(value) matching :missing {
+                on Remote(value) matching #missing {
                   emit Seen(value: 999)
                 }
                 """)
@@ -243,7 +243,7 @@ public sealed class GameEventScriptHostSteppingTests
                 """
                 on Start {
                   emit Local
-                  publish Remote with :radio
+                  publish Remote with #radio
                 }
 
                 on Remote {

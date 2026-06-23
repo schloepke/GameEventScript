@@ -18,7 +18,7 @@ public sealed class GameEventScriptBinaryTests
             predicate high(value) be value > 3
 
             on Start(value) {
-              let rounded be :math.floor value
+              let rounded be floor value
               emit Done(score: score(value: value), high: value is high, rounded: rounded)
             }
             """;
@@ -29,7 +29,7 @@ public sealed class GameEventScriptBinaryTests
         Assert.AreEqual((ushort)1, binary.Header.Version);
 
         var binds = binary.BindTable.Entries.ToArray();
-        Assert.AreEqual((ushort)5, binary.BindTable.EntryCount);
+        Assert.AreEqual((ushort)4, binary.BindTable.EntryCount);
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Function && Resolve(binary, entry.Name) == "score"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Predicate && Resolve(binary, entry.Name) == "high"));
@@ -42,9 +42,7 @@ public sealed class GameEventScriptBinaryTests
         Assert.AreEqual("Done", Resolve(binary, outbound.Name));
         CollectionAssert.AreEqual(new[] { "score", "high", "rounded" }, outbound.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
 
-        var import = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.ExtensionCall);
-        Assert.AreEqual("math.floor", Resolve(binary, import.Name));
-        CollectionAssert.AreEqual(new[] { "_" }, import.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
+        Assert.IsFalse(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.ExtensionCall));
     }
 
     [TestMethod]

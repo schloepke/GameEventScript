@@ -565,6 +565,15 @@ internal static class GesCompiler
                 case ExpressionSelectorNode { Expression: TextLiteralExpressionNode text }:
                     _builder.MemberAccess(destination, text.Value, target);
                     return;
+                case ExpressionSelectorNode { Expression: TagLiteralExpressionNode { Name: "keys" } }:
+                    _builder.KeysOfMap(destination, target);
+                    return;
+                case ExpressionSelectorNode { Expression: TagLiteralExpressionNode { Name: "values" } }:
+                    _builder.ValuesOfMap(destination, target);
+                    return;
+                case ExpressionSelectorNode { Expression: TagLiteralExpressionNode { Name: "entries" } }:
+                    _builder.EntriesOfMap(destination, target);
+                    return;
                 case ExpressionSelectorNode { Expression: TagLiteralExpressionNode tag }:
                     _builder.MemberAccess(destination, tag.Name, target);
                     return;
@@ -605,6 +614,12 @@ internal static class GesCompiler
                     EmitPredicateTerminal(destination, target, predicate.Identifier, predicate.Predicate, predicate.Operator, context, state);
                     return;
                 case CountSelectorNode count:
+                    if (IsAlwaysTrue(count.Predicate))
+                    {
+                        _builder.Count(destination, target);
+                        return;
+                    }
+
                     EmitStreamTransformTerminal(destination, target, count.Identifier, count.Predicate, GameEventScriptBytecodeOpCode.Count, filter: true, context, state);
                     return;
                 case SumSelectorNode sum:
@@ -1667,9 +1682,6 @@ internal static class GesCompiler
                 case GesUnaryOperator.Empty:
                     _builder.IsEmpty(destination, operand);
                     return;
-                case GesUnaryOperator.Length:
-                    _builder.Length(destination, operand);
-                    return;
                 case GesUnaryOperator.Chance:
                     _builder.Chance(destination, operand);
                     return;
@@ -1687,6 +1699,36 @@ internal static class GesCompiler
                     return;
                 case GesUnaryOperator.NaturalLog:
                     _builder.LogN(destination, operand);
+                    return;
+                case GesUnaryOperator.Exp:
+                    _builder.Exp(destination, operand);
+                    return;
+                case GesUnaryOperator.Floor:
+                    _builder.Floor(destination, operand);
+                    return;
+                case GesUnaryOperator.Ceil:
+                    _builder.Ceil(destination, operand);
+                    return;
+                case GesUnaryOperator.Truncate:
+                    _builder.Truncate(destination, operand);
+                    return;
+                case GesUnaryOperator.RoundHalfEven:
+                    _builder.RoundHalfEven(destination, operand);
+                    return;
+                case GesUnaryOperator.RoundHalfUp:
+                    _builder.RoundHalfUp(destination, operand);
+                    return;
+                case GesUnaryOperator.RoundHalfDown:
+                    _builder.RoundHalfDown(destination, operand);
+                    return;
+                case GesUnaryOperator.DegreeToRadians:
+                    _builder.DegreeToRadians(destination, operand);
+                    return;
+                case GesUnaryOperator.DegreeFromRadians:
+                    _builder.DegreeFromRadians(destination, operand);
+                    return;
+                case GesUnaryOperator.WrapDegree:
+                    _builder.WrapDegree(destination, operand);
                     return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support unary operator '{operation.ToSourceText()}'.");

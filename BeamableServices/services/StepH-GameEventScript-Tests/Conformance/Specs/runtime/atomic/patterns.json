@@ -6,35 +6,101 @@
     {
       "kind": "scriptApi",
       "name": "has pattern direct source kinds",
-      "script": "module AtomicHasPatternDirectKinds\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'aabb'\n  let vTag be :aabb\n  let vVector be :vector(1, 1, 2)\n  let vPoint be :point(1, 1, 2)\n  let vList be [3, 1, 3, 2]\n  let vListText be ['a', 'b', 'a']\n  let vListTag be [:fire, :ice, :fire]\n  let vMap be [a: 1, b: 1]\n  let vDice as :dice be [6, 6, 5, 4]\n  let vDiceNoPair as :dice be [6, 5, 4, 3]\n  let vRange as :range be from 1 to 4\n  emit Done(nothingValue: vNothing[:has pair], booleanValue: vBoolean[:has pair], integerValue: vInteger[:has pair], floatValue: vFloat[:has pair], percentageValue: vPercentage[:has pair], textValue: vText[:has pair], tagValue: vTag[:has pair], vectorValue: vVector[:has pair], pointValue: vPoint[:has pair], listPair: vList[:has pair], listPairOfThree: vList[:has pair of 3], listPairOfFour: vList[:has pair of 4], listTextPair: vListText[:has pair of 'a'], listTextMissing: vListText[:has pair of 'c'], listTagPair: vListTag[:has pair of :fire], mapValue: vMap[:has pair], dicePair: vDice[:has pair], dicePairOfSix: vDice[:has pair of 6], dicePairOfFive: vDice[:has pair of 5], diceNoPair: vDiceNoPair[:has pair], rangeValue: vRange[:has pair])\n}",
+      "script": "module AtomicHasPatternDirectKinds\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'aabb'\n  let vTag be #aabb\n  let vVector be :vector(1, 1, 2)\n  let vPoint be :point(1, 1, 2)\n  let vList be [3, 1, 3, 2]\n  let vListText be ['a', 'b', 'a']\n  let vListTag be [#fire, #ice, #fire]\n  let vMap be [a: 1, b: 1]\n  let vDice as :dice be [6, 6, 5, 4]\n  let vDiceNoPair as :dice be [6, 5, 4, 3]\n  let vRange as :range be from 1 to 4\n  emit Done(nothingValue: vNothing[:has pair], booleanValue: vBoolean[:has pair], integerValue: vInteger[:has pair], floatValue: vFloat[:has pair], percentageValue: vPercentage[:has pair], textValue: vText[:has pair], tagValue: vTag[:has pair], vectorValue: vVector[:has pair], pointValue: vPoint[:has pair], listPair: vList[:has pair], listPairOfThree: vList[:has pair of 3], listPairOfFour: vList[:has pair of 4], listTextPair: vListText[:has pair of 'a'], listTextMissing: vListText[:has pair of 'c'], listTagPair: vListTag[:has pair of #fire], mapValue: vMap[:has pair], dicePair: vDice[:has pair], dicePairOfSix: vDice[:has pair of 6], dicePairOfFive: vDice[:has pair of 5], diceNoPair: vDiceNoPair[:has pair], rangeValue: vRange[:has pair])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "nothingValue": { "type": ":boolean", "value": false },
-                "booleanValue": { "type": ":boolean", "value": false },
-                "integerValue": { "type": ":boolean", "value": false },
-                "floatValue": { "type": ":boolean", "value": false },
-                "percentageValue": { "type": ":boolean", "value": false },
-                "textValue": { "type": ":boolean", "value": false },
-                "tagValue": { "type": ":boolean", "value": false },
-                "vectorValue": { "type": ":boolean", "value": false },
-                "pointValue": { "type": ":boolean", "value": false },
-                "listPair": { "type": ":boolean", "value": true },
-                "listPairOfThree": { "type": ":boolean", "value": true },
-                "listPairOfFour": { "type": ":boolean", "value": false },
-                "listTextPair": { "type": ":boolean", "value": true },
-                "listTextMissing": { "type": ":boolean", "value": false },
-                "listTagPair": { "type": ":boolean", "value": true },
-                "mapValue": { "type": ":boolean", "value": false },
-                "dicePair": { "type": ":boolean", "value": true },
-                "dicePairOfSix": { "type": ":boolean", "value": true },
-                "dicePairOfFive": { "type": ":boolean", "value": false },
-                "diceNoPair": { "type": ":boolean", "value": false },
-                "rangeValue": { "type": ":boolean", "value": false }
+                "nothingValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "booleanValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "integerValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "floatValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "percentageValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "tagValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "vectorValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "pointValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listPairOfThree": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listPairOfFour": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listTextPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listTextMissing": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listTagPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapValue": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "dicePair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "dicePairOfSix": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "dicePairOfFive": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceNoPair": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "rangeValue": {
+                  "type": ":boolean",
+                  "value": false
+                }
               }
             }
           ]
@@ -44,38 +110,116 @@
     {
       "kind": "scriptApi",
       "name": "take pattern count direct source kinds",
-      "script": "module AtomicTakePatternCountKinds\non Start {\n  let vNothing be nothing\n  let vInteger be 10\n  let vText be 'aabb'\n  let vMap be [a: 1, b: 1]\n  let vRange as :range be from 1 to 4\n  let vList be [3, 1, 3, 2, 3]\n  let vListText be ['a', 'b', 'a']\n  let vListTag be [:fire, :ice, :fire]\n  let vDice as :dice be [6, 6, 5, 5, 5]\n  let vDiceNoTriple as :dice be [6, 6, 5, 4]\n  let listPair be vList[:take pair]\n  let listThree be vList[:take three of a kind]\n  let listPairOfThree be vList[:take pair of 3]\n  let textPair be vListText[:take pair of 'a']\n  let tagPair be vListTag[:take pair of :fire]\n  let dicePair be vDice[:take pair]\n  let diceThree be vDice[:take three of a kind]\n  let dicePairOfSix be vDice[:take pair of 6]\n  emit Done(nothingValue: vNothing[:take pair], integerValue: vInteger[:take pair], textValue: vText[:take pair], mapValue: vMap[:take pair], rangeValue: vRange[:take pair], listPairLen: :len listPair, listPairFirst: listPair[1], listPairSecond: listPair[2], listThreeLen: :len listThree, listThreeFirst: listThree[1], listThreeThird: listThree[3], listPairOfThreeLen: :len listPairOfThree, listPairOfThreeFirst: listPairOfThree[1], listPairOfFour: vList[:take pair of 4], textPairLen: :len textPair, textPairFirst: textPair[1], textPairSecond: textPair[2], tagPairLen: :len tagPair, tagPairFirst: tagPair[1], tagPairSecond: tagPair[2], dicePair: dicePair, diceThree: diceThree, dicePairOfSix: dicePairOfSix, diceNoTriple: vDiceNoTriple[:take three of a kind])\n}",
+      "script": "module AtomicTakePatternCountKinds\non Start {\n  let vNothing be nothing\n  let vInteger be 10\n  let vText be 'aabb'\n  let vMap be [a: 1, b: 1]\n  let vRange as :range be from 1 to 4\n  let vList be [3, 1, 3, 2, 3]\n  let vListText be ['a', 'b', 'a']\n  let vListTag be [#fire, #ice, #fire]\n  let vDice as :dice be [6, 6, 5, 5, 5]\n  let vDiceNoTriple as :dice be [6, 6, 5, 4]\n  let listPair be vList[:take pair]\n  let listThree be vList[:take three of a kind]\n  let listPairOfThree be vList[:take pair of 3]\n  let textPair be vListText[:take pair of 'a']\n  let tagPair be vListTag[:take pair of #fire]\n  let dicePair be vDice[:take pair]\n  let diceThree be vDice[:take three of a kind]\n  let dicePairOfSix be vDice[:take pair of 6]\n  emit Done(nothingValue: vNothing[:take pair], integerValue: vInteger[:take pair], textValue: vText[:take pair], mapValue: vMap[:take pair], rangeValue: vRange[:take pair], listPairLen: listPair[:count], listPairFirst: listPair[1], listPairSecond: listPair[2], listThreeLen: listThree[:count], listThreeFirst: listThree[1], listThreeThird: listThree[3], listPairOfThreeLen: listPairOfThree[:count], listPairOfThreeFirst: listPairOfThree[1], listPairOfFour: vList[:take pair of 4], textPairLen: textPair[:count], textPairFirst: textPair[1], textPairSecond: textPair[2], tagPairLen: tagPair[:count], tagPairFirst: tagPair[1], tagPairSecond: tagPair[2], dicePair: dicePair, diceThree: diceThree, dicePairOfSix: dicePairOfSix, diceNoTriple: vDiceNoTriple[:take three of a kind])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "nothingValue": { "type": ":nothing" },
-                "integerValue": { "type": ":nothing" },
-                "textValue": { "type": ":nothing" },
-                "mapValue": { "type": ":nothing" },
-                "rangeValue": { "type": ":nothing" },
-                "listPairLen": { "type": ":integer", "value": "2" },
-                "listPairFirst": { "type": ":integer", "value": "3" },
-                "listPairSecond": { "type": ":integer", "value": "3" },
-                "listThreeLen": { "type": ":integer", "value": "3" },
-                "listThreeFirst": { "type": ":integer", "value": "3" },
-                "listThreeThird": { "type": ":integer", "value": "3" },
-                "listPairOfThreeLen": { "type": ":integer", "value": "2" },
-                "listPairOfThreeFirst": { "type": ":integer", "value": "3" },
-                "listPairOfFour": { "type": ":nothing" },
-                "textPairLen": { "type": ":integer", "value": "2" },
-                "textPairFirst": { "type": ":text", "value": "a" },
-                "textPairSecond": { "type": ":text", "value": "a" },
-                "tagPairLen": { "type": ":integer", "value": "2" },
-                "tagPairFirst": { "type": ":tag", "value": "fire" },
-                "tagPairSecond": { "type": ":tag", "value": "fire" },
-                "dicePair": { "type": ":dice", "rolls": [6, 6] },
-                "diceThree": { "type": ":dice", "rolls": [5, 5, 5] },
-                "dicePairOfSix": { "type": ":dice", "rolls": [6, 6] },
-                "diceNoTriple": { "type": ":nothing" }
+                "nothingValue": {
+                  "type": ":nothing"
+                },
+                "integerValue": {
+                  "type": ":nothing"
+                },
+                "textValue": {
+                  "type": ":nothing"
+                },
+                "mapValue": {
+                  "type": ":nothing"
+                },
+                "rangeValue": {
+                  "type": ":nothing"
+                },
+                "listPairLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "listPairFirst": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listPairSecond": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listThreeLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listThreeFirst": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listThreeThird": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listPairOfThreeLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "listPairOfThreeFirst": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listPairOfFour": {
+                  "type": ":nothing"
+                },
+                "textPairLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "textPairFirst": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "textPairSecond": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "tagPairLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "tagPairFirst": {
+                  "type": ":tag",
+                  "value": "fire"
+                },
+                "tagPairSecond": {
+                  "type": ":tag",
+                  "value": "fire"
+                },
+                "dicePair": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6
+                  ]
+                },
+                "diceThree": {
+                  "type": ":dice",
+                  "rolls": [
+                    5,
+                    5,
+                    5
+                  ]
+                },
+                "dicePairOfSix": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6
+                  ]
+                },
+                "diceNoTriple": {
+                  "type": ":nothing"
+                }
               }
             }
           ]
@@ -85,35 +229,110 @@
     {
       "kind": "scriptApi",
       "name": "full house and straight patterns",
-      "script": "module AtomicFullHouseStraightPatterns\non Start {\n  let diceFull as :dice be [6, 6, 6, 5, 5]\n  let diceNotFull as :dice be [6, 6, 5, 5, 4]\n  let diceStraight as :dice be [6, 5, 4, 3, 2]\n  let diceNotStraight as :dice be [6, 5, 4, 2, 1]\n  let listFull be ['a', 'b', 'a', 'b', 'a']\n  let listNotFull be ['a', 'b', 'a', 'b', 'c']\n  let listStraight be [3, 1, 2]\n  let listNotStraight be [3, 1, 5]\n  let diceFullTaken be diceFull[:take full house]\n  let diceStraightTaken be diceStraight[:take straight]\n  let listFullTaken be listFull[:take full house]\n  let listStraightTaken be listStraight[:take straight]\n  emit Done(diceFullHas: diceFull[:has full house], diceNotFullHas: diceNotFull[:has full house], diceStraightHas: diceStraight[:has straight], diceNotStraightHas: diceNotStraight[:has straight], listFullHas: listFull[:has full house], listNotFullHas: listNotFull[:has full house], listStraightHas: listStraight[:has straight], listNotStraightHas: listNotStraight[:has straight], diceFullTaken: diceFullTaken, diceFullMissing: diceNotFull[:take full house], diceStraightTaken: diceStraightTaken, diceStraightMissing: diceNotStraight[:take straight], listFullLen: :len listFullTaken, listFull_1: listFullTaken[1], listFull_3: listFullTaken[3], listFull_4: listFullTaken[4], listStraightLen: :len listStraightTaken, listStraight_1: listStraightTaken[1], listStraight_2: listStraightTaken[2], listStraight_3: listStraightTaken[3], listStraightMissing: listNotStraight[:take straight])\n}",
+      "script": "module AtomicFullHouseStraightPatterns\non Start {\n  let diceFull as :dice be [6, 6, 6, 5, 5]\n  let diceNotFull as :dice be [6, 6, 5, 5, 4]\n  let diceStraight as :dice be [6, 5, 4, 3, 2]\n  let diceNotStraight as :dice be [6, 5, 4, 2, 1]\n  let listFull be ['a', 'b', 'a', 'b', 'a']\n  let listNotFull be ['a', 'b', 'a', 'b', 'c']\n  let listStraight be [3, 1, 2]\n  let listNotStraight be [3, 1, 5]\n  let diceFullTaken be diceFull[:take full house]\n  let diceStraightTaken be diceStraight[:take straight]\n  let listFullTaken be listFull[:take full house]\n  let listStraightTaken be listStraight[:take straight]\n  emit Done(diceFullHas: diceFull[:has full house], diceNotFullHas: diceNotFull[:has full house], diceStraightHas: diceStraight[:has straight], diceNotStraightHas: diceNotStraight[:has straight], listFullHas: listFull[:has full house], listNotFullHas: listNotFull[:has full house], listStraightHas: listStraight[:has straight], listNotStraightHas: listNotStraight[:has straight], diceFullTaken: diceFullTaken, diceFullMissing: diceNotFull[:take full house], diceStraightTaken: diceStraightTaken, diceStraightMissing: diceNotStraight[:take straight], listFullLen: listFull[:count], listFull_1: listFullTaken[1], listFull_3: listFullTaken[3], listFull_4: listFullTaken[4], listStraightLen: listStraight[:count], listStraight_1: listStraightTaken[1], listStraight_2: listStraightTaken[2], listStraight_3: listStraightTaken[3], listStraightMissing: listNotStraight[:take straight])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "diceFullHas": { "type": ":boolean", "value": true },
-                "diceNotFullHas": { "type": ":boolean", "value": false },
-                "diceStraightHas": { "type": ":boolean", "value": true },
-                "diceNotStraightHas": { "type": ":boolean", "value": false },
-                "listFullHas": { "type": ":boolean", "value": true },
-                "listNotFullHas": { "type": ":boolean", "value": false },
-                "listStraightHas": { "type": ":boolean", "value": true },
-                "listNotStraightHas": { "type": ":boolean", "value": false },
-                "diceFullTaken": { "type": ":dice", "rolls": [6, 6, 6, 5, 5] },
-                "diceFullMissing": { "type": ":nothing" },
-                "diceStraightTaken": { "type": ":dice", "rolls": [6, 5, 4, 3, 2] },
-                "diceStraightMissing": { "type": ":nothing" },
-                "listFullLen": { "type": ":integer", "value": "5" },
-                "listFull_1": { "type": ":text", "value": "a" },
-                "listFull_3": { "type": ":text", "value": "a" },
-                "listFull_4": { "type": ":text", "value": "b" },
-                "listStraightLen": { "type": ":integer", "value": "3" },
-                "listStraight_1": { "type": ":integer", "value": "3" },
-                "listStraight_2": { "type": ":integer", "value": "1" },
-                "listStraight_3": { "type": ":integer", "value": "2" },
-                "listStraightMissing": { "type": ":nothing" }
+                "diceFullHas": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceNotFullHas": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceStraightHas": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceNotStraightHas": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listFullHas": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listNotFullHas": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listStraightHas": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listNotStraightHas": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "diceFullTaken": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6,
+                    6,
+                    5,
+                    5
+                  ]
+                },
+                "diceFullMissing": {
+                  "type": ":nothing"
+                },
+                "diceStraightTaken": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    5,
+                    4,
+                    3,
+                    2
+                  ]
+                },
+                "diceStraightMissing": {
+                  "type": ":nothing"
+                },
+                "listFullLen": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "listFull_1": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "listFull_3": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "listFull_4": {
+                  "type": ":text",
+                  "value": "b"
+                },
+                "listStraightLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listStraight_1": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listStraight_2": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "listStraight_3": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "listStraightMissing": {
+                  "type": ":nothing"
+                }
               }
             }
           ]
@@ -123,32 +342,73 @@
     {
       "kind": "scriptApi",
       "name": "pattern selectors over streams",
-      "script": "module AtomicPatternStreams\non Start {\n  let listStream be [1, 2, 1, 3][:filter value where value > 0]\n  let listStreamTake be [1, 2, 1, 3][:filter value where value > 0][:take pair]\n  let dice as :dice be [6, 6, 5, 4]\n  let diceStreamTake be dice[:filter value where value > 0][:take pair of 6]\n  let textStream be 'aabb'[:filter value where true]\n  let rangeStream as :range be from 1 to 4\n  emit Done(listStreamHasPair: listStream[:has pair], listStreamTakeLen: :len listStreamTake, listStreamTakeFirst: listStreamTake[1], listStreamTakeSecond: listStreamTake[2], diceStreamHasPair: dice[:filter value where value > 0][:has pair of 6], diceStreamTakeLen: :len diceStreamTake, diceStreamTakeFirst: diceStreamTake[1], diceStreamTakeSecond: diceStreamTake[2], textStreamHasPair: textStream[:has pair], textStreamTake: textStream[:take pair], rangeStreamHasPair: rangeStream[:filter value where true][:has pair], rangeStreamTake: rangeStream[:filter value where true][:take pair])\n}",
+      "script": "module AtomicPatternStreams\non Start {\n  let listStream be [1, 2, 1, 3][:filter value where value > 0]\n  let listStreamTake be [1, 2, 1, 3][:filter value where value > 0][:take pair]\n  let dice as :dice be [6, 6, 5, 4]\n  let diceStreamTake be dice[:filter value where value > 0][:take pair of 6]\n  let textStream be 'aabb'[:filter value where true]\n  let rangeStream as :range be from 1 to 4\n  emit Done(listStreamHasPair: listStream[:has pair], listStreamTakeLen: listStreamTake[:count], listStreamTakeFirst: listStreamTake[1], listStreamTakeSecond: listStreamTake[2], diceStreamHasPair: dice[:filter value where value > 0][:has pair of 6], diceStreamTakeLen: diceStreamTake[:count], diceStreamTakeFirst: diceStreamTake[1], diceStreamTakeSecond: diceStreamTake[2], textStreamHasPair: textStream[:has pair], textStreamTake: textStream[:take pair], rangeStreamHasPair: rangeStream[:filter value where true][:has pair], rangeStreamTake: rangeStream[:filter value where true][:take pair])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "listStreamHasPair": { "type": ":boolean", "value": true },
-                "listStreamTakeLen": { "type": ":integer", "value": "2" },
-                "listStreamTakeFirst": { "type": ":integer", "value": "1" },
-                "listStreamTakeSecond": { "type": ":integer", "value": "1" },
-                "diceStreamHasPair": { "type": ":boolean", "value": true },
-                "diceStreamTakeLen": { "type": ":integer", "value": "2" },
-                "diceStreamTakeFirst": { "type": ":integer", "value": "6" },
-                "diceStreamTakeSecond": { "type": ":integer", "value": "6" },
-                "textStreamHasPair": { "type": ":boolean", "value": true },
+                "listStreamHasPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listStreamTakeLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "listStreamTakeFirst": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "listStreamTakeSecond": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "diceStreamHasPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceStreamTakeLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "diceStreamTakeFirst": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "diceStreamTakeSecond": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "textStreamHasPair": {
+                  "type": ":boolean",
+                  "value": true
+                },
                 "textStreamTake": {
                   "type": ":list",
                   "items": [
-                    { "type": ":text", "value": "a" },
-                    { "type": ":text", "value": "a" }
+                    {
+                      "type": ":text",
+                      "value": "a"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "a"
+                    }
                   ]
                 },
-                "rangeStreamHasPair": { "type": ":boolean", "value": false },
-                "rangeStreamTake": { "type": ":nothing" }
+                "rangeStreamHasPair": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "rangeStreamTake": {
+                  "type": ":nothing"
+                }
               }
             }
           ]

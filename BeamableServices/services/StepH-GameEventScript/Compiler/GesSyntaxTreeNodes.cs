@@ -110,13 +110,22 @@ internal enum GesUnaryOperator
     Not,
     HasValue,
     Empty,
-    Length,
     Chance,
     Keys,
     Values,
     Entries,
     Abs,
-    NaturalLog
+    NaturalLog,
+    Exp,
+    Floor,
+    Ceil,
+    Truncate,
+    RoundHalfEven,
+    RoundHalfUp,
+    RoundHalfDown,
+    DegreeToRadians,
+    DegreeFromRadians,
+    WrapDegree
 }
 
 internal enum GesBinaryOperator
@@ -158,13 +167,22 @@ internal static class GesOperatorText
             GesUnaryOperator.Not => "!",
             GesUnaryOperator.HasValue => "has value",
             GesUnaryOperator.Empty => "empty",
-            GesUnaryOperator.Length => "len",
             GesUnaryOperator.Chance => "chance",
             GesUnaryOperator.Keys => "keys",
             GesUnaryOperator.Values => "values",
             GesUnaryOperator.Entries => "entries",
             GesUnaryOperator.Abs => "abs",
             GesUnaryOperator.NaturalLog => "ln",
+            GesUnaryOperator.Exp => "exp",
+            GesUnaryOperator.Floor => "floor",
+            GesUnaryOperator.Ceil => "ceil",
+            GesUnaryOperator.Truncate => "truncate",
+            GesUnaryOperator.RoundHalfEven => "round half even",
+            GesUnaryOperator.RoundHalfUp => "round half up",
+            GesUnaryOperator.RoundHalfDown => "round half down",
+            GesUnaryOperator.DegreeToRadians => "rad",
+            GesUnaryOperator.DegreeFromRadians => "deg",
+            GesUnaryOperator.WrapDegree => "wrap degree",
             _ => op.ToString()
         };
 

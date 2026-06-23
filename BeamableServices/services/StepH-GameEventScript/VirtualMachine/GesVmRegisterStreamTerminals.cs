@@ -32,6 +32,9 @@ internal static class GesVmRegisterStreamTerminals
             case Text or Tag:
                 vmState.SetInteger(destinationRegister, iterator.TextValue.Length);
                 return;
+            case Nothing:
+                vmState.SetInteger(destinationRegister, 0);
+                return;
         }
 
         IGesVmStream stream;

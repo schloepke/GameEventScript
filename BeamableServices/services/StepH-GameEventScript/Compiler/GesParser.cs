@@ -1344,7 +1344,7 @@ internal sealed class GesParser
         => expression is IntegerLiteralExpressionNode or FloatLiteralExpressionNode;
 
     private bool IsImplicitMultiplicationRightStart()
-        => Current.Kind == Identifier;
+        => Current.Kind is Identifier or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity;
 
     private static bool AreAdjacent(GesToken left, GesToken right)
         => left.EndLine == right.Line &&
@@ -1371,20 +1371,18 @@ internal sealed class GesParser
 
         if (!Match(OperatorNot))
         {
-            if (!TryParseTaggedUnaryOperator(out var taggedOperator, out var rootExponent))
+            if (TryParseKeywordUnaryOperator(out var keywordOperator, out var rootExponent, out var keywordToken))
             {
-                return ParsePowerExpression();
+                var keywordOperand = ParseUnaryIntrinsicOperand();
+                if (TryCreateRootPowerExpression(rootExponent, keywordOperand, keywordToken, out var rootExpression))
+                {
+                    return rootExpression;
+                }
+
+                return WithRange(new UnaryExpressionNode(keywordOperator, keywordOperand), keywordToken, Previous);
             }
 
-            var taggedToken = Previous;
-            SkipNewLines();
-            var taggedOperand = ParseUnaryExpression();
-            if (TryCreateRootPowerExpression(rootExponent, taggedOperand, taggedToken, out var rootExpression))
-            {
-                return rootExpression;
-            }
-
-            return WithRange(new UnaryExpressionNode(taggedOperator, taggedOperand), taggedOperand);
+            return ParsePowerExpression();
         }
 
         var startToken = Previous;
@@ -1418,50 +1416,91 @@ internal sealed class GesParser
         return ParsePostfixExpression();
     }
 
-    private bool TryParseTaggedUnaryOperator(out GesUnaryOperator op, out double? rootExponent)
+    private bool TryParseKeywordUnaryOperator(out GesUnaryOperator op, out double? rootExponent, out GesToken startToken)
     {
         op = default;
         rootExponent = null;
-        if (Current.Kind != Tag)
+        startToken = Current;
+        if (!Match(IntrinsicAbs))
         {
-            return false;
+            if (Match(IntrinsicLn)) op = GesUnaryOperator.NaturalLog;
+            else if (Match(IntrinsicExp)) op = GesUnaryOperator.Exp;
+            else if (Match(IntrinsicSqrt)) rootExponent = SquareRootExponent;
+            else if (Match(IntrinsicCbrt)) rootExponent = CubeRootExponent;
+            else if (Match(IntrinsicChance)) op = GesUnaryOperator.Chance;
+            else if (Match(IntrinsicFloor)) op = GesUnaryOperator.Floor;
+            else if (Match(IntrinsicCeil)) op = GesUnaryOperator.Ceil;
+            else if (Match(IntrinsicTruncate)) op = GesUnaryOperator.Truncate;
+            else if (Match(IntrinsicRad)) op = GesUnaryOperator.DegreeToRadians;
+            else if (Match(IntrinsicDeg)) op = GesUnaryOperator.DegreeFromRadians;
+            else if (Match(IntrinsicWrap))
+            {
+                SkipNewLines();
+                ExpectWord("degree");
+                op = GesUnaryOperator.WrapDegree;
+            }
+            else if (Match(IntrinsicRound))
+            {
+                SkipNewLines();
+                ExpectWord("half");
+                SkipNewLines();
+                if (MatchWord("even")) op = GesUnaryOperator.RoundHalfEven;
+                else if (MatchWord("up")) op = GesUnaryOperator.RoundHalfUp;
+                else if (MatchWord("down")) op = GesUnaryOperator.RoundHalfDown;
+                else
+                {
+                    var token = Current;
+                    throw new GameEventScriptParseException("Expected round mode 'even', 'up', or 'down'.", token);
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            op = GesUnaryOperator.Abs;
         }
 
-        switch (Current.Text)
+        return true;
+    }
+
+    private static bool TryGetMathConstant(GesTokenKind kind, out double value)
+    {
+        switch (kind)
         {
-            case ":len":
-                op = GesUnaryOperator.Length;
-                break;
-            case ":chance":
-                op = GesUnaryOperator.Chance;
-                break;
-            case ":keys":
-                op = GesUnaryOperator.Keys;
-                break;
-            case ":values":
-                op = GesUnaryOperator.Values;
-                break;
-            case ":entries":
-                op = GesUnaryOperator.Entries;
-                break;
-            case ":abs":
-                op = GesUnaryOperator.Abs;
-                break;
-            case ":ln":
-                op = GesUnaryOperator.NaturalLog;
-                break;
-            case ":sqrt":
-                rootExponent = SquareRootExponent;
-                break;
-            case ":cbrt":
-                rootExponent = CubeRootExponent;
-                break;
+            case MathConstantPi:
+                value = GameEventScriptMathConstants.Pi;
+                return true;
+            case MathConstantE:
+                value = GameEventScriptMathConstants.E;
+                return true;
+            case MathConstantTau:
+                value = GameEventScriptMathConstants.Tau;
+                return true;
+            case MathConstantInfinity:
+                value = GameEventScriptMathConstants.Infinity;
+                return true;
             default:
+                value = 0d;
                 return false;
         }
+    }
 
-        Advance();
-        return true;
+    private ExpressionNode ParseUnaryIntrinsicOperand()
+    {
+        SkipNewLines();
+        if (!Match(LeftParen))
+        {
+            return ParseUnaryExpression();
+        }
+
+        SkipNewLines();
+        var operand = ParseExpression();
+        SkipNewLines();
+        Expect(RightParen);
+        return operand;
     }
 
     private bool TryCreateRootPowerExpression(
@@ -1710,6 +1749,13 @@ internal sealed class GesParser
             return ParseOrderBySelector();
         }
 
+        if (Current.Kind == Tag && Current.Text.StartsWith(":", StringComparison.Ordinal))
+        {
+            var tagToken = Advance();
+            var tag = WithRange(new TagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
+            return WithRange(new ExpressionSelectorNode(tag), startToken);
+        }
+
         return WithRange(new ExpressionSelectorNode(ParseExpression()), startToken);
     }
 
@@ -1951,10 +1997,17 @@ internal sealed class GesParser
             return WithRange(new NothingLiteralExpressionNode(), Previous);
         }
 
-        if (Current.Kind == Tag)
+        if (Current.Kind == Tag && Current.Text.StartsWith("#", StringComparison.Ordinal))
         {
             var tagToken = Advance();
             return WithRange(new TagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
+        }
+
+        if (TryGetMathConstant(Current.Kind, out var numericConstant))
+        {
+            var constantToken = Current;
+            Advance();
+            return WithRange(new FloatLiteralExpressionNode(numericConstant), constantToken);
         }
 
         if ((Current.Kind == Identifier || Current.Kind == Message) && IsCallExpressionStart())
@@ -2390,6 +2443,11 @@ internal sealed class GesParser
     {
         var startToken = Current;
         var (extensionName, functionName, _) = ParseExtensionSymbol();
+        if (extensionName is "integer" or "degree")
+        {
+            throw new GameEventScriptParseException($"Standard extension namespace ':{extensionName}' has been removed; use direct math intrinsics instead.", startToken);
+        }
+
         SkipNewLines();
 
         ArgumentListNode arguments;
@@ -2571,7 +2629,7 @@ internal sealed class GesParser
 
     private bool MatchTag(string tagText)
     {
-        if (Current.Kind == Tag && string.Equals(Current.Text, tagText, StringComparison.Ordinal))
+        if (Current.Kind == Tag && Current.Text.StartsWith(":", StringComparison.Ordinal) && string.Equals(Current.Text, tagText, StringComparison.Ordinal))
         {
             Advance();
             return true;
@@ -2638,7 +2696,7 @@ internal sealed class GesParser
 
     private bool IsExtensionCallStart()
     {
-        if (Current.Kind != Tag)
+        if (Current.Kind != Tag || !Current.Text.StartsWith(":", StringComparison.Ordinal))
         {
             return false;
         }
@@ -2660,7 +2718,7 @@ internal sealed class GesParser
             lookahead++;
         }
 
-        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != Identifier)
+        if (lookahead >= _tokens.Count || !IsExtensionFunctionNameKind(_tokens[lookahead].Kind))
         {
             return false;
         }
@@ -2690,16 +2748,20 @@ internal sealed class GesParser
         SkipNewLines();
         Expect(Dot);
         SkipNewLines();
-        var functionToken = Expect(Identifier);
+        var functionToken = ExpectExtensionFunctionName();
         return (extensionToken.Text[1..], functionToken.Text, functionToken);
     }
 
     private bool IsExtensionUnaryArgumentStart()
-        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
+        => Current.Kind is Identifier or Message or Tag or GesTokenKind.Float or Percentage or UnitNumber or Text or True or False or Nothing or
+            MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
+            IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
+            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
+            LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()
     {
-        if (Current.Kind is not (Identifier or To or Nothing))
+        if (!IsArgumentLabelKind(Current.Kind))
         {
             return false;
         }
@@ -2715,13 +2777,34 @@ internal sealed class GesParser
 
     private string ExpectArgumentLabel()
     {
-        if (Current.Kind is Identifier or To or Nothing)
+        if (IsArgumentLabelKind(Current.Kind))
         {
             return Advance().Text;
         }
 
         var token = Current;
         throw new GameEventScriptParseException($"Expected argument label but found {token.Kind}", token);
+    }
+
+    private static bool IsArgumentLabelKind(GesTokenKind kind)
+        => kind is Identifier or To or Nothing or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
+            IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
+            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound;
+
+    private static bool IsExtensionFunctionNameKind(GesTokenKind kind)
+        => kind is Identifier or
+            IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
+            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound;
+
+    private GesToken ExpectExtensionFunctionName()
+    {
+        if (IsExtensionFunctionNameKind(Current.Kind))
+        {
+            return Advance();
+        }
+
+        var token = Current;
+        throw new GameEventScriptParseException($"Expected extension function name but found {token.Kind}", token);
     }
 
     private string ParseTypeName()

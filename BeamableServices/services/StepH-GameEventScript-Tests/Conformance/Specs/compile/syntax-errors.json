@@ -78,7 +78,7 @@
     {
       "kind": "compileError",
       "name": "legacy floor prefix builtin is rejected",
-      "script": "on Start {\n  let value be :floor 10.4\n}",
+      "script": "on Start {\n  let value be #floor 10.4\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -86,7 +86,7 @@
     {
       "kind": "compileError",
       "name": "legacy wrapDegree prefix builtin is rejected",
-      "script": "on Start {\n  let value be :wrapDegree 370°\n}",
+      "script": "on Start {\n  let value be #wrapDegree 370°\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -174,7 +174,7 @@
     {
       "kind": "compileError",
       "name": "set literal syntax is rejected",
-      "script": "on Start {\n  let x be :set[1, 2]\n}",
+      "script": "on Start {\n  let x be #set[1, 2]\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -182,7 +182,7 @@
     {
       "kind": "compileError",
       "name": "generated set syntax is rejected",
-      "script": "on Start {\n  let x be :set[:select item from 1 to 3 => item]\n}",
+      "script": "on Start {\n  let x be #set[:select item from 1 to 3 => item]\n}",
       "expectedError": {
         "phase": "syntax"
       }

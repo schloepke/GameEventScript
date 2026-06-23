@@ -31,7 +31,7 @@
     {
       "kind": "bytecode",
       "name": "stage literal value kinds lower to stage opcodes",
-      "script": "module StageOpcodes\n\nrecord :sample as {\n  falseValue: :boolean,\n  trueValue: :boolean,\n  integerValue: :number,\n  floatValue: :number,\n  meterInteger: :number,\n  meterFloat: :number,\n  percentageValue: :percentage,\n  textValue: :text,\n  tagValue: :tag,\n  omitted: :number\n}\n\non Start {\n  let values be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', :ready]\n  let sample be :sample(falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: :ready)\n  emit Done(values: values, omitted: sample.omitted)\n}\n",
+      "script": "module StageOpcodes\n\nrecord :sample as {\n  falseValue: :boolean,\n  trueValue: :boolean,\n  integerValue: :number,\n  floatValue: :number,\n  meterInteger: :number,\n  meterFloat: :number,\n  percentageValue: :percentage,\n  textValue: :text,\n  tagValue: :tag,\n  omitted: :number\n}\n\non Start {\n  let values be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', #ready]\n  let sample be :sample(falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: #ready)\n  emit Done(values: values, omitted: sample.omitted)\n}\n",
       "expectedOpcodes": {
         "contains": [
           "StageNothing",
@@ -48,7 +48,7 @@
     {
       "kind": "bytecode",
       "name": "dynamic selectors lower to property access",
-      "script": "module PropertyAccessOpcodes\n\non Start {\n  let listValue be [10, 20, 30]\n  let mapValue be [name: 'Ada', hp: 10]\n  let vectorValue be :vector(1m, 2m, 3m)\n  let pointValue be :point(4m, 5m, 6m)\n  let textValue be 'ab'\n  let indexKey be 2\n  let textKey be 'name'\n  let tagKey be :hp\n  let vectorKey be 'y'\n  let pointKey be :z\n  let invalidKey be true\n  emit Done(listDynamic: listValue[indexKey], mapText: mapValue[textKey], mapTag: mapValue[tagKey], vectorDynamic: vectorValue[vectorKey], pointDynamic: pointValue[pointKey], textDynamic: textValue[indexKey], invalidProperty: mapValue[invalidKey])\n}\n",
+      "script": "module PropertyAccessOpcodes\n\non Start {\n  let listValue be [10, 20, 30]\n  let mapValue be [name: 'Ada', hp: 10]\n  let vectorValue be :vector(1m, 2m, 3m)\n  let pointValue be :point(4m, 5m, 6m)\n  let textValue be 'ab'\n  let indexKey be 2\n  let textKey be 'name'\n  let tagKey be #hp\n  let vectorKey be 'y'\n  let pointKey be #z\n  let invalidKey be true\n  emit Done(listDynamic: listValue[indexKey], mapText: mapValue[textKey], mapTag: mapValue[tagKey], vectorDynamic: vectorValue[vectorKey], pointDynamic: pointValue[pointKey], textDynamic: textValue[indexKey], invalidProperty: mapValue[invalidKey])\n}\n",
       "expectedOpcodes": {
         "minCounts": {
           "PropertyAccess": 7
@@ -157,7 +157,7 @@
     {
       "kind": "bytecode",
       "name": "pipeline selector lowers to stream map and collect list",
-      "script": "module SideTables\n\non Start(values) {\n  let selected be values[:select item => item + 1]\n  emit Done(count: :len selected)\n}\n",
+      "script": "module SideTables\n\non Start(values) {\n  let selected be values[:select item => item + 1]\n  emit Done(count: selected[:count])\n}\n",
       "expectedOpcodes": {
         "contains": [
           "StreamMap",

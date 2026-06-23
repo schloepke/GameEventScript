@@ -52,7 +52,7 @@
     {
       "kind": "compileError",
       "name": "guarded choice rejects tag otherwise",
-      "script": "on Start {\n  let x be 1 when true, :otherwise 0\n}",
+      "script": "on Start {\n  let x be 1 when true, #otherwise 0\n}",
       "expectedError": {
         "phase": "syntax",
         "messageContains": "Expected When"
@@ -271,7 +271,7 @@
     {
       "kind": "compileError",
       "name": "ref type has been removed",
-      "script": "on Start {\n  let unitRef be :ref(:number, id: 'unit-42')\n}",
+      "script": "on Start {\n  let unitRef be :ref(id: 'unit-42')\n}",
       "expectedError": {
         "phase": "build",
         "kind": "InvalidTypeConstructor",
@@ -362,12 +362,12 @@
     },
     {
       "kind": "compileError",
-      "name": "tag rejects numeric suffix",
-      "script": "on Start {\n  emit Done with :tag_1\n}",
+      "name": "tag rejects unseparated numeric suffix",
+      "script": "on Start {\n  emit Done with #tag1\n}",
       "expectedError": {
         "phase": "syntax",
         "kind": "Syntax",
-        "messageContains": "Illegal token ':tag_1'"
+        "messageContains": "Illegal token '#tag1'"
       }
     },
     {
@@ -473,6 +473,36 @@
         "kind": "InvalidMessageCase",
         "symbol": "undeliverable",
         "symbolKind": "Handler"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy prefix tag math operator is rejected",
+      "script": "on Start {\n  let x be :abs -5\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Unexpected token"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy numeric tag constant is rejected",
+      "script": "on Start {\n  let x be :pi\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Unexpected token"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy integer standard extension is rejected",
+      "script": "on Start(value) {\n  let x be :integer.floor value\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "removed; use direct math intrinsics"
       }
     }
   ]

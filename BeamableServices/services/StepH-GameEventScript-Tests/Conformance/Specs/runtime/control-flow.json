@@ -247,7 +247,7 @@
     {
       "kind": "scriptApi",
       "name": "threshold check publishes matching branch",
-      "script": "on Start(values, threshold) {\n  let passed be values[:any value where value > threshold]\n  if passed {\n    emit Passed(count: :len values)\n  } else {\n    emit Failed\n  }\n}",
+      "script": "on Start(values, threshold) {\n  let passed be values[:any value where value > threshold]\n  if passed {\n    emit Passed(count: values[:count])\n  } else {\n    emit Failed\n  }\n}",
       "steps": [
         {
           "input": {

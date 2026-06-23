@@ -92,15 +92,15 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:true|false)\b</string>
+					<string>\b(?:infinity|pi|e|tau)\b|[∞∏ℇτ]</string>
 					<key>name</key>
-					<string>constant.language.boolean.tag.gameeventscript</string>
+					<string>constant.language.numeric.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:infinity|negativeinfinity|pi|e|euler|tau|phi)\b|[∞∏ℇτφ]</string>
+					<string>#[a-z][A-Za-z]*(?:_[0-9]+)?\b</string>
 					<key>name</key>
-					<string>constant.language.tag.numeric.gameeventscript</string>
+					<string>entity.other.attribute-name.tag.gameeventscript</string>
 				</dict>
 			</array>
 		</dict>
@@ -277,15 +277,27 @@
 					</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:integer\.(?:floor|ceil|truncate|halfEven|halfUp|halfDown)|degree\.(?:wrap|toRadians|fromRadians)|math\.[A-Za-z_][A-Za-z0-9_]*|series\.[A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(?:abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg)\b</string>
 					<key>name</key>
-					<string>support.function.standard.gameeventscript</string>
+					<string>support.function.prefix.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:chance|abs|ln|sqrt|cbrt|random|dice|list|len|keys|values|entries|clamp|min|max|default)\b</string>
+					<string>\b(?:wrap)([ \t]+)(degree)\b</string>
 					<key>name</key>
-					<string>support.function.prefix.gameeventscript</string>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(?:round)([ \t]+)(half)([ \t]+)(even|up|down)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>:(?:series\.[A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<key>name</key>
+					<string>support.function.standard.gameeventscript</string>
 				</dict>
 				<dict>
 					<key>match</key>

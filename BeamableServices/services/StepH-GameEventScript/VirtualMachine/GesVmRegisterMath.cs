@@ -1,9 +1,9 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static StepH.GameEventScript.VirtualMachine.GesVmMathConstants;
 using static StepH.GameEventScript.VirtualMachine.GesVmUnitCalculation;
 
 namespace StepH.GameEventScript.VirtualMachine;
@@ -1232,9 +1232,7 @@ internal static class GesVmRegisterMath
                 break;
             case Tag:
                 leftText = a.TextValue;
-                leftNumber = ResolveNumericTagValue(leftText);
-                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
-                leftRank = 1;
+                leftRank = 3;
                 break;
             case Vector:
                 leftRank = 4;
@@ -1290,9 +1288,7 @@ internal static class GesVmRegisterMath
                 break;
             case Tag:
                 rightText = b.TextValue;
-                rightNumber = ResolveNumericTagValue(rightText);
-                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
-                rightRank = 1;
+                rightRank = 3;
                 break;
             case Vector:
                 rightRank = 4;
@@ -1455,9 +1451,7 @@ internal static class GesVmRegisterMath
                 break;
             case Tag:
                 leftText = a.TextValue;
-                leftNumber = ResolveNumericTagValue(leftText);
-                leftIsNumeric = leftText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
-                leftRank = 1;
+                leftRank = 3;
                 break;
             case Vector:
                 leftRank = 4;
@@ -1513,9 +1507,7 @@ internal static class GesVmRegisterMath
                 break;
             case Tag:
                 rightText = b.TextValue;
-                rightNumber = ResolveNumericTagValue(rightText);
-                rightIsNumeric = rightText is "infinity" or "negativeinfinity" or "pi" or "e" or "tau" or "phi";
-                rightRank = 1;
+                rightRank = 3;
                 break;
             case Vector:
                 rightRank = 4;
@@ -1836,6 +1828,202 @@ internal static class GesVmRegisterMath
                 else dst.SetFloat(Math.Log(number));
                 return;
         }
+    }
+    internal static void GesVmExp(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (a.HasUnit || !a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetFloat(destinationRegister, Math.Exp(a.AsNumeric));
+    }
+    internal static void GesVmFloor(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Floor(a.AsNumeric)));
+    }
+    internal static void GesVmCeil(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Ceiling(a.AsNumeric)));
+    }
+    internal static void GesVmTruncate(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Truncate(a.AsNumeric)));
+    }
+    internal static void GesVmRoundHalfEven(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Round(a.AsNumeric, 0, MidpointRounding.ToEven)));
+    }
+    internal static void GesVmRoundHalfUp(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Round(a.AsNumeric, 0, MidpointRounding.AwayFromZero)));
+    }
+    internal static void GesVmRoundHalfDown(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        var value = a.AsNumeric;
+        var sign = Math.Sign(value);
+        var absolute = Math.Abs(value);
+        var floor = Math.Floor(absolute);
+        var fraction = absolute - floor;
+        var roundedAbsolute = fraction > 0.5d ? floor + 1d : floor;
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(sign < 0 ? -roundedAbsolute : roundedAbsolute));
+    }
+    internal static void GesVmDegreeToRadians(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric || a.Unit.IsNumericUnit() && a.Unit != UnitDegree)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        var number = a.AsNumeric;
+        if (!double.IsFinite(number))
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetFloat(destinationRegister, number / 180d * GameEventScriptMathConstants.Pi);
+    }
+    internal static void GesVmDegreeFromRadians(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric || a.Unit.IsNumericUnit())
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        var number = a.AsNumeric;
+        if (!double.IsFinite(number))
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        vmState.SetFloat(destinationRegister, number / GameEventScriptMathConstants.Pi * 180d, UnitDegree);
+    }
+    internal static void GesVmWrapDegree(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    {
+        if (a.Kind is Nothing)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (!a.IsNumeric || a.Unit.IsNumericUnit() && a.Unit != UnitDegree)
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        var number = a.AsNumeric;
+        if (!double.IsFinite(number))
+        {
+            vmState.SetFloat(destinationRegister, double.NaN);
+            return;
+        }
+
+        var wrapped = number % 360d;
+        if (wrapped < 0d) wrapped += 360d;
+        vmState.SetFloat(destinationRegister, wrapped == 360d ? 0d : wrapped, UnitDegree);
+    }
+    private static long ToIntegerSaturated(double number)
+    {
+        if (double.IsNaN(number)) return 0;
+        if (double.IsPositiveInfinity(number) || number > long.MaxValue) return long.MaxValue;
+        if (double.IsNegativeInfinity(number) || number < long.MinValue) return long.MinValue;
+        return (long)Math.Truncate(number);
     }
     internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, in GesVmValue termSlot)
     {

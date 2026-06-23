@@ -531,6 +531,85 @@ internal static class GesAstOptimizer
                      operand.Integer != long.MinValue:
                 value = GameEventScriptValueFactory.GesInteger(-operand.Integer, operand.Unit);
                 return true;
+            case GesUnaryOperator.Abs when operand.Kind is GameEventScriptBytecodeTypeKind.Integer:
+                value = operand.Integer == long.MinValue
+                    ? GameEventScriptValueFactory.GesFloat(-(double)operand.Integer, operand.Unit)
+                    : GameEventScriptValueFactory.GesInteger(Math.Abs(operand.Integer), operand.Unit);
+                return true;
+            case GesUnaryOperator.Abs when operand.Kind is GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage:
+                value = operand.Kind == GameEventScriptBytecodeTypeKind.Percentage
+                    ? GameEventScriptValueFactory.GesPercentage(Math.Abs(operand.Number))
+                    : GameEventScriptValueFactory.GesFloat(Math.Abs(operand.Number), operand.Unit);
+                return true;
+            case GesUnaryOperator.NaturalLog:
+                value = !operand.Unit.IsNumericUnit() && operand.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean
+                    ? GameEventScriptValueFactory.GesFloat(Math.Log(operand.Number))
+                    : GameEventScriptValueFactory.GesNothing();
+                return true;
+            case GesUnaryOperator.Exp:
+                value = !operand.Unit.IsNumericUnit() && operand.Kind is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean
+                    ? GameEventScriptValueFactory.GesFloat(Math.Exp(operand.Number))
+                    : GameEventScriptValueFactory.GesNothing();
+                return true;
+            case GesUnaryOperator.Floor:
+            case GesUnaryOperator.Ceil:
+            case GesUnaryOperator.Truncate:
+            case GesUnaryOperator.RoundHalfEven:
+            case GesUnaryOperator.RoundHalfUp:
+            case GesUnaryOperator.RoundHalfDown:
+                if (operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean))
+                {
+                    value = GameEventScriptValueFactory.GesNothing();
+                    return true;
+                }
+
+                var rounded = unary.Operator switch
+                {
+                    GesUnaryOperator.Floor => Math.Floor(operand.Number),
+                    GesUnaryOperator.Ceil => Math.Ceiling(operand.Number),
+                    GesUnaryOperator.Truncate => Math.Truncate(operand.Number),
+                    GesUnaryOperator.RoundHalfEven => Math.Round(operand.Number, 0, MidpointRounding.ToEven),
+                    GesUnaryOperator.RoundHalfUp => Math.Round(operand.Number, 0, MidpointRounding.AwayFromZero),
+                    GesUnaryOperator.RoundHalfDown => RoundHalfTowardZero(operand.Number),
+                    _ => 0d
+                };
+                value = GameEventScriptValueFactory.GesInteger(ToIntegerSaturated(rounded));
+                return true;
+            case GesUnaryOperator.DegreeToRadians:
+                if ((operand.Unit.IsNumericUnit() && operand.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree) ||
+                    operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean) ||
+                    !double.IsFinite(operand.Number))
+                {
+                    value = GameEventScriptValueFactory.GesNothing();
+                    return true;
+                }
+
+                value = GameEventScriptValueFactory.GesFloat(operand.Number / 180d * GameEventScriptMathConstants.Pi);
+                return true;
+            case GesUnaryOperator.DegreeFromRadians:
+                if (operand.Unit.IsNumericUnit() ||
+                    operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean) ||
+                    !double.IsFinite(operand.Number))
+                {
+                    value = GameEventScriptValueFactory.GesNothing();
+                    return true;
+                }
+
+                value = GameEventScriptValueFactory.GesFloat(operand.Number / GameEventScriptMathConstants.Pi * 180d, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+                return true;
+            case GesUnaryOperator.WrapDegree:
+                if ((operand.Unit.IsNumericUnit() && operand.Unit != GameEventScriptBytecodeInstructionUnit.UnitDegree) ||
+                    operand.Kind is not (GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean) ||
+                    !double.IsFinite(operand.Number))
+                {
+                    value = GameEventScriptValueFactory.GesNothing();
+                    return true;
+                }
+
+                var wrapped = operand.Number % 360d;
+                if (wrapped < 0d) wrapped += 360d;
+                value = GameEventScriptValueFactory.GesFloat(wrapped == 360d ? 0d : wrapped, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+                return true;
             default:
                 value = GameEventScriptValueFactory.GesNothing();
                 return false;
@@ -856,16 +935,13 @@ internal static class GesAstOptimizer
             case GameEventScriptBytecodeTypeKind.Float:
             case GameEventScriptBytecodeTypeKind.Percentage:
                 number = value.Number;
-                return double.IsFinite(number);
+                return !double.IsNaN(number);
             case GameEventScriptBytecodeTypeKind.Boolean:
                 number = value.Boolean ? 1d : 0d;
                 return true;
             case GameEventScriptBytecodeTypeKind.Text:
                 return double.TryParse(value.Text, NumberStyles.Number, CultureInfo.InvariantCulture, out number) &&
                        double.IsFinite(number);
-            case GameEventScriptBytecodeTypeKind.Tag:
-                number = GesVmMathConstants.ResolveNumericTagValue(value.Text);
-                return !double.IsNaN(number);
             default:
                 number = default;
                 return false;
@@ -1023,4 +1099,22 @@ internal static class GesAstOptimizer
         => unit is { } valueUnit && valueUnit.IsNumericUnit()
             ? new UnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
             : new FloatLiteralExpressionNode(value);
+
+    private static long ToIntegerSaturated(double number)
+    {
+        if (double.IsNaN(number)) return 0;
+        if (double.IsPositiveInfinity(number) || number > long.MaxValue) return long.MaxValue;
+        if (double.IsNegativeInfinity(number) || number < long.MinValue) return long.MinValue;
+        return (long)Math.Truncate(number);
+    }
+
+    private static double RoundHalfTowardZero(double value)
+    {
+        var sign = Math.Sign(value);
+        var absolute = Math.Abs(value);
+        var floor = Math.Floor(absolute);
+        var fraction = absolute - floor;
+        var roundedAbsolute = fraction > 0.5d ? floor + 1d : floor;
+        return sign < 0 ? -roundedAbsolute : roundedAbsolute;
+    }
 }

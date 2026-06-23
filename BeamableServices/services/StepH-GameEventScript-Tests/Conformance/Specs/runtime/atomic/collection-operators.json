@@ -5,8 +5,8 @@
   "tests": [
     {
       "kind": "scriptApi",
-      "name": "length operator",
-      "script": "module AtomicCollectionLengthOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :len vNothing, booleanValue: :len vBoolean, integerValue: :len vInteger, floatValue: :len vFloat, percentageValue: :len vPercentage, textValue: :len vText, tagValue: :len vTag, vectorValue: :len vVector, pointValue: :len vPoint, listValue: :len vList, mapValue: :len vMap, diceValue: :len vDice, rangeValue: :len vRange)\n}",
+      "name": "count operator",
+      "script": "module AtomicCollectionCountOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be #ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing[:count], booleanValue: vBoolean[:count], integerValue: vInteger[:count], floatValue: vFloat[:count], percentageValue: vPercentage[:count], textValue: vText[:count], tagValue: vTag[:count], vectorValue: vVector[:count], pointValue: vPoint[:count], listValue: vList[:count], mapValue: vMap[:count], diceValue: vDice[:count], rangeValue: vRange[:count])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -47,10 +47,12 @@
                   "value": "2"
                 },
                 "vectorValue": {
-                  "type": ":nothing"
+                  "type": ":integer",
+                  "value": "3"
                 },
                 "pointValue": {
-                  "type": ":nothing"
+                  "type": ":integer",
+                  "value": "3"
                 },
                 "listValue": {
                   "type": ":integer",
@@ -77,7 +79,7 @@
     {
       "kind": "scriptApi",
       "name": "has value operator",
-      "script": "module AtomicCollectionHasValueOperator\non Start {\n  let vNothing be nothing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be :ab\n  let vTagNan be :nan\n  let vInfinity be :infinity\n  let vNegativeInfinity be 0 - :infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing has value, booleanTrue: vBooleanTrue has value, booleanFalse: vBooleanFalse has value, integerZero: vIntegerZero has value, floatPositive: vFloatPositive has value, percentageZero: vPercentageZero has value, textValue: vText has value, textEmpty: vTextEmpty has value, tagValue: vTag has value, tagNanValue: vTagNan has value, infinityValue: vInfinity has value, negativeInfinityValue: vNegativeInfinity has value, vectorZero: vVectorZero has value, pointZero: vPointZero has value, listValue: vList has value, listEmpty: vListEmpty has value, mapValue: vMap has value, mapEmpty: vMapEmpty has value, diceValue: vDice has value, diceEmpty: vDiceEmpty has value, rangeValue: vRange has value)\n}",
+      "script": "module AtomicCollectionHasValueOperator\non Start {\n  let vNothing be nothing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be #ab\n  let vTagNan be #nan\n  let vInfinity be infinity\n  let vNegativeInfinity be 0 - infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing has value, booleanTrue: vBooleanTrue has value, booleanFalse: vBooleanFalse has value, integerZero: vIntegerZero has value, floatPositive: vFloatPositive has value, percentageZero: vPercentageZero has value, textValue: vText has value, textEmpty: vTextEmpty has value, tagValue: vTag has value, tagNanValue: vTagNan has value, infinityValue: vInfinity has value, negativeInfinityValue: vNegativeInfinity has value, vectorZero: vVectorZero has value, pointZero: vPointZero has value, listValue: vList has value, listEmpty: vListEmpty has value, mapValue: vMap has value, mapEmpty: vMapEmpty has value, diceValue: vDice has value, diceEmpty: vDiceEmpty has value, rangeValue: vRange has value)\n}",
       "steps": [
         {
           "input": {
@@ -181,7 +183,7 @@
     {
       "kind": "scriptApi",
       "name": "is empty operator",
-      "script": "module AtomicCollectionIsEmptyOperator\non Start {\n  let vNothing be nothing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be :ab\n  let vTagNan be :nan\n  let vInfinity be :infinity\n  let vNegativeInfinity be 0 - :infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing is empty, booleanTrue: vBooleanTrue is empty, booleanFalse: vBooleanFalse is empty, integerZero: vIntegerZero is empty, floatPositive: vFloatPositive is empty, percentageZero: vPercentageZero is empty, textValue: vText is empty, textEmpty: vTextEmpty is empty, tagValue: vTag is empty, tagNanValue: vTagNan is empty, infinityValue: vInfinity is empty, negativeInfinityValue: vNegativeInfinity is empty, vectorZero: vVectorZero is empty, pointZero: vPointZero is empty, listValue: vList is empty, listEmpty: vListEmpty is empty, mapValue: vMap is empty, mapEmpty: vMapEmpty is empty, diceValue: vDice is empty, diceEmpty: vDiceEmpty is empty, rangeValue: vRange is empty)\n}",
+      "script": "module AtomicCollectionIsEmptyOperator\non Start {\n  let vNothing be nothing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be #ab\n  let vTagNan be #nan\n  let vInfinity be infinity\n  let vNegativeInfinity be 0 - infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing is empty, booleanTrue: vBooleanTrue is empty, booleanFalse: vBooleanFalse is empty, integerZero: vIntegerZero is empty, floatPositive: vFloatPositive is empty, percentageZero: vPercentageZero is empty, textValue: vText is empty, textEmpty: vTextEmpty is empty, tagValue: vTag is empty, tagNanValue: vTagNan is empty, infinityValue: vInfinity is empty, negativeInfinityValue: vNegativeInfinity is empty, vectorZero: vVectorZero is empty, pointZero: vPointZero is empty, listValue: vList is empty, listEmpty: vListEmpty is empty, mapValue: vMap is empty, mapEmpty: vMapEmpty is empty, diceValue: vDice is empty, diceEmpty: vDiceEmpty is empty, rangeValue: vRange is empty)\n}",
       "steps": [
         {
           "input": {
@@ -285,7 +287,7 @@
     {
       "kind": "scriptApi",
       "name": "default operator",
-      "script": "module AtomicCollectionDefaultOperator\non Start {\n  let vNothing be nothing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be :ab\n  let vTagNan be :nan\n  let vInfinity be :infinity\n  let vNegativeInfinity be 0 - :infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  let vRangeEmpty as :range be from 1 to 0\n  emit Done(nothingValue: vNothing :default 'fallback', booleanTrue: vBooleanTrue :default 'fallback', booleanFalse: vBooleanFalse :default 'fallback', integerZero: vIntegerZero :default 99, floatPositive: vFloatPositive :default 99, percentageZero: vPercentageZero :default 99%, textValue: vText :default 'fallback', textEmpty: vTextEmpty :default 'fallback', tagValue: vTag :default :fallback, tagNanValue: vTagNan :default :fallback, infinityValue: vInfinity :default 99, negativeInfinityValue: vNegativeInfinity :default 99, vectorZero: vVectorZero :default :vector(9, 9, 9), pointZero: vPointZero :default :point(9, 9, 9), listValue: vList :default [9], listEmpty: vListEmpty :default [9], mapValue: vMap :default [fallback: 1], mapEmpty: vMapEmpty :default [fallback: 1], diceValue: vDice :default [9], diceEmpty: vDiceEmpty :default [9], rangeValue: vRange :default [9], rangeEmpty: vRangeEmpty :default [9])\n}",
+      "script": "module AtomicCollectionDefaultOperator\non Start {\n  let vNothing be nothing\n  let vBooleanTrue be true\n  let vBooleanFalse be false\n  let vIntegerZero be 0\n  let vFloatPositive be 10.5\n  let vPercentageZero be 0%\n  let vText be 'ab'\n  let vTextEmpty be ''\n  let vTag be #ab\n  let vTagNan be #nan\n  let vInfinity be infinity\n  let vNegativeInfinity be 0 - infinity\n  let vVectorZero be :vector(0, 0, 0)\n  let vPointZero be :point(0, 0, 0)\n  let vList be [1, 2]\n  let vListEmpty be []\n  let vMap be [name: 'Ada']\n  let vMapEmpty be [:]\n  let vDice as :dice be [6, 2]\n  let vDiceEmpty as :dice be []\n  let vRange as :range be from 1 to 3\n  let vRangeEmpty as :range be from 1 to 0\n  emit Done(nothingValue: vNothing :default 'fallback', booleanTrue: vBooleanTrue :default 'fallback', booleanFalse: vBooleanFalse :default 'fallback', integerZero: vIntegerZero :default 99, floatPositive: vFloatPositive :default 99, percentageZero: vPercentageZero :default 99%, textValue: vText :default 'fallback', textEmpty: vTextEmpty :default 'fallback', tagValue: vTag :default #fallback, tagNanValue: vTagNan :default #fallback, infinityValue: vInfinity :default 99, negativeInfinityValue: vNegativeInfinity :default 99, vectorZero: vVectorZero :default :vector(9, 9, 9), pointZero: vPointZero :default :point(9, 9, 9), listValue: vList :default [9], listEmpty: vListEmpty :default [9], mapValue: vMap :default [fallback: 1], mapEmpty: vMapEmpty :default [fallback: 1], diceValue: vDice :default [9], diceEmpty: vDiceEmpty :default [9], rangeValue: vRange :default [9], rangeEmpty: vRangeEmpty :default [9])\n}",
       "steps": [
         {
           "input": {
@@ -337,8 +339,8 @@
                   "value": "nan"
                 },
                 "infinityValue": {
-                  "type": ":tag",
-                  "value": "infinity"
+                  "type": ":float",
+                  "value": "Infinity"
                 },
                 "negativeInfinityValue": {
                   "type": ":float",
@@ -359,36 +361,57 @@
                 "listValue": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
                   ]
                 },
                 "listEmpty": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "9" }
+                    {
+                      "type": ":integer",
+                      "value": "9"
+                    }
                   ]
                 },
                 "mapValue": {
                   "type": ":map",
                   "entries": {
-                    "name": { "type": ":text", "value": "Ada" }
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    }
                   }
                 },
                 "mapEmpty": {
                   "type": ":map",
                   "entries": {
-                    "fallback": { "type": ":integer", "value": "1" }
+                    "fallback": {
+                      "type": ":integer",
+                      "value": "1"
+                    }
                   }
                 },
                 "diceValue": {
                   "type": ":dice",
-                  "rolls": [6, 2]
+                  "rolls": [
+                    6,
+                    2
+                  ]
                 },
                 "diceEmpty": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "9" }
+                    {
+                      "type": ":integer",
+                      "value": "9"
+                    }
                   ]
                 },
                 "rangeValue": {
@@ -400,7 +423,10 @@
                 "rangeEmpty": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "9" }
+                    {
+                      "type": ":integer",
+                      "value": "9"
+                    }
                   ]
                 }
               }
@@ -412,7 +438,7 @@
     {
       "kind": "scriptApi",
       "name": "keys operator",
-      "script": "module AtomicCollectionKeysOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :keys vNothing, booleanValue: :keys vBoolean, integerValue: :keys vInteger, floatValue: :keys vFloat, percentageValue: :keys vPercentage, textValue: :keys vText, tagValue: :keys vTag, vectorValue: :keys vVector, pointValue: :keys vPoint, listValue: :keys vList, mapValue: :keys vMap, diceValue: :keys vDice, rangeValue: :keys vRange)\n}",
+      "script": "module AtomicCollectionKeysOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be #ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing[:keys], booleanValue: vBoolean[:keys], integerValue: vInteger[:keys], floatValue: vFloat[:keys], percentageValue: vPercentage[:keys], textValue: vText[:keys], tagValue: vTag[:keys], vectorValue: vVector[:keys], pointValue: vPoint[:keys], listValue: vList[:keys], mapValue: vMap[:keys], diceValue: vDice[:keys], rangeValue: vRange[:keys])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -490,7 +516,7 @@
     {
       "kind": "scriptApi",
       "name": "values operator",
-      "script": "module AtomicCollectionValuesOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :values vNothing, booleanValue: :values vBoolean, integerValue: :values vInteger, floatValue: :values vFloat, percentageValue: :values vPercentage, textValue: :values vText, tagValue: :values vTag, vectorValue: :values vVector, pointValue: :values vPoint, listValue: :values vList, mapValue: :values vMap, diceValue: :values vDice, rangeValue: :values vRange)\n}",
+      "script": "module AtomicCollectionValuesOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be #ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing[:values], booleanValue: vBoolean[:values], integerValue: vInteger[:values], floatValue: vFloat[:values], percentageValue: vPercentage[:values], textValue: vText[:values], tagValue: vTag[:values], vectorValue: vVector[:values], pointValue: vPoint[:values], listValue: vList[:values], mapValue: vMap[:values], diceValue: vDice[:values], rangeValue: vRange[:values])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -568,7 +594,7 @@
     {
       "kind": "scriptApi",
       "name": "entries operator",
-      "script": "module AtomicCollectionEntriesOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be :ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: :entries vNothing, booleanValue: :entries vBoolean, integerValue: :entries vInteger, floatValue: :entries vFloat, percentageValue: :entries vPercentage, textValue: :entries vText, tagValue: :entries vTag, vectorValue: :entries vVector, pointValue: :entries vPoint, listValue: :entries vList, mapValue: :entries vMap, diceValue: :entries vDice, rangeValue: :entries vRange)\n}",
+      "script": "module AtomicCollectionEntriesOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'ab'\n  let vTag be #ab\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10, alpha: 'first']\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing[:entries], booleanValue: vBoolean[:entries], integerValue: vInteger[:entries], floatValue: vFloat[:entries], percentageValue: vPercentage[:entries], textValue: vText[:entries], tagValue: vTag[:entries], vectorValue: vVector[:entries], pointValue: vPoint[:entries], listValue: vList[:entries], mapValue: vMap[:entries], diceValue: vDice[:entries], rangeValue: vRange[:entries])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -673,7 +699,7 @@
     {
       "kind": "scriptApi",
       "name": "starts with operator",
-      "script": "module AtomicCollectionStartsWithOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing starts with [1], booleanValue: vBoolean starts with [1], integerValue: vInteger starts with [1], floatValue: vFloat starts with [1], percentageValue: vPercentage starts with [1], textValue: vText starts with 'ab', tagValue: vTag starts with :ab, vectorValue: vVector starts with [1, 2], pointValue: vPoint starts with [4, 5], listValue: vList starts with [1, 2], mapValue: vMap starts with [10], diceValue: vDice starts with [3, 2], rangeValue: vRange starts with [1, 2])\n}",
+      "script": "module AtomicCollectionStartsWithOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing starts with [1], booleanValue: vBoolean starts with [1], integerValue: vInteger starts with [1], floatValue: vFloat starts with [1], percentageValue: vPercentage starts with [1], textValue: vText starts with 'ab', tagValue: vTag starts with #ab, vectorValue: vVector starts with [1, 2], pointValue: vPoint starts with [4, 5], listValue: vList starts with [1, 2], mapValue: vMap starts with [10], diceValue: vDice starts with [3, 2], rangeValue: vRange starts with [1, 2])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -749,7 +775,7 @@
     {
       "kind": "scriptApi",
       "name": "ends with operator",
-      "script": "module AtomicCollectionEndsWithOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing ends with [1], booleanValue: vBoolean ends with [1], integerValue: vInteger ends with [1], floatValue: vFloat ends with [1], percentageValue: vPercentage ends with [1], textValue: vText ends with 'cd', tagValue: vTag ends with :cd, vectorValue: vVector ends with [2, 3], pointValue: vPoint ends with [5, 6], listValue: vList ends with [2, 3], mapValue: vMap ends with [10], diceValue: vDice ends with [2, 1], rangeValue: vRange ends with [2, 3])\n}",
+      "script": "module AtomicCollectionEndsWithOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing ends with [1], booleanValue: vBoolean ends with [1], integerValue: vInteger ends with [1], floatValue: vFloat ends with [1], percentageValue: vPercentage ends with [1], textValue: vText ends with 'cd', tagValue: vTag ends with #cd, vectorValue: vVector ends with [2, 3], pointValue: vPoint ends with [5, 6], listValue: vList ends with [2, 3], mapValue: vMap ends with [10], diceValue: vDice ends with [2, 1], rangeValue: vRange ends with [2, 3])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -825,7 +851,7 @@
     {
       "kind": "scriptApi",
       "name": "contains operator",
-      "script": "module AtomicCollectionContainsOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 in vNothing, booleanValue: 1 in vBoolean, integerValue: 1 in vInteger, floatValue: 1 in vFloat, percentageValue: 1 in vPercentage, textValue: 'bc' in vText, tagValue: :bc in vTag, vectorValue: 2 in vVector, pointValue: 5 in vPoint, listValue: 2 in vList, mapValue: :hp in vMap, diceValue: 2 in vDice, rangeValue: 2 in vRange)\n}",
+      "script": "module AtomicCollectionContainsOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 in vNothing, booleanValue: 1 in vBoolean, integerValue: 1 in vInteger, floatValue: 1 in vFloat, percentageValue: 1 in vPercentage, textValue: 'bc' in vText, tagValue: #bc in vTag, vectorValue: 2 in vVector, pointValue: 5 in vPoint, listValue: 2 in vList, mapValue: #hp in vMap, diceValue: 2 in vDice, rangeValue: 2 in vRange)\n}",
       "randomSequence": [
         "3",
         "2",
@@ -901,7 +927,7 @@
     {
       "kind": "scriptApi",
       "name": "contains any and all operators",
-      "script": "module AtomicCollectionContainsAnyAllOperators\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice as :dice be [3, 2, 1]\n  let vRange as :range be from 1 to 3\n  emit Done(nothingAny: vNothing[:contains any [1]], nothingAll: vNothing[:contains all [1]], booleanAny: vBoolean[:contains any [1]], booleanAll: vBoolean[:contains all [1]], textAny: vText[:contains any ['xy', 'bc']], textAll: vText[:contains all ['ab', 'cd']], tagAny: vTag[:contains any [:xy, :bc]], tagAll: vTag[:contains all [:ab, :cd]], vectorAny: vVector[:contains any [9, 2]], vectorAll: vVector[:contains all [1, 3]], pointAny: vPoint[:contains any [9, 5]], pointAll: vPoint[:contains all [4, 6]], listAny: vList[:contains any [0, 2]], listAll: vList[:contains all [1, 3]], listAllMissing: vList[:contains all [1, 9]], mapAny: vMap[:contains any [:missing, :hp]], mapAll: vMap[:contains all [:name, :hp]], diceAny: vDice[:contains any [9, 2]], diceAll: vDice[:contains all [3, 2]], rangeAny: vRange[:contains any [9, 2]], rangeAll: vRange[:contains all [1, 3]], emptyAny: vList[:contains any []], emptyAll: vList[:contains all []])\n}",
+      "script": "module AtomicCollectionContainsAnyAllOperators\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice as :dice be [3, 2, 1]\n  let vRange as :range be from 1 to 3\n  emit Done(nothingAny: vNothing[:contains any [1]], nothingAll: vNothing[:contains all [1]], booleanAny: vBoolean[:contains any [1]], booleanAll: vBoolean[:contains all [1]], textAny: vText[:contains any ['xy', 'bc']], textAll: vText[:contains all ['ab', 'cd']], tagAny: vTag[:contains any [#xy, #bc]], tagAll: vTag[:contains all [#ab, #cd]], vectorAny: vVector[:contains any [9, 2]], vectorAll: vVector[:contains all [1, 3]], pointAny: vPoint[:contains any [9, 5]], pointAll: vPoint[:contains all [4, 6]], listAny: vList[:contains any [0, 2]], listAll: vList[:contains all [1, 3]], listAllMissing: vList[:contains all [1, 9]], mapAny: vMap[:contains any [#missing, #hp]], mapAll: vMap[:contains all [#name, #hp]], diceAny: vDice[:contains any [9, 2]], diceAll: vDice[:contains all [3, 2]], rangeAny: vRange[:contains any [9, 2]], rangeAll: vRange[:contains all [1, 3]], emptyAny: vList[:contains any []], emptyAll: vList[:contains all []])\n}",
       "steps": [
         {
           "input": {
@@ -1011,7 +1037,7 @@
     {
       "kind": "scriptApi",
       "name": "contains value operator",
-      "script": "module AtomicCollectionContainsValueOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 in values of vNothing, booleanValue: 1 in values of vBoolean, integerValue: 1 in values of vInteger, floatValue: 1 in values of vFloat, percentageValue: 1 in values of vPercentage, textValue: 'bc' in values of vText, tagValue: :bc in values of vTag, vectorValue: 2 in values of vVector, pointValue: 5 in values of vPoint, listValue: 2 in values of vList, mapValue: 10 in values of vMap, diceValue: 2 in values of vDice, rangeValue: 2 in values of vRange)\n}",
+      "script": "module AtomicCollectionContainsValueOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: 1 in values of vNothing, booleanValue: 1 in values of vBoolean, integerValue: 1 in values of vInteger, floatValue: 1 in values of vFloat, percentageValue: 1 in values of vPercentage, textValue: 'bc' in values of vText, tagValue: #bc in values of vTag, vectorValue: 2 in values of vVector, pointValue: 5 in values of vPoint, listValue: 2 in values of vList, mapValue: 10 in values of vMap, diceValue: 2 in values of vDice, rangeValue: 2 in values of vRange)\n}",
       "randomSequence": [
         "3",
         "2",
@@ -1087,7 +1113,7 @@
     {
       "kind": "scriptApi",
       "name": "union operator",
-      "script": "module AtomicCollectionUnionOperator\non Start {\n  let vNothing be nothing\n  let vInteger be 10\n  let vList be [1, 2]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice as :dice be [3, 1]\n  let vDiceOther as :dice be [2]\n  emit Done(nothingValue: vNothing | [2], integerValue: vInteger | [2], listValue: vList | [3, 4], listDiceValue: vList | vDice, diceListValue: vDice | [2, 4], diceValue: vDice | vDiceOther, mapValue: vMap | [hp: 12, mp: 5], mapKeyListValue: vMap | [:mp, 'alive'], mapInvalidKeyList: vMap | [:mp, 1], diceIntegerValue: vDice | 2)\n}",
+      "script": "module AtomicCollectionUnionOperator\non Start {\n  let vNothing be nothing\n  let vInteger be 10\n  let vList be [1, 2]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice as :dice be [3, 1]\n  let vDiceOther as :dice be [2]\n  emit Done(nothingValue: vNothing | [2], integerValue: vInteger | [2], listValue: vList | [3, 4], listDiceValue: vList | vDice, diceListValue: vDice | [2, 4], diceValue: vDice | vDiceOther, mapValue: vMap | [hp: 12, mp: 5], mapKeyListValue: vMap | [#mp, 'alive'], mapInvalidKeyList: vMap | [#mp, 1], diceIntegerValue: vDice | 2)\n}",
       "steps": [
         {
           "input": {
@@ -1228,7 +1254,7 @@
     {
       "kind": "scriptApi",
       "name": "intersect operator",
-      "script": "module AtomicCollectionIntersectOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing & [2], booleanValue: vBoolean & [2], integerValue: vInteger & [2], floatValue: vFloat & [2], percentageValue: vPercentage & [2], textValue: vText & [2], tagValue: vTag & [2], vectorValue: vVector & [2], pointValue: vPoint & [2], listValue: vList & [2, 2, 4], mapValue: vMap & [hp: 99, extra: 1], diceValue: vDice & [2, 4], rangeValue: vRange & [2])\n}",
+      "script": "module AtomicCollectionIntersectOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing & [2], booleanValue: vBoolean & [2], integerValue: vInteger & [2], floatValue: vFloat & [2], percentageValue: vPercentage & [2], textValue: vText & [2], tagValue: vTag & [2], vectorValue: vVector & [2], pointValue: vPoint & [2], listValue: vList & [2, 2, 4], mapValue: vMap & [hp: 99, extra: 1], diceValue: vDice & [2, 4], rangeValue: vRange & [2])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -1314,7 +1340,7 @@
     {
       "kind": "scriptApi",
       "name": "zip operator",
-      "script": "module AtomicCollectionZipOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be :abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :zip ['a'], booleanValue: vBoolean :zip ['a'], integerValue: vInteger :zip ['a'], floatValue: vFloat :zip ['a'], percentageValue: vPercentage :zip ['a'], textValue: vText :zip ['a'], tagValue: vTag :zip ['a'], vectorValue: vVector :zip ['a'], pointValue: vPoint :zip ['a'], listValue: vList :zip ['a', 'b'], mapValue: vMap :zip ['a'], diceValue: vDice :zip ['a', 'b'], rangeValue: vRange :zip ['a'])\n}",
+      "script": "module AtomicCollectionZipOperator\non Start {\n  let vNothing be nothing\n  let vBoolean be true\n  let vInteger be 10\n  let vFloat be 10.5\n  let vPercentage be 25%\n  let vText be 'abcd'\n  let vTag be #abcd\n  let vVector be :vector(1, 2, 3)\n  let vPoint be :point(4, 5, 6)\n  let vList be [1, 2, 3]\n  let vMap be [name: 'Ada', hp: 10]\n  let vDice be :dice 3d3\n  let vRange as :range be from 1 to 3\n  emit Done(nothingValue: vNothing :zip ['a'], booleanValue: vBoolean :zip ['a'], integerValue: vInteger :zip ['a'], floatValue: vFloat :zip ['a'], percentageValue: vPercentage :zip ['a'], textValue: vText :zip ['a'], tagValue: vTag :zip ['a'], vectorValue: vVector :zip ['a'], pointValue: vPoint :zip ['a'], listValue: vList :zip ['a', 'b'], mapValue: vMap :zip ['a'], diceValue: vDice :zip ['a', 'b'], rangeValue: vRange :zip ['a'])\n}",
       "randomSequence": [
         "3",
         "2",

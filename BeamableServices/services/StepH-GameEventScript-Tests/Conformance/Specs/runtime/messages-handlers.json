@@ -126,7 +126,7 @@
     {
       "kind": "scriptApi",
       "name": "empty uppercase invocation creates handler value",
-      "script": "on Start {\n  let handler as :handler be Shoot()\n  emit Done(name: handler.name, parameterCount: :len handler[:parameters])\n}",
+      "script": "on Start {\n  let handler as :handler be Shoot()\n  emit Done(name: handler.name, parameterCount: handler.parameters[:count])\n}",
       "steps": [
         {
           "input": {
@@ -256,7 +256,7 @@
     {
       "kind": "scriptApi",
       "name": "message and handler values expose members without becoming dictionaries",
-      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: shoot is :handler, handlerIsMap: shoot is :map, msgName: msg.name, msgSignature: msg[:signature], handlerName: shoot.name, handlerParameterCount: :len shoot[:parameters], messageArgumentCount: :len msg.arguments)\n}",
+      "script": "module MessageFirstClass\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  emit Done(msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: shoot is :handler, handlerIsMap: shoot is :map, msgName: msg.name, msgSignature: msg[#signature], handlerName: shoot.name, handlerParameterCount: shoot.parameters[:count], messageArgumentCount: msg.arguments[:count])\n}",
       "steps": [
         {
           "input": {

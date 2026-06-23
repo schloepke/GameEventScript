@@ -470,6 +470,36 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case Term:
                             vmState.GesVmTerm(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
                             break;
+                        case Exp:
+                            vmState.GesVmExp(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Floor:
+                            vmState.GesVmFloor(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Ceil:
+                            vmState.GesVmCeil(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Truncate:
+                            vmState.GesVmTruncate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case RoundHalfEven:
+                            vmState.GesVmRoundHalfEven(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case RoundHalfUp:
+                            vmState.GesVmRoundHalfUp(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case RoundHalfDown:
+                            vmState.GesVmRoundHalfDown(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case DegreeToRadians:
+                            vmState.GesVmDegreeToRadians(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case DegreeFromRadians:
+                            vmState.GesVmDegreeFromRadians(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case WrapDegree:
+                            vmState.GesVmWrapDegree(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
 
                         #endregion
 
@@ -505,8 +535,8 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case TakeRandom:
                             vmState.GesVmTakeRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
                             break;
-                        case Length:
-                            vmState.GesVmLength(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                        case Count:
+                            vmState.GesVmCount(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case StartsWith:
                             vmState.GesVmStartsWith(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
@@ -573,9 +603,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case StreamFilter:
                             vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            break;
-                        case Count:
-                            vmState.GesVmCount(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case Sum:
                             vmState.GesVmSum(instruction.DestinationSlot, vmState.Register(instruction.XSlot));

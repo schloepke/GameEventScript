@@ -63,7 +63,7 @@ public sealed class GameEventScriptValueTests
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Tag, tag.Kind);
         Assert.AreEqual("hello", text.Text);
         Assert.AreEqual("pi", tag.Text);
-        Assert.IsTrue(tag.IsNumeric);
+        Assert.IsFalse(tag.IsNumeric);
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Nothing, nan.Kind);
         Assert.IsTrue(nan.IsNothing);
         Assert.IsFalse(nan.HasValue);

@@ -188,7 +188,7 @@
     {
       "kind": "scriptApi",
       "name": "computed custom type fields are materialized",
-      "script": "record :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  emit Done(meter: hp, isMeter: hp is :gauge)\n}",
+      "script": "record :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp as :gauge be [current: 125, maximum: 100]\n  emit Done(meter: hp, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": {
@@ -391,7 +391,7 @@
     {
       "kind": "scriptApi",
       "name": "custom type constructors apply clamp and computed fields",
-      "script": "record :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and :infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
+      "script": "record :gauge as {\n  current: :number clamped between 0 and maximum,\n  maximum: :number clamped between 0 and infinity,\n  percentage: :percentage computed by\n    0% when maximum <= 0,\n    otherwise (current / maximum) as :percentage\n}\n\non Start {\n  let hp be :gauge(current: 125, maximum: 100)\n  emit Done(meter: hp, current: hp.current, percentage: hp.percentage, isMeter: hp is :gauge)\n}",
       "steps": [
         {
           "input": {
@@ -440,7 +440,7 @@
     {
       "kind": "scriptApi",
       "name": "point constructors and affine arithmetic",
-      "script": "on Start {\n  let origin be :point(10m, 20m)\n  let delta be :vector(3m, -5m)\n  let moved be origin + delta\n  let back be moved - delta\n  let between be moved - origin\n  let labeled be :point(x: 3, y: 4)\n  let yOnly be :point(y: 10m)\n  let zero_2 be :point()\n  let p_3 be :point(origin, 7m)\n  let flat be :point(p_3)\n  let badAdd be origin + moved\n  let badScale be origin * 2\n  let badAbs be :abs origin\n  emit Done(origin: origin, moved: moved, back: back, between: between, labeled: labeled, yOnly: yOnly, zero_2: zero_2, p_3: p_3, flat: flat, x: moved.x, z: p_3.z, isPoint: moved is :point, badAdd: badAdd, badScale: badScale, badAbs: badAbs)\n}",
+      "script": "on Start {\n  let origin be :point(10m, 20m)\n  let delta be :vector(3m, -5m)\n  let moved be origin + delta\n  let back be moved - delta\n  let between be moved - origin\n  let labeled be :point(x: 3, y: 4)\n  let yOnly be :point(y: 10m)\n  let zero_2 be :point()\n  let p_3 be :point(origin, 7m)\n  let flat be :point(p_3)\n  let badAdd be origin + moved\n  let badScale be origin * 2\n  let badAbs be abs origin\n  emit Done(origin: origin, moved: moved, back: back, between: between, labeled: labeled, yOnly: yOnly, zero_2: zero_2, p_3: p_3, flat: flat, x: moved.x, z: p_3.z, isPoint: moved is :point, badAdd: badAdd, badScale: badScale, badAbs: badAbs)\n}",
       "steps": [
         {
           "input": {
@@ -810,7 +810,7 @@
     {
       "kind": "scriptApi",
       "name": "degree literals preserve raw angles and wrap explicitly",
-      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :quantity(°) be 450\n  let wrapNegative be :degree.wrap -10°\n  let wrapOver be :degree.wrap 370°\n  let wrapLarge be :degree.wrap 1000°\n  let wrapCast be :degree.wrap castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :number be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :quantity(°))\n}",
+      "script": "on Start {\n  let fromLiteral be 90°\n  let overLiteral be 360°\n  let floatLiteral be 43.9°\n  let addOpen be 360° + 90°\n  let addOver be 180° + 200°\n  let subtractOpen be 10° - 40°\n  let negOpen be -90°\n  let castOpen as :quantity(°) be 450\n  let wrapNegative be wrap degree -10°\n  let wrapOver be wrap degree 370°\n  let wrapLarge be wrap degree 1000°\n  let wrapCast be wrap degree castOpen\n  let textValue as :text be 43.9°\n  let floatValue as :number be 43.9°\n  emit Done(fromLiteral: fromLiteral, overLiteral: overLiteral, floatLiteral: floatLiteral, addOpen: addOpen, addOver: addOver, subtractOpen: subtractOpen, negOpen: negOpen, castOpen: castOpen, wrapNegative: wrapNegative, wrapOver: wrapOver, wrapLarge: wrapLarge, wrapCast: wrapCast, textValue: textValue, floatValue: floatValue, isDegree: fromLiteral is :quantity(°))\n}",
       "steps": [
         {
           "input": {
@@ -903,7 +903,7 @@
     {
       "kind": "scriptApi",
       "name": "degree arithmetic percentages helpers and comparisons",
-      "script": "on Start {\n  emit Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyFloat: 30° * 0.2, divideFloat: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: :degree.wrap (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: :integer.floor 43.9°, ceilDegree: :integer.ceil 43.1°, roundEvenDegree: :integer.halfEven 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
+      "script": "on Start {\n  emit Done(addNumber: 120° + 10, subtractNumber: 120° - 150, addPercentRight: 120° + 10%, addPercentLeft: 10% + 120°, subtractPercent: 120° - 10%, multiplyPercentRight: 120° * 10%, multiplyPercentLeft: 10% * 120°, multiplyFloat: 30° * 0.2, divideFloat: 30° / 0.2, dividePercent: 120° / 10%, wrappedDividePercent: wrap degree (120° / 10%), moduloDegree: 370° mod 90°, moduloPercent: 120° mod 10%, divideZero: 120° / 0, moduloZero: 120° mod 0, reverseSubtract: 10 - 120°, reverseDivide: 10 / 120°, reverseModulo: 10 mod 120°, floorDegree: floor 43.9°, ceilDegree: ceil 43.1°, roundEvenDegree: round half even 42.5°, minDegree: :min of 350° and 10°, maxDegree: :max of 350° and 10°, greaterDegree: 350° > 10°, lessMixed: 10° < 20, percentCompare: 10° < 10%)\n}",
       "steps": [
         {
           "input": {
@@ -1038,7 +1038,7 @@
     {
       "kind": "scriptApi",
       "name": "numeric unit literals casts and strict arithmetic",
-      "script": "on Start {\n  let castMeter as :quantity(m) be 100\n  let rawMeter as :number be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :quantity(m), isSecond: 15s is :quantity(s), isFloat: castMeter is :number, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: :degree.wrap 10m)\n}",
+      "script": "on Start {\n  let castMeter as :quantity(m) be 100\n  let rawMeter as :number be castMeter\n  emit Done(distance: 100m, duration: 15s, castMeter: castMeter, rawMeter: rawMeter, isMeter: castMeter is :quantity(m), isSecond: 15s is :quantity(s), isFloat: castMeter is :number, sameAdd: 100m + 50m, mixedAdd: 100m + 50, wrongAdd: 100m + 5s, scaleLeft: 100m * 2, scaleRight: 2 * 100m, divideScalar: 100m / 2, divideSame: 100m / 25m, unitModulo: 370m mod 90m, unitModuloScalar: 100m mod 3, wrapMeter: wrap degree 10m)\n}",
       "steps": [
         {
           "input": {
@@ -1135,7 +1135,7 @@
     {
       "kind": "scriptApi",
       "name": "required standard integer and degree extensions are intrinsic",
-      "script": "on Start(value, heading, unitlessHeading, meterValue) {\n  let pi be :degree.toRadians 180°\n  emit Done(floorBare: :integer.floor value, floorCall: :integer.floor(value), floorNegative: :integer.floor -10.4, ceilNegative: :integer.ceil -10.4, truncateNegative: :integer.truncate -10.4, halfEven_12: :integer.halfEven 12.5, halfEven_13: :integer.halfEven 13.5, halfUpNegative: :integer.halfUp -12.5, halfDownNegative: :integer.halfDown -12.5, wrapNegative: :degree.wrap heading, wrapUnitless: :degree.wrap unitlessHeading, radians: pi, degrees: :degree.fromRadians pi, wrapWrongUnit: :degree.wrap meterValue, radiansWrongUnit: :degree.toRadians meterValue, fromRadiansWrongUnit: :degree.fromRadians meterValue)\n}",
+      "script": "on Start(value, heading, unitlessHeading, meterValue) {\n  let radiansValue be rad 180°\n  emit Done(floorBare: floor value, floorCall: floor(value), floorNegative: floor -10.4, ceilNegative: ceil -10.4, truncateNegative: truncate -10.4, halfEven_12: round half even 12.5, halfEven_13: round half even 13.5, halfUpNegative: round half up -12.5, halfDownNegative: round half down -12.5, wrapNegative: wrap degree heading, wrapUnitless: wrap degree unitlessHeading, radians: radiansValue, degrees: deg radiansValue, wrapWrongUnit: wrap degree meterValue, radiansWrongUnit: rad meterValue, fromRadiansWrongUnit: deg meterValue)\n}",
       "steps": [
         {
           "input": {
@@ -1241,7 +1241,7 @@
     {
       "kind": "scriptApi",
       "name": "vector values cast expose components",
-      "script": "on Start {\n  let position as :vector be [x: 10.5, y: -2]\n  let point as :vector be [1, 2, 3]\n  let lifted as :vector be position\n  let flattened as :vector be point\n  let vectorList as :list be position\n  let vectorDictionary as :map be point\n  emit Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[:y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVectorPosition: position is :vector, isVectorPoint: point is :vector, vectorIsMap: position is :map)\n}",
+      "script": "on Start {\n  let position as :vector be [x: 10.5, y: -2]\n  let point as :vector be [1, 2, 3]\n  let lifted as :vector be position\n  let flattened as :vector be point\n  let vectorList as :list be position\n  let vectorDictionary as :map be point\n  emit Done(position: position, point: point, lifted: lifted, flattened: flattened, x: position.x, y: position[#y], z: point.z, listFirst: vectorList[1], dictZ: vectorDictionary.z, isVectorPosition: position is :vector, isVectorPoint: point is :vector, vectorIsMap: position is :map)\n}",
       "steps": [
         {
           "input": {
@@ -1317,7 +1317,7 @@
     {
       "kind": "scriptApi",
       "name": "vector units are preserved in components and conversions",
-      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :number(position)\n  let rawPositionCast as :number be position\n  let remetered be :quantity(m)(rawPosition)\n  let sameMeter be :quantity(m)(position)\n  let wrongUnitVector be :quantity(s)(position)\n  let wrongScalarUnit be :quantity(m)(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[:y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
+      "script": "on Start {\n  let position be :vector(3m, 4m)\n  let rawPosition be :number(position)\n  let rawPositionCast as :number be position\n  let remetered be :quantity(m)(rawPosition)\n  let sameMeter be :quantity(m)(position)\n  let wrongUnitVector be :quantity(s)(position)\n  let wrongScalarUnit be :quantity(m)(15s)\n  let lifted as :vector be position\n  let liftedConstructed be :vector(position)\n  let liftedConstructedWithZ be :vector(position, 20m)\n  let flattened as :vector be :vector(1m, 2m, 3m)\n  let flattenedConstructed be :vector(:vector(1m, 2m, 3m))\n  let vectorList as :list be position\n  let vectorDictionary as :map be position\n  emit Done(position: position, x: position.x, y: position[#y], listY: vectorList[2], dictX: vectorDictionary.x, rawPosition: rawPosition, rawPositionCast: rawPositionCast, remetered: remetered, sameMeter: sameMeter, wrongUnitVector: wrongUnitVector, wrongScalarUnit: wrongScalarUnit, lifted: lifted, liftedConstructed: liftedConstructed, liftedConstructedWithZ: liftedConstructedWithZ, flattened: flattened, flattenedConstructed: flattenedConstructed)\n}",
       "steps": [
         {
           "input": {
@@ -1424,7 +1424,7 @@
     {
       "kind": "scriptApi",
       "name": "vector arithmetic supports addition scaling division and length",
-      "script": "on Start {\n  let a be :vector(1m, 2m)\n  let b be :vector(3m, 4m)\n  let c be :vector(1, 2, 2)\n  emit Done(sum: a + b, difference: a - b, negated: -a, scaleRight: a * 2, scaleLeft: 2 * a, percentScale: a * 50%, divided: b / 2, unitlessScaled: :vector(1, 2) * 5m, unitDivided: a / 1m, length_2: :abs :vector(3m, 4m), length_3: :abs c)\n}",
+      "script": "on Start {\n  let a be :vector(1m, 2m)\n  let b be :vector(3m, 4m)\n  let c be :vector(1, 2, 2)\n  emit Done(sum: a + b, difference: a - b, negated: -a, scaleRight: a * 2, scaleLeft: 2 * a, percentScale: a * 50%, divided: b / 2, unitlessScaled: :vector(1, 2) * 5m, unitDivided: a / 1m, length_2: abs :vector(3m, 4m), length_3: abs c)\n}",
       "steps": [
         {
           "input": {
@@ -1577,7 +1577,7 @@
     {
       "kind": "scriptApi",
       "name": "inline literals escaped quotes and numeric helpers",
-      "script": "on Start(opt, missingValue, value, meterValue) {\n  let text be 'Hello ''World'', I''m here'\n  let doubleText be \"didn't say \"\"stop\"\"\"\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be :abs (0 - 12.5)\n  let naturalOne be :ln :e\n  let naturalZero be :ln 0\n  let naturalNegative be :ln (0 - 1)\n  let naturalInfinity be :ln :infinity\n  let naturalInvalidTag be :ln :nan\n  let naturalNothing be :ln missingValue\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let boundedNothingValue be :clamp missingValue between 0 and 99\n  let boundedNothingMin be :clamp 10 between missingValue and 99\n  let boundedInvalid be :clamp 'hello' between 0 and 99\n  let boundedInfinity be :clamp :infinity between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  emit Done(text: text, doubleText: doubleText, listLen: :len myList, name: myValues.name, position: myValues.position, emptyLen: :len emptyValues, distance: distance, naturalOne: naturalOne, naturalZero: naturalZero, naturalNegative: naturalNegative, naturalInfinity: naturalInfinity, naturalInvalidTag: naturalInvalidTag, naturalNothing: naturalNothing, naturalRuntime: :ln value > 1, naturalUnit: :ln meterValue, boundedHigh: boundedHigh, boundedLow: boundedLow, boundedNothingValue: boundedNothingValue, boundedNothingMin: boundedNothingMin, boundedInvalid: boundedInvalid, boundedInfinity: boundedInfinity, highest: highest, lowest: lowest, presenceFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
+      "script": "on Start(opt, missingValue, value, meterValue) {\n  let text be 'Hello ''World'', I''m here'\n  let doubleText be \"didn't say \"\"stop\"\"\"\n  let myList be [1, 2, 3]\n  let myValues be [name: 'Hello', position: 1]\n  let emptyValues be [:]\n  let distance be abs (0 - 12.5)\n  let naturalOne be ln e\n  let naturalZero be ln 0\n  let naturalNegative be ln (0 - 1)\n  let naturalInfinity be ln infinity\n  let naturalInvalidTag be ln #nan\n  let naturalNothing be ln missingValue\n  let boundedHigh be :clamp 120 between 0 and 99\n  let boundedLow be :clamp (0 - 3) between 0 and 99\n  let boundedNothingValue be :clamp missingValue between 0 and 99\n  let boundedNothingMin be :clamp 10 between missingValue and 99\n  let boundedInvalid be :clamp 'hello' between 0 and 99\n  let boundedInfinity be :clamp infinity between 0 and 99\n  let highest be :max of 4 and 9 and 2;\n  let lowest be :min of 4 and 9 and 2;\n  emit Done(text: text, doubleText: doubleText, listLen: myList[:count], name: myValues.name, position: myValues.position, emptyLen: emptyValues[:count], distance: distance, naturalOne: naturalOne, naturalZero: naturalZero, naturalNegative: naturalNegative, naturalInfinity: naturalInfinity, naturalInvalidTag: naturalInvalidTag, naturalNothing: naturalNothing, naturalRuntime: ln value > 1, naturalUnit: ln meterValue, boundedHigh: boundedHigh, boundedLow: boundedLow, boundedNothingValue: boundedNothingValue, boundedNothingMin: boundedNothingMin, boundedInvalid: boundedInvalid, boundedInfinity: boundedInfinity, highest: highest, lowest: lowest, presenceFallback: opt :default 10, nothingFallback: missingValue :default 20)\n}",
       "steps": [
         {
           "input": {
@@ -1709,7 +1709,7 @@
     {
       "kind": "scriptApi",
       "name": "lookup and empty checks are runtime-visible",
-      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :number be 'abc'\n  emit Done(second: items[2], nothing: items[4], hp: unit[:hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
+      "script": "on Start {\n  let items be [10, 20, 30]\n  let unit be [hp: 7, name: 'Knight']\n  let emptyList be []\n  let invalidNumber as :number be 'abc'\n  emit Done(second: items[2], nothing: items[4], hp: unit[#hp], emptyList: emptyList is empty, invalidHasValue: invalidNumber has value, invalidIsEmpty: invalidNumber is empty)\n}",
       "steps": [
         {
           "input": {
@@ -1891,7 +1891,7 @@
     {
       "kind": "scriptApi",
       "name": "one based lookup and dictionary property access",
-      "script": "on Start(entry, keyName) {\n  let values be [10, 20, 30]\n  let tags be ['alpha', 'beta']\n  let lookupProperty be :name\n  emit Done(first: values[1], third: values[3], zero: values[0], missingIndex: values[4], property: entry.name, textKey: entry['name'], tagKey: entry[:name], dynamicTag: entry[lookupProperty], dynamicText: entry[keyName], missingProperty: entry['missing'], firstTag: tags[1], missingTag: tags[3])\n}",
+      "script": "on Start(entry, keyName) {\n  let values be [10, 20, 30]\n  let tags be ['alpha', 'beta']\n  let lookupProperty be #name\n  emit Done(first: values[1], third: values[3], zero: values[0], missingIndex: values[4], property: entry.name, textKey: entry['name'], tagKey: entry[#name], dynamicTag: entry[lookupProperty], dynamicText: entry[keyName], missingProperty: entry['missing'], firstTag: tags[1], missingTag: tags[3])\n}",
       "steps": [
         {
           "input": {
@@ -2118,7 +2118,7 @@
     {
       "kind": "scriptApi",
       "name": "type conversions length checks and type tags",
-      "script": "on Start(valueForLen, a, b, c, d, e, f, g) {\n  let tagOk as :tag be :name\n  let numberOk as :number be '12.2'\n  let numberFail as :number be 'abc'\n  let integerOk as :number be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: :len listOk, diceFirst: diceOk[1], diceLen: :len diceOk, textLen: :len 'abc', dictLen: :len [first: 1, second: 2], valueForLenLen: :len valueForLen, floatLen: :len 12.5, booleanLen: :len true, aIsTag: a is :tag, bIsFloat: b is :number, cIsInteger: c is :number, dIsText: d is :text, eIsList: e is :list, fIsMap: f is :map, gIsNothing: g is nothing)\n}",
+      "script": "on Start(valueForLen, a, b, c, d, listArg, f, g) {\n  let tagOk as :tag be #name\n  let numberOk as :number be '12.2'\n  let numberFail as :number be 'abc'\n  let integerOk as :number be '12.7'\n  let booleanOk as :boolean be 'true'\n  let listOk as :list be 'ab'\n  let diceOk as :dice be [6, 2, 4]\n  emit Done(tagOk: tagOk, numberOk: numberOk, numberFail: numberFail, integerOk: integerOk, booleanOk: booleanOk, listLen: listOk[:count], diceFirst: diceOk[1], diceLen: diceOk[:count], textLen: valueForLen[:count], dictLen: [first: 1, second: 2][:count], valueForLenLen: valueForLen[:count], floatLen: 12.5[:count], booleanLen: true[:count], aIsTag: a is :tag, bIsFloat: b is :number, cIsInteger: c is :number, dIsText: d is :text, eIsList: listArg is :list, fIsMap: f is :map, gIsNothing: g is nothing)\n}",
       "randomSequence": [
         "2",
         "6",
@@ -2150,7 +2150,7 @@
                 "type": ":text",
                 "value": "x"
               },
-              "e": {
+              "listArg": {
                 "type": ":list",
                 "items": [
                   {
@@ -2248,7 +2248,7 @@
                 },
                 "textLen": {
                   "type": ":integer",
-                  "value": "3"
+                  "value": "1"
                 },
                 "valueForLenLen": {
                   "type": ":integer",
@@ -2263,7 +2263,7 @@
     {
       "kind": "scriptApi",
       "name": "unary domain conditional and standard integer rounding forms",
-      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :number be 12 when age is :boolean, or 15 when age is :number, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: target has value, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: :integer.floor 12.7, ceil: :integer.ceil 12.1, roundEven_12: :integer.halfEven 12.5, roundEven_13: :integer.halfEven 13.5, truncate: :integer.truncate -12.9, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5)\n}",
+      "script": "on Start(hp, mana, hand, target, age) {\n  let negInt be -12\n  let negFloat be -12.34\n  let negPercent be -25%\n  let restored be -negFloat\n  let score as :number be 12 when age is :boolean, or 15 when age is :number, otherwise 5\n  emit Done(negInt: negInt, negFloat: negFloat, negPercent: negPercent, restored: restored, boolNegation: not false, hpCheck: hp is 0 or less, manaCheck: mana is at least 3, handCheck: hand is empty, targetCheck: target has value, oldHasValue: target has value, newHasValue: target has value, oldEmpty: empty hand, newEmpty: hand is empty, score: score, floor: floor 12.7, ceil: ceil 12.1, roundEven_12: round half even 12.5, roundEven_13: round half even 13.5, truncate: truncate -12.9, halfUp: round half up -12.5, halfDown: round half down -12.5)\n}",
       "steps": [
         {
           "input": {
@@ -2644,7 +2644,7 @@
     {
       "kind": "scriptApi",
       "name": "additional unicode mathematical aliases",
-      "script": "on Start(x, y) {\n  let tags be [:boss, :scout]\n  let unit be [name: 'Ada', hp: 10]\n  let projected be :list[:select item from 1 to 2↦item + 1]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: :boss ∈ tags, tagNotMember: :ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :number, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :number, unicodeNegativeInfinity: −∞ + 1, piTag: :pi as :number, piAlias: ∏ as :number, piGreater: ∏ > 3, eTag: :e as :number, eAlias: ℇ as :number, eLess: ℇ < 3, tauTag: :tau as :number, tauAlias: τ as :number, tauGreater: τ > 6, phiTag: :phi as :number, phiAlias: φ as :number, phiBetween: φ > 1 and φ < 2, sqrtTag: :sqrt 81, sqrtAlias: √81, cbrtTag: :cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])\n}",
+      "script": "on Start(x, y) {\n  let tags be [#boss, #scout]\n  let unit be [name: 'Ada', hp: 10]\n  let projected be :list[:select item from 1 to 2↦item + 1]\n  emit Done(dot: x · y, smallDot: x ⋅ y, unicodeMinus: y − x, andAlias: true ∧ false, orAlias: false ∨ true, xorAlias: true ⊕ false, tagMember: #boss ∈ tags, tagNotMember: #ghost ∉ tags, dictKey: 'name' ∈ unit, infinity: ∞ as :number, infinityAdd: ∞ + 1, negativeInfinity: -∞ as :number, unicodeNegativeInfinity: −∞ + 1, piTag: pi as :number, piAlias: ∏ as :number, piGreater: ∏ > 3, eTag: e as :number, eAlias: ℇ as :number, eLess: ℇ < 3, tauTag: tau as :number, tauAlias: τ as :number, tauGreater: τ > 6, phiTag: 1.6180339887498948 as :number, phiAlias: 1.6180339887498948 as :number, phiBetween: 1.6180339887498948 > 1 and 1.6180339887498948 < 2, sqrtTag: sqrt 81, sqrtAlias: √81, cbrtTag: cbrt 27, cbrtAlias: ∛27, projectionAlias: projected[2])\n}",
       "steps": [
         {
           "input": {
@@ -2793,7 +2793,7 @@
     {
       "kind": "scriptApi",
       "name": "floating point equality uses ulp tolerance",
-      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, far: 0.1 = 0.2, tagExact: :nan = :nan, unitNear: 0.1m + 0.2m = 0.3m, unitMismatch: 1m = 1s)\n}",
+      "script": "on Start {\n  let near be 0.1 + 0.2\n  let target be 0.3\n  emit Done(exact: near = target, far: 0.1 = 0.2, tagExact: #nan = #nan, unitNear: 0.1m + 0.2m = 0.3m, unitMismatch: 1m = 1s)\n}",
       "steps": [
         {
           "input": {
@@ -3002,7 +3002,7 @@
     {
       "kind": "scriptApi",
       "name": "type checks identify primitive custom and first class values",
-      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: :ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: nothing is nothing)\n}",
+      "script": "on Start(custom) {\n  let integerValue be 12\n  let percentValue be 5%\n  let degreeValue be 90°\n  let meterValue be 100m\n  let secondValue be 15s\n  let listValue be [1]\n  let dictValue be [name: 'Ada']\n  let msg be Ping(value: 1)\n  let handler be Ping(value)\n  emit Done(intIsInteger: integerValue is :number, intIsFloat: integerValue is :number, percentIsFloat: percentValue is :number, degreeIsFloat: degreeValue is :number, degreeIsDegree: degreeValue is :quantity(°), meterIsMeter: meterValue is :quantity(m), secondIsSecond: secondValue is :quantity(s), textIsText: 'x' is :text, tagIsTag: #ready is :tag, boolIsBoolean: true is :boolean, listIsList: listValue is :list, dictIsMap: dictValue is :map, customIsGauge: custom is :gauge, customIsMap: custom is :map, msgIsMessage: msg is :message, msgIsMap: msg is :map, handlerIsHandler: handler is :handler, missingIsNothing: nothing is nothing)\n}",
       "steps": [
         {
           "input": {
@@ -3162,7 +3162,7 @@
     {
       "kind": "scriptApi",
       "name": "old unit names remain ordinary tags",
-      "script": "on Start {\n  emit Done(meter: :meter, degree: :degree, seconds: :seconds)\n}",
+      "script": "on Start {\n  emit Done(meter: #meter, degree: #degree, seconds: #seconds)\n}",
       "steps": [
         {
           "input": {

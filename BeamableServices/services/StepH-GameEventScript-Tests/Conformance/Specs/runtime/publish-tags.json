@@ -5,22 +5,43 @@
     {
       "kind": "scriptApi",
       "name": "emit stays local while publish uses outbound hook",
-      "script": "on Start {\n  emit Local\n  publish Remote with :radio\n}\n\non Local {\n  emit Seen(value: 1)\n}\n\non Remote {\n  emit ShouldNotRun\n}",
+      "script": "on Start {\n  emit Local\n  publish Remote with #radio\n}\n\non Local {\n  emit Seen(value: 1)\n}\n\non Remote {\n  emit ShouldNotRun\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
-            { "name": "Local", "args": {} },
-            { "name": "Remote", "tags": ["radio"], "args": {} },
+            {
+              "name": "Local",
+              "args": {}
+            },
+            {
+              "name": "Remote",
+              "tags": [
+                "radio"
+              ],
+              "args": {}
+            },
             {
               "name": "Seen",
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             }
           ],
           "expectedOutboundPublished": [
-            { "name": "Remote", "tags": ["radio"], "args": {} }
+            {
+              "name": "Remote",
+              "tags": [
+                "radio"
+              ],
+              "args": {}
+            }
           ]
         }
       ]
@@ -77,47 +98,74 @@
     {
       "kind": "scriptApi",
       "name": "emit tags match handler filters",
-      "script": "on Start {\n  let group be [:radio, :command, :radio]\n  emit Signal(value: 1) with group\n  emit Signal(value: 2) with :radio, :blocked\n  emit Signal(value: 3)\n}\n\non Signal(value) matching :radio, :command {\n  emit Seen(value: value)\n}\n\non Signal(value) matching :radio without :blocked {\n  emit Seen(value: value + 10)\n}\n\non Signal(value) without :radio {\n  emit Seen(value: value + 100)\n}",
+      "script": "on Start {\n  let group be [#radio, #command, #radio]\n  emit Signal(value: 1) with group\n  emit Signal(value: 2) with #radio, #blocked\n  emit Signal(value: 3)\n}\n\non Signal(value) matching #radio, #command {\n  emit Seen(value: value)\n}\n\non Signal(value) matching #radio without #blocked {\n  emit Seen(value: value + 10)\n}\n\non Signal(value) without #radio {\n  emit Seen(value: value + 100)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Signal",
-              "tags": ["radio", "command"],
+              "tags": [
+                "radio",
+                "command"
+              ],
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
             {
               "name": "Signal",
-              "tags": ["radio", "blocked"],
+              "tags": [
+                "radio",
+                "blocked"
+              ],
               "args": {
-                "value": { "type": ":integer", "value": "2" }
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             },
             {
               "name": "Signal",
               "args": {
-                "value": { "type": ":integer", "value": "3" }
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             },
             {
               "name": "Seen",
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
             {
               "name": "Seen",
               "args": {
-                "value": { "type": ":integer", "value": "11" }
+                "value": {
+                  "type": ":integer",
+                  "value": "11"
+                }
               }
             },
             {
               "name": "Seen",
               "args": {
-                "value": { "type": ":integer", "value": "103" }
+                "value": {
+                  "type": ":integer",
+                  "value": "103"
+                }
               }
             }
           ]
@@ -127,35 +175,70 @@
     {
       "kind": "scriptApi",
       "name": "undeliverable endpoint receives unknown tagged messages",
-      "script": "on Start {\n  emit Unknown(value: 7) with :radio, :encrypted\n  emit Silent(value: 1) with :silent\n}\n\non undeliverable as message matching :radio {\n  emit Heard(name: message.name, signature: message.signature, value: message.arguments.value, tagCount: :len message.tags, firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)\n}",
+      "script": "on Start {\n  emit Unknown(value: 7) with #radio, #encrypted\n  emit Silent(value: 1) with #silent\n}\n\non undeliverable as message matching #radio {\n  emit Heard(name: message.name, signature: message.signature, value: message.arguments.value, tagCount: message.tags[:count], firstTag: message.tags[1], secondTag: message.tags[2], isMessage: message is :message)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Unknown",
-              "tags": ["radio", "encrypted"],
+              "tags": [
+                "radio",
+                "encrypted"
+              ],
               "args": {
-                "value": { "type": ":integer", "value": "7" }
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
             },
             {
               "name": "Silent",
-              "tags": ["silent"],
+              "tags": [
+                "silent"
+              ],
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
             {
               "name": "Heard",
               "args": {
-                "firstTag": { "type": ":tag", "value": "radio" },
-                "isMessage": { "type": ":boolean", "value": true },
-                "name": { "type": ":text", "value": "Unknown" },
-                "secondTag": { "type": ":tag", "value": "encrypted" },
-                "signature": { "type": ":text", "value": "Unknown(value)" },
-                "tagCount": { "type": ":integer", "value": "2" },
-                "value": { "type": ":integer", "value": "7" }
+                "firstTag": {
+                  "type": ":tag",
+                  "value": "radio"
+                },
+                "isMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "name": {
+                  "type": ":text",
+                  "value": "Unknown"
+                },
+                "secondTag": {
+                  "type": ":tag",
+                  "value": "encrypted"
+                },
+                "signature": {
+                  "type": ":text",
+                  "value": "Unknown(value)"
+                },
+                "tagCount": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
             }
           ]
@@ -165,22 +248,33 @@
     {
       "kind": "scriptApi",
       "name": "normal delivery suppresses undeliverable endpoint",
-      "script": "on Start {\n  emit Known(value: 3) with :radio\n}\n\non Known(value) matching :radio {\n  emit Normal(value: value)\n}\n\non undeliverable as message matching :radio {\n  emit Unexpected(name: message.name)\n}",
+      "script": "on Start {\n  emit Known(value: 3) with #radio\n}\n\non Known(value) matching #radio {\n  emit Normal(value: value)\n}\n\non undeliverable as message matching #radio {\n  emit Unexpected(name: message.name)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Known",
-              "tags": ["radio"],
+              "tags": [
+                "radio"
+              ],
               "args": {
-                "value": { "type": ":integer", "value": "3" }
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             },
             {
               "name": "Normal",
               "args": {
-                "value": { "type": ":integer", "value": "3" }
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             }
           ]
@@ -190,59 +284,120 @@
     {
       "kind": "scriptApi",
       "name": "message-name handler receives matching names with original message",
-      "script": "on Start {\n  emit Damage(amount: 3) with :radio, :enemy\n  emit Damage(amount: 5, kind: 'fire') with :radio\n  emit Damage(amount: 7) with :silent\n}\n\non Damage as message matching :radio {\n  emit Heard(signature: message.signature, amount: message.arguments.amount, tagCount: :len message.tags, firstTag: message.tags[1], isMessage: message is :message)\n}\n\non undeliverable as message matching :silent {\n  emit Missed(signature: message.signature, amount: message.arguments.amount, tag: message.tags[1])\n}",
+      "script": "on Start {\n  emit Damage(amount: 3) with #radio, #enemy\n  emit Damage(amount: 5, kind: 'fire') with #radio\n  emit Damage(amount: 7) with #silent\n}\n\non Damage as message matching #radio {\n  emit Heard(signature: message.signature, amount: message.arguments.amount, tagCount: message.tags[:count], firstTag: message.tags[1], isMessage: message is :message)\n}\n\non undeliverable as message matching #silent {\n  emit Missed(signature: message.signature, amount: message.arguments.amount, tag: message.tags[1])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Damage",
-              "tags": ["radio", "enemy"],
+              "tags": [
+                "radio",
+                "enemy"
+              ],
               "args": {
-                "amount": { "type": ":integer", "value": "3" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             },
             {
               "name": "Damage",
-              "tags": ["radio"],
+              "tags": [
+                "radio"
+              ],
               "args": {
-                "amount": { "type": ":integer", "value": "5" },
-                "kind": { "type": ":text", "value": "fire" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "kind": {
+                  "type": ":text",
+                  "value": "fire"
+                }
               }
             },
             {
               "name": "Damage",
-              "tags": ["silent"],
+              "tags": [
+                "silent"
+              ],
               "args": {
-                "amount": { "type": ":integer", "value": "7" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
             },
             {
               "name": "Heard",
               "args": {
-                "amount": { "type": ":integer", "value": "3" },
-                "firstTag": { "type": ":tag", "value": "radio" },
-                "isMessage": { "type": ":boolean", "value": true },
-                "signature": { "type": ":text", "value": "Damage(amount)" },
-                "tagCount": { "type": ":integer", "value": "2" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "firstTag": {
+                  "type": ":tag",
+                  "value": "radio"
+                },
+                "isMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "signature": {
+                  "type": ":text",
+                  "value": "Damage(amount)"
+                },
+                "tagCount": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             },
             {
               "name": "Heard",
               "args": {
-                "amount": { "type": ":integer", "value": "5" },
-                "firstTag": { "type": ":tag", "value": "radio" },
-                "isMessage": { "type": ":boolean", "value": true },
-                "signature": { "type": ":text", "value": "Damage(amount,kind)" },
-                "tagCount": { "type": ":integer", "value": "1" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "5"
+                },
+                "firstTag": {
+                  "type": ":tag",
+                  "value": "radio"
+                },
+                "isMessage": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "signature": {
+                  "type": ":text",
+                  "value": "Damage(amount,kind)"
+                },
+                "tagCount": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
             {
               "name": "Missed",
               "args": {
-                "amount": { "type": ":integer", "value": "7" },
-                "signature": { "type": ":text", "value": "Damage(amount)" },
-                "tag": { "type": ":tag", "value": "silent" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "7"
+                },
+                "signature": {
+                  "type": ":text",
+                  "value": "Damage(amount)"
+                },
+                "tag": {
+                  "type": ":tag",
+                  "value": "silent"
+                }
               }
             }
           ]
@@ -252,28 +407,42 @@
     {
       "kind": "scriptApi",
       "name": "exact and message-name handlers share dispatch order",
-      "script": "on Start {\n  emit Damage(amount: 9) with :radio\n}\n\non Damage(amount) matching :radio {\n  emit Exact(amount: amount)\n}\n\non Damage as message matching :radio {\n  emit Any(signature: message.signature)\n}",
+      "script": "on Start {\n  emit Damage(amount: 9) with #radio\n}\n\non Damage(amount) matching #radio {\n  emit Exact(amount: amount)\n}\n\non Damage as message matching #radio {\n  emit Any(signature: message.signature)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Damage",
-              "tags": ["radio"],
+              "tags": [
+                "radio"
+              ],
               "args": {
-                "amount": { "type": ":integer", "value": "9" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "9"
+                }
               }
             },
             {
               "name": "Exact",
               "args": {
-                "amount": { "type": ":integer", "value": "9" }
+                "amount": {
+                  "type": ":integer",
+                  "value": "9"
+                }
               }
             },
             {
               "name": "Any",
               "args": {
-                "signature": { "type": ":text", "value": "Damage(amount)" }
+                "signature": {
+                  "type": ":text",
+                  "value": "Damage(amount)"
+                }
               }
             }
           ]

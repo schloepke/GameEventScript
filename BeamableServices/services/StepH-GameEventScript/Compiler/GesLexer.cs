@@ -21,6 +21,23 @@ internal enum GesTokenKind
     True,
     False,
     Nothing,
+    MathConstantPi,
+    MathConstantE,
+    MathConstantTau,
+    MathConstantInfinity,
+    IntrinsicAbs,
+    IntrinsicLn,
+    IntrinsicExp,
+    IntrinsicSqrt,
+    IntrinsicCbrt,
+    IntrinsicChance,
+    IntrinsicFloor,
+    IntrinsicCeil,
+    IntrinsicTruncate,
+    IntrinsicRad,
+    IntrinsicDeg,
+    IntrinsicWrap,
+    IntrinsicRound,
     Module,
     Record,
     Predicate,
@@ -203,6 +220,9 @@ internal sealed class GesLexer
                 case ':' when char.IsLower(Peek()):
                     yield return ReadSelectorToken(startLine, startColumn);
                     continue;
+                case '#' when char.IsLower(Peek()):
+                    yield return ReadTagToken(startLine, startColumn);
+                    continue;
                 default:
                     yield return ReadOperatorToken(startLine, startColumn);
                     continue;
@@ -293,6 +313,23 @@ internal sealed class GesLexer
             "true" => new GesToken(GesTokenKind.True, text, line, column, endLine, endColumn),
             "false" => new GesToken(GesTokenKind.False, text, line, column, endLine, endColumn),
             "nothing" => new GesToken(GesTokenKind.Nothing, text, line, column, endLine, endColumn),
+            "pi" => new GesToken(GesTokenKind.MathConstantPi, text, line, column, endLine, endColumn),
+            "e" => new GesToken(GesTokenKind.MathConstantE, text, line, column, endLine, endColumn),
+            "tau" => new GesToken(GesTokenKind.MathConstantTau, text, line, column, endLine, endColumn),
+            "infinity" => new GesToken(GesTokenKind.MathConstantInfinity, text, line, column, endLine, endColumn),
+            "abs" => new GesToken(GesTokenKind.IntrinsicAbs, text, line, column, endLine, endColumn),
+            "ln" => new GesToken(GesTokenKind.IntrinsicLn, text, line, column, endLine, endColumn),
+            "exp" => new GesToken(GesTokenKind.IntrinsicExp, text, line, column, endLine, endColumn),
+            "sqrt" => new GesToken(GesTokenKind.IntrinsicSqrt, text, line, column, endLine, endColumn),
+            "cbrt" => new GesToken(GesTokenKind.IntrinsicCbrt, text, line, column, endLine, endColumn),
+            "chance" => new GesToken(GesTokenKind.IntrinsicChance, text, line, column, endLine, endColumn),
+            "floor" => new GesToken(GesTokenKind.IntrinsicFloor, text, line, column, endLine, endColumn),
+            "ceil" => new GesToken(GesTokenKind.IntrinsicCeil, text, line, column, endLine, endColumn),
+            "truncate" => new GesToken(GesTokenKind.IntrinsicTruncate, text, line, column, endLine, endColumn),
+            "rad" => new GesToken(GesTokenKind.IntrinsicRad, text, line, column, endLine, endColumn),
+            "deg" => new GesToken(GesTokenKind.IntrinsicDeg, text, line, column, endLine, endColumn),
+            "wrap" => new GesToken(GesTokenKind.IntrinsicWrap, text, line, column, endLine, endColumn),
+            "round" => new GesToken(GesTokenKind.IntrinsicRound, text, line, column, endLine, endColumn),
             "module" => new GesToken(GesTokenKind.Module, text, line, column, endLine, endColumn),
             _ when char.IsUpper(text[0]) => new GesToken(GesTokenKind.Message, text, line, column, endLine, endColumn),
             _ => new GesToken(GesTokenKind.Identifier, text, line, column, endLine, endColumn)
@@ -377,6 +414,42 @@ internal sealed class GesLexer
                 "sort" => CreateToken(GesTokenKind.SelectorSort, $":{selector}", line, column),
                 _ => CreateToken(GesTokenKind.Tag, $":{selector}", line, column)
             };
+        while (!IsAtEnd && !char.IsWhiteSpace(Current))
+        {
+            Advance();
+        }
+
+        return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+    }
+
+    private GesToken ReadTagToken(int line, int column)
+    {
+        var start = _index;
+        Advance();
+        var tagStart = _index;
+        ReadWhile(IsWordLetter);
+        if (!IsAtEnd && Current == '_')
+        {
+            Advance();
+            if (!ReadValidIdentifierSuffix())
+            {
+                while (!IsAtEnd && !char.IsWhiteSpace(Current))
+                {
+                    Advance();
+                }
+
+                return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+            }
+        }
+
+        if (_index == tagStart)
+        {
+            return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
+        }
+
+        if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
+            return CreateToken(GesTokenKind.Tag, _input[start.._index], line, column);
+
         while (!IsAtEnd && !char.IsWhiteSpace(Current))
         {
             Advance();
@@ -542,13 +615,13 @@ internal sealed class GesLexer
                     '\u00D7' => CreateToken(GesTokenKind.OperatorMultiply, "*", line, column),
                     '\u00F7' => CreateToken(GesTokenKind.OperatorDivide, "/", line, column),
                     '\u2212' => CreateToken(GesTokenKind.OperatorMinus, "-", line, column),
-                    '\u221E' => CreateToken(GesTokenKind.Tag, ":infinity", line, column),
-                    '\u220F' => CreateToken(GesTokenKind.Tag, ":pi", line, column),
-                    '\u2107' => CreateToken(GesTokenKind.Tag, ":e", line, column),
-                    '\u03C4' => CreateToken(GesTokenKind.Tag, ":tau", line, column),
-                    '\u03C6' => CreateToken(GesTokenKind.Tag, ":phi", line, column),
-                    '\u221A' => CreateToken(GesTokenKind.Tag, ":sqrt", line, column),
-                    '\u221B' => CreateToken(GesTokenKind.Tag, ":cbrt", line, column),
+                    '\u221E' => CreateToken(GesTokenKind.MathConstantInfinity, "infinity", line, column),
+                    '\u03C0' => CreateToken(GesTokenKind.MathConstantPi, "pi", line, column),
+                    '\u220F' => CreateToken(GesTokenKind.MathConstantPi, "pi", line, column),
+                    '\u2107' => CreateToken(GesTokenKind.MathConstantE, "e", line, column),
+                    '\u03C4' => CreateToken(GesTokenKind.MathConstantTau, "tau", line, column),
+                    '\u221A' => CreateToken(GesTokenKind.IntrinsicSqrt, "sqrt", line, column),
+                    '\u221B' => CreateToken(GesTokenKind.IntrinsicCbrt, "cbrt", line, column),
                     '\u00B0' => CreateToken(GesTokenKind.Identifier, "degree", line, column),
                     '\u2227' => CreateToken(GesTokenKind.OperatorAnd, "\u2227", line, column),
                     '\u2228' => CreateToken(GesTokenKind.OperatorOr, "\u2228", line, column),
@@ -615,7 +688,7 @@ internal sealed class GesLexer
         => ch is '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B';
 
     private static bool IsStructuralBoundary(char ch)
-        => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
+        => ch is '(' or ')' or '{' or '}' or '[' or ']' or ',' or ';' or '.' or ':' or '#' or '+' or '-' or '*' or '/' or '!' or '~' or '&' or '|' or '^' or '=' or '<' or '>' or
             '\u00B7' or '\u00D7' or '\u00F7' or '\u2212' or '\u221E' or '\u220F' or '\u2107' or '\u03C4' or '\u03C6' or '\u221A' or '\u221B' or '\u00B0' or
             '\u2227' or '\u2228' or '\u2208' or '\u2209' or '\u2295' or '\u22C5' or
             '\u2264' or '\u2265' or '\u00AC' or '\u2260' or '\u2248' or '\u2245' or

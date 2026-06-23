@@ -7,13 +7,22 @@
       "name": "message signatures are ordered",
       "signature": {
         "name": "Start",
-        "parameters": ["a", "b"]
+        "parameters": [
+          "a",
+          "b"
+        ]
       },
       "message": {
         "name": "Start",
         "args": {
-          "b": { "type": ":integer", "value": "2" },
-          "a": { "type": ":integer", "value": "1" }
+          "b": {
+            "type": ":integer",
+            "value": "2"
+          },
+          "a": {
+            "type": ":integer",
+            "value": "1"
+          }
         }
       },
       "expectedMessageName": "Start",
@@ -27,13 +36,22 @@
       "name": "signature ids trim message names preserve parameter order and include name",
       "signature": {
         "name": " Shoot ",
-        "parameters": ["unit", "target"]
+        "parameters": [
+          "unit",
+          "target"
+        ]
       },
       "message": {
         "name": " Shoot ",
         "args": {
-          "target": { "type": ":integer", "value": "2" },
-          "unit": { "type": ":integer", "value": "1" }
+          "target": {
+            "type": ":integer",
+            "value": "2"
+          },
+          "unit": {
+            "type": ":integer",
+            "value": "1"
+          }
         }
       },
       "expectedMessageName": "Shoot",
@@ -47,13 +65,22 @@
       "name": "signature id includes the message name",
       "signature": {
         "name": "Run",
-        "parameters": ["target", "unit"]
+        "parameters": [
+          "target",
+          "unit"
+        ]
       },
       "message": {
         "name": "Run",
         "args": {
-          "target": { "type": ":integer", "value": "2" },
-          "unit": { "type": ":integer", "value": "1" }
+          "target": {
+            "type": ":integer",
+            "value": "2"
+          },
+          "unit": {
+            "type": ":integer",
+            "value": "1"
+          }
         }
       },
       "expectedMessageName": "Run",
@@ -70,7 +97,9 @@
         {
           "name": "Start",
           "count": 1,
-          "signatureIds": ["Start(playerId)"]
+          "signatureIds": [
+            "Start(playerId)"
+          ]
         }
       ]
     }

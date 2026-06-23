@@ -2,7 +2,6 @@ using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.VirtualMachine.GesVmMathConstants;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
@@ -669,10 +668,7 @@ internal static class GesVmRegisterSortGroupDistinct
             case Percentage:
                 return 1;
             case Tag:
-            {
-                var text = value.TextValue;
-                return IsNumericTag(text) ? 1 : 3;
-            }
+                return 3;
             case Text:
                 return 2;
             case Vector:

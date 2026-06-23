@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "collections project filter aggregate and choose edges",
-      "script": "on Compute(items) {\n  let names be items[:select item => item.name]\n  let positive be items[:filter item where item.points > 0]\n  let total be items[:sum item => item.points]\n  let positiveCount be items[:count item where item.points > 0]\n  let averagePoints be items[:average item => item.points]\n  let highestItem be items[:highest item => item.points]\n  let lowestItem be items[:lowest item => item.points]\n  emit Done(nameCount: :len names, positiveCount: :len positive, total: total, counted: positiveCount, average: averagePoints, highest: highestItem.name, lowest: lowestItem.name)\n}",
+      "script": "on Compute(items) {\n  let names be items[:select item => item.name]\n  let positive be items[:filter item where item.points > 0]\n  let total be items[:sum item => item.points]\n  let positiveCount be items[:count item where item.points > 0]\n  let averagePoints be items[:average item => item.points]\n  let highestItem be items[:highest item => item.points]\n  let lowestItem be items[:lowest item => item.points]\n  emit Done(nameCount: names[:count], positiveCount: positive[:count], total: total, counted: positiveCount, average: averagePoints, highest: highestItem.name, lowest: lowestItem.name)\n}",
       "steps": [
         {
           "input": {
@@ -172,7 +172,7 @@
     {
       "kind": "scriptApi",
       "name": "selector variants are observable through runtime behavior",
-      "script": "on Start(items) {\n  let hasAny be items[:any item where item.points > 10]\n  let allValid be items[:all item where item.points >= 0]\n  let firstTwo be items[:take first 2]\n  let withoutLast be items[:drop last 1]\n  let firstAlive be items[:first item where item.alive]\n  let lastAlive be items[:last item where item.alive]\n  let singleBoss be items[:single item where item.role = :boss]\n  let weakest be items[:min item => item.points]\n  let strongest be items[:max item => item.points]\n  let topItem be items[:highest item => item.points]\n  let lowItem be items[:lowest item => item.points]\n  emit Done(hasAny: hasAny, allValid: allValid, firstTwoCount: :len firstTwo, withoutLastCount: :len withoutLast, firstAlive: firstAlive.name, lastAlive: lastAlive.name, singleBoss: singleBoss.name, weakest: weakest.name, strongest: strongest.name, topItem: topItem.name, lowItem: lowItem.name)\n}",
+      "script": "on Start(items) {\n  let hasAny be items[:any item where item.points > 10]\n  let allValid be items[:all item where item.points >= 0]\n  let firstTwo be items[:take first 2]\n  let withoutLast be items[:drop last 1]\n  let firstAlive be items[:first item where item.alive]\n  let lastAlive be items[:last item where item.alive]\n  let singleBoss be items[:single item where item.role = #boss]\n  let weakest be items[:min item => item.points]\n  let strongest be items[:max item => item.points]\n  let topItem be items[:highest item => item.points]\n  let lowItem be items[:lowest item => item.points]\n  emit Done(hasAny: hasAny, allValid: allValid, firstTwoCount: firstTwo[:count], withoutLastCount: withoutLast[:count], firstAlive: firstAlive.name, lastAlive: lastAlive.name, singleBoss: singleBoss.name, weakest: weakest.name, strongest: strongest.name, topItem: topItem.name, lowItem: lowItem.name)\n}",
       "steps": [
         {
           "input": {
@@ -343,8 +343,7 @@
             }
           ],
           "unexpectedRuntimeLimits": [
-            {
-            }
+            {}
           ]
         }
       ]
@@ -502,7 +501,7 @@
     {
       "kind": "scriptApi",
       "name": "dictionary selectors use last wins semantics",
-      "script": "on Start(items) {\n  let byId be items[:map item by item.id]\n  let namesById be items[:map item by item.id => item.name]\n  emit Done(rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, rookName: namesById[:rook], mageName: namesById[:mage], count: :len byId)\n}",
+      "script": "on Start(items) {\n  let byId be items[:map item by item.id]\n  let namesById be items[:map item by item.id => item.name]\n  emit Done(rookHp: byId[#rook].hp, mageHp: byId[#mage].hp, rookName: namesById[#rook], mageName: namesById[#mage], count: byId[:count])\n}",
       "steps": [
         {
           "input": {
@@ -599,7 +598,7 @@
     {
       "kind": "scriptApi",
       "name": "collections sort order distinct and group",
-      "script": "on Start(values, units) {\n  let ascendingValues be values[:sort ascending]\n  let descendingValues be values[:sort descending]\n  let byPriority be units[:order by item => item.priority descending]\n  let firstValue be values[:first]\n  let lastValue be values[:last]\n  let distinctValues be values[:distinct]\n  let distinctFactions be units[:distinct by unit => unit.faction]\n  let groups be units[:group by unit => unit.faction]\n  emit Done(asc_1: ascendingValues[1], asc_2: ascendingValues[2], asc_3: ascendingValues[3], desc_1: descendingValues[1], desc_2: descendingValues[2], desc_3: descendingValues[3], priority_1: byPriority[1].name, priority_2: byPriority[2].name, priority_3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: :len distinctValues, distinct_1: distinctFactions[1].name, distinct_2: distinctFactions[2].name, melee_1: groups[:melee][1].name, melee_2: groups[:melee][2].name, ranged_1: groups[:ranged][1].name)\n}",
+      "script": "on Start(values, units) {\n  let ascendingValues be values[:sort ascending]\n  let descendingValues be values[:sort descending]\n  let byPriority be units[:order by item => item.priority descending]\n  let firstValue be values[:first]\n  let lastValue be values[:last]\n  let distinctValues be values[:distinct]\n  let distinctFactions be units[:distinct by unit => unit.faction]\n  let groups be units[:group by unit => unit.faction]\n  emit Done(asc_1: ascendingValues[1], asc_2: ascendingValues[2], asc_3: ascendingValues[3], desc_1: descendingValues[1], desc_2: descendingValues[2], desc_3: descendingValues[3], priority_1: byPriority[1].name, priority_2: byPriority[2].name, priority_3: byPriority[3].name, first: firstValue, last: lastValue, distinctCount: distinctValues[:count], distinct_1: distinctFactions[1].name, distinct_2: distinctFactions[2].name, melee_1: groups[#melee][1].name, melee_2: groups[#melee][2].name, ranged_1: groups[#ranged][1].name)\n}",
       "steps": [
         {
           "input": {
@@ -769,7 +768,7 @@
     {
       "kind": "scriptApi",
       "name": "collections add subtract intersect and zip",
-      "script": "on Start {\n  let appended be [1, 2, 3] + 4\n  let prepended be 0 + [1, 2, 3]\n  let mergedList be [1, 2, 3] | [4, 5]\n  let commonList be [1, 2, 2, 3] & [2, 2, 4]\n  let leftOnly be [1, 2, 2, 3] - [2]\n  let flags be [enemy:, visible:]\n  let mixedFlags be [enemy:, hp: 10]\n  let dictA be [name: 'Mark', age: 32]\n  let dictB be [city: 'Somewhere', age: 33]\n  let mergedDict be dictA | dictB\n  let minusAge be mergedDict - :age\n  let zipped be ['a', 'b', 'c'] :zip [1, 2]\n  emit Done(appended: appended[4], prepended: prepended[1], mergedList: mergedList[5], common_1: commonList[1], common_2: commonList[2], leftOnlyLen: :len leftOnly, leftOnlySecond: leftOnly[2], enemyFlag: flags.enemy, visibleIn: :visible in flags, missingIn: :missing in flags, numericLookup: flags[1], numericIn: 1 in flags, mixedEnemy: mixedFlags.enemy, mixedHp: mixedFlags.hp, mergedAge: mergedDict.age, mergedCity: mergedDict.city, minusAgeMissing: minusAge.age, minusAgeName: minusAge.name, zipOneLeft: zipped[1].left, zipOneRight: zipped[1].right, zipTwoLeft: zipped[2].left, zipTwoRight: zipped[2].right, zipLen: :len zipped)\n}",
+      "script": "on Start {\n  let appended be [1, 2, 3] + 4\n  let prepended be 0 + [1, 2, 3]\n  let mergedList be [1, 2, 3] | [4, 5]\n  let commonList be [1, 2, 2, 3] & [2, 2, 4]\n  let leftOnly be [1, 2, 2, 3] - [2]\n  let flags be [enemy:, visible:]\n  let mixedFlags be [enemy:, hp: 10]\n  let dictA be [name: 'Mark', age: 32]\n  let dictB be [city: 'Somewhere', age: 33]\n  let mergedDict be dictA | dictB\n  let minusAge be mergedDict - #age\n  let zipped be ['a', 'b', 'c'] :zip [1, 2]\n  emit Done(appended: appended[4], prepended: prepended[1], mergedList: mergedList[5], common_1: commonList[1], common_2: commonList[2], leftOnlyLen: leftOnly[:count], leftOnlySecond: leftOnly[2], enemyFlag: flags.enemy, visibleIn: #visible in flags, missingIn: #missing in flags, numericLookup: flags[1], numericIn: 1 in flags, mixedEnemy: mixedFlags.enemy, mixedHp: mixedFlags.hp, mergedAge: mergedDict.age, mergedCity: mergedDict.city, minusAgeMissing: minusAge.age, minusAgeName: minusAge.name, zipOneLeft: zipped[1].left, zipOneRight: zipped[1].right, zipTwoLeft: zipped[2].left, zipTwoRight: zipped[2].right, zipLen: zipped[:count])\n}",
       "steps": [
         {
           "input": {
@@ -996,7 +995,7 @@
     {
       "kind": "scriptApi",
       "name": "keys values and entries iterate through public output",
-      "script": "on Start(player, values, maybeTarget) {\n  let dictKeys be :keys player\n  let valueSequence be :values values\n  let maybeValues be :values maybeTarget\n  let entries be :entries player\n  for key in dictKeys {\n    emit SeenKey(key: key, value: player[key])\n  }\n  for item in valueSequence {\n    emit SeenValue(value: item)\n  }\n  for target in maybeValues {\n    emit SeenMaybe(value: target)\n  }\n  for entry in entries {\n    emit SeenEntry(key: entry.key, value: entry[:value])\n  }\n  emit Done(keyCount: :len dictKeys, valueCount: :len valueSequence, maybeCount: :len maybeValues, entryCount: :len entries)\n}",
+      "script": "on Start(player, values, maybeTarget) {\n  let dictKeys be player[:keys]\n  let valueSequence be values[:values]\n  let maybeValues be maybeTarget[:values]\n  let entries be player[:entries]\n  for key in dictKeys {\n    emit SeenKey(key: key, value: player[key])\n  }\n  for item in valueSequence {\n    emit SeenValue(value: item)\n  }\n  for target in maybeValues {\n    emit SeenMaybe(value: target)\n  }\n  for entry in entries {\n    emit SeenEntry(key: entry.key, value: entry[#value])\n  }\n  emit Done(keyCount: dictKeys[:count], valueCount: valueSequence[:count], maybeCount: maybeValues[:count], entryCount: entries[:count])\n}",
       "steps": [
         {
           "input": {

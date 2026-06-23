@@ -6,10 +6,13 @@
     {
       "kind": "scriptApi",
       "name": "stream create next close over source kinds",
-      "script": "module AtomicStreamCreateNextClose\non Start {\n  let values be [1, 2, 3]\n  let dice as :dice be [6, 4, 2]\n  let text be 'abc'\n  let tags be :boss\n  let map be [a: 1, b: 2]\n  let range as :range be from 1 to 4\n  let fromRange be range[:select item => item * 2]\n  let fromList be values[:select item => item + 10]\n  let fromDice be dice[:select item => item]\n  let fromText be text[:select item => item]\n  let fromTag be tags[:select item => item]\n  let fromMap be map[:select item => item]\n  let fromEmptyList be [][:select item => item]\n  emit Done(fromRange: fromRange, fromList: fromList, fromDice: fromDice, fromText: fromText, fromTag: fromTag, fromMap: fromMap, fromEmptyList: fromEmptyList)\n}",
+      "script": "module AtomicStreamCreateNextClose\non Start {\n  let values be [1, 2, 3]\n  let dice as :dice be [6, 4, 2]\n  let text be 'abc'\n  let tags be #boss\n  let map be [a: 1, b: 2]\n  let range as :range be from 1 to 4\n  let fromRange be range[:select item => item * 2]\n  let fromList be values[:select item => item + 10]\n  let fromDice be dice[:select item => item]\n  let fromText be text[:select item => item]\n  let fromTag be tags[:select item => item]\n  let fromMap be map[:select item => item]\n  let fromEmptyList be [][:select item => item]\n  emit Done(fromRange: fromRange, fromList: fromList, fromDice: fromDice, fromText: fromText, fromTag: fromTag, fromMap: fromMap, fromEmptyList: fromEmptyList)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
@@ -17,9 +20,18 @@
                 "fromDice": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "6" },
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "2" }
+                    {
+                      "type": ":integer",
+                      "value": "6"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
                   ]
                 },
                 "fromEmptyList": {
@@ -29,42 +41,90 @@
                 "fromList": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "11" },
-                    { "type": ":integer", "value": "12" },
-                    { "type": ":integer", "value": "13" }
+                    {
+                      "type": ":integer",
+                      "value": "11"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "13"
+                    }
                   ]
                 },
                 "fromMap": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
                   ]
                 },
                 "fromRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "6" },
-                    { "type": ":integer", "value": "8" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "6"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "8"
+                    }
                   ]
                 },
                 "fromTag": {
                   "type": ":list",
                   "items": [
-                    { "type": ":text", "value": "b" },
-                    { "type": ":text", "value": "o" },
-                    { "type": ":text", "value": "s" },
-                    { "type": ":text", "value": "s" }
+                    {
+                      "type": ":text",
+                      "value": "b"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "o"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "s"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "s"
+                    }
                   ]
                 },
                 "fromText": {
                   "type": ":list",
                   "items": [
-                    { "type": ":text", "value": "a" },
-                    { "type": ":text", "value": "b" },
-                    { "type": ":text", "value": "c" }
+                    {
+                      "type": ":text",
+                      "value": "a"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "b"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "c"
+                    }
                   ]
                 }
               }
@@ -79,27 +139,78 @@
       "script": "module AtomicHasAnyAllDirectAndStreams\non Start {\n  let values be [true, false, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 0 to 2\n  let text be '10'\n  let map be [a: false, b: true]\n  emit Done(listAny: values[:any value where value], listAll: values[:all value where value], emptyAny: emptyList[:any value where value], emptyAll: emptyList[:all value where value], diceAny: dice[:any value where value], diceAll: dice[:all value where value], rangeAny: range[:any value where value], rangeAll: range[:all value where value], textAny: text[:any value where value], textAll: text[:all value where value], mapAny: map[:any value where value], mapAll: map[:all value where value], streamAnyHit: [1, 2, 3][:any value where value > 2], streamAnyMiss: [1, 2, 3][:any value where value > 9], streamAllHit: [1, 2, 3][:all value where value > 0], streamAllMiss: [1, 2, 3][:all value where value > 1])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "diceAll": { "type": ":boolean", "value": true },
-                "diceAny": { "type": ":boolean", "value": true },
-                "emptyAll": { "type": ":boolean", "value": true },
-                "emptyAny": { "type": ":boolean", "value": false },
-                "listAll": { "type": ":boolean", "value": false },
-                "listAny": { "type": ":boolean", "value": true },
-                "mapAll": { "type": ":boolean", "value": false },
-                "mapAny": { "type": ":boolean", "value": true },
-                "rangeAll": { "type": ":boolean", "value": false },
-                "rangeAny": { "type": ":boolean", "value": true },
-                "streamAllHit": { "type": ":boolean", "value": true },
-                "streamAllMiss": { "type": ":boolean", "value": false },
-                "streamAnyHit": { "type": ":boolean", "value": true },
-                "streamAnyMiss": { "type": ":boolean", "value": false },
-                "textAll": { "type": ":boolean", "value": false },
-                "textAny": { "type": ":boolean", "value": true }
+                "diceAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "emptyAll": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "emptyAny": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listAll": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapAll": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeAll": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "rangeAny": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "streamAllHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "streamAllMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "streamAnyHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "streamAnyMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textAll": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "textAny": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -112,7 +223,10 @@
       "script": "module AtomicStreamMapFilterCollectList\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let mapped be values[:select value => value * 10]\n  let filtered be values[:filter value where value mod 2 = 1]\n  let chained be values[:filter value where value >= 2][:select value => value * 2][:filter value where value > 5]\n  let capturedBase be 100\n  let captured be values[:select value => value + capturedBase]\n  emit Done(mapped: mapped, filtered: filtered, chained: chained, captured: captured)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
@@ -120,37 +234,85 @@
                 "captured": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "101" },
-                    { "type": ":integer", "value": "102" },
-                    { "type": ":integer", "value": "103" },
-                    { "type": ":integer", "value": "104" },
-                    { "type": ":integer", "value": "105" }
+                    {
+                      "type": ":integer",
+                      "value": "101"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "102"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "103"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "104"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "105"
+                    }
                   ]
                 },
                 "chained": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "6" },
-                    { "type": ":integer", "value": "8" },
-                    { "type": ":integer", "value": "10" }
+                    {
+                      "type": ":integer",
+                      "value": "6"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "8"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    }
                   ]
                 },
                 "filtered": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
                 "mapped": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "10" },
-                    { "type": ":integer", "value": "20" },
-                    { "type": ":integer", "value": "30" },
-                    { "type": ":integer", "value": "40" },
-                    { "type": ":integer", "value": "50" }
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "20"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "30"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "40"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "50"
+                    }
                   ]
                 }
               }
@@ -165,28 +327,82 @@
       "script": "module AtomicStreamContainsTerminals\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 5\n  let text be 'abcd'\n  let map be [alpha: 10, beta: 20]\n  emit Done(listContainsHit: values[:filter value where value > 2][:contains 4], listContainsMiss: values[:filter value where value > 2][:contains 2], listAnyHit: values[:filter value where value > 2][:contains any [1, 5]], listAnyMiss: values[:filter value where value > 2][:contains any [1, 2]], listAllHit: values[:filter value where value > 2][:contains all [3, 5]], listAllMiss: values[:filter value where value > 2][:contains all [3, 2]], diceContainsHit: dice[:select roll => roll][:contains 4], diceAnyHit: dice[:select roll => roll][:contains any [1, 6]], diceAllHit: dice[:select roll => roll][:contains all [6, 2]], rangeContainsHit: range[:select item => item][:contains 4], rangeAnyHit: range[:select item => item][:contains any [0, 5]], rangeAllHit: range[:select item => item][:contains all [1, 5]], textContainsHit: text[:select char => char][:contains 'b'], textAllHit: text[:select char => char][:contains all ['a', 'd']], mapContainsHit: map[:select value => value][:contains 10], mapAnyHit: map[:select value => value][:contains any [99, 20]], mapAllHit: map[:select value => value][:contains all [10, 20]])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "diceAllHit": { "type": ":boolean", "value": true },
-                "diceAnyHit": { "type": ":boolean", "value": true },
-                "diceContainsHit": { "type": ":boolean", "value": true },
-                "listAllHit": { "type": ":boolean", "value": true },
-                "listAllMiss": { "type": ":boolean", "value": false },
-                "listAnyHit": { "type": ":boolean", "value": true },
-                "listAnyMiss": { "type": ":boolean", "value": false },
-                "listContainsHit": { "type": ":boolean", "value": true },
-                "listContainsMiss": { "type": ":boolean", "value": false },
-                "mapAllHit": { "type": ":boolean", "value": true },
-                "mapAnyHit": { "type": ":boolean", "value": true },
-                "mapContainsHit": { "type": ":boolean", "value": true },
-                "rangeAllHit": { "type": ":boolean", "value": true },
-                "rangeAnyHit": { "type": ":boolean", "value": true },
-                "rangeContainsHit": { "type": ":boolean", "value": true },
-                "textAllHit": { "type": ":boolean", "value": true },
-                "textContainsHit": { "type": ":boolean", "value": true }
+                "diceAllHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceAnyHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "diceContainsHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listAllHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listAllMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listAnyHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listAnyMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "listContainsHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "listContainsMiss": {
+                  "type": ":boolean",
+                  "value": false
+                },
+                "mapAllHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapAnyHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "mapContainsHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeAllHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeAnyHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "rangeContainsHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textAllHit": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "textContainsHit": {
+                  "type": ":boolean",
+                  "value": true
+                }
               }
             }
           ]
@@ -199,7 +415,10 @@
       "script": "module AtomicStreamTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], takeHighest: values[:filter value where value > 1][:take highest 2], takeLowest: values[:filter value where value > 1][:take lowest 2], dropHighest: values[:filter value where value > 1][:drop highest 2], dropLowest: values[:filter value where value > 1][:drop lowest 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
@@ -207,64 +426,118 @@
                 "dropFirst": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
                 "dropLast": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "dropHighest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "dropLowest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
                 "mappedTakeFirst": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "10" },
-                    { "type": ":integer", "value": "20" }
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "20"
+                    }
                   ]
                 },
                 "takeFirst": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "takeHighest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "5" },
-                    { "type": ":integer", "value": "4" }
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
                   ]
                 },
                 "takeLast": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
                 "takeLowest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 }
               }
@@ -276,56 +549,149 @@
     {
       "kind": "scriptApi",
       "name": "take drop direct source boundaries",
-      "script": "module AtomicTakeDropDirectBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 1 to 3\n  let floatRange as :range be from 1.5 to 2.5 step 0.5\n  emit Done(listTakeFirstTooMany: values[:take first 9], listDropFirstTooManyLen: :len values[:drop first 9], listTakeLastTooMany: values[:take last 9], listDropLastTooManyLen: :len values[:drop last 9], emptyListTakeLen: :len emptyList[:take first 2], emptyListDropLen: :len emptyList[:drop last 2], diceTakeFirstTooMany: dice[:take first 9], diceDropFirstTooManyLen: :len dice[:drop first 9], emptyDiceTakeLen: :len emptyDice[:take highest 2], emptyDiceDropLen: :len emptyDice[:drop lowest 2], rangeTakeFirstTooMany: range[:take first 9], rangeDropFirstTooManyLen: :len range[:drop first 9], floatRangeTakeLastTooMany: floatRange[:take last 9], floatRangeDropLastTooManyLen: :len floatRange[:drop last 9], invalidIntTakeFirst: 10[:take first 1], invalidIntDropFirst: 10[:drop first 1], invalidIntTakeLast: 10[:take last 1], invalidIntDropLast: 10[:drop last 1], invalidIntTakeHighest: 10[:take highest 1], invalidIntTakeLowest: 10[:take lowest 1], invalidIntDropHighest: 10[:drop highest 1], invalidIntDropLowest: 10[:drop lowest 1], invalidNothingTakeFirst: nothing[:take first 1], invalidTextTakeFirst: 'abc'[:take first 1], invalidTagTakeFirst: :abc[:take first 1], invalidVectorTakeFirst: :vector(1, 2, 3)[:take first 1], invalidPointTakeFirst: :point(1, 2, 3)[:take first 1], invalidMapTakeFirst: [a: 1][:take first 1])\n}",
+      "script": "module AtomicTakeDropDirectBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 1 to 3\n  let floatRange as :range be from 1.5 to 2.5 step 0.5\n  emit Done(listTakeFirstTooMany: values[:take first 9], listDropFirstTooManyLen: values[:drop first 9][:count], listTakeLastTooMany: values[:take last 9], listDropLastTooManyLen: values[:drop last 9][:count], emptyListTakeLen: emptyList[:take first 2][:count], emptyListDropLen: emptyList[:drop first 2][:count], diceTakeFirstTooMany: dice[:take first 9], diceDropFirstTooManyLen: dice[:drop first 9][:count], emptyDiceTakeLen: emptyDice[:take first 2][:count], emptyDiceDropLen: emptyDice[:drop first 2][:count], rangeTakeFirstTooMany: range[:take first 9], rangeDropFirstTooManyLen: range[:drop first 9][:count], floatRangeTakeLastTooMany: floatRange[:take last 9], floatRangeDropLastTooManyLen: floatRange[:drop last 9][:count], invalidIntTakeFirst: 10[:take first 1], invalidIntDropFirst: 10[:drop first 1], invalidIntTakeLast: 10[:take last 1], invalidIntDropLast: 10[:drop last 1], invalidIntTakeHighest: 10[:take highest 1], invalidIntTakeLowest: 10[:take lowest 1], invalidIntDropHighest: 10[:drop highest 1], invalidIntDropLowest: 10[:drop lowest 1], invalidNothingTakeFirst: nothing[:take first 1], invalidTextTakeFirst: 'abc'[:take first 1], invalidTagTakeFirst: #abc[:take first 1], invalidVectorTakeFirst: :vector(1, 2, 3)[:take first 1], invalidPointTakeFirst: :point(1, 2, 3)[:take first 1], invalidMapTakeFirst: [a: 1][:take first 1])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "diceDropFirstTooManyLen": { "type": ":integer", "value": "0" },
-                "diceTakeFirstTooMany": { "type": ":dice", "rolls": [6, 4, 2] },
-                "emptyDiceDropLen": { "type": ":integer", "value": "0" },
-                "emptyDiceTakeLen": { "type": ":integer", "value": "0" },
-                "emptyListDropLen": { "type": ":integer", "value": "0" },
-                "emptyListTakeLen": { "type": ":integer", "value": "0" },
-                "floatRangeDropLastTooManyLen": { "type": ":integer", "value": "0" },
-                "floatRangeTakeLastTooMany": { "type": ":range", "from": "1.5", "to": "2.5", "step": "0.5" },
-                "invalidIntDropFirst": { "type": ":nothing" },
-                "invalidIntDropHighest": { "type": ":nothing" },
-                "invalidIntDropLast": { "type": ":nothing" },
-                "invalidIntDropLowest": { "type": ":nothing" },
-                "invalidIntTakeFirst": { "type": ":nothing" },
-                "invalidIntTakeHighest": { "type": ":nothing" },
-                "invalidIntTakeLast": { "type": ":nothing" },
-                "invalidIntTakeLowest": { "type": ":nothing" },
-                "invalidMapTakeFirst": { "type": ":nothing" },
-                "invalidNothingTakeFirst": { "type": ":nothing" },
-                "invalidPointTakeFirst": { "type": ":nothing" },
-                "invalidTagTakeFirst": { "type": ":nothing" },
-                "invalidTextTakeFirst": { "type": ":nothing" },
-                "invalidVectorTakeFirst": { "type": ":nothing" },
-                "listDropFirstTooManyLen": { "type": ":integer", "value": "0" },
-                "listDropLastTooManyLen": { "type": ":integer", "value": "0" },
+                "diceDropFirstTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "diceTakeFirstTooMany": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4,
+                    2
+                  ]
+                },
+                "emptyDiceDropLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyDiceTakeLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyListDropLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyListTakeLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "floatRangeDropLastTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "floatRangeTakeLastTooMany": {
+                  "type": ":range",
+                  "from": "1.5",
+                  "to": "2.5",
+                  "step": "0.5"
+                },
+                "invalidIntDropFirst": {
+                  "type": ":nothing"
+                },
+                "invalidIntDropHighest": {
+                  "type": ":nothing"
+                },
+                "invalidIntDropLast": {
+                  "type": ":nothing"
+                },
+                "invalidIntDropLowest": {
+                  "type": ":nothing"
+                },
+                "invalidIntTakeFirst": {
+                  "type": ":nothing"
+                },
+                "invalidIntTakeHighest": {
+                  "type": ":nothing"
+                },
+                "invalidIntTakeLast": {
+                  "type": ":nothing"
+                },
+                "invalidIntTakeLowest": {
+                  "type": ":nothing"
+                },
+                "invalidMapTakeFirst": {
+                  "type": ":nothing"
+                },
+                "invalidNothingTakeFirst": {
+                  "type": ":nothing"
+                },
+                "invalidPointTakeFirst": {
+                  "type": ":nothing"
+                },
+                "invalidTagTakeFirst": {
+                  "type": ":nothing"
+                },
+                "invalidTextTakeFirst": {
+                  "type": ":nothing"
+                },
+                "invalidVectorTakeFirst": {
+                  "type": ":nothing"
+                },
+                "listDropFirstTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "listDropLastTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
                 "listTakeFirstTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "listTakeLastTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
-                "rangeDropFirstTooManyLen": { "type": ":integer", "value": "0" },
-                "rangeTakeFirstTooMany": { "type": ":range", "from": "1", "to": "3", "step": "1" }
+                "rangeDropFirstTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "rangeTakeFirstTooMany": {
+                  "type": ":range",
+                  "from": "1",
+                  "to": "3",
+                  "step": "1"
+                }
               }
             }
           ]
@@ -335,52 +701,115 @@
     {
       "kind": "scriptApi",
       "name": "take drop stream boundary counts",
-      "script": "module AtomicTakeDropStreamBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyStream be values[:filter value where false]\n  emit Done(takeFirstTooMany: values[:filter value where true][:take first 9], dropFirstTooManyLen: :len values[:filter value where true][:drop first 9], takeLastTooMany: values[:filter value where true][:take last 9], dropLastTooManyLen: :len values[:filter value where true][:drop last 9], takeHighestTooMany: values[:filter value where true][:take highest 9], dropHighestTooManyLen: :len values[:filter value where true][:drop highest 9], takeLowestTooMany: values[:filter value where true][:take lowest 9], dropLowestTooManyLen: :len values[:filter value where true][:drop lowest 9], emptyTakeFirstLen: :len emptyStream[:take first 2], emptyDropLastLen: :len values[:filter value where false][:drop last 2], emptyTakeHighestLen: :len values[:filter value where false][:take highest 2], emptyDropLowestLen: :len values[:filter value where false][:drop lowest 2])\n}",
+      "script": "module AtomicTakeDropStreamBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyStream be values[:filter value where false]\n  emit Done(takeFirstTooMany: values[:filter value where true][:take first 9], dropFirstTooManyLen: values[:filter value where true][:drop first 9][:count], takeLastTooMany: values[:filter value where true][:take last 9], dropLastTooManyLen: values[:filter value where true][:drop last 9][:count], takeHighestTooMany: values[:filter value where true][:take highest 9], dropHighestTooManyLen: values[:filter value where true][:drop highest 9][:count], takeLowestTooMany: values[:filter value where true][:take lowest 9], dropLowestTooManyLen: values[:filter value where true][:drop lowest 9][:count], emptyTakeFirstLen: emptyStream[:take first 2][:count], emptyDropLastLen: emptyStream[:drop last 2][:count], emptyTakeHighestLen: emptyStream[:take highest 2][:count], emptyDropLowestLen: emptyStream[:drop lowest 2][:count])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "dropFirstTooManyLen": { "type": ":integer", "value": "0" },
-                "dropHighestTooManyLen": { "type": ":integer", "value": "0" },
-                "dropLastTooManyLen": { "type": ":integer", "value": "0" },
-                "dropLowestTooManyLen": { "type": ":integer", "value": "0" },
-                "emptyDropLastLen": { "type": ":integer", "value": "0" },
-                "emptyDropLowestLen": { "type": ":integer", "value": "0" },
-                "emptyTakeFirstLen": { "type": ":integer", "value": "0" },
-                "emptyTakeHighestLen": { "type": ":integer", "value": "0" },
+                "dropFirstTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "dropHighestTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "dropLastTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "dropLowestTooManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyDropLastLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyDropLowestLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyTakeFirstLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyTakeHighestLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
                 "takeFirstTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "takeHighestTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "1" }
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    }
                   ]
                 },
                 "takeLastTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "takeLowestTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 }
               }
@@ -401,15 +830,30 @@
       "script": "module AtomicWeightedChooseLowering\non Start {\n  let units be [[name: 'A', weight: 1], [name: 'B', weight: 3], [name: 'C', weight: 6], [name: 'Ignored', weight: 0]]\n  let liveUnits be units[:filter unit where unit.weight > 0]\n  let weightedOne be liveUnits[:choose 1 weighted by unit => unit.weight]\n  let weightedTwo be liveUnits[:choose 2 weighted by unit => unit.weight]\n  let weightedFilteredOne be units[:choose 1 unit where unit.name <> 'Ignored' weighted by unit => unit.weight]\n  emit Done(weightedOne: weightedOne.name, weighted_1: weightedTwo[1].name, weighted_2: weightedTwo[2].name, weightedFilteredOne: weightedFilteredOne.name)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "weightedOne": { "type": ":text", "value": "C" },
-                "weighted_1": { "type": ":text", "value": "A" },
-                "weighted_2": { "type": ":text", "value": "C" },
-                "weightedFilteredOne": { "type": ":text", "value": "A" }
+                "weightedOne": {
+                  "type": ":text",
+                  "value": "C"
+                },
+                "weighted_1": {
+                  "type": ":text",
+                  "value": "A"
+                },
+                "weighted_2": {
+                  "type": ":text",
+                  "value": "C"
+                },
+                "weightedFilteredOne": {
+                  "type": ":text",
+                  "value": "A"
+                }
               }
             }
           ]
@@ -424,23 +868,50 @@
         "0",
         "0"
       ],
-      "script": "module AtomicWeightedChooseInvalidWeights\non Start {\n  let emptyUnits be []\n  let invalidUnits be [[name: 'Zero', weight: 0], [name: 'Negative', weight: 0 - 1], [name: 'Missing', weight: nothing], [name: 'Text', weight: 'bad'], [name: 'Infinite', weight: :infinity]]\n  let mixedUnits be [[name: 'Zero', weight: 0], [name: 'A', weight: 1], [name: 'Negative', weight: 0 - 2], [name: 'B', weight: 2], [name: 'Missing', weight: nothing]]\n  let emptyOne be emptyUnits[:choose 1 weighted by unit => unit.weight]\n  let emptyMany be emptyUnits[:choose 3 weighted by unit => unit.weight]\n  let invalidOne be invalidUnits[:choose 1 weighted by unit => unit.weight]\n  let invalidMany be invalidUnits[:choose 3 weighted by unit => unit.weight]\n  let mixedOne be mixedUnits[:choose 1 weighted by unit => unit.weight]\n  let mixedMany be mixedUnits[:choose 5 weighted by unit => unit.weight]\n  emit Done(emptyOneName: emptyOne.name, emptyManyLen: :len emptyMany, invalidOneName: invalidOne.name, invalidManyLen: :len invalidMany, mixedOneName: mixedOne.name, mixedManyLen: :len mixedMany, mixed_1: mixedMany[1].name, mixed_2: mixedMany[2].name, mixed_3: mixedMany[3].name)\n}",
+      "script": "module AtomicWeightedChooseInvalidWeights\non Start {\n  let emptyUnits be []\n  let invalidUnits be [[name: 'Zero', weight: 0], [name: 'Negative', weight: 0 - 1], [name: 'Missing', weight: nothing], [name: 'Text', weight: 'bad'], [name: 'Infinite', weight: infinity]]\n  let mixedUnits be [[name: 'Zero', weight: 0], [name: 'A', weight: 1], [name: 'Negative', weight: 0 - 2], [name: 'B', weight: 2], [name: 'Missing', weight: nothing]]\n  let emptyOne be emptyUnits[:choose 1 weighted by unit => unit.weight]\n  let emptyMany be emptyUnits[:choose 3 weighted by unit => unit.weight]\n  let invalidOne be invalidUnits[:choose 1 weighted by unit => unit.weight]\n  let invalidMany be invalidUnits[:choose 3 weighted by unit => unit.weight]\n  let mixedOne be mixedUnits[:choose 1 weighted by unit => unit.weight]\n  let mixedMany be mixedUnits[:choose 5 weighted by unit => unit.weight]\n  emit Done(emptyOneName: emptyOne.name, emptyManyLen: emptyMany[:count], invalidOneName: invalidOne.name, invalidManyLen: invalidMany[:count], mixedOneName: mixedOne.name, mixedManyLen: mixedMany[:count], mixed_1: mixedMany[1].name, mixed_2: mixedMany[2].name, mixed_3: mixedMany[3].name)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "emptyManyLen": { "type": ":integer", "value": "0" },
-                "emptyOneName": { "type": ":nothing" },
-                "invalidManyLen": { "type": ":integer", "value": "0" },
-                "invalidOneName": { "type": ":nothing" },
-                "mixedOneName": { "type": ":text", "value": "A" },
-                "mixedManyLen": { "type": ":integer", "value": "2" },
-                "mixed_1": { "type": ":text", "value": "A" },
-                "mixed_2": { "type": ":text", "value": "B" },
-                "mixed_3": { "type": ":nothing" }
+                "emptyManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyOneName": {
+                  "type": ":nothing"
+                },
+                "invalidManyLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "invalidOneName": {
+                  "type": ":nothing"
+                },
+                "mixedOneName": {
+                  "type": ":text",
+                  "value": "A"
+                },
+                "mixedManyLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "mixed_1": {
+                  "type": ":text",
+                  "value": "A"
+                },
+                "mixed_2": {
+                  "type": ":text",
+                  "value": "B"
+                },
+                "mixed_3": {
+                  "type": ":nothing"
+                }
               }
             }
           ]
@@ -462,18 +933,42 @@
       "script": "module AtomicWeightedChooseDuplicateWeights\non Start {\n  let units be [[name: 'A', weight: 1], [name: 'B', weight: 1], [name: 'C', weight: 1], [name: 'D', weight: 1]]\n  let weightedOne be units[:choose 1 weighted by unit => unit.weight]\n  let weightedAll be units[:choose 4 weighted by unit => unit.weight]\n  let weightedBoundary be units[:choose 2 weighted by unit => unit.weight]\n  emit Done(one: weightedOne.name, all_1: weightedAll[1].name, all_2: weightedAll[2].name, all_3: weightedAll[3].name, all_4: weightedAll[4].name, boundary_1: weightedBoundary[1].name, boundary_2: weightedBoundary[2].name)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "all_1": { "type": ":text", "value": "A" },
-                "all_2": { "type": ":text", "value": "B" },
-                "all_3": { "type": ":text", "value": "C" },
-                "all_4": { "type": ":text", "value": "D" },
-                "boundary_1": { "type": ":text", "value": "B" },
-                "boundary_2": { "type": ":text", "value": "C" },
-                "one": { "type": ":text", "value": "A" }
+                "all_1": {
+                  "type": ":text",
+                  "value": "A"
+                },
+                "all_2": {
+                  "type": ":text",
+                  "value": "B"
+                },
+                "all_3": {
+                  "type": ":text",
+                  "value": "C"
+                },
+                "all_4": {
+                  "type": ":text",
+                  "value": "D"
+                },
+                "boundary_1": {
+                  "type": ":text",
+                  "value": "B"
+                },
+                "boundary_2": {
+                  "type": ":text",
+                  "value": "C"
+                },
+                "one": {
+                  "type": ":text",
+                  "value": "A"
+                }
               }
             }
           ]
@@ -488,18 +983,33 @@
         "0",
         "0"
       ],
-      "script": "module AtomicWeightedChooseCapturedWeights\non Start {\n  let scale be 2\n  let bonus be 1\n  let units be [[name: 'Low', weight: 1], [name: 'High', weight: 3], [name: 'Zero', weight: 0]]\n  let weightedOne be units[:choose 1 weighted by unit => unit.weight * scale]\n  let weightedTwo be units[:choose 2 weighted by unit => unit.weight + bonus]\n  emit Done(one: weightedOne.name, two_1: weightedTwo[1].name, two_2: weightedTwo[2].name, twoLen: :len weightedTwo)\n}",
+      "script": "module AtomicWeightedChooseCapturedWeights\non Start {\n  let scale be 2\n  let bonus be 1\n  let units be [[name: 'Low', weight: 1], [name: 'High', weight: 3], [name: 'Zero', weight: 0]]\n  let weightedOne be units[:choose 1 weighted by unit => unit.weight * scale]\n  let weightedTwo be units[:choose 2 weighted by unit => unit.weight + bonus]\n  emit Done(one: weightedOne.name, two_1: weightedTwo[1].name, two_2: weightedTwo[2].name, twoLen: weightedTwo[:count])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "one": { "type": ":text", "value": "High" },
-                "two_1": { "type": ":text", "value": "Low" },
-                "two_2": { "type": ":text", "value": "High" },
-                "twoLen": { "type": ":integer", "value": "2" }
+                "one": {
+                  "type": ":text",
+                  "value": "High"
+                },
+                "two_1": {
+                  "type": ":text",
+                  "value": "Low"
+                },
+                "two_2": {
+                  "type": ":text",
+                  "value": "High"
+                },
+                "twoLen": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -523,25 +1033,46 @@
       "script": "module AtomicChooseLowering\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 5, 4, 3]\n  let range as :range be from 10 to 14\n  emit Done(chooseOne: values[:choose 1], chooseTwo: values[:choose 2], chooseFilteredOne: values[:choose 1 value where value > 2], chooseFilteredTwo: values[:choose 2 value where value > 2], randomOne: values[:choose 1 at random], randomTwo: values[:choose 2 at random], randomFilteredTwo: values[:choose 2 at random value where value > 2], diceRandomTwo: dice[:choose 2 at random], rangeRandomTwo: range[:choose 2 at random])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "chooseFilteredOne": { "type": ":integer", "value": "3" },
+                "chooseFilteredOne": {
+                  "type": ":integer",
+                  "value": "3"
+                },
                 "chooseFilteredTwo": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "4" }
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
                   ]
                 },
-                "chooseOne": { "type": ":integer", "value": "1" },
+                "chooseOne": {
+                  "type": ":integer",
+                  "value": "1"
+                },
                 "chooseTwo": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
                   ]
                 },
                 "diceRandomTwo": {
@@ -554,23 +1085,44 @@
                 "randomFilteredTwo": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
-                "randomOne": { "type": ":integer", "value": "3" },
+                "randomOne": {
+                  "type": ":integer",
+                  "value": "3"
+                },
                 "randomTwo": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "5" },
-                    { "type": ":integer", "value": "4" }
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
                   ]
                 },
                 "rangeRandomTwo": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "12" },
-                    { "type": ":integer", "value": "14" }
+                    {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "14"
+                    }
                   ]
                 }
               }
@@ -584,56 +1136,131 @@
       "name": "random choose boundary source kinds",
       "randomSequence": [
         "0",
-        "0", "0", "0",
         "0",
-        "0", "0", "0",
         "0",
-        "0", "0", "0",
-        "0", "0", "0"
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0"
       ],
-      "script": "module AtomicRandomChooseBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 10 to 12\n  let emptyStream be values[:filter value where false]\n  emit Done(listOne: values[:choose 1 at random], listTakeTooMany: values[:choose 9 at random], emptyListOne: emptyList[:choose 1 at random], emptyListTakeLen: :len emptyList[:choose 2 at random], diceOne: dice[:choose 1 at random], diceTakeTooMany: dice[:choose 9 at random], emptyDiceOne: emptyDice[:choose 1 at random], emptyDiceTakeLen: :len emptyDice[:choose 2 at random], rangeOne: range[:choose 1 at random], rangeTakeTooMany: range[:choose 9 at random], streamTakeTooMany: values[:filter value where true][:choose 9 at random], emptyStreamOne: emptyStream[:choose 1 at random], emptyStreamTakeLen: :len values[:filter value where false][:choose 2 at random], invalidIntOne: 10[:choose 1 at random], invalidIntTake: 10[:choose 2 at random], invalidMapTake: [a: 1][:choose 2 at random])\n}",
+      "script": "module AtomicRandomChooseBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 10 to 12\n  let emptyStream be values[:filter value where false]\n  emit Done(listOne: values[:choose 1 at random], listTakeTooMany: values[:choose 9 at random], emptyListOne: emptyList[:choose 1 at random], emptyListTakeLen: emptyList[:choose 2 at random][:count], diceOne: dice[:choose 1 at random], diceTakeTooMany: dice[:choose 9 at random], emptyDiceOne: emptyDice[:choose 1 at random], emptyDiceTakeLen: emptyDice[:choose 2 at random][:count], rangeOne: range[:choose 1 at random], rangeTakeTooMany: range[:choose 9 at random], streamTakeTooMany: values[:filter value where true][:choose 9 at random], emptyStreamOne: emptyStream[:choose 1 at random], emptyStreamTakeLen: emptyStream[:choose 2 at random][:count], invalidIntOne: 10[:choose 1 at random], invalidIntTake: 10[:choose 2 at random], invalidMapTake: [a: 1][:choose 2 at random])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "diceOne": { "type": ":integer", "value": "6" },
-                "diceTakeTooMany": { "type": ":dice", "rolls": [6, 4, 2] },
-                "emptyDiceOne": { "type": ":nothing" },
-                "emptyDiceTakeLen": { "type": ":integer", "value": "0" },
-                "emptyListOne": { "type": ":nothing" },
-                "emptyListTakeLen": { "type": ":integer", "value": "0" },
-                "emptyStreamOne": { "type": ":nothing" },
-                "emptyStreamTakeLen": { "type": ":integer", "value": "0" },
-                "invalidIntOne": { "type": ":nothing" },
-                "invalidIntTake": { "type": ":nothing" },
-                "invalidMapTake": { "type": ":nothing" },
-                "listOne": { "type": ":integer", "value": "1" },
+                "diceOne": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "diceTakeTooMany": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    4,
+                    2
+                  ]
+                },
+                "emptyDiceOne": {
+                  "type": ":nothing"
+                },
+                "emptyDiceTakeLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyListOne": {
+                  "type": ":nothing"
+                },
+                "emptyListTakeLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "emptyStreamOne": {
+                  "type": ":nothing"
+                },
+                "emptyStreamTakeLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "invalidIntOne": {
+                  "type": ":nothing"
+                },
+                "invalidIntTake": {
+                  "type": ":nothing"
+                },
+                "invalidMapTake": {
+                  "type": ":nothing"
+                },
+                "listOne": {
+                  "type": ":integer",
+                  "value": "1"
+                },
                 "listTakeTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
-                "rangeOne": { "type": ":integer", "value": "10" },
+                "rangeOne": {
+                  "type": ":integer",
+                  "value": "10"
+                },
                 "rangeTakeTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "10" },
-                    { "type": ":integer", "value": "11" },
-                    { "type": ":integer", "value": "12" }
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "11"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "12"
+                    }
                   ]
                 },
                 "streamTakeTooMany": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 }
               }
@@ -648,7 +1275,10 @@
       "script": "module AtomicTakeDropHighestLowestDirectFastPaths\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2, 1]\n  let range as :range be from 1 to 5\n  emit Done(listTakeHighest: values[:take highest 2], listTakeLowest: values[:take lowest 2], listDropHighest: values[:drop highest 2], listDropLowest: values[:drop lowest 2], diceTakeHighest: dice[:take highest 2], diceTakeLowest: dice[:take lowest 2], diceDropHighest: dice[:drop highest 2], diceDropLowest: dice[:drop lowest 2], rangeTakeHighest: range[:take highest 2], rangeTakeLowest: range[:take lowest 2], rangeDropHighest: range[:drop highest 2], rangeDropLowest: range[:drop lowest 2])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
@@ -656,31 +1286,61 @@
                 "listTakeHighest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "5" },
-                    { "type": ":integer", "value": "4" }
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
                   ]
                 },
                 "listTakeLowest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
                   ]
                 },
                 "listDropHighest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "listDropLowest": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
                 "diceTakeHighest": {
@@ -744,35 +1404,100 @@
     {
       "kind": "scriptApi",
       "name": "stream collect map and map value",
-      "script": "module AtomicStreamCollectMap\non Start {\n  let units be [[id: :rook, hp: 10, team: :blue], [id: :mage, hp: 6, team: :red], [id: :rook, hp: 12, team: :green], [id: '', hp: 99, team: :hidden]]\n  let emptyUnits be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  let text be 'aba'\n  let sourceMap be [b: 2, a: 1]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let emptyById be emptyUnits[:map unit by unit.id]\n  let diceMap be dice[:map roll by roll]\n  let rangeMap be range[:map value by value]\n  let textMap be text[:map char by char]\n  let mapValueMap be sourceMap[:map value by value => value * 10]\n  let invalidIntegerMap be 10[:map value by value]\n  emit Done(byIdCount: :len byId, rookHp: byId[:rook].hp, rookTeam: byId[:rook].team, mageHp: byId[:mage].hp, hpByIdCount: :len hpById, hpRook: hpById[:rook], hpMage: hpById[:mage], missingEmpty: byId[''], emptyByIdLen: :len emptyById, diceMapLen: :len diceMap, diceSix: diceMap['6'], diceFour: diceMap['4'], rangeMapLen: :len rangeMap, rangeTwo: rangeMap['2'], textMapLen: :len textMap, textA: textMap['a'], textB: textMap['b'], mapValueLen: :len mapValueMap, mapValueOne: mapValueMap['1'], mapValueTwo: mapValueMap['2'], invalidIntegerMapLen: :len invalidIntegerMap)\n}",
+      "script": "module AtomicStreamCollectMap\non Start {\n  let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: '', hp: 99, team: #hidden]]\n  let emptyUnits be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  let text be 'aba'\n  let sourceMap be [b: 2, a: 1]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let emptyById be emptyUnits[:map unit by unit.id]\n  let diceMap be dice[:map roll by roll]\n  let rangeMap be range[:map value by value]\n  let textMap be text[:map char by char]\n  let mapValueMap be sourceMap[:map value by value => value * 10]\n  let invalidIntegerMap be 10[:map value by value]\n  emit Done(byIdCount: byId[:count], rookHp: byId[#rook].hp, rookTeam: byId[#rook].team, mageHp: byId[#mage].hp, hpByIdCount: hpById[:count], hpRook: hpById[#rook], hpMage: hpById[#mage], missingEmpty: byId[''], emptyByIdLen: emptyById[:count], diceMapLen: diceMap[:count], diceSix: diceMap['6'], diceFour: diceMap['4'], rangeMapLen: rangeMap[:count], rangeTwo: rangeMap['2'], textMapLen: textMap[:count], textA: textMap['a'], textB: textMap['b'], mapValueLen: mapValueMap[:count], mapValueOne: mapValueMap['1'], mapValueTwo: mapValueMap['2'], invalidIntegerMapLen: invalidIntegerMap[:count])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "byIdCount": { "type": ":integer", "value": "2" },
-                "diceFour": { "type": ":integer", "value": "4" },
-                "diceMapLen": { "type": ":integer", "value": "3" },
-                "diceSix": { "type": ":integer", "value": "6" },
-                "emptyByIdLen": { "type": ":integer", "value": "0" },
-                "hpByIdCount": { "type": ":integer", "value": "2" },
-                "hpMage": { "type": ":integer", "value": "6" },
-                "hpRook": { "type": ":integer", "value": "12" },
-                "invalidIntegerMapLen": { "type": ":integer", "value": "0" },
-                "mapValueLen": { "type": ":integer", "value": "2" },
-                "mapValueOne": { "type": ":integer", "value": "10" },
-                "mapValueTwo": { "type": ":integer", "value": "20" },
-                "mageHp": { "type": ":integer", "value": "6" },
-                "missingEmpty": { "type": ":nothing" },
-                "rangeMapLen": { "type": ":integer", "value": "3" },
-                "rangeTwo": { "type": ":integer", "value": "2" },
-                "rookHp": { "type": ":integer", "value": "12" },
-                "rookTeam": { "type": ":tag", "value": "green" },
-                "textA": { "type": ":text", "value": "a" },
-                "textB": { "type": ":text", "value": "b" },
-                "textMapLen": { "type": ":integer", "value": "2" }
+                "byIdCount": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "diceFour": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "diceMapLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "diceSix": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "emptyByIdLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "hpByIdCount": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "hpMage": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "hpRook": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "invalidIntegerMapLen": {
+                  "type": ":integer",
+                  "value": "0"
+                },
+                "mapValueLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "mapValueOne": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "mapValueTwo": {
+                  "type": ":integer",
+                  "value": "20"
+                },
+                "mageHp": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "missingEmpty": {
+                  "type": ":nothing"
+                },
+                "rangeMapLen": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "rangeTwo": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "rookHp": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "rookTeam": {
+                  "type": ":tag",
+                  "value": "green"
+                },
+                "textA": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "textB": {
+                  "type": ":text",
+                  "value": "b"
+                },
+                "textMapLen": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -782,24 +1507,57 @@
     {
       "kind": "scriptApi",
       "name": "stream collect map duplicate keys use last value",
-      "script": "module AtomicStreamCollectMapDuplicateKeys\non Start {\n  let units be [[id: :rook, hp: 10, team: :blue], [id: :mage, hp: 6, team: :red], [id: :rook, hp: 12, team: :green], [id: :mage, hp: 8, team: :gold]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let streamById be units[:filter unit where true][:map unit by unit.id]\n  emit Done(byIdLen: :len byId, rookHp: byId[:rook].hp, rookTeam: byId[:rook].team, mageHp: byId[:mage].hp, mageTeam: byId[:mage].team, hpByIdLen: :len hpById, hpRook: hpById[:rook], hpMage: hpById[:mage], streamRookHp: streamById[:rook].hp, streamMageTeam: streamById[:mage].team)\n}",
+      "script": "module AtomicStreamCollectMapDuplicateKeys\non Start {\n  let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: #mage, hp: 8, team: #gold]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let streamById be units[:filter unit where true][:map unit by unit.id]\n  emit Done(byIdLen: byId[:count], rookHp: byId[#rook].hp, rookTeam: byId[#rook].team, mageHp: byId[#mage].hp, mageTeam: byId[#mage].team, hpByIdLen: hpById[:count], hpRook: hpById[#rook], hpMage: hpById[#mage], streamRookHp: streamById[#rook].hp, streamMageTeam: streamById[#mage].team)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "byIdLen": { "type": ":integer", "value": "2" },
-                "hpByIdLen": { "type": ":integer", "value": "2" },
-                "hpMage": { "type": ":integer", "value": "8" },
-                "hpRook": { "type": ":integer", "value": "12" },
-                "mageHp": { "type": ":integer", "value": "8" },
-                "mageTeam": { "type": ":tag", "value": "gold" },
-                "rookHp": { "type": ":integer", "value": "12" },
-                "rookTeam": { "type": ":tag", "value": "green" },
-                "streamMageTeam": { "type": ":tag", "value": "gold" },
-                "streamRookHp": { "type": ":integer", "value": "12" }
+                "byIdLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "hpByIdLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "hpMage": {
+                  "type": ":integer",
+                  "value": "8"
+                },
+                "hpRook": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "mageHp": {
+                  "type": ":integer",
+                  "value": "8"
+                },
+                "mageTeam": {
+                  "type": ":tag",
+                  "value": "gold"
+                },
+                "rookHp": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "rookTeam": {
+                  "type": ":tag",
+                  "value": "green"
+                },
+                "streamMageTeam": {
+                  "type": ":tag",
+                  "value": "gold"
+                },
+                "streamRookHp": {
+                  "type": ":integer",
+                  "value": "12"
+                }
               }
             }
           ]
@@ -809,26 +1567,60 @@
     {
       "kind": "scriptApi",
       "name": "stream collect map skips empty keys and keeps projected nothing values",
-      "script": "module AtomicStreamCollectMapInvalidKeysAndValues\non Start {\n  let units be [[id: :rook, hp: 10], [id: '', hp: 99], [id: nothing, hp: 42], [id: :mage, hp: 6]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let missingById be units[:map unit by unit.id => unit.missing]\n  let textKeyMap be ['a', '', 'b'][:map value by value => value]\n  emit Done(byIdLen: :len byId, rookHp: byId[:rook].hp, mageHp: byId[:mage].hp, emptyKey: byId[''], missingKey: byId['nothing'], missingByIdLen: :len missingById, missingRook: missingById[:rook], missingMage: missingById[:mage], textKeyLen: :len textKeyMap, textA: textKeyMap['a'], textB: textKeyMap['b'], textEmpty: textKeyMap[''])\n}",
+      "script": "module AtomicStreamCollectMapInvalidKeysAndValues\non Start {\n  let units be [[id: #rook, hp: 10], [id: '', hp: 99], [id: nothing, hp: 42], [id: #mage, hp: 6]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let missingById be units[:map unit by unit.id => unit.missing]\n  let textKeyMap be ['a', '', 'b'][:map value by value => value]\n  emit Done(byIdLen: byId[:count], rookHp: byId[#rook].hp, mageHp: byId[#mage].hp, emptyKey: byId[''], missingKey: byId['nothing'], missingByIdLen: missingById[:count], missingRook: missingById[#rook], missingMage: missingById[#mage], textKeyLen: textKeyMap[:count], textA: textKeyMap['a'], textB: textKeyMap['b'], textEmpty: textKeyMap[''])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "byIdLen": { "type": ":integer", "value": "2" },
-                "emptyKey": { "type": ":nothing" },
-                "mageHp": { "type": ":integer", "value": "6" },
-                "missingByIdLen": { "type": ":integer", "value": "2" },
-                "missingKey": { "type": ":nothing" },
-                "missingMage": { "type": ":nothing" },
-                "missingRook": { "type": ":nothing" },
-                "rookHp": { "type": ":integer", "value": "10" },
-                "textA": { "type": ":text", "value": "a" },
-                "textB": { "type": ":text", "value": "b" },
-                "textEmpty": { "type": ":nothing" },
-                "textKeyLen": { "type": ":integer", "value": "2" }
+                "byIdLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "emptyKey": {
+                  "type": ":nothing"
+                },
+                "mageHp": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "missingByIdLen": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "missingKey": {
+                  "type": ":nothing"
+                },
+                "missingMage": {
+                  "type": ":nothing"
+                },
+                "missingRook": {
+                  "type": ":nothing"
+                },
+                "rookHp": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "textA": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "textB": {
+                  "type": ":text",
+                  "value": "b"
+                },
+                "textEmpty": {
+                  "type": ":nothing"
+                },
+                "textKeyLen": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -841,30 +1633,86 @@
       "script": "module AtomicFirstLastSingle\non Start {\n  let values be [1, 2, 3, 4]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  emit Done(first: values[:first], firstFiltered: values[:first value where value > 2], firstEmpty: emptyList[:first], last: values[:last], lastFiltered: values[:last value where value < 4], lastEmpty: emptyList[:last], single: values[:single value where value = 3], singleNone: values[:single value where value > 9], singleMany: values[:single value where value > 1], diceFirst: dice[:first], diceLast: dice[:last], rangeFirst: range[:first], rangeLast: range[:last], textFirst: text[:first], textLast: text[:last], textSingle: 'x'[:single], mapFirst: map[:first], mapLast: map[:last], listSingle: [9][:single])\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "first": { "type": ":integer", "value": "1" },
-                "diceFirst": { "type": ":integer", "value": "6" },
-                "diceLast": { "type": ":integer", "value": "2" },
-                "firstEmpty": { "type": ":nothing" },
-                "firstFiltered": { "type": ":integer", "value": "3" },
-                "last": { "type": ":integer", "value": "4" },
-                "lastEmpty": { "type": ":nothing" },
-                "lastFiltered": { "type": ":integer", "value": "3" },
-                "listSingle": { "type": ":integer", "value": "9" },
-                "mapFirst": { "type": ":integer", "value": "1" },
-                "mapLast": { "type": ":integer", "value": "2" },
-                "rangeFirst": { "type": ":integer", "value": "1" },
-                "rangeLast": { "type": ":integer", "value": "3" },
-                "single": { "type": ":integer", "value": "3" },
-                "singleMany": { "type": ":nothing" },
-                "singleNone": { "type": ":nothing" },
-                "textFirst": { "type": ":text", "value": "a" },
-                "textLast": { "type": ":text", "value": "b" },
-                "textSingle": { "type": ":text", "value": "x" }
+                "first": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "diceFirst": {
+                  "type": ":integer",
+                  "value": "6"
+                },
+                "diceLast": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "firstEmpty": {
+                  "type": ":nothing"
+                },
+                "firstFiltered": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "last": {
+                  "type": ":integer",
+                  "value": "4"
+                },
+                "lastEmpty": {
+                  "type": ":nothing"
+                },
+                "lastFiltered": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "listSingle": {
+                  "type": ":integer",
+                  "value": "9"
+                },
+                "mapFirst": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "mapLast": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "rangeFirst": {
+                  "type": ":integer",
+                  "value": "1"
+                },
+                "rangeLast": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "single": {
+                  "type": ":integer",
+                  "value": "3"
+                },
+                "singleMany": {
+                  "type": ":nothing"
+                },
+                "singleNone": {
+                  "type": ":nothing"
+                },
+                "textFirst": {
+                  "type": ":text",
+                  "value": "a"
+                },
+                "textLast": {
+                  "type": ":text",
+                  "value": "b"
+                },
+                "textSingle": {
+                  "type": ":text",
+                  "value": "x"
+                }
               }
             }
           ]

@@ -7,25 +7,6 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCollectionOperators
 {
-    internal static void GesVmLength(this GesVmState vmState, ushort dst, in GesVmValue a)
-    {
-        switch (a.Kind)
-        {
-            case Text or Tag when a is { IsStorageObject: true, ObjectValue: string text }:
-                vmState.SetInteger(dst, text.Length);
-                break;
-            case List or Map or Dice or GameEventScriptBytecodeTypeKind.Range:
-                vmState.SetInteger(dst, a.IntegerValue);
-                break;
-            case Nothing:
-                vmState.SetInteger(dst, 0);
-                break;
-            default:
-                vmState.SetNothing(dst);
-                break;
-        }
-    }
-
     internal static void GesVmStartsWith(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
     {
         switch (a.Kind)

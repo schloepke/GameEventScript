@@ -735,6 +735,10 @@ internal static class GesAstValidator
         return unary.Operator switch
         {
             GesUnaryOperator.HasValue or GesUnaryOperator.Empty or GesUnaryOperator.Chance => StaticExpressionInfo.Boolean,
+            GesUnaryOperator.Abs or GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
+                GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
+                GesUnaryOperator.RoundHalfEven or GesUnaryOperator.RoundHalfUp or GesUnaryOperator.RoundHalfDown or
+                GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree => StaticExpressionInfo.Other("number"),
             GesUnaryOperator.Negate => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
             GesUnaryOperator.Not => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean

@@ -22,8 +22,8 @@ cases=5
 //		  let b be a * 3
 //		  let c be b - 7
 //		  let d be c div 2
-//		  let e be d * d
-//		  let f be e mod 97
+//		  let squared be d * d
+//		  let f be squared mod 97
 //		  let g be f + 10
 //		  let h be g * 2
 //		  let i be h - 15
@@ -103,7 +103,7 @@ Start:				 // handler Start(value)
 //		on Start {
 //		  let values be :list[:select item from 1 to 100 => item * 2]
 //		  let total be values[:sum value => value]
-//		  let count be :len values
+//		  let count be values[:count]
 //		  emit Done(total: total, count: count)
 //		}
 //		
@@ -148,7 +148,7 @@ Start_3:			StreamNext r1, r5, Start_8
 Start_8:			StreamClose r5
 					ListBuilderFinish r0, r4
 					Sum r2, r0
-					Length r3, r0
+					Count r3, r0
 					EmitMessage Outbound_Done, Args_0 // "Done(total, count)"
 					ReturnVoid
 
@@ -369,8 +369,8 @@ Start_43:			SlotLocals #2
 //		predicate high(value as :number) be value >= 10
 //		
 //		on Start(values) {
-//		  let total be values[:filter value where value is high][:select value => value + 5%][:sum value => :integer.floor value]
-//		  let average be values[:filter value where value is high][:select value => value + 5%][:average value => :integer.floor value]
+//		  let total be values[:filter value where value is high][:select value => value + 5%][:sum value => floor value]
+//		  let average be values[:filter value where value is high][:select value => value + 5%][:average value => floor value]
 //		  let oddCount be values[:filter value where value mod 2 = 1][:count value where true]
 //		  let firstBoosted be values[:filter value where value is high][:select value => value + 5%][:first]
 //		  let scaled as :quantity(m) be 100m + 5%
@@ -417,9 +417,6 @@ T_Success:			.text "Success"
 T_message:			.text "message"
 T_hello:			.text "hello"
 T_world:			.text "world"
-T_integer:			.text "integer"
-T_floor:			.text "floor"
-T_19:				.text "_"
 
 
 .segment lists
@@ -430,8 +427,6 @@ Args_2:				.registers [r17, r8]
 Args_3:				.registers [r17, r5]
 Captures_4:			.registers [r13]
 Args_5:				.registers [r1, r2, r3, r7, r4, r5, r6, r15]
-StdExt_6:			.texts [T_integer, T_floor, T_19] // "integer", "floor", "_"
-Args_7:				.registers [r0]
 
 
 .segment bind
@@ -505,7 +500,7 @@ Start_56:			SlotLocals #2
 					Add r2, r0, r1
 					ReturnValue r2
 Start_60:			SlotLocals #1
-					CallStandard r1, StdExt_6, Args_7 // "integer", "floor", "_"
+					Floor r1, r0
 					ReturnValue r1
 Start_63:			SlotLocals #1
 					StageRegister r0
@@ -516,7 +511,7 @@ Start_67:			SlotLocals #2
 					Add r2, r0, r1
 					ReturnValue r2
 Start_71:			SlotLocals #1
-					CallStandard r1, StdExt_6, Args_7 // "integer", "floor", "_"
+					Floor r1, r0
 					ReturnValue r1
 Start_74:			SlotLocals #3
 					LoadInteger r1, #2

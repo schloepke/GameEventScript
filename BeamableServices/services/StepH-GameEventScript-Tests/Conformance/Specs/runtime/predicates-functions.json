@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates and functions are reusable in expressions and collections",
-      "script": "predicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList, first: woundedList[1].name, second: woundedList[2].name)\n}",
+      "script": "predicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: woundedList[:count], first: woundedList[1].name, second: woundedList[2].name)\n}",
       "steps": [
         {
           "input": {
@@ -119,7 +119,7 @@
     {
       "kind": "scriptApi",
       "name": "predicates and functions are lenient when expected keys are missing",
-      "script": "predicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: :len woundedList)\n}",
+      "script": "predicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]\n\non Start(unit, units) {\n  let byCall be wounded(unit)\n  let byPredicate be unit is wounded\n  let woundedList be woundedUnits(units)\n  emit Done(byCall: byCall, byPredicate: byPredicate, woundedCount: woundedList[:count])\n}",
       "steps": [
         {
           "input": {
@@ -452,7 +452,7 @@
         },
         {
           "sourceName": "runtime.es",
-          "text": "module Runtime\non Start(unit, units) {\n  let hp as :gauge be [current: unit.hp, maximum: unit.maxHp]\n  let anyWounded be wounded(unit)\n  let candidates be woundedUnits(units)\n  emit Done(anyWounded: anyWounded, candidateCount: :len candidates, maximum: hp.maximum)\n}"
+          "text": "module Runtime\non Start(unit, units) {\n  let hp as :gauge be [current: unit.hp, maximum: unit.maxHp]\n  let anyWounded be wounded(unit)\n  let candidates be woundedUnits(units)\n  emit Done(anyWounded: anyWounded, candidateCount: candidates[:count], maximum: hp.maximum)\n}"
         }
       ],
       "steps": [

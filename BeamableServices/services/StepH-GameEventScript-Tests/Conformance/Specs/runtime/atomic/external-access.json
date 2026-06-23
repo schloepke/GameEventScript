@@ -482,37 +482,73 @@
     {
       "kind": "scriptApi",
       "name": "static emit and publish variants",
-      "script": "module AtomicEmitPublishStatic\non Start {\n  let tags be [:radio, :command, :radio]\n  emit LocalZero\n  emit LocalTagged(value: 1) with :local, :visible, :local\n  publish OutZero\n  publish OutTagged(value: 2, kind: :fire) with tags\n}",
+      "script": "module AtomicEmitPublishStatic\non Start {\n  let tags be [#radio, #command, #radio]\n  emit LocalZero\n  emit LocalTagged(value: 1) with #local, #visible, #local\n  publish OutZero\n  publish OutTagged(value: 2, kind: #fire) with tags\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
-            { "name": "LocalZero", "args": {} },
+            {
+              "name": "LocalZero",
+              "args": {}
+            },
             {
               "name": "LocalTagged",
-              "tags": ["local", "visible"],
+              "tags": [
+                "local",
+                "visible"
+              ],
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
-            { "name": "OutZero", "args": {} },
+            {
+              "name": "OutZero",
+              "args": {}
+            },
             {
               "name": "OutTagged",
-              "tags": ["radio", "command"],
+              "tags": [
+                "radio",
+                "command"
+              ],
               "args": {
-                "kind": { "type": ":tag", "value": "fire" },
-                "value": { "type": ":integer", "value": "2" }
+                "kind": {
+                  "type": ":tag",
+                  "value": "fire"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ],
           "expectedOutboundPublished": [
-            { "name": "OutZero", "args": {} },
+            {
+              "name": "OutZero",
+              "args": {}
+            },
             {
               "name": "OutTagged",
-              "tags": ["radio", "command"],
+              "tags": [
+                "radio",
+                "command"
+              ],
               "args": {
-                "kind": { "type": ":tag", "value": "fire" },
-                "value": { "type": ":integer", "value": "2" }
+                "kind": {
+                  "type": ":tag",
+                  "value": "fire"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -522,39 +558,73 @@
     {
       "kind": "scriptApi",
       "name": "message value emit and publish variants",
-      "script": "module AtomicEmitPublishMessageValues\non Start {\n  let tags be [:alpha, :beta, :alpha]\n  let emitMsg be DynamicEmit(value: 3, label: 'local')\n  let publishMsg be DynamicPublish(value: 4, label: 'bus')\n  emit emitMsg\n  emit emitMsg with tags\n  publish publishMsg\n  publish publishMsg with :bus, tags\n}",
+      "script": "module AtomicEmitPublishMessageValues\non Start {\n  let tags be [#alpha, #beta, #alpha]\n  let emitMsg be DynamicEmit(value: 3, label: 'local')\n  let publishMsg be DynamicPublish(value: 4, label: 'bus')\n  emit emitMsg\n  emit emitMsg with tags\n  publish publishMsg\n  publish publishMsg with #bus, tags\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "DynamicEmit",
               "args": {
-                "label": { "type": ":text", "value": "local" },
-                "value": { "type": ":integer", "value": "3" }
+                "label": {
+                  "type": ":text",
+                  "value": "local"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             },
             {
               "name": "DynamicEmit",
-              "tags": ["alpha", "beta"],
+              "tags": [
+                "alpha",
+                "beta"
+              ],
               "args": {
-                "label": { "type": ":text", "value": "local" },
-                "value": { "type": ":integer", "value": "3" }
+                "label": {
+                  "type": ":text",
+                  "value": "local"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
             },
             {
               "name": "DynamicPublish",
               "args": {
-                "label": { "type": ":text", "value": "bus" },
-                "value": { "type": ":integer", "value": "4" }
+                "label": {
+                  "type": ":text",
+                  "value": "bus"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "4"
+                }
               }
             },
             {
               "name": "DynamicPublish",
-              "tags": ["bus", "alpha", "beta"],
+              "tags": [
+                "bus",
+                "alpha",
+                "beta"
+              ],
               "args": {
-                "label": { "type": ":text", "value": "bus" },
-                "value": { "type": ":integer", "value": "4" }
+                "label": {
+                  "type": ":text",
+                  "value": "bus"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "4"
+                }
               }
             }
           ],
@@ -562,16 +632,32 @@
             {
               "name": "DynamicPublish",
               "args": {
-                "label": { "type": ":text", "value": "bus" },
-                "value": { "type": ":integer", "value": "4" }
+                "label": {
+                  "type": ":text",
+                  "value": "bus"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "4"
+                }
               }
             },
             {
               "name": "DynamicPublish",
-              "tags": ["bus", "alpha", "beta"],
+              "tags": [
+                "bus",
+                "alpha",
+                "beta"
+              ],
               "args": {
-                "label": { "type": ":text", "value": "bus" },
-                "value": { "type": ":integer", "value": "4" }
+                "label": {
+                  "type": ":text",
+                  "value": "bus"
+                },
+                "value": {
+                  "type": ":integer",
+                  "value": "4"
+                }
               }
             }
           ]
@@ -584,24 +670,36 @@
       "script": "module AtomicEmitPublishDispatch\non Start {\n  emit Local(value: 1)\n  publish Remote(value: 2)\n}\n\non Local(value) {\n  emit Seen(value: value)\n}\n\non Remote(value) {\n  emit ShouldNotRun(value: value)\n}",
       "steps": [
         {
-          "input": { "name": "Start", "args": {} },
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
           "expectedPublished": [
             {
               "name": "Local",
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             },
             {
               "name": "Remote",
               "args": {
-                "value": { "type": ":integer", "value": "2" }
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             },
             {
               "name": "Seen",
               "args": {
-                "value": { "type": ":integer", "value": "1" }
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
               }
             }
           ],
@@ -609,7 +707,10 @@
             {
               "name": "Remote",
               "args": {
-                "value": { "type": ":integer", "value": "2" }
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
             }
           ]
@@ -619,34 +720,83 @@
     {
       "kind": "scriptApi",
       "name": "standard extension calls",
-      "script": "module AtomicCallStandard\non Start(value) {\n  let natural be :series.natural(start: 2, step: 3)\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  let naturalZero be natural[:term 0]\n  let naturalThree be natural[:term 3]\n  let fibSeven be fib[:term 7]\n  let factFive be fact[:term 5]\n  emit Done(floorBare: :integer.floor value, ceilCall: :integer.ceil(value), truncateNegative: :integer.truncate -10.7, halfEven: :integer.halfEven 12.5, halfUp: :integer.halfUp -12.5, halfDown: :integer.halfDown -12.5, wrapDegree: :degree.wrap 370°, radians: :degree.toRadians 180°, degrees: :degree.fromRadians 3.141592653589793, naturalIsSeries: natural is :series, naturalZero: naturalZero, naturalThree: naturalThree, fibSeven: fibSeven, factFive: factFive, floorPredicate: value is :integer.floor)\n}",
+      "script": "module AtomicCallStandard\non Start(value) {\n  let natural be :series.natural(start: 2, step: 3)\n  let fib be :series.fibonacci()\n  let fact be :series.factorial()\n  let naturalZero be natural[:term 0]\n  let naturalThree be natural[:term 3]\n  let fibSeven be fib[:term 7]\n  let factFive be fact[:term 5]\n  emit Done(floorBare: floor value, ceilCall: ceil(value), truncateNegative: truncate -10.7, halfEven: round half even 12.5, halfUp: round half up -12.5, halfDown: round half down -12.5, wrapDegree: wrap degree 370°, radians: rad 180°, degrees: deg 3.141592653589793, naturalIsSeries: natural is :series, naturalZero: naturalZero, naturalThree: naturalThree, fibSeven: fibSeven, factFive: factFive, floorPredicate: nothing)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":float", "value": "10.75" }
+              "value": {
+                "type": ":float",
+                "value": "10.75"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "ceilCall": { "type": ":integer", "value": "11" },
-                "degrees": { "type": ":float", "value": "180", "unit": ":degree" },
-                "factFive": { "type": ":integer", "value": "120" },
-                "fibSeven": { "type": ":integer", "value": "13" },
-                "floorBare": { "type": ":integer", "value": "10" },
-                "floorPredicate": { "type": ":nothing" },
-                "halfDown": { "type": ":integer", "value": "-12" },
-                "halfEven": { "type": ":integer", "value": "12" },
-                "halfUp": { "type": ":integer", "value": "-13" },
-                "naturalIsSeries": { "type": ":boolean", "value": true },
-                "naturalThree": { "type": ":integer", "value": "11" },
-                "naturalZero": { "type": ":integer", "value": "2" },
-                "radians": { "type": ":float", "value": "3.14159265358979" },
-                "truncateNegative": { "type": ":integer", "value": "-10" },
-                "wrapDegree": { "type": ":float", "value": "10", "unit": ":degree" }
+                "ceilCall": {
+                  "type": ":integer",
+                  "value": "11"
+                },
+                "degrees": {
+                  "type": ":float",
+                  "value": "180",
+                  "unit": ":degree"
+                },
+                "factFive": {
+                  "type": ":integer",
+                  "value": "120"
+                },
+                "fibSeven": {
+                  "type": ":integer",
+                  "value": "13"
+                },
+                "floorBare": {
+                  "type": ":integer",
+                  "value": "10"
+                },
+                "floorPredicate": {
+                  "type": ":nothing"
+                },
+                "halfDown": {
+                  "type": ":integer",
+                  "value": "-12"
+                },
+                "halfEven": {
+                  "type": ":integer",
+                  "value": "12"
+                },
+                "halfUp": {
+                  "type": ":integer",
+                  "value": "-13"
+                },
+                "naturalIsSeries": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "naturalThree": {
+                  "type": ":integer",
+                  "value": "11"
+                },
+                "naturalZero": {
+                  "type": ":integer",
+                  "value": "2"
+                },
+                "radians": {
+                  "type": ":float",
+                  "value": "3.14159265358979"
+                },
+                "truncateNegative": {
+                  "type": ":integer",
+                  "value": "-10"
+                },
+                "wrapDegree": {
+                  "type": ":float",
+                  "value": "10",
+                  "unit": ":degree"
+                }
               }
             }
           ]
@@ -656,41 +806,80 @@
     {
       "kind": "scriptApi",
       "name": "external extension calls",
-      "script": "module AtomicCallExternal\non Start(value, heading, target) {\n  let nothingValue be nothing\n  let listValue be [1, 'two', :three]\n  let mapValue be [alpha: 1, beta: 'two']\n  let diceValue as :dice be [6, 4, 2]\n  let messageValue be Ping(amount: 7, label: 'ok')\n  emit Done(floored: :math.floor value, flooredCall: :math.floor(value), maxed: :math.max of 2 and 8 and 5, turn: :nav.shortestTurn from: heading to: target, northPredicate: heading is :nav.isNorth, vectorTotal: :test.vectorSum :vector(1m, 2m, 3m), echoNothing: :test.echo nothingValue, echoBoolean: :test.echo true, echoInteger: :test.echo 12, echoFloat: :test.echo 12.5, echoPercentage: :test.echo 25%, echoMeter: :test.echo 10m, echoText: :test.echo 'hello', echoTag: :test.echo :ready, echoVector: :test.echo :vector(1m, 2m, 3m), echoPoint: :test.echo :point(4m, 5m, 6m), echoList: :test.echo listValue, echoMap: :test.echo mapValue, echoDice: :test.echo diceValue, echoMessage: :test.echo messageValue, echoPredicate: value is :test.echo)\n}",
+      "script": "module AtomicCallExternal\non Start(value, heading, target) {\n  let nothingValue be nothing\n  let listValue be [1, 'two', #three]\n  let mapValue be [alpha: 1, beta: 'two']\n  let diceValue as :dice be [6, 4, 2]\n  let messageValue be Ping(amount: 7, label: 'ok')\n  emit Done(floored: floor value, flooredCall: floor(value), maxed: :max of 2 and 8 and 5, turn: :nav.shortestTurn from: heading to: target, northPredicate: heading is :nav.isNorth, vectorTotal: :test.vectorSum :vector(1m, 2m, 3m), echoNothing: :test.echo nothingValue, echoBoolean: :test.echo true, echoInteger: :test.echo 12, echoFloat: :test.echo 12.5, echoPercentage: :test.echo 25%, echoMeter: :test.echo 10m, echoText: :test.echo 'hello', echoTag: :test.echo #ready, echoVector: :test.echo :vector(1m, 2m, 3m), echoPoint: :test.echo :point(4m, 5m, 6m), echoList: :test.echo listValue, echoMap: :test.echo mapValue, echoDice: :test.echo diceValue, echoMessage: :test.echo messageValue, echoPredicate: value is :test.echo)\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
             "args": {
-              "value": { "type": ":float", "value": "10.75" },
-              "heading": { "type": ":float", "value": "350", "unit": ":degree" },
-              "target": { "type": ":float", "value": "10", "unit": ":degree" }
+              "value": {
+                "type": ":float",
+                "value": "10.75"
+              },
+              "heading": {
+                "type": ":float",
+                "value": "350",
+                "unit": ":degree"
+              },
+              "target": {
+                "type": ":float",
+                "value": "10",
+                "unit": ":degree"
+              }
             }
           },
           "expectedPublished": [
             {
               "name": "Done",
               "args": {
-                "echoBoolean": { "type": ":boolean", "value": true },
+                "echoBoolean": {
+                  "type": ":boolean",
+                  "value": true
+                },
                 "echoDice": {
                   "type": ":dice",
-                  "rolls": [6, 4, 2]
+                  "rolls": [
+                    6,
+                    4,
+                    2
+                  ]
                 },
-                "echoFloat": { "type": ":float", "value": "12.5" },
-                "echoInteger": { "type": ":integer", "value": "12" },
+                "echoFloat": {
+                  "type": ":float",
+                  "value": "12.5"
+                },
+                "echoInteger": {
+                  "type": ":integer",
+                  "value": "12"
+                },
                 "echoList": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":text", "value": "two" },
-                    { "type": ":tag", "value": "three" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "two"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "three"
+                    }
                   ]
                 },
                 "echoMap": {
                   "type": ":map",
                   "entries": {
-                    "alpha": { "type": ":integer", "value": "1" },
-                    "beta": { "type": ":text", "value": "two" }
+                    "alpha": {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    "beta": {
+                      "type": ":text",
+                      "value": "two"
+                    }
                   }
                 },
                 "echoMessage": {
@@ -698,25 +887,80 @@
                   "message": {
                     "name": "Ping",
                     "args": {
-                      "amount": { "type": ":integer", "value": "7" },
-                      "label": { "type": ":text", "value": "ok" }
+                      "amount": {
+                        "type": ":integer",
+                        "value": "7"
+                      },
+                      "label": {
+                        "type": ":text",
+                        "value": "ok"
+                      }
                     }
                   }
                 },
-                "echoMeter": { "type": ":integer", "value": "10", "unit": ":meter" },
-                "echoNothing": { "type": ":nothing" },
-                "echoPercentage": { "type": ":percentage", "value": "0.25" },
-                "echoPoint": { "type": ":point", "x": "4", "y": "5", "z": "6", "unit": ":meter" },
-                "echoPredicate": { "type": ":nothing" },
-                "echoTag": { "type": ":tag", "value": "ready" },
-                "echoText": { "type": ":text", "value": "hello" },
-                "echoVector": { "type": ":vector", "x": "1", "y": "2", "z": "3", "unit": ":meter" },
-                "floored": { "type": ":float", "value": "10" },
-                "flooredCall": { "type": ":float", "value": "10" },
-                "maxed": { "type": ":float", "value": "8" },
-                "northPredicate": { "type": ":boolean", "value": true },
-                "turn": { "type": ":float", "value": "20", "unit": ":degree" },
-                "vectorTotal": { "type": ":float", "value": "6", "unit": ":meter" }
+                "echoMeter": {
+                  "type": ":integer",
+                  "value": "10",
+                  "unit": ":meter"
+                },
+                "echoNothing": {
+                  "type": ":nothing"
+                },
+                "echoPercentage": {
+                  "type": ":percentage",
+                  "value": "0.25"
+                },
+                "echoPoint": {
+                  "type": ":point",
+                  "x": "4",
+                  "y": "5",
+                  "z": "6",
+                  "unit": ":meter"
+                },
+                "echoPredicate": {
+                  "type": ":nothing"
+                },
+                "echoTag": {
+                  "type": ":tag",
+                  "value": "ready"
+                },
+                "echoText": {
+                  "type": ":text",
+                  "value": "hello"
+                },
+                "echoVector": {
+                  "type": ":vector",
+                  "x": "1",
+                  "y": "2",
+                  "z": "3",
+                  "unit": ":meter"
+                },
+                "floored": {
+                  "type": ":float",
+                  "value": "10"
+                },
+                "flooredCall": {
+                  "type": ":float",
+                  "value": "10"
+                },
+                "maxed": {
+                  "type": ":float",
+                  "value": "8"
+                },
+                "northPredicate": {
+                  "type": ":boolean",
+                  "value": true
+                },
+                "turn": {
+                  "type": ":float",
+                  "value": "20",
+                  "unit": ":degree"
+                },
+                "vectorTotal": {
+                  "type": ":float",
+                  "value": "6",
+                  "unit": ":meter"
+                }
               }
             }
           ]

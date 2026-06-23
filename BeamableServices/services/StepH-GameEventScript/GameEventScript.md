@@ -328,45 +328,60 @@ value has value
 ### Prefix Helpers
 
 ```ges
-:len items
-:chance 25%
-:keys map
-:values map
-:entries map
-:abs value
-:ln value
-:sqrt value
+items[:count]
+chance 25%
+map[:keys]
+map[:values]
+map[:entries]
+abs value
+ln value
+exp value
+sqrt value
 √ value
-:cbrt value
+cbrt value
 ∛ value
+floor value
+ceil(value)
+truncate value
+round half even value
+round half up value
+round half down value
+rad degrees
+deg radians
+wrap degree value
 :clamp value between 0 and 100
 :min of a and b and c
 :max of a and b and c
 ```
 
-`:len` counts text and tag characters by raw text, so `:len :active` is `6`.
+`x[:count]` counts text and tag characters by raw text, so `#active[:count]`
+is `6`.
 
-`:keys`, `:values`, and `:entries` are defined only for maps and
-map-backed custom type values. `:keys` returns a list of tag keys, `:values`
+`x[:keys]`, `x[:values]`, and `x[:entries]` are defined only for maps and
+map-backed custom type values. `x[:keys]` returns a list of tag keys, `x[:values]`
 returns the corresponding values, and `:entries` returns maps with `key` and
 `value` fields. All three projections use stable ordinal key order. If the
 operand is `nothing`, the result is `nothing`; if the operand is any other
 non-map value, the result is also `nothing`.
 
-Square and cube roots lower to powers with exponents `0.5` and `1/3`.
+Square and cube roots lower to powers with exponents `0.5` and `1/3`. `exp`
+is the natural exponential counterpart of `ln`.
 
 ### Constants
 
-Numeric constants are tag-like literals:
+Numeric constants are keywords, not tags:
 
 ```ges
-:infinity
-:negativeinfinity
-:pi      // alias: ∏
-:e       // aliases: :euler, ℇ
-:tau     // alias: τ
-:phi     // alias: φ
+infinity
+0 - infinity
+pi      // aliases: π, ∏
+e       // alias: ℇ
+tau     // alias: τ
 ```
+
+Tags use `#name`. `#true`, `#false`, `#pi`, and `#infinity` are ordinary tag
+values without boolean or numeric meaning. `:name` is reserved for selectors,
+types, and namespace-like extension references such as `:series.fibonacci`.
 
 ## Types and Values
 
@@ -406,8 +421,8 @@ cast to `:tag` as `nothing`; formatted vector, point, list, map, dice, and range
 text also cast to `:tag` as `nothing` because those strings are not valid tag
 names. Existing valid tags remain unchanged. Text casts to `:tag` only when the
 text is a valid tag name; the text values `'true'`, `'True'`, `'false'`, and
-`'False'` are normalized to `:true` and `:false`. Boolean casts to `:tag` also
-write `:true` or `:false`.
+`'False'` are normalized to `#true` and `#false`. Boolean casts to `:tag` also
+write `#true` or `#false`.
 
 Text casts are formatting casts and keep using the value's text representation;
 they do not require the formatted text to be a valid tag. Numeric text is parsed
@@ -484,9 +499,8 @@ parse text as described below.
 | integer number | true | true | false | integer value, including quantity unit |
 | float number | true | true when finite and exactly integral; otherwise false | true when finite and non-integral | float value, including quantity unit |
 | percentage | true | true when the stored ratio is finite and exactly integral; otherwise false | true when finite and non-integral | stored ratio |
-| numeric tag constant (`:true`, `:false`, `:pi`, `:e`, `:tau`, `:phi`, `:infinity`, `:negativeinfinity`) | true | true only for finite integral constants | true only for finite non-integral constants | constant value |
 | dice | true | true | false | sum of rolls |
-| text, list, map, range, vector, point, message, handler, series, custom values, non-numeric tags | false | false | false | none |
+| text, tag, list, map, range, vector, point, message, handler, series, custom values | false | false | false | none |
 
 Text values are not numeric for implicit mathematics or numeric checks:
 `'100' is numeric` is false, and `'100' + 200` is text concatenation. An
@@ -509,9 +523,8 @@ therefore produces `nothing`, not `true`.
 
 For present operands, exact equality first tries the same numeric view used by
 numeric operators. Numeric values, percentages, booleans (`false` = `0`,
-`true` = `1`), dice sums, and numeric tag constants such as `:pi`,
-`:infinity`, and `:negativeinfinity` compare by numeric value when both
-operands have a numeric view. Quantity units must match exactly; unitless and
+`true` = `1`), and dice sums compare by numeric value when both operands have
+a numeric view. Quantity units must match exactly; unitless and
 unit-bearing values are not equal, including integer fast paths such as
 `10 = 10m`, which is `false`. Internal `NaN` numeric values are never equal.
 When either numeric side is represented as double precision, finite values
@@ -531,7 +544,7 @@ and maps/records/custom map-like values compare their visible key/value pairs.
 Hidden map fields such as record type markers do not participate in map
 equality.
 
-`:abs` preserves the operand's numeric family for percentages and quantities:
+`abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their
 unit. Finite numeric results that are exactly integral are represented as
 integer values.
@@ -997,7 +1010,7 @@ Random values are drawn from the runtime random generator:
 
 ```ges
 let roll be :random from 1 to 6
-let chance be :chance 25%
+let chance be chance 25%
 ```
 
 Dice rolls use `:dice NdM` and produce sorted dice values:
@@ -1017,24 +1030,15 @@ Extension references use `:extension.function`.
 Supported call forms:
 
 ```ges
-:integer.floor value
-:integer.ceil(value)
-:integer.halfEven of value
-:degree.wrap value
 :series.natural(start: 1, step: 2)
 ```
 
-Standard extensions:
+Built-in math intrinsics are opcodes rather than standard extensions:
 
-- `:integer.floor`
-- `:integer.ceil`
-- `:integer.truncate`
-- `:integer.halfEven`
-- `:integer.halfUp`
-- `:integer.halfDown`
-- `:degree.wrap`
-- `:degree.toRadians`
-- `:degree.fromRadians`
+- `floor`, `ceil`, `truncate`
+- `round half even`, `round half up`, `round half down`
+- `rad`, `deg`, `wrap degree`
+- `abs`, `ln`, `exp`, `sqrt`, `cbrt`, `chance`
 - `:series.fibonacci`
 - `:series.factorial`
 - `:series.natural`
@@ -1048,7 +1052,7 @@ Records are immutable map-like values with declared fields:
 ```ges
 record :gauge as {
   current: :number clamped between 0 and maximum,
-  maximum: :number clamped between 0 and :infinity,
+  maximum: :number clamped between 0 and infinity,
   percentage: :percentage computed by
     0% when maximum <= 0,
     otherwise (current / maximum) as :percentage

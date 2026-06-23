@@ -522,8 +522,8 @@ term. `is numeric`, `is integer`, and `is fractional` are source-level check
 constructs that lower to `CheckNumeric`, `CheckInteger`, and `CheckFractional`;
 they do not parse text and do not treat series as numeric. `CheckNumeric` is
 true exactly for values with a runtime numeric view: integer and float numbers,
-percentages, booleans (`false` = `0`, `true` = `1`), numeric tag constants, and
-dice through the sum of their rolls. `CheckInteger` is true when that numeric
+percentages, booleans (`false` = `0`, `true` = `1`), and dice through the sum
+of their rolls. Text and tags are not numeric here. `CheckInteger` is true when that numeric
 view is finite and exactly integral; booleans and dice are therefore integer.
 `CheckFractional` is true when the numeric view is finite and non-integral.
 `Nothing`, text, list, map, range, vector, point, message, handler, series,
@@ -539,9 +539,9 @@ syntax: first character lowercase letter, remaining characters letters only.
 The empty string, numbers, quantities, percentages, formatted containers,
 formatted vector/point values, whitespace, punctuation, brackets, colons inside
 the value, and underscores are invalid and write `nothing`. Existing valid tags
-remain unchanged. Boolean sources write `:true` or `:false`; text sources write a
+remain unchanged. Boolean sources write `#true` or `#false`; text sources write a
 tag only when the raw text is a valid tag name. Text values `true`, `True`,
-`false`, and `False` are accepted and normalized to `:true` and `:false`.
+`false`, and `False` are accepted and normalized to `#true` and `#false`.
 
 `Cast :text` is the formatting cast and does not validate the formatted text as
 a tag. `Cast :vector` and `Cast :point` are structural conversions: vector to
@@ -587,13 +587,13 @@ Required operations:
 - `StartsWith`, `EndsWith`
 - `Union`, `Intersect`, `Zip`
 - `Min`, `Max`
-- direct unary opcodes such as `Negate`, `Not`, `Length`,
+- direct unary opcodes such as `Negate`, `Not`, `Count`,
   `Abs`, and `LogN`
 - `Clamp`
 
-Text and tag values are text-compatible for `Length`, `Contains`, `StartsWith`,
+Text and tag values are text-compatible for `Count`, `Contains`, `StartsWith`,
 and `EndsWith`: comparisons use raw text without the `:` tag prefix, using
-ordinal comparison, and `Length` counts raw text characters. Other operand
+ordinal comparison, and `Count` counts raw text characters. Other operand
 shapes follow their collection or invalid-operation semantics.
 
 `Contains left, right` writes membership of `left` in `right`. For text/tag
@@ -683,8 +683,8 @@ collection operators.
 other Group 2 operations: if either direct operand is `Nothing`, or an internal
 numeric `NaN` observed as `Nothing`, the result register receives `Nothing`.
 For present operands, `Equal` first tries numeric comparison. Integers, floats,
-percentages, booleans, dice sums, and numeric tag constants compare by numeric
-value when both operands have a numeric view. Quantity units must both be absent
+percentages, booleans, and dice sums compare by numeric value when both
+operands have a numeric view. Quantity units must both be absent
 or exactly equal; integer fast paths must obey the same unit equality rule, so
 `10 = 10m` is `false` and `10 <> 10m` is `true`. Numeric infinities compare
 equal only when they have the same sign; numeric `NaN` values are never equal.

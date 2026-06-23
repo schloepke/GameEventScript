@@ -6,7 +6,7 @@
     {
       "kind": "scriptApi",
       "name": "load primitive values",
-      "script": "module AtomicLoadPrimitiveValues\non Start {\n  let nothingValue be nothing\n  let trueValue be true\n  let falseValue be false\n  let integerValue be 42\n  let floatValue be 12.5\n  let meterValue be 7m\n  let percentageValue be 25%\n  let textValue be 'hello'\n  let tagValue be :boss\n  emit Done(nothingValue: nothingValue, trueValue: trueValue, falseValue: falseValue, integerValue: integerValue, floatValue: floatValue, meterValue: meterValue, percentageValue: percentageValue, textValue: textValue, tagValue: tagValue)\n}",
+      "script": "module AtomicLoadPrimitiveValues\non Start {\n  let nothingValue be nothing\n  let trueValue be true\n  let falseValue be false\n  let integerValue be 42\n  let floatValue be 12.5\n  let meterValue be 7m\n  let percentageValue be 25%\n  let textValue be 'hello'\n  let tagValue be #boss\n  emit Done(nothingValue: nothingValue, trueValue: trueValue, falseValue: falseValue, integerValue: integerValue, floatValue: floatValue, meterValue: meterValue, percentageValue: percentageValue, textValue: textValue, tagValue: tagValue)\n}",
       "steps": [
         {
           "input": {
@@ -235,7 +235,7 @@
     {
       "kind": "scriptApi",
       "name": "create dice values",
-      "script": "module AtomicCreateDiceValues\non Start {\n  let diceValue be :dice 6d3\n  emit Done(diceValue: diceValue, length: :len diceValue)\n}",
+      "script": "module AtomicCreateDiceValues\non Start {\n  let diceValue be :dice 6d3\n  emit Done(diceValue: diceValue, length: diceValue[:count])\n}",
       "randomSequence": [
         "3",
         "2",
@@ -278,7 +278,7 @@
     {
       "kind": "scriptApi",
       "name": "create list values",
-      "script": "module AtomicCreateListValues\non Start {\n  let values be [1, 'two', :pi, true]\n  emit Done(values: values, length: :len values)\n}",
+      "script": "module AtomicCreateListValues\non Start {\n  let values be [1, 'two', pi, true]\n  emit Done(values: values, length: values[:count])\n}",
       "steps": [
         {
           "input": {
@@ -305,8 +305,8 @@
                       "value": "two"
                     },
                     {
-                      "type": ":tag",
-                      "value": "pi"
+                      "type": ":float",
+                      "value": "3.14159265358979"
                     },
                     {
                       "type": ":boolean",
@@ -323,7 +323,7 @@
     {
       "kind": "scriptApi",
       "name": "create map values",
-      "script": "module AtomicCreateMapValues\non Start {\n  let unit be [name: 'Ada', hp: 10, alive: true, role: :boss]\n  emit Done(unit: unit, length: :len unit)\n}",
+      "script": "module AtomicCreateMapValues\non Start {\n  let unit be [name: 'Ada', hp: 10, alive: true, role: #boss]\n  emit Done(unit: unit, length: unit[:count])\n}",
       "steps": [
         {
           "input": {
@@ -368,7 +368,7 @@
     {
       "kind": "scriptApi",
       "name": "create nested collection values",
-      "script": "module AtomicCreateNestedCollectionValues\non Start {\n  let squad be [leader: [name: 'Ada', hp: 10], inventory: ['potion', 'key'], tags: [:boss, :scout]]\n  emit Done(squad: squad, length: :len squad)\n}",
+      "script": "module AtomicCreateNestedCollectionValues\non Start {\n  let squad be [leader: [name: 'Ada', hp: 10], inventory: ['potion', 'key'], tags: [#boss, #scout]]\n  emit Done(squad: squad, length: squad[:count])\n}",
       "steps": [
         {
           "input": {
@@ -436,7 +436,7 @@
     {
       "kind": "scriptApi",
       "name": "stage literal value kinds",
-      "script": "module AtomicStageLiteralValueKinds\non Start {\n  let stagedList be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', :ready]\n  let stagedMap be [falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: :ready]\n  emit Done(stagedList: stagedList, stagedMap: stagedMap)\n}",
+      "script": "module AtomicStageLiteralValueKinds\non Start {\n  let stagedList be [false, true, 12, 12.5, 7m, 1.5m, 25%, 'txt', #ready]\n  let stagedMap be [falseValue: false, trueValue: true, integerValue: 12, floatValue: 12.5, meterInteger: 7m, meterFloat: 1.5m, percentageValue: 25%, textValue: 'txt', tagValue: #ready]\n  emit Done(stagedList: stagedList, stagedMap: stagedMap)\n}",
       "steps": [
         {
           "input": {
@@ -450,29 +450,87 @@
                 "stagedList": {
                   "type": ":list",
                   "items": [
-                    { "type": ":boolean", "value": false },
-                    { "type": ":boolean", "value": true },
-                    { "type": ":integer", "value": "12" },
-                    { "type": ":float", "value": "12.5" },
-                    { "type": ":integer", "unit": ":meter", "value": "7" },
-                    { "type": ":float", "unit": ":meter", "value": "1.5" },
-                    { "type": ":percentage", "value": "0.25" },
-                    { "type": ":text", "value": "txt" },
-                    { "type": ":tag", "value": "ready" }
+                    {
+                      "type": ":boolean",
+                      "value": false
+                    },
+                    {
+                      "type": ":boolean",
+                      "value": true
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    {
+                      "type": ":float",
+                      "value": "12.5"
+                    },
+                    {
+                      "type": ":integer",
+                      "unit": ":meter",
+                      "value": "7"
+                    },
+                    {
+                      "type": ":float",
+                      "unit": ":meter",
+                      "value": "1.5"
+                    },
+                    {
+                      "type": ":percentage",
+                      "value": "0.25"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "txt"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "ready"
+                    }
                   ]
                 },
                 "stagedMap": {
                   "type": ":map",
                   "entries": {
-                    "falseValue": { "type": ":boolean", "value": false },
-                    "floatValue": { "type": ":float", "value": "12.5" },
-                    "integerValue": { "type": ":integer", "value": "12" },
-                    "meterFloat": { "type": ":float", "unit": ":meter", "value": "1.5" },
-                    "meterInteger": { "type": ":integer", "unit": ":meter", "value": "7" },
-                    "percentageValue": { "type": ":percentage", "value": "0.25" },
-                    "tagValue": { "type": ":tag", "value": "ready" },
-                    "textValue": { "type": ":text", "value": "txt" },
-                    "trueValue": { "type": ":boolean", "value": true }
+                    "falseValue": {
+                      "type": ":boolean",
+                      "value": false
+                    },
+                    "floatValue": {
+                      "type": ":float",
+                      "value": "12.5"
+                    },
+                    "integerValue": {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    "meterFloat": {
+                      "type": ":float",
+                      "unit": ":meter",
+                      "value": "1.5"
+                    },
+                    "meterInteger": {
+                      "type": ":integer",
+                      "unit": ":meter",
+                      "value": "7"
+                    },
+                    "percentageValue": {
+                      "type": ":percentage",
+                      "value": "0.25"
+                    },
+                    "tagValue": {
+                      "type": ":tag",
+                      "value": "ready"
+                    },
+                    "textValue": {
+                      "type": ":text",
+                      "value": "txt"
+                    },
+                    "trueValue": {
+                      "type": ":boolean",
+                      "value": true
+                    }
                   }
                 }
               }
@@ -484,7 +542,7 @@
     {
       "kind": "scriptApi",
       "name": "generated list builder values",
-      "script": "module AtomicGeneratedListBuilderValues\non Start {\n  let sourceList be [1, 'two', :boss, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  let fromRange be :list[:select item from 1 to 4 => item * item]\n  let filteredRange be :list[:select item from 1 to 6 where item mod 2 = 0 => item]\n  let fromList be :list[:select item in sourceList => item]\n  let fromEmptyList be :list[:select item in emptyList => item]\n  let fromDice be :list[:select item in dice => item + 1]\n  let fromText be :list[:select item in text => item]\n  let fromMap be :list[:select item in map => item * 10]\n  let invalidSource be :list[:select item in 10 => item]\n  emit Done(fromRange: fromRange, filteredRange: filteredRange, fromList: fromList, fromEmptyList: fromEmptyList, fromDice: fromDice, fromText: fromText, fromMap: fromMap, invalidSource: invalidSource)\n}",
+      "script": "module AtomicGeneratedListBuilderValues\non Start {\n  let sourceList be [1, 'two', #boss, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  let fromRange be :list[:select item from 1 to 4 => item * item]\n  let filteredRange be :list[:select item from 1 to 6 where item mod 2 = 0 => item]\n  let fromList be :list[:select item in sourceList => item]\n  let fromEmptyList be :list[:select item in emptyList => item]\n  let fromDice be :list[:select item in dice => item + 1]\n  let fromText be :list[:select item in text => item]\n  let fromMap be :list[:select item in map => item * 10]\n  let invalidSource be :list[:select item in 10 => item]\n  emit Done(fromRange: fromRange, filteredRange: filteredRange, fromList: fromList, fromEmptyList: fromEmptyList, fromDice: fromDice, fromText: fromText, fromMap: fromMap, invalidSource: invalidSource)\n}",
       "steps": [
         {
           "input": {
@@ -498,27 +556,60 @@
                 "fromRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "9" },
-                    { "type": ":integer", "value": "16" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "9"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "16"
+                    }
                   ]
                 },
                 "filteredRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "6" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "6"
+                    }
                   ]
                 },
                 "fromList": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":text", "value": "two" },
-                    { "type": ":tag", "value": "boss" },
-                    { "type": ":boolean", "value": true }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "two"
+                    },
+                    {
+                      "type": ":tag",
+                      "value": "boss"
+                    },
+                    {
+                      "type": ":boolean",
+                      "value": true
+                    }
                   ]
                 },
                 "fromEmptyList": {
@@ -528,23 +619,44 @@
                 "fromDice": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "7" },
-                    { "type": ":integer", "value": "5" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "7"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 },
                 "fromText": {
                   "type": ":list",
                   "items": [
-                    { "type": ":text", "value": "a" },
-                    { "type": ":text", "value": "b" }
+                    {
+                      "type": ":text",
+                      "value": "a"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "b"
+                    }
                   ]
                 },
                 "fromMap": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "10" },
-                    { "type": ":integer", "value": "20" }
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "20"
+                    }
                   ]
                 },
                 "invalidSource": {
@@ -574,25 +686,52 @@
                 "descendingRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "5" },
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "1" }
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    }
                   ]
                 },
                 "dynamicRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" },
-                    { "type": ":integer", "value": "4" },
-                    { "type": ":integer", "value": "5" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   ]
                 },
                 "dynamicSteppedRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "4" }
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
                   ]
                 },
                 "emptyRange": {
@@ -602,17 +741,35 @@
                 "floatRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":float", "value": "1.5" },
-                    { "type": ":float", "value": "2" },
-                    { "type": ":float", "value": "2.5" }
+                    {
+                      "type": ":float",
+                      "value": "1.5"
+                    },
+                    {
+                      "type": ":float",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":float",
+                      "value": "2.5"
+                    }
                   ]
                 },
                 "shortRange": {
                   "type": ":list",
                   "items": [
-                    { "type": ":integer", "value": "1" },
-                    { "type": ":integer", "value": "2" },
-                    { "type": ":integer", "value": "3" }
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    }
                   ]
                 }
               }
@@ -624,7 +781,7 @@
     {
       "kind": "scriptApi",
       "name": "large staged list grows register storage",
-      "script": "module AtomicLargeStagedList\non Start {\n  let values be [\n    1, 2, 3, 4, 5, 6, 7, 8,\n    9, 10, 11, 12, 13, 14, 15, 16,\n    17, 18, 19, 20, 21, 22, 23, 24,\n    25, 26, 27, 28, 29, 30, 31, 32,\n    33, 34, 35, 36, 37, 38, 39, 40\n  ]\n  emit Done(count: :len values)\n}",
+      "script": "module AtomicLargeStagedList\non Start {\n  let values be [\n    1, 2, 3, 4, 5, 6, 7, 8,\n    9, 10, 11, 12, 13, 14, 15, 16,\n    17, 18, 19, 20, 21, 22, 23, 24,\n    25, 26, 27, 28, 29, 30, 31, 32,\n    33, 34, 35, 36, 37, 38, 39, 40\n  ]\n  emit Done(count: values[:count])\n}",
       "steps": [
         {
           "input": {

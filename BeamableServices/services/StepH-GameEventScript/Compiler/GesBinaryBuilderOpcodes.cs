@@ -288,6 +288,36 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder Chance(GesRegisterRef destination, GesRegisterRef operand)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Chance, destination, operand);
 
+    public GesBinaryBuilder Exp(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Exp, destination, operand);
+
+    public GesBinaryBuilder Floor(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Floor, destination, operand);
+
+    public GesBinaryBuilder Ceil(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Ceil, destination, operand);
+
+    public GesBinaryBuilder Truncate(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Truncate, destination, operand);
+
+    public GesBinaryBuilder RoundHalfEven(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.RoundHalfEven, destination, operand);
+
+    public GesBinaryBuilder RoundHalfUp(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.RoundHalfUp, destination, operand);
+
+    public GesBinaryBuilder RoundHalfDown(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.RoundHalfDown, destination, operand);
+
+    public GesBinaryBuilder DegreeToRadians(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.DegreeToRadians, destination, operand);
+
+    public GesBinaryBuilder DegreeFromRadians(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.DegreeFromRadians, destination, operand);
+
+    public GesBinaryBuilder WrapDegree(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.WrapDegree, destination, operand);
+
     public GesBinaryBuilder Clamp(GesRegisterRef destination, GesRegisterRef value, GesRegisterRef minimum, GesRegisterRef maximum)
         => AddOpcode(GameEventScriptBytecodeOpCode.Clamp, dst: GesOperand.Register(destination), x: GesOperand.Register(value), y: GesOperand.Register(minimum), a: GesOperand.Register(maximum));
 
@@ -339,8 +369,8 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder TakeRandom(GesRegisterRef destination, GesRegisterRef source, short count)
         => CountOpcode(GameEventScriptBytecodeOpCode.TakeRandom, destination, source, count);
 
-    public GesBinaryBuilder Length(GesRegisterRef destination, GesRegisterRef operand)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.Length, destination, operand);
+    public GesBinaryBuilder Count(GesRegisterRef destination, GesRegisterRef source)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Count, destination, source);
 
     public GesBinaryBuilder StartsWith(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
         => BinaryOpcode(GameEventScriptBytecodeOpCode.StartsWith, destination, left, right);
@@ -407,9 +437,6 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder StreamFilter(GesRegisterRef destination, GesRegisterRef sourceIterator, GesLabelRef predicateEntry, GesRegisterRef itemBinding, IReadOnlyList<GesRegisterRef> captures)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamFilter, dst: GesOperand.Register(destination), x: GesOperand.Register(sourceIterator), y: GesOperand.Label(predicateEntry), a: GesOperand.Register(itemBinding), b: GesOperand.RegisterList(captures));
-
-    public GesBinaryBuilder Count(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.Count, destination, iterator);
 
     public GesBinaryBuilder Sum(GesRegisterRef destination, GesRegisterRef iterator)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Sum, destination, iterator);

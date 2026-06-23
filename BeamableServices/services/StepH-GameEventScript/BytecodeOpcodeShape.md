@@ -216,7 +216,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x17 | `CheckType` | - | result register | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
 | 0x18 | `CheckCustomType` | - | result register | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
 | 0x19 | `CheckUnit` | target numeric unit | result register | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x1A | `CheckNumeric` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), numeric tag constants, and dice sums are numeric. Text is not parsed here. |
+| 0x1A | `CheckNumeric` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), and dice sums are numeric. Text and tags are not parsed here. |
 | 0x1B | `CheckInteger` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a finite integral numeric view. Booleans and dice are integer. Text is not parsed here. |
 | 0x1C | `CheckFractional` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a finite non-integral numeric view. Text is not parsed here. |
 | 0x1D | `Move` | - | result register | `XSlot`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
@@ -287,8 +287,8 @@ percentage as its stored ratio and writes a numeric result in the other
 operand's value family, so `10% * 10` and `10 * 10%` both write numeric `1`.
 `Equal` and `NotEqual` propagate `Nothing` when either operand
 is absent. Exact equality first compares the numeric view for numeric-capable
-operands (numbers, percentages, booleans, dice sums, and numeric tag
-constants), requiring identical quantity units or no unit on both operands; this
+operands (numbers, percentages, booleans, and dice sums), requiring identical
+quantity units or no unit on both operands; this
 also applies to integer fast paths. If numeric comparison does not apply, exact
 equality requires the same value kind and kind-specific structural equality.
 When either numeric side is represented as double precision, finite values
@@ -329,7 +329,17 @@ separate approximate-equality opcode.
 | 0x6D | `RandomPushConstant` | - | - | - | - | `I64`=signed seed | Pushes a nested random scope from inline signed `Int64`. |
 | 0x6E | `RandomPop` | - | - | - | - | - | Restores the previous random scope. |
 | 0x6F | `Term` | - | result register | `XSlot`=series | `YSlot`=index | - | Reads a zero-based mathematical series term; non-series sources yield `nothing`. |
-| 0x70..0x7F | reserved | - | - | - | - | - | Reserved tail of Group 2 after compacting boolean algebra, math, random, and series. |
+| 0x70 | `Exp` | - | result register | `XSlot`=operand | - | - | Natural exponential. Unitless numeric input only; overflow to `+Infinity` is valid. |
+| 0x71 | `Floor` | - | result register | `XSlot`=operand | - | - | Floors a unitless numeric value and writes an integer. |
+| 0x72 | `Ceil` | - | result register | `XSlot`=operand | - | - | Ceils a unitless numeric value and writes an integer. |
+| 0x73 | `Truncate` | - | result register | `XSlot`=operand | - | - | Truncates a unitless numeric value toward zero and writes an integer. |
+| 0x74 | `RoundHalfEven` | - | result register | `XSlot`=operand | - | - | Rounds a unitless numeric value using midpoint-to-even and writes an integer. |
+| 0x75 | `RoundHalfUp` | - | result register | `XSlot`=operand | - | - | Rounds midpoint values away from zero and writes an integer. |
+| 0x76 | `RoundHalfDown` | - | result register | `XSlot`=operand | - | - | Rounds midpoint values toward zero and writes an integer. |
+| 0x77 | `DegreeToRadians` | - | result register | `XSlot`=operand | - | - | Converts degrees to unitless radians. |
+| 0x78 | `DegreeFromRadians` | - | result register | `XSlot`=operand | - | - | Converts unitless radians to a degree quantity. |
+| 0x79 | `WrapDegree` | - | result register | `XSlot`=operand | - | - | Normalizes a degree or unitless numeric value into `[0, 360)` degrees. |
+| 0x7A..0x7F | reserved | - | - | - | - | - | Reserved tail of Group 2 after compacting boolean algebra, math, random, and series. |
 
 ### Group 3 - Text, Collections, Streams
 
@@ -345,7 +355,7 @@ separate approximate-equality opcode.
 | 0x87 | `DropLowest` | - | result register | `XSlot`=source | `ImmediateY`=count | - | Drops the lowest `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
 | 0x88 | `OneRandom` | - | result register | `XSlot`=source | - | - | Chooses one random element from a finite list, dice, range, or stream source; empty/invalid/series sources yield `nothing`. |
 | 0x89 | `TakeRandom` | - | result register | `XSlot`=source | `ImmediateY`=count | - | Chooses up to `Y` random elements without replacement. Lists stay lists, dice stay dice, ranges and streams materialize as lists. |
-| 0x8A | `Length` | - | result register | `XSlot`=operand | - | - | Length operation. Text and tags use raw text length. |
+| 0x8A | `Count` | - | result register | `XSlot`=source | - | - | Counts finite collection/stream elements. Text and tags use raw text length; `nothing` -> `0`; invalid/series sources -> `nothing`. |
 | 0x8B | `StartsWith` | - | result register | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text prefix check or list/dice/range sequence prefix check. |
 | 0x8C | `EndsWith` | - | result register | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text suffix check or list/dice/range sequence suffix check. |
 | 0x8D | `Contains` | - | result register | `XSlot`=needle | `YSlot`=container | - | Text/tag substring, map key, list/dice/range membership, or vector/point component membership. |
@@ -368,31 +378,30 @@ separate approximate-equality opcode.
 | 0x9E | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
 | 0x9F | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
 | 0xA0 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
-| 0xA1 | `Count` | - | result register | `XSlot`=source | - | - | Counts finite collection/stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xA2 | `Sum` | - | result register | `XSlot`=source | - | - | Sums finite collection/stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xA3 | `Average` | - | result register | `XSlot`=source | - | - | Averages finite collection/stream elements. Empty/series -> `nothing`. |
-| 0xA4 | `StreamMin` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
-| 0xA5 | `StreamMax` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
-| 0xA6 | `StreamOneWeighted` | - | result register | `XSlot`=iterator | - | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
-| 0xA7 | `StreamTakeWeighted` | - | result register | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
-| 0xA8 | `StreamCollectList` | - | result register | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xA9 | `StreamCollectMap` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
-| 0xAA | `StreamCollectMapValue` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
-| 0xAB | `Distinct` | - | result register | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
-| 0xAC | `DistinctBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
-| 0xAD | `GroupBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct list, map/custom map-backed, and stream sources. |
-| 0xAE | `SortAscending` | - | result register | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
-| 0xAF | `SortDescending` | - | result register | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
-| 0xB0 | `OrderByAscending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
-| 0xB1 | `OrderByDescending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
-| 0xB2 | `Reverse` | - | result register | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
-| 0xB3 | `Shuffle` | - | result register | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
-| 0xB4 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
-| 0xB5 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xB6 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
-| 0xB7 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
-| 0xB8 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-| 0xB9..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
+| 0xA1 | `Sum` | - | result register | `XSlot`=source | - | - | Sums finite collection/stream elements. Empty -> `0`; series -> `nothing`. |
+| 0xA2 | `Average` | - | result register | `XSlot`=source | - | - | Averages finite collection/stream elements. Empty/series -> `nothing`. |
+| 0xA3 | `StreamMin` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
+| 0xA4 | `StreamMax` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
+| 0xA5 | `StreamOneWeighted` | - | result register | `XSlot`=iterator | - | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
+| 0xA6 | `StreamTakeWeighted` | - | result register | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
+| 0xA7 | `StreamCollectList` | - | result register | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xA8 | `StreamCollectMap` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
+| 0xA9 | `StreamCollectMapValue` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
+| 0xAA | `Distinct` | - | result register | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
+| 0xAB | `DistinctBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
+| 0xAC | `GroupBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct list, map/custom map-backed, and stream sources. |
+| 0xAD | `SortAscending` | - | result register | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
+| 0xAE | `SortDescending` | - | result register | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
+| 0xAF | `OrderByAscending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
+| 0xB0 | `OrderByDescending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
+| 0xB1 | `Reverse` | - | result register | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
+| 0xB2 | `Shuffle` | - | result register | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
+| 0xB3 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
+| 0xB4 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xB5 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
+| 0xB6 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
+| 0xB7 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
+| 0xB8..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

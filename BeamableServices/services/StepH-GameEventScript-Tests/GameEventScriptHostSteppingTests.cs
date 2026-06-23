@@ -367,48 +367,6 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
-    public void AutomaticDispatchCanShareOneDispatcherAcrossHosts()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit Done
-                }
-                """)
-            .CompileModule();
-        using var dispatcher = GameEventScriptDispatcher.Create(workerCount: 1);
-        var completed = new CountdownEvent(2);
-        var first = GameEventScriptHost.CreateBuilder()
-            .WithAutomaticDispatch(dispatcher)
-            .WithRuntimeObserver(TestRuntimeObserver.ObserveOutputs(message =>
-            {
-                if (message.Name == "Done")
-                {
-                    completed.Signal();
-                }
-            }))
-            .Build()
-            .Load(bytecode);
-        var second = GameEventScriptHost.CreateBuilder()
-            .WithAutomaticDispatch(dispatcher)
-            .WithRuntimeObserver(TestRuntimeObserver.ObserveOutputs(message =>
-            {
-                if (message.Name == "Done")
-                {
-                    completed.Signal();
-                }
-            }))
-            .Build()
-            .Load(bytecode);
-
-        Assert.IsTrue(first.Publish(Create("Start")));
-        Assert.IsTrue(second.Publish(Create("Start")));
-
-        Assert.IsTrue(completed.Wait(TimeSpan.FromSeconds(2)));
-    }
-
-    [TestMethod]
     public void SubscribeDuringDispatchUpdatesFutureDispatchSnapshots()
     {
         var calls = new List<string>();

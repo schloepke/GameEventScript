@@ -1,4 +1,4 @@
-using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.VirtualMachine;
 

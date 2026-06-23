@@ -16,7 +16,6 @@ public sealed class GameEventScriptHostBuilder
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
     private GameEventScriptDispatchMode _dispatchMode = GameEventScriptDispatchMode.Manual;
-    private GameEventScriptDispatcher? _dispatcher;
     private Func<GameEventScriptMessage, bool>? _publishHook;
 
     /// <summary>
@@ -124,38 +123,12 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
-    /// Configures how the host drains its internal message queue after messages are published.
-    /// </summary>
-    /// <param name="dispatchMode">The dispatch mode used by the built host.</param>
-    /// <returns>The current builder instance.</returns>
-    public GameEventScriptHostBuilder WithDispatchMode(GameEventScriptDispatchMode dispatchMode)
-    {
-        _dispatchMode = dispatchMode;
-        return this;
-    }
-
-    /// <summary>
     /// Configures the host to drain queued messages on a background dispatch pump.
     /// </summary>
     /// <returns>The current builder instance.</returns>
     public GameEventScriptHostBuilder WithAutomaticDispatch()
     {
         _dispatchMode = GameEventScriptDispatchMode.Automatic;
-        return this;
-    }
-
-    /// <summary>
-    /// Configures the host to drain queued messages on the provided shared dispatcher.
-    /// </summary>
-    /// <param name="dispatcher">The dispatcher that should pump this host.</param>
-    /// <returns>The current builder instance.</returns>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown if the <paramref name="dispatcher"/> parameter is null.
-    /// </exception>
-    public GameEventScriptHostBuilder WithAutomaticDispatch(GameEventScriptDispatcher dispatcher)
-    {
-        _dispatchMode = GameEventScriptDispatchMode.Automatic;
-        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         return this;
     }
 
@@ -174,6 +147,6 @@ public sealed class GameEventScriptHostBuilder
         _externalTypeRegistry,
         _runtimeLimits,
         _dispatchMode,
-        _dispatcher,
+        dispatcher: null,
         _publishHook);
 }

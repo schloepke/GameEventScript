@@ -9,78 +9,63 @@ using StepH.GameEventScript.VirtualMachine;
 
 namespace StepH.GameEventScript.Runtime;
 
-public interface IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptExtensionRegistryBuilder : IGameEventScriptExtensionRegistryBuilder
 {
-    bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function);
-}
+    private readonly IGameEventScriptExtensionRegistry? _baseRegistry;
+    private readonly List<Type> _extensionTypes = [];
 
-public interface IGameEventScriptExtensionFunction
-{
-    GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments);
-}
-
-public sealed class GameEventScriptExtensionReference
-{
-    public GameEventScriptExtensionReference(string? extensionName, string? functionName, IEnumerable<string?>? argumentLabels)
+    private GameEventScriptExtensionRegistryBuilder(IGameEventScriptExtensionRegistry? baseRegistry)
     {
-        ExtensionName = NormalizeName(extensionName);
-        FunctionName = NormalizeName(functionName);
-        ArgumentLabels = (argumentLabels ?? Array.Empty<string?>()).Select(GameEventScriptMessageSignature.NormalizeParameterName).ToArray();
-        SignatureId = $"{ExtensionName}.{FunctionName}({string.Join(",", ArgumentLabels)})";
+        _baseRegistry = baseRegistry;
     }
 
-    public string ExtensionName { get; }
+    public static GameEventScriptExtensionRegistryBuilder Create(IGameEventScriptExtensionRegistry? baseRegistry)
+        => new(baseRegistry);
 
-    public string FunctionName { get; }
-
-    public IReadOnlyList<string> ArgumentLabels { get; }
-
-    public string SignatureId { get; }
-
-    private static string NormalizeName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
-}
-
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-public sealed class GesExtensionAttribute(string name) : Attribute
-{
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
-}
-
-[AttributeUsage(AttributeTargets.Method)]
-public sealed class GesFunctionAttribute(string name) : Attribute
-{
-    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind) : this(name)
+    public IGameEventScriptExtensionRegistryBuilder Add(Type extensionType)
     {
-        ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit: null);
-        ReturnKind = returnKind;
+        _extensionTypes.Add(extensionType ?? throw new ArgumentNullException(nameof(extensionType)));
+        return this;
     }
 
-    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
+    public IGameEventScriptExtensionRegistryBuilder Add<T>() => Add(typeof(T));
+
+    public IGameEventScriptExtensionRegistryBuilder AddRange(IEnumerable<Type> extensionTypes)
     {
-        ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
-        ReturnKind = returnKind;
-        ReturnUnit = unit.ToStoredUnit();
+        _ = extensionTypes ?? throw new ArgumentNullException(nameof(extensionTypes));
+        foreach (var extensionType in extensionTypes)
+        {
+            Add(extensionType);
+        }
+
+        return this;
     }
 
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
-
-    public string? ReturnTypeName { get; }
-
-    public GameEventScriptBytecodeTypeKind? ReturnKind { get; }
-
-    public GameEventScriptBytecodeInstructionUnit ReturnUnit { get; }
+    public IGameEventScriptExtensionRegistry Build()
+    {
+        var localRegistry = GameEventScriptExtensionRegistry.Create(_extensionTypes);
+        return _baseRegistry is null
+            ? localRegistry
+            : new GameEventScriptOverlayExtensionRegistry(localRegistry, _baseRegistry);
+    }
 }
 
-public sealed class GameEventScriptExtensionContext(GameEventScriptSession runtimeSession)
+internal sealed class GameEventScriptOverlayExtensionRegistry(
+    IGameEventScriptExtensionRegistry localRegistry,
+    IGameEventScriptExtensionRegistry baseRegistry) : IGameEventScriptExtensionRegistry
 {
-    public GameEventScriptSession RuntimeSession { get; } = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
+    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
+    {
+        if (localRegistry.TryResolve(reference, out function))
+        {
+            return true;
+        }
 
-    public GameEventScriptRandomGenerator Random => RuntimeSession.Random;
-
-    public GameEventScriptRuntimeLimits RuntimeLimits => RuntimeSession.RuntimeLimits;
+        return baseRegistry.TryResolve(reference, out function);
+    }
 }
 
-public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtensionRegistry
 {
     private readonly IReadOnlyDictionary<string, IGameEventScriptExtensionFunction> _functions;
 
@@ -641,7 +626,7 @@ public sealed class GameEventScriptExtensionRegistry : IGameEventScriptExtension
     }
 }
 
-public sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry
 {
     public static readonly GameEventScriptEmptyExtensionRegistry Instance = new();
 

@@ -2,7 +2,7 @@
 
 namespace StepH.GameEventScript.Runtime;
 
-public enum GameEventScriptDispatchMode
+internal enum GameEventScriptDispatchMode
 {
     Manual,
     Automatic

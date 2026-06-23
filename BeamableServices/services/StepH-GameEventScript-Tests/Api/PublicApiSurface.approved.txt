@@ -44,7 +44,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)
   method StepH.GameEventScript.Api.GameEventScriptBuilder AddScript(System.String text, System.String sourceName)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithDebugInfo(System.Boolean enabled)
-  method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry registry)
+  method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypes(System.Type[] types)
   method StepH.GameEventScript.Api.GameEventScriptBuilder WithOptimization(System.Boolean enabled)
   method StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
@@ -320,19 +320,60 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
   property System.Boolean Optimize { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException
   ctor GameEventScriptDynamicLinkException(System.String message)
+sealed class StepH.GameEventScript.Api.GameEventScriptExtensionContext
+  ctor GameEventScriptExtensionContext(StepH.GameEventScript.Api.GameEventScriptSession runtimeSession)
+  property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
+  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
+  property StepH.GameEventScript.Api.GameEventScriptSession RuntimeSession { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExtensionReference
+  ctor GameEventScriptExtensionReference(System.String extensionName, System.String functionName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
+  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
+  property System.String ExtensionName { get }
+  property System.String FunctionName { get }
+  property System.String SignatureId { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition
+  ctor GameEventScriptExternalTypeConstructorDefinition(System.String typeName, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition> parameters)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition> Parameters { get }
+  property System.String SignatureId { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference
+  ctor GameEventScriptExternalTypeConstructorReference(System.String typeName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
+  method static System.String CreateSignatureId(System.String typeName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
+  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
+  property System.String SignatureId { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition
+  ctor GameEventScriptExternalTypeDefinition(System.String name, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition> fields, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition> constructors)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition> Constructors { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition> Fields { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition
+  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition
+  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
 abstract class StepH.GameEventScript.Api.GameEventScriptFatalRuntimeException
 sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
   ctor GameEventScriptHostBuilder()
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithAutomaticDispatch()
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithAutomaticDispatch(StepH.GameEventScript.Runtime.GameEventScriptDispatcher dispatcher)
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithDispatchMode(StepH.GameEventScript.Runtime.GameEventScriptDispatchMode dispatchMode)
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypes(StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry registry)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypes(StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypes(System.Type[] types)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishHook(System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, System.Boolean> publishHook)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandom(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random)
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRegistry(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry registry)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRegistry(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry registry)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeLimits(StepH.GameEventScript.Api.GameEventScriptRuntimeLimits runtimeLimits)
-  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeObserver(StepH.GameEventScript.Runtime.IGameEventScriptRuntimeObserver runtimeObserver)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeObserver(StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver runtimeObserver)
   method StepH.GameEventScript.Runtime.GameEventScriptHost Build()
 enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
@@ -411,7 +452,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
   property System.Int32 MaxQueuedMessagesPerRun { get set }
   property System.Int32 MaxRangeItems { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptSession
-  ctor GameEventScriptSession(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random, System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, System.Boolean> emit, StepH.GameEventScript.Api.GameEventScriptRuntimeLimits runtimeLimits, StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, System.Boolean> publish)
   method StepH.GameEventScript.Runtime.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
   method System.Boolean Dispatch(StepH.GameEventScript.Api.GameEventScriptMessage message)
@@ -426,7 +466,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptSession
   method System.Boolean Publish(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Api.GameEventScriptValue>[] args)
   property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
   property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
-  property StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
+  property StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
   property System.Boolean IsCompletedAndIdle { get }
   property System.Int32 PendingMessageCount { get }
   property System.Int64 ExecutedOpcodes { get }
@@ -528,13 +568,70 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Api.GameEventScriptValue GesTag(System.String tag)
   method static StepH.GameEventScript.Api.GameEventScriptValue GesText(System.String text)
   method static StepH.GameEventScript.Api.GameEventScriptValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+sealed class StepH.GameEventScript.Api.GesConstructAttribute
+  ctor GesConstructAttribute()
+sealed class StepH.GameEventScript.Api.GesExtensionAttribute
+  ctor GesExtensionAttribute(System.String name)
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Api.GesFieldAttribute
+  ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GesFieldAttribute(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GesFunctionAttribute
+  ctor GesFunctionAttribute(System.String name)
+  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind returnKind)
+  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind returnKind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit ReturnUnit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? ReturnKind { get }
+  property System.String Name { get }
+  property System.String ReturnTypeName { get }
+sealed class StepH.GameEventScript.Api.GesParamAttribute
+  ctor GesParamAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GesParamAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GesParamAttribute(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GesTypeAttribute
+  ctor GesTypeAttribute(System.String typeName)
+  property System.String TypeName { get }
+interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
+  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
+interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
+  method System.Boolean TryResolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference, StepH.GameEventScript.Api.IGameEventScriptExtensionFunction& function)
+  method static StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry CreateDefault(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+  method static StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry CreateDefault(System.Type[] extensionTypes)
+  method static StepH.GameEventScript.Api.IGameEventScriptExtensionRegistryBuilder CreateBuilder()
+  method static StepH.GameEventScript.Api.IGameEventScriptExtensionRegistryBuilder CreateBuilder(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry baseRegistry)
+interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistryBuilder
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry Build()
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionRegistryBuilder Add(System.Type extensionType)
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionRegistryBuilder Add<T>()
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionRegistryBuilder AddRange(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor
+  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
+  property StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition Definition { get }
+interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry
+  method System.Boolean TryResolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor& constructor)
+  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> Types { get }
 interface StepH.GameEventScript.Api.IGameEventScriptMessageInvocation
   method System.Int32 RunSlice(System.Int32 maxSteps)
   property System.Boolean IsCompleted { get }
 interface StepH.GameEventScript.Api.IGameEventScriptModule
-  method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
+  method System.Void Bind(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry typeRegistry)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
   property System.String ModuleName { get }
+interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
+  method System.Void DispatchCompleted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
+  method System.Void DispatchStarted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
+  method System.Void MessageEmitted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
+  method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
+  method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
@@ -546,72 +643,11 @@ static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
   method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.IGameEventScriptModule CreateModule(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
-enum StepH.GameEventScript.Runtime.GameEventScriptDispatchMode
-  enum-field Manual = 0
-  enum-field Automatic = 1
-sealed class StepH.GameEventScript.Runtime.GameEventScriptDispatcher
-  method System.Void Dispose()
-  method static StepH.GameEventScript.Runtime.GameEventScriptDispatcher Create(System.Int32 workerCount)
-  property StepH.GameEventScript.Runtime.GameEventScriptDispatcher Shared { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptEmptyExtensionRegistry
-  field static StepH.GameEventScript.Runtime.GameEventScriptEmptyExtensionRegistry Instance
-  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExtensionReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction& function)
-sealed class StepH.GameEventScript.Runtime.GameEventScriptEmptyExternalTypeRegistry
-  field static StepH.GameEventScript.Runtime.GameEventScriptEmptyExternalTypeRegistry Instance
-  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor& constructor)
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.GameEventScriptExternalTypeDefinition> Types { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExtensionContext
-  ctor GameEventScriptExtensionContext(StepH.GameEventScript.Api.GameEventScriptSession runtimeSession)
-  property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
-  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
-  property StepH.GameEventScript.Api.GameEventScriptSession RuntimeSession { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExtensionReference
-  ctor GameEventScriptExtensionReference(System.String extensionName, System.String functionName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
-  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
-  property System.String ExtensionName { get }
-  property System.String FunctionName { get }
-  property System.String SignatureId { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExtensionRegistry
-  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExtensionReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction& function)
-  method static StepH.GameEventScript.Runtime.GameEventScriptExtensionRegistry Create(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
-  method static StepH.GameEventScript.Runtime.GameEventScriptExtensionRegistry Create(System.Type[] extensionTypes)
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorDefinition
-  ctor GameEventScriptExternalTypeConstructorDefinition(System.String typeName, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeParameterDefinition> parameters)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeParameterDefinition> Parameters { get }
-  property System.String SignatureId { get }
-  property System.String TypeName { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference
-  ctor GameEventScriptExternalTypeConstructorReference(System.String typeName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
-  method static System.String CreateSignatureId(System.String typeName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
-  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
-  property System.String SignatureId { get }
-  property System.String TypeName { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeDefinition
-  ctor GameEventScriptExternalTypeDefinition(System.String name, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeFieldDefinition> fields, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorDefinition> constructors)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorDefinition> Constructors { get }
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.GameEventScriptExternalTypeFieldDefinition> Fields { get }
-  property System.String Name { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeFieldDefinition
-  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
-  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, System.String typeName)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
-  property System.String Name { get }
-  property System.String TypeName { get }
-sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeParameterDefinition
-  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
-  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, System.String typeName)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
-  property System.String Name { get }
-  property System.String TypeName { get }
 sealed class StepH.GameEventScript.Runtime.GameEventScriptExternalTypeRegistry
-  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor& constructor)
+  method System.Boolean TryResolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor& constructor)
   method static StepH.GameEventScript.Runtime.GameEventScriptExternalTypeRegistry Create(System.Collections.Generic.IEnumerable<System.Type> types)
   method static StepH.GameEventScript.Runtime.GameEventScriptExternalTypeRegistry Create(System.Type[] types)
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.GameEventScriptExternalTypeDefinition> Types { get }
+  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> Types { get }
 sealed class StepH.GameEventScript.Runtime.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptSession StartSession()
   method StepH.GameEventScript.Runtime.GameEventScriptHost Load(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
@@ -650,58 +686,10 @@ sealed class StepH.GameEventScript.Runtime.GameEventScriptRunStepResult
   property StepH.GameEventScript.Runtime.GameEventScriptRunState State { get set }
   property System.Int32 ExecutedOpcodes { get set }
   property System.Int32 PublishedMessages { get set }
-sealed class StepH.GameEventScript.Runtime.GesConstructAttribute
-  ctor GesConstructAttribute()
-sealed class StepH.GameEventScript.Runtime.GesExtensionAttribute
-  ctor GesExtensionAttribute(System.String name)
-  property System.String Name { get }
-sealed class StepH.GameEventScript.Runtime.GesFieldAttribute
-  ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
-  ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  ctor GesFieldAttribute(System.String name, System.String typeName)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
-  property System.String Name { get }
-  property System.String TypeName { get }
-sealed class StepH.GameEventScript.Runtime.GesFunctionAttribute
-  ctor GesFunctionAttribute(System.String name)
-  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind returnKind)
-  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind returnKind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit ReturnUnit { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? ReturnKind { get }
-  property System.String Name { get }
-  property System.String ReturnTypeName { get }
-sealed class StepH.GameEventScript.Runtime.GesParamAttribute
-  ctor GesParamAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
-  ctor GesParamAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  ctor GesParamAttribute(System.String name, System.String typeName)
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
-  property System.String Name { get }
-  property System.String TypeName { get }
-sealed class StepH.GameEventScript.Runtime.GesTypeAttribute
-  ctor GesTypeAttribute(System.String typeName)
-  property System.String TypeName { get }
-interface StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction
-  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(StepH.GameEventScript.Runtime.GameEventScriptExtensionContext context, System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
-interface StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry
-  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExtensionReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExtensionFunction& function)
-interface StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor
-  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
-  property StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorDefinition Definition { get }
-interface StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry
-  method System.Boolean TryResolve(StepH.GameEventScript.Runtime.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeConstructor& constructor)
-  property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.GameEventScriptExternalTypeDefinition> Types { get }
-interface StepH.GameEventScript.Runtime.IGameEventScriptRuntimeObserver
-  method System.Void DispatchCompleted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
-  method System.Void DispatchStarted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
-  method System.Void MessageEmitted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
-  method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
-  method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 class StepH.GameEventScript.VirtualMachine.GameEventScriptVirtualMaschine
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
   method System.String DumpState(System.String scriptSource, System.Boolean includeInstructionAddresses)
-  method System.Void Bind(StepH.GameEventScript.Runtime.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Runtime.IGameEventScriptExternalTypeRegistry typeRegistry)
+  method System.Void Bind(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry typeRegistry)
   method static StepH.GameEventScript.VirtualMachine.GameEventScriptVirtualMaschine Create(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
   property System.String DebugScriptSource { get set }

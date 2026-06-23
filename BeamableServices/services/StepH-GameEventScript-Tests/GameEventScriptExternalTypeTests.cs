@@ -122,7 +122,7 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypes(registry)
-            .WithRegistry(GameEventScriptExtensionRegistry.Create(typeof(AimExtensionFunctions)))
+            .WithRegistry(IGameEventScriptExtensionRegistry.CreateDefault(typeof(AimExtensionFunctions)))
             .Build()
             .Load(GameEventScriptManager.CreateModule(bytecode))
             .Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
@@ -141,9 +141,28 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void AnnotatedExtensionsAllowValueParameters()
     {
-        var registry = GameEventScriptExtensionRegistry.Create(typeof(ValueExtensionFunctions));
+        var registry = IGameEventScriptExtensionRegistry.CreateDefault(typeof(ValueExtensionFunctions));
 
         Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("value", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
+    }
+
+    [TestMethod]
+    public void ExtensionRegistryBuilderCreatesImmutableOverlayRegistry()
+    {
+        var baseRegistry = IGameEventScriptExtensionRegistry
+            .CreateBuilder()
+            .Add(typeof(BaseOverlayExtensionFunctions))
+            .Build();
+        var extendedRegistry = IGameEventScriptExtensionRegistry
+            .CreateBuilder(baseRegistry)
+            .Add(typeof(LocalOverlayExtensionFunctions))
+            .Build();
+        var reference = new GameEventScriptExtensionReference("overlay", "value", []);
+
+        Assert.IsTrue(baseRegistry.TryResolve(reference, out var baseFunction));
+        Assert.AreEqual(1, baseFunction.Invoke(null!, ReadOnlySpan<GameEventScriptValue>.Empty).AsInteger());
+        Assert.IsTrue(extendedRegistry.TryResolve(reference, out var extendedFunction));
+        Assert.AreEqual(2, extendedFunction.Invoke(null!, ReadOnlySpan<GameEventScriptValue>.Empty).AsInteger());
     }
 
     [GesType("aim")]
@@ -204,6 +223,20 @@ public sealed class GameEventScriptExternalTypeTests
         [GesFunction("value")]
         public static GameEventScriptValue Value([GesParam("_", GameEventScriptBytecodeTypeKind.Float)] GameEventScriptValue value)
             => value;
+    }
+
+    [GesExtension("overlay")]
+    private static class BaseOverlayExtensionFunctions
+    {
+        [GesFunction("value", GameEventScriptBytecodeTypeKind.Float)]
+        public static long Value() => 1;
+    }
+
+    [GesExtension("overlay")]
+    private static class LocalOverlayExtensionFunctions
+    {
+        [GesFunction("value", GameEventScriptBytecodeTypeKind.Float)]
+        public static long Value() => 2;
     }
 
 }

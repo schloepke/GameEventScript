@@ -6,7 +6,7 @@ using System.Threading;
 
 namespace StepH.GameEventScript.Runtime;
 
-public sealed class GameEventScriptDispatcher : IDisposable
+internal sealed class GameEventScriptDispatcher : IDisposable
 {
     private readonly Queue<Action> _workItems = new();
     private readonly object _gate = new();

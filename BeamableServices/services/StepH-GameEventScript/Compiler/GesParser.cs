@@ -1371,6 +1371,11 @@ internal sealed class GesParser
 
         if (!Match(OperatorNot))
         {
+            if (TryParseIntrinsicCallExpression(out var intrinsicCall))
+            {
+                return intrinsicCall;
+            }
+
             if (TryParseKeywordUnaryOperator(out var keywordOperator, out var rootExponent, out var keywordToken))
             {
                 var keywordOperand = ParseUnaryIntrinsicOperand();
@@ -1433,6 +1438,12 @@ internal sealed class GesParser
             else if (Match(IntrinsicTruncate)) op = GesUnaryOperator.Truncate;
             else if (Match(IntrinsicRad)) op = GesUnaryOperator.DegreeToRadians;
             else if (Match(IntrinsicDeg)) op = GesUnaryOperator.DegreeFromRadians;
+            else if (Match(IntrinsicSin)) op = GesUnaryOperator.Sin;
+            else if (Match(IntrinsicCos)) op = GesUnaryOperator.Cos;
+            else if (Match(IntrinsicTan)) op = GesUnaryOperator.Tan;
+            else if (Match(IntrinsicAsin)) op = GesUnaryOperator.Asin;
+            else if (Match(IntrinsicAcos)) op = GesUnaryOperator.Acos;
+            else if (Match(IntrinsicAtan)) op = GesUnaryOperator.Atan;
             else if (Match(IntrinsicWrap))
             {
                 SkipNewLines();
@@ -1464,6 +1475,93 @@ internal sealed class GesParser
         }
 
         return true;
+    }
+
+    private bool TryParseIntrinsicCallExpression(out ExpressionNode expression)
+    {
+        expression = null!;
+        var startToken = Current;
+        GesIntrinsicFunction function;
+
+        if (Match(IntrinsicAtan2))
+        {
+            function = GesIntrinsicFunction.Atan2;
+        }
+        else if (Match(IntrinsicHypot))
+        {
+            function = GesIntrinsicFunction.Hypot;
+        }
+        else if (Match(IntrinsicDistance))
+        {
+            SkipNewLines();
+            function = Match(IntrinsicSquared)
+                ? GesIntrinsicFunction.DistanceSquared
+                : GesIntrinsicFunction.Distance;
+        }
+        else if (Match(IntrinsicLength))
+        {
+            SkipNewLines();
+            Expect(IntrinsicSquared);
+            function = GesIntrinsicFunction.LengthSquared;
+        }
+        else if (Match(IntrinsicNormalize))
+        {
+            function = GesIntrinsicFunction.Normalize;
+        }
+        else if (Match(IntrinsicDot))
+        {
+            function = GesIntrinsicFunction.Dot;
+        }
+        else if (Match(IntrinsicCross))
+        {
+            function = GesIntrinsicFunction.Cross;
+        }
+        else if (Match(IntrinsicAngle))
+        {
+            SkipNewLines();
+            ExpectWord("between");
+            function = GesIntrinsicFunction.AngleBetween;
+        }
+        else
+        {
+            return false;
+        }
+
+        SkipNewLines();
+        var arguments = ParseIntrinsicArgumentExpressions(function);
+        expression = WithRange(new IntrinsicCallExpressionNode(function, arguments), startToken, Previous);
+        return true;
+    }
+
+    private IReadOnlyList<ExpressionNode> ParseIntrinsicArgumentExpressions(GesIntrinsicFunction function)
+    {
+        Expect(LeftParen);
+        SkipNewLines();
+
+        if (Match(RightParen))
+        {
+            return [];
+        }
+
+        var arguments = new List<ExpressionNode>();
+        while (true)
+        {
+            arguments.Add(ParseExpression());
+            SkipNewLines();
+
+            if (Match(RightParen))
+            {
+                return arguments;
+            }
+
+            if (!Match(Comma))
+            {
+                var token = Current;
+                throw new GameEventScriptParseException($"Expected ',' or ')' in {function.ToSourceText()} argument list.", token);
+            }
+
+            SkipNewLines();
+        }
     }
 
     private static bool TryGetMathConstant(GesTokenKind kind, out double value)
@@ -2757,6 +2855,8 @@ internal sealed class GesParser
             MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
+            IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
+            IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle or
             LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()
@@ -2789,12 +2889,16 @@ internal sealed class GesParser
     private static bool IsArgumentLabelKind(GesTokenKind kind)
         => kind is Identifier or To or Nothing or MathConstantPi or MathConstantE or MathConstantTau or MathConstantInfinity or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
-            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound;
+            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
+            IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
+            IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle;
 
     private static bool IsExtensionFunctionNameKind(GesTokenKind kind)
         => kind is Identifier or
             IntrinsicAbs or IntrinsicLn or IntrinsicExp or IntrinsicSqrt or IntrinsicCbrt or IntrinsicChance or
-            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound;
+            IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
+            IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
+            IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle;
 
     private GesToken ExpectExtensionFunctionName()
     {

@@ -444,6 +444,10 @@ internal static class GesCompiler
                 case VariadicTaggedExpressionNode variadic:
                     return EmitVariadic(variadic, destination, context, state);
 
+                case IntrinsicCallExpressionNode intrinsic:
+                    EmitIntrinsicCallInto(intrinsic, destination, context, state);
+                    return destination;
+
                 case ExtensionCallExpressionNode extensionCall:
                     EmitExtensionCallInto(extensionCall, destination, context, state, isPredicate: false);
                     return destination;
@@ -548,6 +552,81 @@ internal static class GesCompiler
 
             return destination;
         }
+
+        private void EmitIntrinsicCallInto(IntrinsicCallExpressionNode intrinsic, GesRegisterRef destination, LoweringContext context, ExpressionState state)
+        {
+            var arguments = new GesRegisterRef[intrinsic.Arguments.Count];
+            for (var index = 0; index < intrinsic.Arguments.Count; index++)
+            {
+                arguments[index] = EmitExpressionForRead(intrinsic.Arguments[index], context, state);
+            }
+
+            switch (intrinsic.Function)
+            {
+                case GesIntrinsicFunction.Atan2:
+                    RequireIntrinsicArity(intrinsic, 2);
+                    _builder.Atan2(destination, arguments[0], arguments[1]);
+                    return;
+                case GesIntrinsicFunction.Hypot:
+                    if (arguments.Length == 2) _builder.Hypot2D(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 3) _builder.Hypot3D(destination, arguments[0], arguments[1], arguments[2]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "2 or 3");
+                    return;
+                case GesIntrinsicFunction.Distance:
+                    if (arguments.Length == 2) _builder.Distance(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 4) _builder.Distance2D(destination, arguments[0], arguments[1], arguments[2], arguments[3]);
+                    else if (arguments.Length == 6) _builder.Distance3D(destination, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
+                    return;
+                case GesIntrinsicFunction.DistanceSquared:
+                    if (arguments.Length == 2) _builder.DistanceSquared(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 4) _builder.DistanceSquared2D(destination, arguments[0], arguments[1], arguments[2], arguments[3]);
+                    else if (arguments.Length == 6) _builder.DistanceSquared3D(destination, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
+                    return;
+                case GesIntrinsicFunction.LengthSquared:
+                    if (arguments.Length == 1) _builder.LengthSquared(destination, arguments[0]);
+                    else if (arguments.Length == 2) _builder.LengthSquared2D(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 3) _builder.LengthSquared3D(destination, arguments[0], arguments[1], arguments[2]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "1, 2 or 3");
+                    return;
+                case GesIntrinsicFunction.Normalize:
+                    if (arguments.Length == 1) _builder.Normalize(destination, arguments[0]);
+                    else if (arguments.Length == 2) _builder.Normalize2D(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 3) _builder.Normalize3D(destination, arguments[0], arguments[1], arguments[2]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "1, 2 or 3");
+                    return;
+                case GesIntrinsicFunction.Dot:
+                    if (arguments.Length == 2) _builder.Dot(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 4) _builder.Dot2D(destination, arguments[0], arguments[1], arguments[2], arguments[3]);
+                    else if (arguments.Length == 6) _builder.Dot3D(destination, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
+                    return;
+                case GesIntrinsicFunction.Cross:
+                    if (arguments.Length == 2) _builder.Cross(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 4) _builder.Cross2D(destination, arguments[0], arguments[1], arguments[2], arguments[3]);
+                    else if (arguments.Length == 6) _builder.Cross3D(destination, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
+                    return;
+                case GesIntrinsicFunction.AngleBetween:
+                    if (arguments.Length == 2) _builder.AngleBetween(destination, arguments[0], arguments[1]);
+                    else if (arguments.Length == 4) _builder.AngleBetween2D(destination, arguments[0], arguments[1], arguments[2], arguments[3]);
+                    else if (arguments.Length == 6) _builder.AngleBetween3D(destination, arguments[0], arguments[1], arguments[2], arguments[3], arguments[4], arguments[5]);
+                    else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
+                    return;
+                default:
+                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support intrinsic '{intrinsic.Function.ToSourceText()}'.");
+            }
+        }
+
+        private static void RequireIntrinsicArity(IntrinsicCallExpressionNode intrinsic, int arity)
+        {
+            if (intrinsic.Arguments.Count == arity) return;
+            ThrowInvalidIntrinsicArity(intrinsic, arity.ToString());
+        }
+
+        private static void ThrowInvalidIntrinsicArity(IntrinsicCallExpressionNode intrinsic, string expected)
+            => throw new GameEventScriptCompileException($"Intrinsic '{intrinsic.Function.ToSourceText()}' expects {expected} arguments but got {intrinsic.Arguments.Count}.");
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
@@ -1730,6 +1809,24 @@ internal static class GesCompiler
                 case GesUnaryOperator.WrapDegree:
                     _builder.WrapDegree(destination, operand);
                     return;
+                case GesUnaryOperator.Sin:
+                    _builder.Sin(destination, operand);
+                    return;
+                case GesUnaryOperator.Cos:
+                    _builder.Cos(destination, operand);
+                    return;
+                case GesUnaryOperator.Tan:
+                    _builder.Tan(destination, operand);
+                    return;
+                case GesUnaryOperator.Asin:
+                    _builder.Asin(destination, operand);
+                    return;
+                case GesUnaryOperator.Acos:
+                    _builder.Acos(destination, operand);
+                    return;
+                case GesUnaryOperator.Atan:
+                    _builder.Atan(destination, operand);
+                    return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support unary operator '{operation.ToSourceText()}'.");
             }
@@ -2088,6 +2185,9 @@ internal static class GesCompiler
                     break;
                 case VariadicTaggedExpressionNode variadic:
                     foreach (var argument in variadic.Arguments) CollectReferencedIdentifiers(argument, identifiers, bound);
+                    break;
+                case IntrinsicCallExpressionNode intrinsic:
+                    foreach (var argument in intrinsic.Arguments) CollectReferencedIdentifiers(argument, identifiers, bound);
                     break;
                 case ClampExpressionNode clamp:
                     CollectReferencedIdentifiers(clamp.Value, identifiers, bound);

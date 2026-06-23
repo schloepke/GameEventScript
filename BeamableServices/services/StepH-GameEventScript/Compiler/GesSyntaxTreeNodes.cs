@@ -125,7 +125,26 @@ internal enum GesUnaryOperator
     RoundHalfDown,
     DegreeToRadians,
     DegreeFromRadians,
-    WrapDegree
+    WrapDegree,
+    Sin,
+    Cos,
+    Tan,
+    Asin,
+    Acos,
+    Atan
+}
+
+internal enum GesIntrinsicFunction
+{
+    Atan2,
+    Hypot,
+    Distance,
+    DistanceSquared,
+    LengthSquared,
+    Normalize,
+    Dot,
+    Cross,
+    AngleBetween
 }
 
 internal enum GesBinaryOperator
@@ -183,7 +202,28 @@ internal static class GesOperatorText
             GesUnaryOperator.DegreeToRadians => "rad",
             GesUnaryOperator.DegreeFromRadians => "deg",
             GesUnaryOperator.WrapDegree => "wrap degree",
+            GesUnaryOperator.Sin => "sin",
+            GesUnaryOperator.Cos => "cos",
+            GesUnaryOperator.Tan => "tan",
+            GesUnaryOperator.Asin => "asin",
+            GesUnaryOperator.Acos => "acos",
+            GesUnaryOperator.Atan => "atan",
             _ => op.ToString()
+        };
+
+    public static string ToSourceText(this GesIntrinsicFunction function)
+        => function switch
+        {
+            GesIntrinsicFunction.Atan2 => "atan2",
+            GesIntrinsicFunction.Hypot => "hypot",
+            GesIntrinsicFunction.Distance => "distance",
+            GesIntrinsicFunction.DistanceSquared => "distance squared",
+            GesIntrinsicFunction.LengthSquared => "length squared",
+            GesIntrinsicFunction.Normalize => "normalize",
+            GesIntrinsicFunction.Dot => "dot",
+            GesIntrinsicFunction.Cross => "cross",
+            GesIntrinsicFunction.AngleBetween => "angle between",
+            _ => function.ToString()
         };
 
     public static string ToSourceText(this GesBinaryOperator op)
@@ -260,6 +300,7 @@ internal sealed record ListLiteralExpressionNode(IReadOnlyList<ExpressionNode> I
 internal sealed record MapLiteralExpressionNode(IReadOnlyList<MapEntryNode> Entries) : ExpressionNode;
 internal sealed record MapEntryNode(string Key, ExpressionNode Value) : ScriptNode;
 internal sealed record UnaryExpressionNode(GesUnaryOperator Operator, ExpressionNode Operand) : ExpressionNode;
+internal sealed record IntrinsicCallExpressionNode(GesIntrinsicFunction Function, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 internal sealed record VariadicTaggedExpressionNode(string Operator, IReadOnlyList<ExpressionNode> Arguments) : ExpressionNode;
 internal sealed record ClampExpressionNode(ExpressionNode Value, ExpressionNode Minimum, ExpressionNode Maximum) : ExpressionNode;
 internal sealed record RangeExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression, ExpressionNode? StepExpression) : ExpressionNode;

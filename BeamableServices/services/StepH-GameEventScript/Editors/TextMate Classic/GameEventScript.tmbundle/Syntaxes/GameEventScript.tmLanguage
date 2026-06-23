@@ -277,7 +277,19 @@
 					</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg)\b</string>
+					<string>\b(?:distance|length)([ \t]+)(squared)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(?:angle)([ \t]+)(between)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(?:abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|length|normalize|dot|cross)\b</string>
 					<key>name</key>
 					<string>support.function.prefix.gameeventscript</string>
 				</dict>

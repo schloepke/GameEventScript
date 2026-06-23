@@ -318,6 +318,96 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder WrapDegree(GesRegisterRef destination, GesRegisterRef operand)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.WrapDegree, destination, operand);
 
+    public GesBinaryBuilder Sin(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Sin, destination, operand);
+
+    public GesBinaryBuilder Cos(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Cos, destination, operand);
+
+    public GesBinaryBuilder Tan(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Tan, destination, operand);
+
+    public GesBinaryBuilder Asin(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Asin, destination, operand);
+
+    public GesBinaryBuilder Acos(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Acos, destination, operand);
+
+    public GesBinaryBuilder Atan(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Atan, destination, operand);
+
+    public GesBinaryBuilder Atan2(GesRegisterRef destination, GesRegisterRef y, GesRegisterRef x)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.Atan2, destination, y, x);
+
+    public GesBinaryBuilder Hypot2D(GesRegisterRef destination, GesRegisterRef x, GesRegisterRef y)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.Hypot2D, destination, x, y);
+
+    public GesBinaryBuilder Hypot3D(GesRegisterRef destination, GesRegisterRef x, GesRegisterRef y, GesRegisterRef z)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Hypot3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x), y: GesOperand.Register(y), a: GesOperand.Register(z));
+
+    public GesBinaryBuilder Distance(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.Distance, destination, left, right);
+
+    public GesBinaryBuilder Distance2D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef x2, GesRegisterRef y2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Distance2D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(x2), b: GesOperand.Register(y2));
+
+    public GesBinaryBuilder Distance3D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef z1, GesRegisterRef x2, GesRegisterRef y2, GesRegisterRef z2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Distance3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(z1), b: GesOperand.Register(x2), c: GesOperand.Register(y2), d: GesOperand.Register(z2));
+
+    public GesBinaryBuilder DistanceSquared(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.DistanceSquared, destination, left, right);
+
+    public GesBinaryBuilder DistanceSquared2D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef x2, GesRegisterRef y2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.DistanceSquared2D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(x2), b: GesOperand.Register(y2));
+
+    public GesBinaryBuilder DistanceSquared3D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef z1, GesRegisterRef x2, GesRegisterRef y2, GesRegisterRef z2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.DistanceSquared3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(z1), b: GesOperand.Register(x2), c: GesOperand.Register(y2), d: GesOperand.Register(z2));
+
+    public GesBinaryBuilder LengthSquared(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.LengthSquared, destination, operand);
+
+    public GesBinaryBuilder LengthSquared2D(GesRegisterRef destination, GesRegisterRef x, GesRegisterRef y)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.LengthSquared2D, destination, x, y);
+
+    public GesBinaryBuilder LengthSquared3D(GesRegisterRef destination, GesRegisterRef x, GesRegisterRef y, GesRegisterRef z)
+        => AddOpcode(GameEventScriptBytecodeOpCode.LengthSquared3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x), y: GesOperand.Register(y), a: GesOperand.Register(z));
+
+    public GesBinaryBuilder Normalize(GesRegisterRef destination, GesRegisterRef operand)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.Normalize, destination, operand);
+
+    public GesBinaryBuilder Normalize2D(GesRegisterRef destination, GesRegisterRef x, GesRegisterRef y)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.Normalize2D, destination, x, y);
+
+    public GesBinaryBuilder Normalize3D(GesRegisterRef destination, GesRegisterRef x, GesRegisterRef y, GesRegisterRef z)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Normalize3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x), y: GesOperand.Register(y), a: GesOperand.Register(z));
+
+    public GesBinaryBuilder Dot(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.Dot, destination, left, right);
+
+    public GesBinaryBuilder Dot2D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef x2, GesRegisterRef y2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Dot2D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(x2), b: GesOperand.Register(y2));
+
+    public GesBinaryBuilder Dot3D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef z1, GesRegisterRef x2, GesRegisterRef y2, GesRegisterRef z2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Dot3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(z1), b: GesOperand.Register(x2), c: GesOperand.Register(y2), d: GesOperand.Register(z2));
+
+    public GesBinaryBuilder Cross(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.Cross, destination, left, right);
+
+    public GesBinaryBuilder Cross2D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef x2, GesRegisterRef y2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Cross2D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(x2), b: GesOperand.Register(y2));
+
+    public GesBinaryBuilder Cross3D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef z1, GesRegisterRef x2, GesRegisterRef y2, GesRegisterRef z2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.Cross3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(z1), b: GesOperand.Register(x2), c: GesOperand.Register(y2), d: GesOperand.Register(z2));
+
+    public GesBinaryBuilder AngleBetween(GesRegisterRef destination, GesRegisterRef left, GesRegisterRef right)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.AngleBetween, destination, left, right);
+
+    public GesBinaryBuilder AngleBetween2D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef x2, GesRegisterRef y2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.AngleBetween2D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(x2), b: GesOperand.Register(y2));
+
+    public GesBinaryBuilder AngleBetween3D(GesRegisterRef destination, GesRegisterRef x1, GesRegisterRef y1, GesRegisterRef z1, GesRegisterRef x2, GesRegisterRef y2, GesRegisterRef z2)
+        => AddOpcode(GameEventScriptBytecodeOpCode.AngleBetween3D, dst: GesOperand.Register(destination), x: GesOperand.Register(x1), y: GesOperand.Register(y1), a: GesOperand.Register(z1), b: GesOperand.Register(x2), c: GesOperand.Register(y2), d: GesOperand.Register(z2));
+
     public GesBinaryBuilder Clamp(GesRegisterRef destination, GesRegisterRef value, GesRegisterRef minimum, GesRegisterRef maximum)
         => AddOpcode(GameEventScriptBytecodeOpCode.Clamp, dst: GesOperand.Register(destination), x: GesOperand.Register(value), y: GesOperand.Register(minimum), a: GesOperand.Register(maximum));
 

@@ -8,7 +8,7 @@
       "name": "math integer hot path",
       "iterations": 1000,
       "warmupIterations": 100,
-      "script": "module PerformanceMath\n\non Start(value) {\n  let a be value + 5\n  let b be a * 3\n  let c be b - 7\n  let d be c div 2\n  let squared be d * d\n  let f be squared mod 97\n  let g be f + 10\n  let h be g * 2\n  let i be h - 15\n  let j be i div 5\n  emit Done(result: j)\n}\n",
+      "script": "module PerformanceMath\n\non Start(value) {\n  let a be value + 5\n  let b be a * 3\n  let c be b - 7\n  let d be c div 2\n  let squaredValue be d * d\n  let f be squaredValue mod 97\n  let g be f + 10\n  let h be g * 2\n  let i be h - 15\n  let j be i div 5\n  emit Done(result: j)\n}\n",
       "steps": [
         {
           "input": {

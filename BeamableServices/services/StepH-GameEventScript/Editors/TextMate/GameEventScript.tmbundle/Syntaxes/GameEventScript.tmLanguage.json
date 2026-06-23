@@ -350,7 +350,31 @@
           "name": "support.type.primitive.gameeventscript"
         },
         {
-          "match": "\\b(?:abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg)\\b",
+          "match": "\\b(?:distance|length)([ \\t]+)(squared)\\b",
+          "name": "meta.keyword-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.other.definition.gameeventscript"
+            },
+            "2": {
+              "name": "keyword.other.definition.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(?:angle)([ \\t]+)(between)\\b",
+          "name": "meta.keyword-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.other.definition.gameeventscript"
+            },
+            "2": {
+              "name": "keyword.other.definition.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(?:abs|ln|exp|sqrt|cbrt|chance|floor|ceil|truncate|rad|deg|sin|cos|tan|asin|acos|atan|atan2|hypot|distance|length|normalize|dot|cross)\\b",
           "name": "support.function.prefix.gameeventscript"
         },
         {

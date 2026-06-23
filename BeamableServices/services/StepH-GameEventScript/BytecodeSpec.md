@@ -322,11 +322,14 @@ groups are:
 0x30 Group 1 argument staging and value creation continuation
 0x40 Group 1 record/external type construction, presence helpers, reserved tail 0x44..0x4F
 0x50 Group 2: boolean algebra, comparison, math
-0x60 Group 2 math/random/series continuation, reserved tail 0x70..0x7F
-0x80 Group 3: collection slicing, text/collection operators, map projections
-0x90 Group 3 element terminals, iterators, streams, and stream terminals
-0xA0 Group 3 stream extrema, stream collect terminals, distinct/group/sort/order operators
-0xB0 Group 3 order operators, generated-list builders, pattern operators, reserved tail 0xB9..0xFF
+0x60 Group 2 math/random/series continuation and numeric intrinsics
+0x70 Group 2 numeric/degree intrinsics and trigonometry
+0x80 Group 2 navigation/vector math intrinsics
+0x90 Group 2 navigation/vector math continuation, reserved tail 0x98..0x9F
+0xA0 Group 3: collection slicing, text/collection operators, map projections
+0xB0 Group 3 membership, collection algebra, map projections, element terminals
+0xC0 Group 3 streams, aggregations, weighted terminals, collect terminals
+0xD0 Group 3 order/reverse/shuffle, generated-list builders, pattern operators, reserved tail 0xD8..0xFF
 ```
 
 The exhaustive opcode field map lives in `BytecodeOpcodeShape.md`. That table
@@ -588,7 +591,7 @@ Required operations:
 - `Union`, `Intersect`, `Zip`
 - `Min`, `Max`
 - direct unary opcodes such as `Negate`, `Not`, `Count`,
-  `Abs`, and `LogN`
+  `Abs`, `LogN`, `Exp`, `Sin`, `Cos`, `Tan`, `Asin`, `Acos`, and `Atan`
 - `Clamp`
 
 Text and tag values are text-compatible for `Count`, `Contains`, `StartsWith`,
@@ -751,6 +754,41 @@ Percentage multiplication with a non-percentage scalar or quantity treats the
 percentage as its stored ratio and writes a numeric result in the other
 operand's value family, for example `10% * 10` and `10 * 10%` both write
 numeric `1`, while `10% * 10m` and `10m * 10%` both write `1m`.
+
+Math intrinsics are normal opcodes, not standard extension calls. Unary
+intrinsics accept both source forms `op x` and `op(x)`. `ln` lowers to `LogN`,
+`exp` lowers to `Exp`, and `abs` lowers to `Abs`. `sin`, `cos`, and `tan`
+accept unitless radians or `degree` quantities and always write a unitless
+numeric result. `asin` and `acos` accept only unitless numeric input in
+`[-1, 1]`; outside that domain they write `nothing`. `atan` accepts unitless
+numeric input. `atan2(y, x)` accepts two unitless or same-unit numeric operands,
+writes unitless radians, and defines `atan2(0, 0)` as `0`.
+
+Integer-style math intrinsics lower to direct opcodes. `floor`, `ceil`,
+`truncate`, `round half even`, `round half up`, and `round half down` accept
+unitless numeric input and write integer results. `rad(x)` converts degrees to
+unitless radians, `deg(x)` converts unitless radians to a `degree` quantity, and
+`wrap degree x` normalizes a degree or unitless numeric value into `[0, 360)`
+degrees.
+
+Navigation/vector intrinsics with scalar coordinate arguments require
+parentheses and use arity to select 2D or 3D opcodes. Existing `Vector` and
+`Point` values are always treated as 3D because their runtime representation
+always carries `x`, `y`, and `z`. `hypot(x, y)` and `hypot(x, y, z)` accept
+unitless or same-unit numeric operands and preserve matching units in the
+result. `distance(a, b)` accepts scalar numeric values or compatible 3D
+vector/point values; `distance(x1, y1, x2, y2)` and
+`distance(x1, y1, z1, x2, y2, z2)` use 2D and 3D coordinate forms. Distance
+results preserve matching units.
+
+`distance squared(...)` and `length squared(...)` follow the same arity rules as
+their non-squared counterparts but always write unitless numeric results because
+the VM has no square-unit representation. `normalize(...)` writes a unitless
+vector and writes `nothing` for zero-length inputs. `dot(...)` and `cross(...)`
+accept compatible units and strip units from the result; object/3D `cross`
+writes a unitless vector, while 2D `cross(x1, y1, x2, y2)` writes the scalar z
+component. `angle between(...)` writes unitless radians and writes `nothing`
+when either vector length is zero.
 
 Logical operations use three-valued truth tables with `nothing` as unknown.
 Runtime truth tests and false tests both fail for `nothing`.
@@ -1059,9 +1097,11 @@ External references are collected at compile time and dynamically bound by the
 host when loading the compiled artifact. Runtime extension binding is not
 serialized into portable bytecode.
 
-Standard intrinsics are non-overridable and do not appear in
-`ExternalReferences`. They are represented by `CallStandard*` with an extension
-shape stored in `UShortListPool` as
+Core language intrinsics are non-overridable and do not appear in
+`ExternalReferences`. Math, navigation, collection, and stream terminals lower
+to direct opcodes. Remaining built-in namespace calls that have not yet been
+promoted to direct opcodes, currently series helpers, use `CallStandard` with an
+extension shape stored in `UShortListPool` as
 `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`.
 All extension call arguments, including zero-argument calls, are represented by
 a concrete argument register-list entry in `UShortListPool`.

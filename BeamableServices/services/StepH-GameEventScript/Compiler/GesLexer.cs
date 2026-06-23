@@ -38,6 +38,21 @@ internal enum GesTokenKind
     IntrinsicDeg,
     IntrinsicWrap,
     IntrinsicRound,
+    IntrinsicSin,
+    IntrinsicCos,
+    IntrinsicTan,
+    IntrinsicAsin,
+    IntrinsicAcos,
+    IntrinsicAtan,
+    IntrinsicAtan2,
+    IntrinsicHypot,
+    IntrinsicDistance,
+    IntrinsicSquared,
+    IntrinsicLength,
+    IntrinsicNormalize,
+    IntrinsicDot,
+    IntrinsicCross,
+    IntrinsicAngle,
     Module,
     Record,
     Predicate,
@@ -330,6 +345,21 @@ internal sealed class GesLexer
             "deg" => new GesToken(GesTokenKind.IntrinsicDeg, text, line, column, endLine, endColumn),
             "wrap" => new GesToken(GesTokenKind.IntrinsicWrap, text, line, column, endLine, endColumn),
             "round" => new GesToken(GesTokenKind.IntrinsicRound, text, line, column, endLine, endColumn),
+            "sin" => new GesToken(GesTokenKind.IntrinsicSin, text, line, column, endLine, endColumn),
+            "cos" => new GesToken(GesTokenKind.IntrinsicCos, text, line, column, endLine, endColumn),
+            "tan" => new GesToken(GesTokenKind.IntrinsicTan, text, line, column, endLine, endColumn),
+            "asin" => new GesToken(GesTokenKind.IntrinsicAsin, text, line, column, endLine, endColumn),
+            "acos" => new GesToken(GesTokenKind.IntrinsicAcos, text, line, column, endLine, endColumn),
+            "atan" => new GesToken(GesTokenKind.IntrinsicAtan, text, line, column, endLine, endColumn),
+            "atan2" => new GesToken(GesTokenKind.IntrinsicAtan2, text, line, column, endLine, endColumn),
+            "hypot" => new GesToken(GesTokenKind.IntrinsicHypot, text, line, column, endLine, endColumn),
+            "distance" => new GesToken(GesTokenKind.IntrinsicDistance, text, line, column, endLine, endColumn),
+            "squared" => new GesToken(GesTokenKind.IntrinsicSquared, text, line, column, endLine, endColumn),
+            "length" => new GesToken(GesTokenKind.IntrinsicLength, text, line, column, endLine, endColumn),
+            "normalize" => new GesToken(GesTokenKind.IntrinsicNormalize, text, line, column, endLine, endColumn),
+            "dot" => new GesToken(GesTokenKind.IntrinsicDot, text, line, column, endLine, endColumn),
+            "cross" => new GesToken(GesTokenKind.IntrinsicCross, text, line, column, endLine, endColumn),
+            "angle" => new GesToken(GesTokenKind.IntrinsicAngle, text, line, column, endLine, endColumn),
             "module" => new GesToken(GesTokenKind.Module, text, line, column, endLine, endColumn),
             _ when char.IsUpper(text[0]) => new GesToken(GesTokenKind.Message, text, line, column, endLine, endColumn),
             _ => new GesToken(GesTokenKind.Identifier, text, line, column, endLine, endColumn)
@@ -359,6 +389,11 @@ internal sealed class GesLexer
         else if (string.Equals(word, "d", StringComparison.Ordinal) && !IsAtEnd && char.IsDigit(Current))
         {
             return CreateWordToken(word, line, column, _line, _column);
+        }
+        else if (string.Equals(word, "atan", StringComparison.Ordinal) && !IsAtEnd && Current == '2')
+        {
+            Advance();
+            word = _input[start.._index];
         }
 
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(word, line, column, _line, _column);

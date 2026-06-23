@@ -133,6 +133,10 @@ internal static class GesAstOptimizer
             {
                 Arguments = variadic.Arguments.Select(argument => OptimizeExpression(argument, knownTypeNames)).ToArray()
             },
+            IntrinsicCallExpressionNode intrinsic => intrinsic with
+            {
+                Arguments = intrinsic.Arguments.Select(argument => OptimizeExpression(argument, knownTypeNames)).ToArray()
+            },
             ClampExpressionNode clamp => clamp with
             {
                 Value = OptimizeExpression(clamp.Value, knownTypeNames),

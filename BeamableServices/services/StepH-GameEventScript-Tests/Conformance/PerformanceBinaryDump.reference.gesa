@@ -22,8 +22,8 @@ cases=5
 //		  let b be a * 3
 //		  let c be b - 7
 //		  let d be c div 2
-//		  let squared be d * d
-//		  let f be squared mod 97
+//		  let squaredValue be d * d
+//		  let f be squaredValue mod 97
 //		  let g be f + 10
 //		  let h be g * 2
 //		  let i be h - 15

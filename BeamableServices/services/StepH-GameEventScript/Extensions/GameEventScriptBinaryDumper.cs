@@ -269,6 +269,10 @@ public static class GameEventScriptBinaryDumper
             StepRegister => Register(instruction.AU),
             MinimumRegister => Register(instruction.YSlot),
             MaximumRegister => Register(instruction.AU),
+            AuxARegister => Register(instruction.AU),
+            AuxBRegister => Register(instruction.BU),
+            AuxCRegister => Register(instruction.CU),
+            AuxDRegister => Register(instruction.DU),
 
             LocalRegisterDelta => Immediate(instruction.Count),
             DiceCount => Immediate(instruction.Count),

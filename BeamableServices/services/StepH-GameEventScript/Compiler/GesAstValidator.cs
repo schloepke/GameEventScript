@@ -639,6 +639,12 @@ internal static class GesAstValidator
             case UnaryExpressionNode unary:
                 return ClassifyUnary(unary, callables, typeDefinitions, declaredTypes, visitedCallables);
 
+            case IntrinsicCallExpressionNode intrinsic:
+                return intrinsic.Function is GesIntrinsicFunction.Normalize ||
+                    intrinsic.Function is GesIntrinsicFunction.Cross && intrinsic.Arguments.Count is 2 or 6
+                        ? StaticExpressionInfo.Other("vector")
+                        : StaticExpressionInfo.Other("number");
+
             case BinaryExpressionNode binary:
                 return ClassifyBinary(binary, callables, typeDefinitions, declaredTypes, visitedCallables);
 
@@ -738,7 +744,9 @@ internal static class GesAstValidator
             GesUnaryOperator.Abs or GesUnaryOperator.NaturalLog or GesUnaryOperator.Exp or
                 GesUnaryOperator.Floor or GesUnaryOperator.Ceil or GesUnaryOperator.Truncate or
                 GesUnaryOperator.RoundHalfEven or GesUnaryOperator.RoundHalfUp or GesUnaryOperator.RoundHalfDown or
-                GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree => StaticExpressionInfo.Other("number"),
+                GesUnaryOperator.DegreeToRadians or GesUnaryOperator.DegreeFromRadians or GesUnaryOperator.WrapDegree or
+                GesUnaryOperator.Sin or GesUnaryOperator.Cos or GesUnaryOperator.Tan or
+                GesUnaryOperator.Asin or GesUnaryOperator.Acos or GesUnaryOperator.Atan => StaticExpressionInfo.Other("number"),
             GesUnaryOperator.Negate => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables),
             GesUnaryOperator.Not => ClassifyExpression(unary.Operand, callables, typeDefinitions, declaredTypes, visitedCallables).IsPredicateCompatible
                 ? StaticExpressionInfo.Boolean

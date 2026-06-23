@@ -500,6 +500,96 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case WrapDegree:
                             vmState.GesVmWrapDegree(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
+                        case Sin:
+                            vmState.GesVmSin(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Cos:
+                            vmState.GesVmCos(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Tan:
+                            vmState.GesVmTan(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Asin:
+                            vmState.GesVmAsin(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Acos:
+                            vmState.GesVmAcos(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Atan:
+                            vmState.GesVmAtan(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Atan2:
+                            vmState.GesVmAtan2(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case Hypot2D:
+                            vmState.GesVmHypot2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case Hypot3D:
+                            vmState.GesVmHypot3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            break;
+                        case Distance:
+                            vmState.GesVmDistance(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case Distance2D:
+                            vmState.GesVmDistance2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            break;
+                        case Distance3D:
+                            vmState.GesVmDistance3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            break;
+                        case DistanceSquared:
+                            vmState.GesVmDistanceSquared(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case DistanceSquared2D:
+                            vmState.GesVmDistanceSquared2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            break;
+                        case DistanceSquared3D:
+                            vmState.GesVmDistanceSquared3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            break;
+                        case LengthSquared:
+                            vmState.GesVmLengthSquared(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case LengthSquared2D:
+                            vmState.GesVmLengthSquared2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case LengthSquared3D:
+                            vmState.GesVmLengthSquared3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            break;
+                        case Normalize:
+                            vmState.GesVmNormalize(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            break;
+                        case Normalize2D:
+                            vmState.GesVmNormalize2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case Normalize3D:
+                            vmState.GesVmNormalize3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            break;
+                        case Dot:
+                            vmState.GesVmDot(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case Dot2D:
+                            vmState.GesVmDot2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            break;
+                        case Dot3D:
+                            vmState.GesVmDot3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            break;
+                        case Cross:
+                            vmState.GesVmCross(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case Cross2D:
+                            vmState.GesVmCross2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            break;
+                        case Cross3D:
+                            vmState.GesVmCross3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            break;
+                        case AngleBetween:
+                            vmState.GesVmAngleBetween(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            break;
+                        case AngleBetween2D:
+                            vmState.GesVmAngleBetween2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            break;
+                        case AngleBetween3D:
+                            vmState.GesVmAngleBetween3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            break;
 
                         #endregion
 

@@ -46,6 +46,11 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
+    [DynamicData(nameof(RuntimeAtomicTrigNavigationCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicTrigNavigation(GameEventScriptConformanceCase testCase)
+        => RunJsonConformanceCase(testCase);
+
+    [TestMethod]
     [DynamicData(nameof(RuntimeAtomicEqualityCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
     public void RuntimeAtomicEquality(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
@@ -818,6 +823,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     public static IEnumerable<object[]> RuntimeAtomicMathMatrixCases()
         => Cases("runtime/atomic/math-matrix.json");
+
+    public static IEnumerable<object[]> RuntimeAtomicTrigNavigationCases()
+        => Cases("runtime/atomic/trig-navigation.json");
 
     public static IEnumerable<object[]> RuntimeAtomicEqualityCases()
         => Cases("runtime/atomic/equality.json");

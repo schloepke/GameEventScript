@@ -1,0 +1,251 @@
+{
+  "version": 1,
+  "name": "RuntimeAtomicTrigNavigation",
+  "level": "atomic",
+  "tests": [
+    {
+      "kind": "scriptApi",
+      "name": "trigonometric intrinsics",
+      "script": "module AtomicTrigIntrinsics\non Start {\n  let missing be nothing\n  emit Done(sinZero: sin 0, sinParen: sin(0), sinDegree: sin 90°, cosPi: cos pi, tanZero: tan 0, asinOne: asin 1, acosOne: acos 1, atanOne: atan 1, atanTwoQuarter: atan2(1, 1), atanTwoZero: atan2(0, 0), invalidUnit: sin 10m, invalidText: sin 'hello', invalidTag: sin #angle, invalidDomain: asin 2, missing: sin missing)\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "acosOne": {
+                  "type": ":float",
+                  "value": "0"
+                },
+                "asinOne": {
+                  "type": ":float",
+                  "value": "1.5707963267949"
+                },
+                "atanTwoQuarter": {
+                  "type": ":float",
+                  "value": "0.785398163397448"
+                },
+                "atanTwoZero": {
+                  "type": ":float",
+                  "value": "0"
+                },
+                "atanOne": {
+                  "type": ":float",
+                  "value": "0.785398163397448"
+                },
+                "cosPi": {
+                  "type": ":float",
+                  "value": "-1"
+                },
+                "invalidDomain": {
+                  "type": ":nothing"
+                },
+                "invalidTag": {
+                  "type": ":nothing"
+                },
+                "invalidText": {
+                  "type": ":nothing"
+                },
+                "invalidUnit": {
+                  "type": ":nothing"
+                },
+                "missing": {
+                  "type": ":nothing"
+                },
+                "sinDegree": {
+                  "type": ":float",
+                  "value": "1"
+                },
+                "sinParen": {
+                  "type": ":float",
+                  "value": "0"
+                },
+                "sinZero": {
+                  "type": ":float",
+                  "value": "0"
+                },
+                "tanZero": {
+                  "type": ":float",
+                  "value": "0"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "hypot distance and squared distance intrinsics",
+      "script": "module AtomicDistanceIntrinsics\non Start {\n  let pointA be :point(1m, 2m, 2m)\n  let pointB be :point(4m, 6m, 2m)\n  emit Done(hypotTwo: hypot(3, 4), hypotThree: hypot(3, 4, 12), hypotUnit: hypot(3m, 4m), hypotMismatch: hypot(3m, 4s), scalarDistance: distance(10m, 4m), coordinateDistanceTwo: distance(0, 0, 3, 4), coordinateDistanceThree: distance(0, 0, 0, 2, 3, 6), pointDistance: distance(pointA, pointB), scalarDistanceSquared: distance squared(10m, 4m), coordinateDistanceSquaredTwo: distance squared(0, 0, 3, 4), coordinateDistanceSquaredThree: distance squared(0, 0, 0, 2, 3, 6), pointDistanceSquared: distance squared(pointA, pointB), invalidTextDistance: distance('a', 'b'))\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "coordinateDistanceTwo": {
+                  "type": ":float",
+                  "value": "5"
+                },
+                "coordinateDistanceThree": {
+                  "type": ":float",
+                  "value": "7"
+                },
+                "coordinateDistanceSquaredTwo": {
+                  "type": ":float",
+                  "value": "25"
+                },
+                "coordinateDistanceSquaredThree": {
+                  "type": ":float",
+                  "value": "49"
+                },
+                "hypotTwo": {
+                  "type": ":float",
+                  "value": "5"
+                },
+                "hypotThree": {
+                  "type": ":float",
+                  "value": "13"
+                },
+                "hypotMismatch": {
+                  "type": ":nothing"
+                },
+                "hypotUnit": {
+                  "type": ":float",
+                  "unit": ":meter",
+                  "value": "5"
+                },
+                "invalidTextDistance": {
+                  "type": ":nothing"
+                },
+                "pointDistance": {
+                  "type": ":float",
+                  "unit": ":meter",
+                  "value": "5"
+                },
+                "pointDistanceSquared": {
+                  "type": ":float",
+                  "value": "25"
+                },
+                "scalarDistance": {
+                  "type": ":float",
+                  "unit": ":meter",
+                  "value": "6"
+                },
+                "scalarDistanceSquared": {
+                  "type": ":float",
+                  "value": "36"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "vector navigation intrinsics",
+      "script": "module AtomicVectorNavigationIntrinsics\non Start {\n  let a be :vector(1, 2, 3)\n  let b be :vector(4, 5, 6)\n  let right be :vector(1, 0, 0)\n  let up be :vector(0, 1, 0)\n  emit Done(lengthObject: length squared(a), lengthTwo: length squared(3, 4), lengthThree: length squared(1, 2, 2), normalizeObject: normalize(:vector(3, 0, 4)), normalizeTwo: normalize(3, 4), normalizeThree: normalize(0, 3, 4), normalizeZero: normalize(0, 0), dotObject: dot(a, b), dotTwo: dot(1, 2, 3, 4), dotThree: dot(1, 2, 3, 4, 5, 6), crossObject: cross(right, up), crossTwo: cross(1, 0, 0, 1), crossThree: cross(1, 0, 0, 0, 1, 0), angleObject: angle between(right, up), angleTwo: angle between(1, 0, 0, 1), angleThree: angle between(1, 0, 0, 0, 1, 0), angleZero: angle between(0, 0, 1, 0))\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "angleTwo": {
+                  "type": ":float",
+                  "value": "1.5707963267949"
+                },
+                "angleThree": {
+                  "type": ":float",
+                  "value": "1.5707963267949"
+                },
+                "angleObject": {
+                  "type": ":float",
+                  "value": "1.5707963267949"
+                },
+                "angleZero": {
+                  "type": ":nothing"
+                },
+                "crossTwo": {
+                  "type": ":float",
+                  "value": "1"
+                },
+                "crossThree": {
+                  "type": ":vector",
+                  "x": "0",
+                  "y": "0",
+                  "z": "1"
+                },
+                "crossObject": {
+                  "type": ":vector",
+                  "x": "0",
+                  "y": "0",
+                  "z": "1"
+                },
+                "dotTwo": {
+                  "type": ":float",
+                  "value": "11"
+                },
+                "dotThree": {
+                  "type": ":float",
+                  "value": "32"
+                },
+                "dotObject": {
+                  "type": ":float",
+                  "value": "32"
+                },
+                "lengthTwo": {
+                  "type": ":float",
+                  "value": "25"
+                },
+                "lengthThree": {
+                  "type": ":float",
+                  "value": "9"
+                },
+                "lengthObject": {
+                  "type": ":float",
+                  "value": "14"
+                },
+                "normalizeTwo": {
+                  "type": ":vector",
+                  "x": "0.6",
+                  "y": "0.8",
+                  "z": "0"
+                },
+                "normalizeThree": {
+                  "type": ":vector",
+                  "x": "0",
+                  "y": "0.6",
+                  "z": "0.8"
+                },
+                "normalizeObject": {
+                  "type": ":vector",
+                  "x": "0.6",
+                  "y": "0",
+                  "z": "0.8"
+                },
+                "normalizeZero": {
+                  "type": ":nothing"
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

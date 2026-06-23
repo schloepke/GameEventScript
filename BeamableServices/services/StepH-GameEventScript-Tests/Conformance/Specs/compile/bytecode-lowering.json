@@ -97,6 +97,48 @@
     },
     {
       "kind": "bytecode",
+      "name": "trig and navigation intrinsics lower to direct opcodes",
+      "script": "module TrigNavigationOpcodes\n\non Start(a, b) {\n  let vectorA be :vector(1, 0, 0)\n  let vectorB be :vector(0, 1, 0)\n  emit Done(s: sin a, c: cos a, t: tan a, asinValue: asin a, acosValue: acos a, atanValue: atan a, atanTwoValue: atan2(a, b), hypotTwo: hypot(a, b), hypotThree: hypot(a, b, 3), distanceObject: distance(vectorA, vectorB), distanceTwo: distance(0, 0, 1, 1), distanceThree: distance(0, 0, 0, 1, 1, 1), distanceSquaredObject: distance squared(vectorA, vectorB), distanceSquaredTwo: distance squared(0, 0, 1, 1), distanceSquaredThree: distance squared(0, 0, 0, 1, 1, 1), lengthSquaredObject: length squared(vectorA), lengthSquaredTwo: length squared(a, b), lengthSquaredThree: length squared(a, b, 3), normalizeObject: normalize(vectorA), normalizeTwo: normalize(a, b), normalizeThree: normalize(a, b, 3), dotObject: dot(vectorA, vectorB), dotTwo: dot(1, 2, 3, 4), dotThree: dot(1, 2, 3, 4, 5, 6), crossObject: cross(vectorA, vectorB), crossTwo: cross(1, 2, 3, 4), crossThree: cross(1, 2, 3, 4, 5, 6), angleObject: angle between(vectorA, vectorB), angleTwo: angle between(1, 0, 0, 1), angleThree: angle between(1, 0, 0, 0, 1, 0))\n}\n",
+      "expectedOpcodes": {
+        "contains": [
+          "Sin",
+          "Cos",
+          "Tan",
+          "Asin",
+          "Acos",
+          "Atan",
+          "Atan2",
+          "Hypot2D",
+          "Hypot3D",
+          "Distance",
+          "Distance2D",
+          "Distance3D",
+          "DistanceSquared",
+          "DistanceSquared2D",
+          "DistanceSquared3D",
+          "LengthSquared",
+          "LengthSquared2D",
+          "LengthSquared3D",
+          "Normalize",
+          "Normalize2D",
+          "Normalize3D",
+          "Dot",
+          "Dot2D",
+          "Dot3D",
+          "Cross",
+          "Cross2D",
+          "Cross3D",
+          "AngleBetween",
+          "AngleBetween2D",
+          "AngleBetween3D"
+        ],
+        "notContains": [
+          "CallStandard"
+        ]
+      }
+    },
+    {
+      "kind": "bytecode",
       "name": "spatial constructors lower to dedicated opcodes",
       "script": "module SpatialCreation\n\non Start(value) {\n  let position be :vector(y: value, z: 3)\n  let target be :point(1, value)\n  emit Done(position: position, target: target)\n}\n",
       "expectedOpcodes": {

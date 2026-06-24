@@ -1410,9 +1410,9 @@ internal static class GesCompiler
                     return;
                 case DiceCountPatternNode count:
                 {
-                    var faceEntry = EmitHelperExpression("pattern_face", count.Face, context, state);
-                    if (take) _builder.TakePattern(destination, target, GameEventScriptBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), faceEntry);
-                    else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), faceEntry);
+                    var face = EmitExpressionForRead(count.Face!, context, state);
+                    if (take) _builder.TakePattern(destination, target, GameEventScriptBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), face);
+                    else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.CountFace, ToShort(count.Count, "pattern count"), face);
                     return;
                 }
                 case DiceFullHousePatternNode:

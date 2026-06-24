@@ -65,7 +65,7 @@ internal static class GameEventScriptOpcodePrinter
         ProjectionEntry,
         KeyEntry,
         ValueEntry,
-        FaceEntry,
+        FaceRegister,
         WeightEntry,
 
         String,
@@ -296,12 +296,12 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.ListBuilderAdd => [BuilderRegister, ItemRegister],
             GameEventScriptBytecodeOpCode.ListBuilderFinish => [TargetRegister, BuilderRegister],
             GameEventScriptBytecodeOpCode.HasPattern => instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace
-                ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceEntry]
+                ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceRegister]
                 : instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountAny
                     ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate]
                     : [TargetRegister, IteratorRegister, PatternKind],
             GameEventScriptBytecodeOpCode.TakePattern => instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace
-                ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceEntry]
+                ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceRegister]
                 : instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountAny
                     ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate]
                     : [TargetRegister, IteratorRegister, PatternKind],

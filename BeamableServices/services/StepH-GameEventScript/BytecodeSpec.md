@@ -1230,8 +1230,8 @@ choose/shuffle, dice/card patterns, object matches, and series term/take/drop
 operations. Pattern operations use `HasPattern` or `TakePattern` with `AU`
 holding a `GameEventScriptBytecodePatternKind` value. `CountAny` and
 `CountFace` use `ImmediateY` as the required count; `CountFace` additionally
-uses `BU` as the face helper entry address. These opcodes reference only source
-or iterator registers, helper entry addresses, immediate counts, pattern ids, and
+uses `BU` as the already-evaluated face register. These opcodes reference only
+source or iterator registers, immediate counts, pattern ids, face registers, and
 binding registers; there are no pipeline selector, pattern, or object-pattern pools.
 
 Streaming/materialization contract:

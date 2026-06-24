@@ -427,8 +427,8 @@ separate approximate-equality opcode.
 | 0xD0 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
 | 0xD1 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
 | 0xD2 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
-| 0xD3 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
-| 0xD4 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
+| 0xD3 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
+| 0xD4 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
 | 0xD5..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary

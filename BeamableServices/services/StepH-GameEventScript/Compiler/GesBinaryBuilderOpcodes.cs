@@ -585,11 +585,11 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder ListBuilderFinish(GesRegisterRef destination, GesRegisterRef builder)
         => AddOpcode(GameEventScriptBytecodeOpCode.ListBuilderFinish, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
 
-    public GesBinaryBuilder HasPattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesLabelRef? faceEntry = null)
-        => PatternOpcode(GameEventScriptBytecodeOpCode.HasPattern, destination, source, pattern, count, faceEntry);
+    public GesBinaryBuilder HasPattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesRegisterRef? face = null)
+        => PatternOpcode(GameEventScriptBytecodeOpCode.HasPattern, destination, source, pattern, count, face);
 
-    public GesBinaryBuilder TakePattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesLabelRef? faceEntry = null)
-        => PatternOpcode(GameEventScriptBytecodeOpCode.TakePattern, destination, source, pattern, count, faceEntry);
+    public GesBinaryBuilder TakePattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesRegisterRef? face = null)
+        => PatternOpcode(GameEventScriptBytecodeOpCode.TakePattern, destination, source, pattern, count, face);
 
     public GesBinaryBuilder LoadBoolean(GesRegisterRef destination, bool value)
         => value ? LoadTrue(destination) : LoadFalse(destination);
@@ -609,6 +609,6 @@ internal sealed partial class GesBinaryBuilder
     private GesBinaryBuilder SelectorOpcode(GameEventScriptBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef source, GesRegisterRef itemBinding, GesLabelRef keyEntry)
         => AddOpcode(opcode, dst: GesOperand.Register(destination), x: GesOperand.Register(source), y: GesOperand.Register(itemBinding), a: GesOperand.Label(keyEntry));
 
-    private GesBinaryBuilder PatternOpcode(GameEventScriptBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count, GesLabelRef? faceEntry)
-        => AddOpcode(opcode, dst: GesOperand.Register(destination), x: GesOperand.Register(source), y: GesOperand.I16(count), a: GesOperand.U16((ushort)pattern), b: faceEntry.HasValue ? GesOperand.Label(faceEntry.Value) : default);
+    private GesBinaryBuilder PatternOpcode(GameEventScriptBytecodeOpCode opcode, GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count, GesRegisterRef? face)
+        => AddOpcode(opcode, dst: GesOperand.Register(destination), x: GesOperand.Register(source), y: GesOperand.I16(count), a: GesOperand.U16((ushort)pattern), b: face.HasValue ? GesOperand.Register(face.Value) : default);
 }

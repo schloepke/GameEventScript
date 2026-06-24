@@ -714,7 +714,7 @@ internal static class GesCompiler
                     EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { max }, 0, max, context, state);
                     return;
                 case MapSelectorNode map:
-                    EmitStreamCollectMap(destination, target, map, context, state);
+                    EmitMapSelectorLoop(destination, target, map, context, state);
                     return;
                 case SortSelectorNode sort:
                     if (sort.Direction == "descending") _builder.SortDescending(destination, target);
@@ -849,6 +849,7 @@ internal static class GesCompiler
                     AverageSelectorNode or
                     MinSelectorNode or
                     MaxSelectorNode or
+                    MapSelectorNode or
                     ObjectMatchSelectorNode => true,
                 EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
                 _ => false
@@ -890,6 +891,7 @@ internal static class GesCompiler
             _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
 
             GesRegisterRef? listBuilder = null;
+            GesRegisterRef? mapBuilder = null;
             GesRegisterRef? count = null;
             GesRegisterRef? one = null;
             GesRegisterRef? hasSum = null;
@@ -902,6 +904,10 @@ internal static class GesCompiler
                 case FilterSelectorNode or SelectSelectorNode:
                     listBuilder = state.AllocateTemporary(_builder, context);
                     _builder.ListBuilderCreate(listBuilder.Value);
+                    break;
+                case MapSelectorNode:
+                    mapBuilder = state.AllocateTemporary(_builder, context);
+                    _builder.MapBuilderCreate(mapBuilder.Value);
                     break;
                 case CountSelectorNode or AverageSelectorNode:
                     count = destination;
@@ -957,7 +963,7 @@ internal static class GesCompiler
                 current = EmitInlinePipelineStep(selectors[index], current, nextLabel, context, state);
             }
 
-            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, count, one, hasSum, sum, extremaKey, extremaCompare, context, state);
+            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, mapBuilder, count, one, hasSum, sum, extremaKey, extremaCompare, context, state);
             _builder.MarkLabel(nextLabel);
             _builder.Jump(loopLabel);
 
@@ -968,6 +974,9 @@ internal static class GesCompiler
             {
                 case FilterSelectorNode or SelectSelectorNode:
                     _builder.ListBuilderFinish(destination, listBuilder!.Value);
+                    break;
+                case MapSelectorNode:
+                    _builder.MapBuilderFinish(destination, mapBuilder!.Value);
                     break;
                 case SumSelectorNode:
                     _builder.JumpIfTrue(hasSum!.Value, closeLabel);
@@ -1120,6 +1129,7 @@ internal static class GesCompiler
             GesLabelRef nextLabel,
             GesLabelRef endLabel,
             GesRegisterRef? listBuilder,
+            GesRegisterRef? mapBuilder,
             GesRegisterRef? count,
             GesRegisterRef? one,
             GesRegisterRef? hasSum,
@@ -1145,6 +1155,15 @@ internal static class GesCompiler
                         ? current
                         : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state);
                     _builder.ListBuilderAdd(listBuilder!.Value, projected);
+                    return;
+                }
+                case MapSelectorNode map:
+                {
+                    var key = EmitSelectorExpressionForRead(map.Identifier, current, map.KeyProjection, context, state);
+                    var value = map.ValueProjection is null
+                        ? current
+                        : EmitSelectorExpressionForRead(map.Identifier, current, map.ValueProjection, context, state);
+                    _builder.MapBuilderAdd(mapBuilder!.Value, key, value);
                     return;
                 }
                 case CountSelectorNode countSelector:
@@ -1364,11 +1383,8 @@ internal static class GesCompiler
                     _builder.Count(destination, countIterator);
                     return;
                 }
-                case SumSelectorNode or AverageSelectorNode:
-                    throw new GameEventScriptCompileException("GameEventScript binary compiler expects sum and average terminals to be lowered as explicit loops.");
-                case MapSelectorNode map:
-                    EmitStreamCollectMapFromIterator(destination, iterator, map, context, state);
-                    return;
+                case SumSelectorNode or AverageSelectorNode or MapSelectorNode:
+                    throw new GameEventScriptCompileException("GameEventScript binary compiler expects sum, average, and map terminals to be lowered as explicit loops.");
                 case EdgeSelectorNode { Predicate: null } edge:
                     if (edge.Mode == "last") _builder.Last(destination, iterator);
                     else if (edge.Mode == "single") _builder.Single(destination, iterator);
@@ -1587,25 +1603,9 @@ internal static class GesCompiler
             _builder.MarkLabel(doneLabel);
         }
 
-        private void EmitStreamCollectMap(GesRegisterRef destination, GesRegisterRef target, MapSelectorNode map, LoweringContext context, ExpressionState state)
+        private void EmitMapSelectorLoop(GesRegisterRef destination, GesRegisterRef target, MapSelectorNode map, LoweringContext context, ExpressionState state)
         {
-            var iterator = state.AllocateTemporary(_builder, context);
-            _builder.StreamCreate(iterator, target);
-            EmitStreamCollectMapFromIterator(destination, iterator, map, context, state);
-        }
-
-        private void EmitStreamCollectMapFromIterator(GesRegisterRef destination, GesRegisterRef iterator, MapSelectorNode map, LoweringContext context, ExpressionState state)
-        {
-            var itemBinding = state.AllocateTemporary(_builder, context);
-            var keyEntry = EmitSelectorHelperExpression("map_key", map.Identifier, map.KeyProjection, context, state, itemBinding);
-            if (map.ValueProjection is null)
-            {
-                _builder.StreamCollectMap(destination, iterator, itemBinding, keyEntry);
-                return;
-            }
-
-            var valueEntry = EmitSelectorHelperExpression("map_value", map.Identifier, map.ValueProjection, context, state, itemBinding);
-            _builder.StreamCollectMapValue(destination, iterator, itemBinding, keyEntry, valueEntry);
+            EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { map }, 0, map, context, state);
         }
 
         private GesRegisterRef EmitObjectPatternPredicate(GesRegisterRef target, ObjectMatchPatternNode pattern, LoweringContext context, ExpressionState state)

@@ -49,4 +49,33 @@ internal static class GesVmRegisterCollections
 
         vmState.SetNothing(destinationRegister);
     }
+
+    internal static void GesVmCreateMapBuilder(this GesVmState vmState, ushort destinationRegister)
+    {
+        vmState.CreateMapBuilder(destinationRegister);
+    }
+
+    internal static void GesVmMapBuilderAdd(this GesVmState vmState, in GesVmValue mapBuilder, in GesVmValue keyValue, in GesVmValue value)
+    {
+        if (mapBuilder.Kind is not MapBuilder || mapBuilder.ObjectValue is not GesVmValueMapBuilder builder) return;
+        var key = keyValue.Kind switch
+        {
+            Text or Tag => keyValue.TextValue,
+            Nothing => string.Empty,
+            _ => keyValue.ToText
+        };
+        if (key.Length == 0) return;
+        builder.Set(key, value);
+    }
+
+    internal static void GesVmMapBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue mapBuilder)
+    {
+        if (mapBuilder.Kind is MapBuilder && mapBuilder.ObjectValue is GesVmValueMapBuilder builder)
+        {
+            vmState.SetMap(destinationRegister, builder.ToMap());
+            return;
+        }
+
+        vmState.SetNothing(destinationRegister);
+    }
 }

@@ -543,12 +543,6 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder StreamCollectList(GesRegisterRef destination, GesRegisterRef iterator)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamCollectList, destination, iterator);
 
-    public GesBinaryBuilder StreamCollectMap(GesRegisterRef destination, GesRegisterRef iterator, GesRegisterRef itemBinding, GesLabelRef keyEntry)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamCollectMap, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Register(itemBinding), a: GesOperand.Label(keyEntry));
-
-    public GesBinaryBuilder StreamCollectMapValue(GesRegisterRef destination, GesRegisterRef iterator, GesRegisterRef itemBinding, GesLabelRef keyEntry, GesLabelRef valueEntry)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamCollectMapValue, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Register(itemBinding), a: GesOperand.Label(keyEntry), b: GesOperand.Label(valueEntry));
-
     public GesBinaryBuilder Distinct(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Distinct, destination, source);
 
@@ -584,6 +578,15 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder ListBuilderFinish(GesRegisterRef destination, GesRegisterRef builder)
         => AddOpcode(GameEventScriptBytecodeOpCode.ListBuilderFinish, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
+
+    public GesBinaryBuilder MapBuilderCreate(GesRegisterRef destination)
+        => AddOpcode(GameEventScriptBytecodeOpCode.MapBuilderCreate, dst: GesOperand.Register(destination));
+
+    public GesBinaryBuilder MapBuilderAdd(GesRegisterRef builder, GesRegisterRef key, GesRegisterRef value)
+        => AddOpcode(GameEventScriptBytecodeOpCode.MapBuilderAdd, x: GesOperand.Register(builder), y: GesOperand.Register(key), a: GesOperand.Register(value));
+
+    public GesBinaryBuilder MapBuilderFinish(GesRegisterRef destination, GesRegisterRef builder)
+        => AddOpcode(GameEventScriptBytecodeOpCode.MapBuilderFinish, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
 
     public GesBinaryBuilder HasPattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesRegisterRef? face = null)
         => PatternOpcode(GameEventScriptBytecodeOpCode.HasPattern, destination, source, pattern, count, face);

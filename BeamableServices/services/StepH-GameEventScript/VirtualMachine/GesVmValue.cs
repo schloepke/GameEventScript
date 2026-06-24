@@ -326,6 +326,15 @@ internal struct GesVmValue
         ObjectValue = listBuilder;
     }
 
+    internal void SetMapBuilder(GesVmValueMapBuilder mapBuilder)
+    {
+        Kind = MapBuilder;
+        Flags = StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = mapBuilder;
+    }
+
     public double AsNumeric => Kind switch
     {
         Integer => IntegerValue,

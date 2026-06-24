@@ -258,6 +258,8 @@ public static class GameEventScriptBinaryDumper
             RightRegister => Register(instruction.YSlot),
             ObjectRegister => Register(instruction.YSlot),
             ItemRegister => Register(instruction.YSlot),
+            KeyRegister => Register(instruction.YSlot),
+            ValueRegister => Register(instruction.AU),
             IndexRegister => Register(instruction.YSlot),
             DefaultRegister => Register(instruction.YSlot),
             SeedRegister => Register(instruction.XSlot),

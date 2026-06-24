@@ -413,23 +413,24 @@ separate approximate-equality opcode.
 | 0xC2 | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
 | 0xC3 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
 | 0xC4 | `StreamCollectList` | - | result register | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xC5 | `StreamCollectMap` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
-| 0xC6 | `StreamCollectMapValue` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
-| 0xC7 | `Distinct` | - | result register | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
-| 0xC8 | `DistinctBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
-| 0xC9 | `GroupBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct list, map/custom map-backed, and stream sources. |
-| 0xCA | `SortAscending` | - | result register | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
-| 0xCB | `SortDescending` | - | result register | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
-| 0xCC | `OrderByAscending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
-| 0xCD | `OrderByDescending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
-| 0xCE | `Reverse` | - | result register | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
-| 0xCF | `Shuffle` | - | result register | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
-| 0xD0 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
-| 0xD1 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xD2 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
-| 0xD3 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
-| 0xD4 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-| 0xD5..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
+| 0xC5 | `Distinct` | - | result register | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
+| 0xC6 | `DistinctBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
+| 0xC7 | `GroupBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct list, map/custom map-backed, and stream sources. |
+| 0xC8 | `SortAscending` | - | result register | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
+| 0xC9 | `SortDescending` | - | result register | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
+| 0xCA | `OrderByAscending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
+| 0xCB | `OrderByDescending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
+| 0xCC | `Reverse` | - | result register | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
+| 0xCD | `Shuffle` | - | result register | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
+| 0xCE | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
+| 0xCF | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xD0 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
+| 0xD1 | `MapBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal map builder for generated map projections. |
+| 0xD2 | `MapBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=key | `AU`=value register | Adds or overwrites a map entry; empty/nothing keys are skipped. |
+| 0xD3 | `MapBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the map builder as a map. |
+| 0xD4 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Tests a dice/card pattern and returns boolean. |
+| 0xD5 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face register for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
+| 0xD6..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

@@ -710,12 +710,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case StreamCollectList:
                             vmState.GesVmStreamCollectList(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        case StreamCollectMap:
-                            vmState.GesVmStreamCollectMap(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            break;
-                        case StreamCollectMapValue:
-                            vmState.GesVmStreamCollectMapValue(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, instruction.BU, this);
-                            break;
                         case HasAny:
                             vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), false);
                             break;
@@ -757,6 +751,15 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case ListBuilderFinish:
                             vmState.GesVmListBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            break;
+                        case MapBuilderCreate:
+                            vmState.GesVmCreateMapBuilder(instruction.DestinationSlot);
+                            break;
+                        case MapBuilderAdd:
+                            vmState.GesVmMapBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            break;
+                        case MapBuilderFinish:
+                            vmState.GesVmMapBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
                             break;
                         case HasPattern:
                             vmState.GesVmHasPattern(instruction.DestinationSlot, vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, vmState.Register(instruction.BU));

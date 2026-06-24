@@ -329,7 +329,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 streams, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 order/reverse/shuffle, generated-list builders, pattern operators, reserved tail 0xD8..0xFF
+0xD0 Group 3 order/reverse/shuffle, generated collection builders, pattern operators, reserved tail 0xD6..0xFF
 ```
 
 The exhaustive opcode field map lives in `BytecodeOpcodeShape.md`. That table
@@ -1130,8 +1130,6 @@ Count dst source
 OneWeighted dst items weights
 TakeWeighted dst items count weights
 StreamCollectList dst iterator
-StreamCollectMap dst iterator itemBindingRegister keyEntry
-StreamCollectMapValue dst iterator itemBindingRegister keyEntry valueEntry
 Distinct dst source
 DistinctBy dst source itemBindingRegister keyEntry
 GroupBy dst source itemBindingRegister keyEntry
@@ -1148,6 +1146,9 @@ HasAny/HasAll dst source
 ListBuilderCreate builder
 ListBuilderAdd builder item
 ListBuilderFinish dst builder
+MapBuilderCreate builder
+MapBuilderAdd builder key value
+MapBuilderFinish dst builder
 ```
 
 `SortAscending` and `SortDescending` accept lists, dice, ranges, and streams.
@@ -1279,7 +1280,9 @@ use explicit range-source syntax.
 
 At runtime, collection builders are VM-internal values and are not visible as DSL
 values. `ListBuilderAdd` applies `MaxGeneratedCollectionItems` while
-materializing the result.
+materializing the result. Map projections use VM-internal map builders in the
+same linear loop shape; `MapBuilderAdd` skips empty or `nothing` keys and
+overwrites duplicate keys with the later value.
 
 ## Debug Segment
 

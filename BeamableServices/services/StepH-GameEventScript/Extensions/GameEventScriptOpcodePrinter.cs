@@ -23,6 +23,8 @@ internal static class GameEventScriptOpcodePrinter
         ObjectRegister,
         BuilderRegister,
         ItemRegister,
+        KeyRegister,
+        ValueRegister,
         ItemBindingRegister,
         AuxItemBindingRegister,
         WeightRegister,
@@ -278,8 +280,6 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StreamMap => [TargetRegister, SourceIteratorRegister, NextEntry, AuxItemBindingRegister, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamFilter => [TargetRegister, SourceIteratorRegister, PredicateEntry, AuxItemBindingRegister, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamCollectList => [TargetRegister, IteratorRegister],
-            GameEventScriptBytecodeOpCode.StreamCollectMap => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
-            GameEventScriptBytecodeOpCode.StreamCollectMapValue => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry, ValueEntry],
 
             GameEventScriptBytecodeOpCode.HasAny => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.HasAll => [TargetRegister, SourceRegister],
@@ -295,6 +295,9 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.ListBuilderCreate => [TargetRegister],
             GameEventScriptBytecodeOpCode.ListBuilderAdd => [BuilderRegister, ItemRegister],
             GameEventScriptBytecodeOpCode.ListBuilderFinish => [TargetRegister, BuilderRegister],
+            GameEventScriptBytecodeOpCode.MapBuilderCreate => [TargetRegister],
+            GameEventScriptBytecodeOpCode.MapBuilderAdd => [BuilderRegister, KeyRegister, ValueRegister],
+            GameEventScriptBytecodeOpCode.MapBuilderFinish => [TargetRegister, BuilderRegister],
             GameEventScriptBytecodeOpCode.HasPattern => instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountFace
                 ? [TargetRegister, IteratorRegister, PatternKind, CountImmediate, FaceRegister]
                 : instruction.AU == (ushort)GameEventScriptBytecodePatternKind.CountAny

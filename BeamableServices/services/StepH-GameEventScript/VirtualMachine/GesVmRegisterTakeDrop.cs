@@ -93,6 +93,125 @@ internal static class GesVmRegisterTakeDrop
 
         vmState.SetValue(destinationRegister, in dst);
     }
+
+    internal static void GesVmOneWeighted(this GesVmState vmState, ushort destinationRegister, in GesVmValue itemsValue, in GesVmValue weightsValue, GesVmXoshiroRandom randomGenerator)
+    {
+        if (itemsValue is not { Kind: List, ObjectValue: GesVmValue[] items } ||
+            weightsValue is not { Kind: List, ObjectValue: GesVmValue[] weights } ||
+            items.Length == 0 ||
+            weights.Length < items.Length)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        double totalWeight = 0d;
+        for (var i = 0; i < items.Length; i++)
+        {
+            var weight = weights[i].AsNumeric;
+            if (!double.IsFinite(weight) || weight <= 0d)
+            {
+                vmState.SetNothing(destinationRegister);
+                return;
+            }
+
+            totalWeight += weight;
+        }
+
+        if (totalWeight <= 0d)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        var threshold = randomGenerator.NextInclusiveFloat(0d, totalWeight);
+        double cumulative = 0d;
+        var selected = items.Length - 1;
+        for (var i = 0; i < items.Length; i++)
+        {
+            cumulative += weights[i].AsNumeric;
+            if (threshold < cumulative)
+            {
+                selected = i;
+                break;
+            }
+        }
+
+        vmState.SetValue(destinationRegister, in items[selected]);
+    }
+
+    internal static void GesVmTakeWeighted(this GesVmState vmState, ushort destinationRegister, in GesVmValue itemsValue, in GesVmValue weightsValue, short count, GesVmXoshiroRandom randomGenerator)
+    {
+        if (itemsValue is not { Kind: List, ObjectValue: GesVmValue[] items } ||
+            weightsValue is not { Kind: List, ObjectValue: GesVmValue[] weights } ||
+            weights.Length < items.Length)
+        {
+            vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (count <= 0 || items.Length == 0)
+        {
+            vmState.SetList(destinationRegister, vmState.EmptyList);
+            return;
+        }
+
+        var itemCount = items.Length;
+        var itemBuffer = new GesVmValue[itemCount];
+        var weightBuffer = new double[itemCount];
+        double totalWeight = 0d;
+        for (var i = 0; i < itemCount; i++)
+        {
+            var weight = weights[i].AsNumeric;
+            if (!double.IsFinite(weight) || weight <= 0d)
+            {
+                vmState.SetList(destinationRegister, vmState.EmptyList);
+                return;
+            }
+
+            itemBuffer[i] = items[i];
+            weightBuffer[i] = weight;
+            totalWeight += weight;
+        }
+
+        if (totalWeight <= 0d)
+        {
+            vmState.SetList(destinationRegister, vmState.EmptyList);
+            return;
+        }
+
+        var selectedCount = count < itemCount ? count : itemCount;
+        var list = new GesVmValue[selectedCount];
+        var remainingCount = itemCount;
+        for (var target = 0; target < selectedCount && remainingCount > 0 && totalWeight > 0d; target++)
+        {
+            var threshold = randomGenerator.NextInclusiveFloat(0d, totalWeight);
+            double cumulative = 0d;
+            var selected = remainingCount - 1;
+            for (var i = 0; i < remainingCount; i++)
+            {
+                cumulative += weightBuffer[i];
+                if (threshold < cumulative)
+                {
+                    selected = i;
+                    break;
+                }
+            }
+
+            list[target] = itemBuffer[selected];
+            totalWeight -= weightBuffer[selected];
+            if (selected < remainingCount - 1)
+            {
+                Array.Copy(itemBuffer, selected + 1, itemBuffer, selected, remainingCount - selected - 1);
+                Array.Copy(weightBuffer, selected + 1, weightBuffer, selected, remainingCount - selected - 1);
+            }
+
+            remainingCount--;
+        }
+
+        vmState.SetList(destinationRegister, list);
+    }
+
     internal static void GesVmDropFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, short count)
     {
         var dst = new GesVmValue();

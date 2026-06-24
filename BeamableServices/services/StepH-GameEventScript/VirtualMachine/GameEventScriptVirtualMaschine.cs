@@ -628,6 +628,12 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case TakeRandom:
                             vmState.GesVmTakeRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
                             break;
+                        case OneWeighted:
+                            vmState.GesVmOneWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.RandomGenerator);
+                            break;
+                        case TakeWeighted:
+                            vmState.GesVmTakeWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.AU), instruction.ImmediateY, vmState.RandomGenerator);
+                            break;
                         case Count:
                             vmState.GesVmCount(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
@@ -700,12 +706,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case StreamFilter:
                             vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            break;
-                        case StreamOneWeighted:
-                            vmState.GesVmStreamOneWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
-                            break;
-                        case StreamTakeWeighted:
-                            vmState.GesVmStreamTakeWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
                             break;
                         case StreamCollectList:
                             vmState.GesVmStreamCollectList(instruction.DestinationSlot, vmState.Register(instruction.XSlot));

@@ -25,6 +25,7 @@ internal static class GameEventScriptOpcodePrinter
         ItemRegister,
         ItemBindingRegister,
         AuxItemBindingRegister,
+        WeightRegister,
         ConditionRegister,
         CollectionRegister,
         IteratorRegister,
@@ -66,7 +67,6 @@ internal static class GameEventScriptOpcodePrinter
         KeyEntry,
         ValueEntry,
         FaceRegister,
-        WeightEntry,
 
         String,
         Text,
@@ -252,6 +252,8 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.DropLowest => [TargetRegister, SourceRegister, CountImmediate],
             GameEventScriptBytecodeOpCode.OneRandom => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.TakeRandom => [TargetRegister, SourceRegister, CountImmediate],
+            GameEventScriptBytecodeOpCode.OneWeighted => [TargetRegister, SourceRegister, WeightRegister],
+            GameEventScriptBytecodeOpCode.TakeWeighted => [TargetRegister, SourceRegister, CountImmediate, WeightRegister],
 
             GameEventScriptBytecodeOpCode.Count => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.StartsWith => [TargetRegister, LeftRegister, RightRegister],
@@ -275,8 +277,6 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StreamClose => [IteratorRegister],
             GameEventScriptBytecodeOpCode.StreamMap => [TargetRegister, SourceIteratorRegister, NextEntry, AuxItemBindingRegister, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamFilter => [TargetRegister, SourceIteratorRegister, PredicateEntry, AuxItemBindingRegister, CaptureRegisterList],
-            GameEventScriptBytecodeOpCode.StreamOneWeighted => [TargetRegister, IteratorRegister, AuxItemBindingRegister, WeightEntry, CaptureRegisterList],
-            GameEventScriptBytecodeOpCode.StreamTakeWeighted => [TargetRegister, IteratorRegister, CountImmediate, AuxItemBindingRegister, WeightEntry, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamCollectList => [TargetRegister, IteratorRegister],
             GameEventScriptBytecodeOpCode.StreamCollectMap => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry],
             GameEventScriptBytecodeOpCode.StreamCollectMapValue => [TargetRegister, IteratorRegister, ItemBindingRegister, KeyEntry, ValueEntry],

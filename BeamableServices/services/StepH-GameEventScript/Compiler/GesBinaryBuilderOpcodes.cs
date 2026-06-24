@@ -462,6 +462,12 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder TakeRandom(GesRegisterRef destination, GesRegisterRef source, short count)
         => CountOpcode(GameEventScriptBytecodeOpCode.TakeRandom, destination, source, count);
 
+    public GesBinaryBuilder OneWeighted(GesRegisterRef destination, GesRegisterRef items, GesRegisterRef weights)
+        => BinaryOpcode(GameEventScriptBytecodeOpCode.OneWeighted, destination, items, weights);
+
+    public GesBinaryBuilder TakeWeighted(GesRegisterRef destination, GesRegisterRef items, GesRegisterRef weights, short count)
+        => AddOpcode(GameEventScriptBytecodeOpCode.TakeWeighted, dst: GesOperand.Register(destination), x: GesOperand.Register(items), y: GesOperand.I16(count), a: GesOperand.Register(weights));
+
     public GesBinaryBuilder Count(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Count, destination, source);
 
@@ -533,12 +539,6 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder StreamFilter(GesRegisterRef destination, GesRegisterRef sourceIterator, GesLabelRef predicateEntry, GesRegisterRef itemBinding, IReadOnlyList<GesRegisterRef> captures)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamFilter, dst: GesOperand.Register(destination), x: GesOperand.Register(sourceIterator), y: GesOperand.Label(predicateEntry), a: GesOperand.Register(itemBinding), b: GesOperand.RegisterList(captures));
-
-    public GesBinaryBuilder StreamOneWeighted(GesRegisterRef destination, GesRegisterRef iterator, GesRegisterRef itemBinding, GesLabelRef weightEntry, IReadOnlyList<GesRegisterRef> captures)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamOneWeighted, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), a: GesOperand.Register(itemBinding), b: GesOperand.Label(weightEntry), c: GesOperand.RegisterList(captures));
-
-    public GesBinaryBuilder StreamTakeWeighted(GesRegisterRef destination, GesRegisterRef iterator, short count, GesRegisterRef itemBinding, GesLabelRef weightEntry, IReadOnlyList<GesRegisterRef> captures)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamTakeWeighted, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.I16(count), a: GesOperand.Register(itemBinding), b: GesOperand.Label(weightEntry), c: GesOperand.RegisterList(captures));
 
     public GesBinaryBuilder StreamCollectList(GesRegisterRef destination, GesRegisterRef iterator)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamCollectList, destination, iterator);

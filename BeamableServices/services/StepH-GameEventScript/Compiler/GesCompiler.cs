@@ -1513,16 +1513,7 @@ internal static class GesCompiler
 
             if (choose.WeightExpression is not null && !string.IsNullOrEmpty(choose.WeightIdentifier))
             {
-                var iterator = source;
-                if (choose.Predicate is null)
-                {
-                    iterator = state.AllocateTemporary(_builder, context);
-                    _builder.StreamCreate(iterator, source);
-                }
-
-                var weightEntry = EmitStreamSelectorHelperExpression("choose_weight", choose.WeightIdentifier!, choose.WeightExpression, context, out var weightItemBinding, out var weightCaptures);
-                if (choose.Count == 1) _builder.StreamOneWeighted(destination, iterator, weightItemBinding, weightEntry, weightCaptures);
-                else _builder.StreamTakeWeighted(destination, iterator, ToShort(choose.Count, "choose count"), weightItemBinding, weightEntry, weightCaptures);
+                EmitInlineWeightedChoose(destination, target, choose, context, state);
                 return;
             }
 
@@ -1535,6 +1526,65 @@ internal static class GesCompiler
 
             if (choose.Count == 1) _builder.First(destination, source);
             else _builder.TakeFirst(destination, source, ToShort(choose.Count, "choose count"));
+        }
+
+        private void EmitInlineWeightedChoose(GesRegisterRef destination, GesRegisterRef source, ChooseSelectorNode choose, LoweringContext context, ExpressionState state)
+        {
+            var iterator = state.AllocateTemporary(_builder, context);
+            var item = state.AllocateTemporary(_builder, context);
+            var itemsBuilder = state.AllocateTemporary(_builder, context);
+            var weightsBuilder = state.AllocateTemporary(_builder, context);
+            var items = state.AllocateTemporary(_builder, context);
+            var weights = state.AllocateTemporary(_builder, context);
+            var zero = state.AllocateTemporary(_builder, context);
+            var infinity = state.AllocateTemporary(_builder, context);
+            var isPositive = state.AllocateTemporary(_builder, context);
+            var isFinite = state.AllocateTemporary(_builder, context);
+
+            var loopLabel = _builder.AddLabel("weighted_next");
+            var skipLabel = _builder.AddLabel("weighted_skip");
+            var endLabel = _builder.AddLabel("weighted_end");
+            var invalidStreamLabel = _builder.AddLabel("weighted_invalid_stream");
+            var doneLabel = _builder.AddLabel("weighted_done");
+
+            _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
+            _builder.ListBuilderCreate(itemsBuilder);
+            _builder.ListBuilderCreate(weightsBuilder);
+
+            _builder.MarkLabel(loopLabel);
+            _builder.StreamNext(item, iterator, endLabel);
+
+            if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
+            {
+                var predicate = EmitSelectorExpressionForRead(choose.Identifier!, item, choose.Predicate, context, state);
+                _builder.JumpIfNotTrue(predicate, skipLabel);
+            }
+
+            var weight = EmitSelectorExpressionForRead(choose.WeightIdentifier!, item, choose.WeightExpression!, context, state);
+            _builder.LoadInteger(zero, 0);
+            _builder.LoadFloat(infinity, double.PositiveInfinity);
+            _builder.Greater(isPositive, weight, zero);
+            _builder.JumpIfNotTrue(isPositive, skipLabel);
+            _builder.Less(isFinite, weight, infinity);
+            _builder.JumpIfNotTrue(isFinite, skipLabel);
+
+            _builder.ListBuilderAdd(itemsBuilder, item);
+            _builder.ListBuilderAdd(weightsBuilder, weight);
+
+            _builder.MarkLabel(skipLabel);
+            _builder.Jump(loopLabel);
+
+            _builder.MarkLabel(endLabel);
+            _builder.StreamClose(iterator);
+            _builder.ListBuilderFinish(items, itemsBuilder);
+            _builder.ListBuilderFinish(weights, weightsBuilder);
+            if (choose.Count == 1) _builder.OneWeighted(destination, items, weights);
+            else _builder.TakeWeighted(destination, items, weights, ToShort(choose.Count, "choose count"));
+            _builder.Jump(doneLabel);
+
+            _builder.MarkLabel(invalidStreamLabel);
+            _builder.LoadNothing(destination);
+            _builder.MarkLabel(doneLabel);
         }
 
         private void EmitStreamCollectMap(GesRegisterRef destination, GesRegisterRef target, MapSelectorNode map, LoweringContext context, ExpressionState state)

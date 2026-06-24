@@ -386,32 +386,32 @@ separate approximate-equality opcode.
 | 0xA7 | `DropLowest` | - | result register | `XSlot`=source | `ImmediateY`=count | - | Drops the lowest `Y` values from a finite list, dice, range, or stream source; series yields `nothing`. |
 | 0xA8 | `OneRandom` | - | result register | `XSlot`=source | - | - | Chooses one random element from a finite list, dice, range, or stream source; empty/invalid/series sources yield `nothing`. |
 | 0xA9 | `TakeRandom` | - | result register | `XSlot`=source | `ImmediateY`=count | - | Chooses up to `Y` random elements without replacement. Lists stay lists, dice stay dice, ranges and streams materialize as lists. |
-| 0xAA | `Count` | - | result register | `XSlot`=source | - | - | Counts finite collection/stream elements. Text and tags use raw text length; `nothing` -> `0`; invalid/series sources -> `nothing`. |
-| 0xAB | `StartsWith` | - | result register | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text prefix check or list/dice/range sequence prefix check. |
-| 0xAC | `EndsWith` | - | result register | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text suffix check or list/dice/range sequence suffix check. |
-| 0xAD | `Contains` | - | result register | `XSlot`=needle | `YSlot`=container | - | Text/tag substring, map key, list/dice/range membership, or vector/point component membership. |
-| 0xAE | `ContainsAny` | - | result register | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains any value from the needle sequence. Streams are consumed until the first match or exhaustion. |
-| 0xAF | `ContainsAll` | - | result register | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains every value from the needle sequence. Streams are consumed until all needles match or exhaustion. |
-| 0xB0 | `HasAny` | - | result register | `XSlot`=source | - | - | Truthiness `any` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `false`; `nothing` -> `nothing`. |
-| 0xB1 | `HasAll` | - | result register | `XSlot`=source | - | - | Truthiness `all` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `true`; `nothing` -> `nothing`. |
-| 0xB2 | `ContainsValue` | - | result register | `XSlot`=needle | `YSlot`=container | - | Value membership for map-like containers, vectors, and points. |
-| 0xB3 | `Union` | - | result register | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |
-| 0xB4 | `Intersect` | - | result register | `XSlot`=left | `YSlot`=right | - | Map key intersection or list/dice multiset intersection; invalid shapes -> `nothing`. |
-| 0xB5 | `Zip` | - | result register | `XSlot`=left | `YSlot`=right | - | List zip into `{ left, right }` maps up to the shorter length; invalid shapes -> `nothing`. |
-| 0xB6 | `KeysOfMap` | - | result register | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
-| 0xB7 | `ValuesOfMap` | - | result register | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
-| 0xB8 | `EntriesOfMap` | - | result register | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
-| 0xB9 | `First` | - | result register | `XSlot`=source | - | - | Returns the first element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
-| 0xBA | `Last` | - | result register | `XSlot`=source | - | - | Returns the last element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
-| 0xBB | `Single` | - | result register | `XSlot`=source | - | - | Returns the only element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty/multiple-element sources -> `nothing`. |
-| 0xBC | `StreamCreate` | - | iterator register | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. Non-streamable sources write `nothing`. |
-| 0xBD | `StreamCreateOrJump` | - | iterator register | `XSlot`=collection | `TargetAddress`=not-streamable | - | Creates a VM-internal iterator, or writes `nothing` and jumps to `Y` when no stream can be created. |
-| 0xBE | `StreamNext` | - | item register | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
-| 0xBF | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
-| 0xC0 | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
-| 0xC1 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
-| 0xC2 | `StreamOneWeighted` | - | result register | `XSlot`=iterator | - | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
-| 0xC3 | `StreamTakeWeighted` | - | result register | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
+| 0xAA | `OneWeighted` | - | result register | `XSlot`=items list | `YSlot`=weights list | - | Selects one item using positive finite weights. Empty/no-positive-weight lists -> `nothing`. |
+| 0xAB | `TakeWeighted` | - | result register | `XSlot`=items list | `ImmediateY`=count | `AU`=weights list register | Selects up to `Y` items without replacement using positive finite weights. Result is a list. |
+| 0xAC | `Count` | - | result register | `XSlot`=source | - | - | Counts collection/string/range/map items or consumes a stream to count. |
+| 0xAD | `StartsWith` | - | result register | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text prefix check or list/dice/range sequence prefix check. |
+| 0xAE | `EndsWith` | - | result register | `XSlot`=left | `YSlot`=right | - | Text/tag raw-text suffix check or list/dice/range sequence suffix check. |
+| 0xAF | `Contains` | - | result register | `XSlot`=needle | `YSlot`=container | - | Text/tag substring, map key, list/dice/range membership, or vector/point component membership. |
+| 0xB0 | `ContainsAny` | - | result register | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains any value from the needle sequence. Streams are consumed until the first match or exhaustion. |
+| 0xB1 | `ContainsAll` | - | result register | `XSlot`=needles | `YSlot`=container | - | Tests whether the container contains every value from the needle sequence. Streams are consumed until all needles match or exhaustion. |
+| 0xB2 | `HasAny` | - | result register | `XSlot`=source | - | - | Truthiness `any` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `false`; `nothing` -> `nothing`. |
+| 0xB3 | `HasAll` | - | result register | `XSlot`=source | - | - | Truthiness `all` over list/dice/range/map values/text/tag/vector/point or stream sources. Empty -> `true`; `nothing` -> `nothing`. |
+| 0xB4 | `ContainsValue` | - | result register | `XSlot`=needle | `YSlot`=container | - | Value membership for map-like containers, vectors, and points. |
+| 0xB5 | `Union` | - | result register | `XSlot`=left | `YSlot`=right | - | Collection union/merge for list, dice, and map shapes; invalid shapes -> `nothing`. |
+| 0xB6 | `Intersect` | - | result register | `XSlot`=left | `YSlot`=right | - | Map key intersection or list/dice multiset intersection; invalid shapes -> `nothing`. |
+| 0xB7 | `Zip` | - | result register | `XSlot`=left | `YSlot`=right | - | List zip into `{ left, right }` maps up to the shorter length; invalid shapes -> `nothing`. |
+| 0xB8 | `KeysOfMap` | - | result register | `XSlot`=operand | - | - | Map/custom-type keys projection; `nothing` and non-map operands produce `nothing`. |
+| 0xB9 | `ValuesOfMap` | - | result register | `XSlot`=operand | - | - | Map/custom-type values projection; `nothing` and non-map operands produce `nothing`. |
+| 0xBA | `EntriesOfMap` | - | result register | `XSlot`=operand | - | - | Map/custom-type entries projection; `nothing` and non-map operands produce `nothing`. |
+| 0xBB | `First` | - | result register | `XSlot`=source | - | - | Returns the first element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
+| 0xBC | `Last` | - | result register | `XSlot`=source | - | - | Returns the last element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
+| 0xBD | `Single` | - | result register | `XSlot`=source | - | - | Returns the only element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty/multiple-element sources -> `nothing`. |
+| 0xBE | `StreamCreate` | - | iterator register | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. Non-streamable sources write `nothing`. |
+| 0xBF | `StreamCreateOrJump` | - | iterator register | `XSlot`=collection | `TargetAddress`=not-streamable | - | Creates a VM-internal iterator, or writes `nothing` and jumps to `Y` when no stream can be created. |
+| 0xC0 | `StreamNext` | - | item register | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
+| 0xC1 | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
+| 0xC2 | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
+| 0xC3 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
 | 0xC4 | `StreamCollectList` | - | result register | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
 | 0xC5 | `StreamCollectMap` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
 | 0xC6 | `StreamCollectMapValue` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |

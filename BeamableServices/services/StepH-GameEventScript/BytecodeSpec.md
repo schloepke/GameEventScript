@@ -1127,8 +1127,8 @@ StreamCreate source -> iterator
 StreamMap transformedIterator sourceIterator mapEntry itemBindingRegister captureRegisterList
 StreamFilter filteredIterator sourceIterator predicateEntry itemBindingRegister captureRegisterList
 Count dst source
-StreamOneWeighted dst iterator itemBindingRegister weightEntry captureRegisterList
-StreamTakeWeighted dst iterator count itemBindingRegister weightEntry captureRegisterList
+OneWeighted dst items weights
+TakeWeighted dst items count weights
 StreamCollectList dst iterator
 StreamCollectMap dst iterator itemBindingRegister keyEntry
 StreamCollectMapValue dst iterator itemBindingRegister keyEntry valueEntry
@@ -1195,12 +1195,12 @@ when the source has more than one element. The DSL `:draw 1` selector lowers to
 `:choose 1 at random` and `TakeRandom` for `:choose n at random`.
 `TakeRandom` chooses without replacement. Lists stay lists, dice stay dice,
 and ranges or streams materialize as lists. Weighted choice uses stream
-terminals because it must evaluate a helper expression for every candidate:
-`:choose 1 weighted by ...` lowers to `StreamOneWeighted` and returns one item
-or `nothing`; `:choose n weighted by ...` lowers to `StreamTakeWeighted` and
-returns a list with up to `n` items. The current source item is bound to the
-helper-local item register, and the capture register list is copied into helper-local
-registers starting at `1`. Only positive finite weights participate.
+loops so the predicate and weight expression execute as normal bytecode for
+every candidate. The generated loop materializes two lists: candidate items and
+their positive finite weights. `:choose 1 weighted by ...` then lowers to
+`OneWeighted` and returns one item or `nothing`; `:choose n weighted by ...`
+lowers to `TakeWeighted` and returns a list with up to `n` items. Only positive
+finite weights participate.
 
 `StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
 iterator. Their helper entries run as isolated helper frames: the current source

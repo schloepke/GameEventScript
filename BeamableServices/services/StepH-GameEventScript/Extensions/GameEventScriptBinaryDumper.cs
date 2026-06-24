@@ -266,6 +266,7 @@ public static class GameEventScriptBinaryDumper
 
             ItemBindingRegister => Register(operandIndex >= 3 ? instruction.AU : instruction.YSlot),
             AuxItemBindingRegister => Register(instruction.AU),
+            WeightRegister => Register(instruction.OpCode == GameEventScriptBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YSlot),
             StepRegister => Register(instruction.AU),
             MinimumRegister => Register(instruction.YSlot),
             MaximumRegister => Register(instruction.AU),
@@ -296,7 +297,6 @@ public static class GameEventScriptBinaryDumper
             KeyEntry => context.CodeLabel(instruction.AU),
             ValueEntry => context.CodeLabel(instruction.BU),
             FaceRegister => Register(instruction.BU),
-            WeightEntry => context.CodeLabel(instruction.BU),
 
             GameEventScriptOpcodePrinter.OperandPart.String => FormatTextReference(context, instruction.StringIndex),
             Text => FormatTextReference(context, instruction.StringIndex),
@@ -325,9 +325,7 @@ public static class GameEventScriptBinaryDumper
         };
 
     private static ushort CaptureRegisterListIndex(GameEventScriptBytecodeInstruction instruction)
-        => instruction.OpCode is GameEventScriptBytecodeOpCode.StreamOneWeighted or GameEventScriptBytecodeOpCode.StreamTakeWeighted
-            ? instruction.CU
-            : instruction.BU;
+        => instruction.BU;
 
     private static void AppendInstructionFlags(StringBuilder builder, GameEventScriptBytecodeInstruction instruction)
     {
@@ -394,7 +392,6 @@ public static class GameEventScriptBinaryDumper
                     AddCodeEntryComment(comments, context, instruction.BU);
                     break;
                 case ValueEntry:
-                case WeightEntry:
                     AddCodeEntryComment(comments, context, instruction.BU);
                     break;
             }
@@ -841,7 +838,6 @@ public static class GameEventScriptBinaryDumper
                     AddCodeLabel(labels, binary, instruction.BU);
                     break;
                 case ValueEntry:
-                case WeightEntry:
                     AddCodeLabel(labels, binary, instruction.BU);
                     break;
             }

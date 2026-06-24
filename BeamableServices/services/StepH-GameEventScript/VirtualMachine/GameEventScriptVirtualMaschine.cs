@@ -157,6 +157,9 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case JumpIfNotTrue:
                             if (vmState.IsRegisterNotTrue(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
+                        case JumpIfNothing:
+                            if (vmState.IsRegisterNothing(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            break;
 
                         case Call:
                             vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
@@ -676,6 +679,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case StreamCreate:
                             vmState.GesVmStreamCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
+                        case StreamCreateOrJump:
+                            vmState.GesVmStreamCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            if (vmState.IsRegisterNothing(instruction.DestinationSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            break;
                         case StreamNext:
                         {
                             vmState.GesVmStreamNext(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TargetAddress);
@@ -693,12 +700,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case StreamFilter:
                             vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            break;
-                        case Sum:
-                            vmState.GesVmSum(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
-                            break;
-                        case Average:
-                            vmState.GesVmAverage(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case StreamMin:
                             vmState.GesVmStreamMin(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);

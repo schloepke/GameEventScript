@@ -189,6 +189,11 @@ internal class GesVmState
         ref var value = ref Register(index);
         return value.IsNotTrue;
     }
+    internal bool IsRegisterNothing(ushort index)
+    {
+        ref var value = ref Register(index);
+        return value.Kind is GameEventScriptBytecodeTypeKind.Nothing;
+    }
     internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
     internal void SetNothing(ushort index) => Register(index).SetNothing();
     internal void SetValue(ushort index, in GesVmValue value) => Register(index) = value;

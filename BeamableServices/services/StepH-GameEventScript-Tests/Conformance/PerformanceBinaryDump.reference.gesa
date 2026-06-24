@@ -147,7 +147,20 @@ Start_3:			StreamNext r1, r5, Start_8
 					Jump Start_3
 Start_8:			StreamClose r5
 					ListBuilderFinish r0, r4
-					Sum r2, r0
+					StreamCreateOrJump r4, r0, Start_22
+					StreamNext r5, r4, Start_17
+					Move r6, r5
+					Jump Start_14
+Start_14:			StreamNext r5, r4, Start_20
+					Add r6, r6, r5
+					Jump Start_14
+Start_17:			StreamClose r4
+					LoadInteger r6, #0
+					Jump Start_23
+Start_20:			StreamClose r4
+					Jump Start_23
+Start_22:			LoadNothing r6
+Start_23:			Move r2, r6
 					Count r3, r0
 					EmitMessage Outbound_Done, Args_0 // "Done(total, count)"
 					ReturnVoid
@@ -289,8 +302,7 @@ T_Done:				.text "Done"
 
 .segment lists
 
-Captures_0:			.registers []
-Args_1:				.registers [r2, r3, r4]
+Args_0:				.registers [r2, r3, r4]
 
 
 .segment bind
@@ -302,7 +314,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 .segment code
 
 Start:				 // handler Start()
-					SlotLocals #7
+					SlotLocals #12
 					StageInteger #1
 					StageInteger #2
 					StageInteger #3
@@ -325,30 +337,58 @@ Start:				 // handler Start()
 					StageInteger #20
 					CreateList r0
 					TakeFirst r1, r0, #10
-					Sum r2, r1
-					StreamCreate r5, r0
-					StreamFilter r6, r5, Start_33, r0, Captures_0
-					StreamMap r5, r6, Start_39, r0, Captures_0
-					Sum r3, r5
-					StreamCreate r6, r0
-					StreamFilter r5, r6, Start_43, r0, Captures_0
-					Count r4, r5
-					EmitMessage Outbound_Done, Args_1 // "Done(directTotal, streamTotal, streamCount)"
+					StreamCreateOrJump r5, r1, Start_35
+					StreamNext r6, r5, Start_30
+					Move r7, r6
+					Jump Start_27
+Start_27:			StreamNext r6, r5, Start_33
+					Add r7, r7, r6
+					Jump Start_27
+Start_30:			StreamClose r5
+					LoadInteger r7, #0
+					Jump Start_36
+Start_33:			StreamClose r5
+					Jump Start_36
+Start_35:			LoadNothing r7
+Start_36:			Move r2, r7
+					StreamCreateOrJump r5, r0, Start_58
+					LoadFalse r6
+					LoadNothing r7
+Start_40:			StreamNext r8, r5, Start_54
+					LoadInteger r9, #2
+					Modulo r10, r8, r9
+					LoadInteger r9, #0
+					Equal r11, r10, r9
+					JumpIfNotTrue r11, Start_53
+					LoadInteger r10, #2
+					Multiply r9, r8, r10
+					JumpIfTrue r6, Start_52
+					Move r7, r9
+					LoadTrue r6
+					Jump Start_53
+Start_52:			Add r7, r7, r9
+Start_53:			Jump Start_40
+Start_54:			StreamClose r5
+					JumpIfTrue r6, Start_57
+					LoadInteger r7, #0
+Start_57:			Jump Start_59
+Start_58:			LoadNothing r7
+Start_59:			Move r3, r7
+					StreamCreateOrJump r5, r0, Start_71
+					LoadInteger r6, #0
+					LoadInteger r7, #1
+Start_63:			StreamNext r8, r5, Start_69
+					LoadInteger r10, #10
+					Greater r9, r8, r10
+					JumpIfNotTrue r9, Start_68
+					Add r6, r6, r7
+Start_68:			Jump Start_63
+Start_69:			StreamClose r5
+					Jump Start_72
+Start_71:			LoadNothing r6
+Start_72:			Move r4, r6
+					EmitMessage Outbound_Done, Args_0 // "Done(directTotal, streamTotal, streamCount)"
 					ReturnVoid
-Start_33:			SlotLocals #3
-					LoadInteger r1, #2
-					Modulo r2, r0, r1
-					LoadInteger r1, #0
-					Equal r3, r2, r1
-					ReturnValue r3
-Start_39:			SlotLocals #2
-					LoadInteger r1, #2
-					Multiply r2, r0, r1
-					ReturnValue r2
-Start_43:			SlotLocals #2
-					LoadInteger r1, #10
-					Greater r2, r0, r1
-					ReturnValue r2
 
 
 // -------------------------------------------------------------------------------
@@ -421,12 +461,10 @@ T_world:			.text "world"
 
 .segment lists
 
-Captures_0:			.registers []
-Shape_1:			.texts [T_Success, T_message, T_value] // "Success", "message", "value"
-Args_2:				.registers [r17, r8]
-Args_3:				.registers [r17, r5]
-Captures_4:			.registers [r13]
-Args_5:				.registers [r1, r2, r3, r7, r4, r5, r6, r15]
+Shape_0:			.texts [T_Success, T_message, T_value] // "Success", "message", "value"
+Args_1:				.registers [r16, r8]
+Args_2:				.registers [r16, r5]
+Args_3:				.registers [r1, r2, r3, r7, r4, r5, r6, r15]
 
 
 .segment bind
@@ -439,132 +477,173 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 .segment code
 
 Start:				 // handler Start(values)
-					SlotLocals #18
-					StreamCreate r16, r0
-					StreamFilter r17, r16, Start_52, r0, Captures_0
-					StreamMap r16, r17, Start_56, r0, Captures_0
-					StreamMap r17, r16, Start_60, r0, Captures_0
-					Sum r1, r17
-					StreamCreate r16, r0
-					StreamFilter r17, r16, Start_63, r0, Captures_0
-					StreamMap r16, r17, Start_67, r0, Captures_0
-					StreamMap r17, r16, Start_71, r0, Captures_0
-					Average r2, r17
-					StreamCreate r16, r0
-					StreamFilter r17, r16, Start_74, r0, Captures_0
-					Count r3, r17
-					StreamCreate r16, r0
-					StreamFilter r17, r16, Start_80, r0, Captures_0
-					StreamMap r16, r17, Start_84, r0, Captures_0
-					First r4, r16
+					SlotLocals #23
+					StreamCreateOrJump r16, r0, Start_21
+					LoadFalse r17
+					LoadNothing r18
+Start_4:			StreamNext r19, r16, Start_17
+					StageRegister r19
+					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r20, Start_16
+					LoadPercentage r20, #0.05
+					Add r21, r19, r20
+					Floor r19, r21
+					JumpIfTrue r17, Start_15
+					Move r18, r19
+					LoadTrue r17
+					Jump Start_16
+Start_15:			Add r18, r18, r19
+Start_16:			Jump Start_4
+Start_17:			StreamClose r16
+					JumpIfTrue r17, Start_20
+					LoadInteger r18, #0
+Start_20:			Jump Start_22
+Start_21:			LoadNothing r18
+Start_22:			Move r1, r18
+					StreamCreateOrJump r16, r0, Start_48
+					LoadInteger r17, #0
+					LoadInteger r18, #1
+					LoadFalse r21
+					LoadNothing r19
+Start_28:			StreamNext r20, r16, Start_42
+					StageRegister r20
+					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r22, Start_41
+					LoadPercentage r22, #0.05
+					Add r23, r20, r22
+					Floor r20, r23
+					Add r17, r17, r18
+					JumpIfTrue r21, Start_40
+					Move r19, r20
+					LoadTrue r21
+					Jump Start_41
+Start_40:			Add r19, r19, r20
+Start_41:			Jump Start_28
+Start_42:			StreamClose r16
+					JumpIfNotTrue r17, Start_46
+					Divide r17, r19, r17
+					Jump Start_47
+Start_46:			LoadNothing r17
+Start_47:			Jump Start_49
+Start_48:			LoadNothing r17
+Start_49:			Move r2, r17
+					StreamCreateOrJump r16, r0, Start_63
+					LoadInteger r17, #0
+					LoadInteger r18, #1
+Start_53:			StreamNext r21, r16, Start_61
+					LoadInteger r19, #2
+					Modulo r23, r21, r19
+					LoadInteger r21, #1
+					Equal r19, r23, r21
+					JumpIfNotTrue r19, Start_60
+					Add r17, r17, r18
+Start_60:			Jump Start_53
+Start_61:			StreamClose r16
+					Jump Start_64
+Start_63:			LoadNothing r17
+Start_64:			Move r3, r17
+					StreamCreateOrJump r16, r0, Start_77
+					LoadNothing r17
+Start_67:			StreamNext r18, r16, Start_75
+					StageRegister r18
+					Call r23, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r23, Start_74
+					LoadPercentage r23, #0.05
+					Add r17, r18, r23
+					Jump Start_75
+Start_74:			Jump Start_67
+Start_75:			StreamClose r16
+					Jump Start_78
+Start_77:			LoadNothing r17
+Start_78:			Move r4, r17
 					LoadInteger r5, #105, unit:meter
 					CastUnit r5, r5, unit:meter
 					LoadFloat r6, #0.6
-					StreamCreate r17, r0
-					StreamFilter r16, r17, Start_88, r0, Captures_0
-					StreamMap r17, r16, Start_94, r0, Captures_0
-					StreamFilter r16, r17, Start_98, r0, Captures_0
-					Count r7, r16
-					LoadInteger r17, #100, unit:meter
-					Greater r16, r5, r17
-					JumpIfNotTrue r16, Start_37
+					StreamCreateOrJump r16, r0, Start_100
+					LoadInteger r17, #0
+					LoadInteger r18, #1
+Start_85:			StreamNext r23, r16, Start_98
+					LoadInteger r21, #2
+					Modulo r19, r23, r21
+					LoadInteger r21, #1
+					Equal r20, r19, r21
+					JumpIfNotTrue r20, Start_97
+					LoadInteger r19, #2
+					Multiply r21, r23, r19
+					LoadInteger r23, #10
+					Greater r19, r21, r23
+					JumpIfNotTrue r19, Start_97
+					Add r17, r17, r18
+Start_97:			Jump Start_85
+Start_98:			StreamClose r16
+					Jump Start_101
+Start_100:			LoadNothing r17
+Start_101:			Move r7, r17
+					LoadInteger r16, #100, unit:meter
+					Greater r17, r5, r16
+					JumpIfNotTrue r17, Start_113
 					Add r8, r5, r6
 					Divide r9, r5, r6
-					LoadHandler r10, Shape_1 // "Success", "message", "value"
-					LoadText r17, T_hello // "hello"
-					BindHandler r11, r10, Args_2
-					LoadText r17, T_world // "world"
-					LoadMessage r12, Shape_1, Args_3 // "Success", "message", "value"
-					Jump Start_37
-Start_37:			CreateRangeIteratorShort r17, #1, #16, #1
-Start_38:			StreamNext r13, r17, Start_44
-					StreamCreate r16, r0
-					StreamFilter r18, r16, Start_102, r0, Captures_4
-					StreamMap r16, r18, Start_109, r0, Captures_4
-					Sum r14, r16
-					Jump Start_38
-Start_44:			StreamClose r17
-					StreamCreate r17, r0
-					StreamFilter r18, r17, Start_114, r0, Captures_0
-					StreamMap r17, r18, Start_118, r0, Captures_0
-					StreamMap r18, r17, Start_122, r0, Captures_0
-					Sum r15, r18
-					EmitMessage Outbound_Done, Args_5 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
+					LoadHandler r10, Shape_0 // "Success", "message", "value"
+					LoadText r16, T_hello // "hello"
+					BindHandler r11, r10, Args_1
+					LoadText r16, T_world // "world"
+					LoadMessage r12, Shape_0, Args_2 // "Success", "message", "value"
+					Jump Start_113
+Start_113:			CreateRangeIteratorShort r16, #1, #16, #1
+Start_114:			StreamNext r13, r16, Start_141
+					StreamCreateOrJump r17, r0, Start_138
+					LoadFalse r18
+					LoadNothing r21
+Start_118:			StreamNext r23, r17, Start_134
+					Add r19, r23, r13
+					LoadInteger r20, #7
+					Modulo r22, r19, r20
+					LoadInteger r19, #0
+					Greater r20, r22, r19
+					JumpIfNotTrue r20, Start_133
+					Add r22, r23, r13
+					LoadInteger r23, #2
+					Multiply r19, r22, r23
+					JumpIfTrue r18, Start_132
+					Move r21, r19
+					LoadTrue r18
+					Jump Start_133
+Start_132:			Add r21, r21, r19
+Start_133:			Jump Start_118
+Start_134:			StreamClose r17
+					JumpIfTrue r18, Start_137
+					LoadInteger r21, #0
+Start_137:			Jump Start_139
+Start_138:			LoadNothing r21
+Start_139:			Move r14, r21
+					Jump Start_114
+Start_141:			StreamClose r16
+					StreamCreateOrJump r16, r0, Start_163
+					LoadFalse r17
+					LoadNothing r18
+Start_145:			StreamNext r21, r16, Start_159
+					LoadInteger r22, #10
+					GreaterOrEqual r23, r21, r22
+					JumpIfNotTrue r23, Start_158
+					LoadPercentage r22, #0.05
+					Add r23, r21, r22
+					LoadInteger r21, #2
+					Multiply r22, r23, r21
+					JumpIfTrue r17, Start_157
+					Move r18, r22
+					LoadTrue r17
+					Jump Start_158
+Start_157:			Add r18, r18, r22
+Start_158:			Jump Start_145
+Start_159:			StreamClose r16
+					JumpIfTrue r17, Start_162
+					LoadInteger r18, #0
+Start_162:			Jump Start_164
+Start_163:			LoadNothing r18
+Start_164:			Move r15, r18
+					EmitMessage Outbound_Done, Args_3 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
 					ReturnVoid
-Start_52:			SlotLocals #1
-					StageRegister r0
-					Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					ReturnValue r1
-Start_56:			SlotLocals #2
-					LoadPercentage r1, #0.05
-					Add r2, r0, r1
-					ReturnValue r2
-Start_60:			SlotLocals #1
-					Floor r1, r0
-					ReturnValue r1
-Start_63:			SlotLocals #1
-					StageRegister r0
-					Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					ReturnValue r1
-Start_67:			SlotLocals #2
-					LoadPercentage r1, #0.05
-					Add r2, r0, r1
-					ReturnValue r2
-Start_71:			SlotLocals #1
-					Floor r1, r0
-					ReturnValue r1
-Start_74:			SlotLocals #3
-					LoadInteger r1, #2
-					Modulo r2, r0, r1
-					LoadInteger r1, #1
-					Equal r3, r2, r1
-					ReturnValue r3
-Start_80:			SlotLocals #1
-					StageRegister r0
-					Call r1, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					ReturnValue r1
-Start_84:			SlotLocals #2
-					LoadPercentage r1, #0.05
-					Add r2, r0, r1
-					ReturnValue r2
-Start_88:			SlotLocals #3
-					LoadInteger r1, #2
-					Modulo r2, r0, r1
-					LoadInteger r1, #1
-					Equal r3, r2, r1
-					ReturnValue r3
-Start_94:			SlotLocals #2
-					LoadInteger r1, #2
-					Multiply r2, r0, r1
-					ReturnValue r2
-Start_98:			SlotLocals #2
-					LoadInteger r1, #10
-					Greater r2, r0, r1
-					ReturnValue r2
-Start_102:			SlotLocals #3
-					Add r2, r0, r1
-					LoadInteger r3, #7
-					Modulo r4, r2, r3
-					LoadInteger r2, #0
-					Greater r3, r4, r2
-					ReturnValue r3
-Start_109:			SlotLocals #3
-					Add r2, r0, r1
-					LoadInteger r3, #2
-					Multiply r4, r2, r3
-					ReturnValue r4
-Start_114:			SlotLocals #2
-					LoadInteger r1, #10
-					GreaterOrEqual r2, r0, r1
-					ReturnValue r2
-Start_118:			SlotLocals #2
-					LoadPercentage r1, #0.05
-					Add r2, r0, r1
-					ReturnValue r2
-Start_122:			SlotLocals #2
-					LoadInteger r1, #2
-					Multiply r2, r0, r1
-					ReturnValue r2
 
 predicate_high:		 // predicate high(value)
 					SlotLocals #2

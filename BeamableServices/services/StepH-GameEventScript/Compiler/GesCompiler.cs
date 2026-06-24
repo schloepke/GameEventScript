@@ -702,10 +702,10 @@ internal static class GesCompiler
                     EmitStreamTransformTerminal(destination, target, count.Identifier, count.Predicate, GameEventScriptBytecodeOpCode.Count, filter: true, context, state);
                     return;
                 case SumSelectorNode sum:
-                    EmitStreamTransformTerminal(destination, target, sum.Identifier, sum.Projection, GameEventScriptBytecodeOpCode.Sum, filter: false, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { sum }, 0, sum, context, state);
                     return;
                 case AverageSelectorNode average:
-                    EmitStreamTransformTerminal(destination, target, average.Identifier, average.Projection, GameEventScriptBytecodeOpCode.Average, filter: false, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { average }, 0, average, context, state);
                     return;
                 case MinSelectorNode min:
                     EmitStreamExtrema(destination, target, min.Identifier, min.Projection, isMax: false, context, state);
@@ -802,19 +802,9 @@ internal static class GesCompiler
                 return true;
             }
 
-            if (prefixCount == 0 &&
-                terminal is SumSelectorNode sum &&
-                IsIdentityProjection(sum.Identifier, sum.Projection))
+            if (CanEmitInlineStreamPipelineTerminal(terminal, prefixCount > 0))
             {
-                _builder.Sum(destination, sourceRegister);
-                return true;
-            }
-
-            if (prefixCount == 0 &&
-                terminal is AverageSelectorNode average &&
-                IsIdentityProjection(average.Identifier, average.Projection))
-            {
-                _builder.Average(destination, sourceRegister);
+                EmitInlineStreamPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
                 return true;
             }
 
@@ -846,6 +836,375 @@ internal static class GesCompiler
                 DrawSelectorNode => hasPrefix,
                 _ => false
             };
+
+        private static bool CanEmitInlineStreamPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
+            => terminal switch
+            {
+                FilterSelectorNode or SelectSelectorNode or CountSelectorNode or SumSelectorNode or AverageSelectorNode => true,
+                EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
+                _ => false
+            };
+
+        private static bool CanEmitFirstValueAggregatePipeline(CollectionSelectorNode terminal, int prefixCount)
+            => prefixCount == 0 &&
+               (terminal switch
+               {
+                   SumSelectorNode sum => IsIdentityProjection(sum.Identifier, sum.Projection),
+                   AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection),
+                   _ => false
+               });
+
+        private void EmitInlineStreamPipeline(
+            GesRegisterRef destination,
+            GesRegisterRef source,
+            IReadOnlyList<CollectionSelectorNode> selectors,
+            int prefixCount,
+            CollectionSelectorNode terminal,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            if (CanEmitFirstValueAggregatePipeline(terminal, prefixCount))
+            {
+                EmitInlineStreamAggregatePipeline(destination, source, selectors, prefixCount, terminal, context, state);
+                return;
+            }
+
+            var iterator = state.AllocateTemporary(_builder, context);
+            var item = state.AllocateTemporary(_builder, context);
+            var loopLabel = _builder.AddLabel("pipeline_next");
+            var endLabel = _builder.AddLabel("pipeline_end");
+            var nextLabel = _builder.AddLabel("pipeline_skip");
+            var closeLabel = _builder.AddLabel("pipeline_close");
+            var invalidStreamLabel = _builder.AddLabel("pipeline_invalid_stream");
+            var doneLabel = _builder.AddLabel("pipeline_done");
+
+            _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
+
+            GesRegisterRef? listBuilder = null;
+            GesRegisterRef? count = null;
+            GesRegisterRef? one = null;
+            GesRegisterRef? hasSum = null;
+            GesRegisterRef? sum = null;
+
+            switch (terminal)
+            {
+                case FilterSelectorNode or SelectSelectorNode:
+                    listBuilder = state.AllocateTemporary(_builder, context);
+                    _builder.ListBuilderCreate(listBuilder.Value);
+                    break;
+                case CountSelectorNode or AverageSelectorNode:
+                    count = destination;
+                    _builder.LoadInteger(count.Value, 0);
+                    one = state.AllocateTemporary(_builder, context);
+                    _builder.LoadInteger(one.Value, 1);
+                    if (terminal is AverageSelectorNode)
+                    {
+                        hasSum = state.AllocateTemporary(_builder, context);
+                        sum = state.AllocateTemporary(_builder, context);
+                        _builder.LoadFalse(hasSum.Value);
+                        _builder.LoadNothing(sum.Value);
+                    }
+                    break;
+                case SumSelectorNode:
+                    hasSum = state.AllocateTemporary(_builder, context);
+                    sum = destination;
+                    _builder.LoadFalse(hasSum.Value);
+                    _builder.LoadNothing(sum.Value);
+                    break;
+                case EdgeSelectorNode { Mode: "single" }:
+                    count = state.AllocateTemporary(_builder, context);
+                    one = state.AllocateTemporary(_builder, context);
+                    _builder.LoadInteger(count.Value, 0);
+                    _builder.LoadInteger(one.Value, 1);
+                    _builder.LoadNothing(destination);
+                    break;
+                case EdgeSelectorNode:
+                    _builder.LoadNothing(destination);
+                    break;
+            }
+
+            _builder.MarkLabel(loopLabel);
+            _builder.StreamNext(item, iterator, endLabel);
+
+            var current = item;
+            for (var index = 0; index < prefixCount; index++)
+            {
+                current = EmitInlinePipelineStep(selectors[index], current, nextLabel, context, state);
+            }
+
+            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, count, one, hasSum, sum, context, state);
+            _builder.MarkLabel(nextLabel);
+            _builder.Jump(loopLabel);
+
+            _builder.MarkLabel(endLabel);
+            _builder.StreamClose(iterator);
+
+            switch (terminal)
+            {
+                case FilterSelectorNode or SelectSelectorNode:
+                    _builder.ListBuilderFinish(destination, listBuilder!.Value);
+                    break;
+                case SumSelectorNode:
+                    _builder.JumpIfTrue(hasSum!.Value, closeLabel);
+                    _builder.LoadInteger(destination, 0);
+                    break;
+                case AverageSelectorNode:
+                {
+                    var noAverageLabel = _builder.AddLabel("pipeline_average_empty");
+                    _builder.JumpIfNotTrue(count!.Value, noAverageLabel);
+                    _builder.Divide(destination, sum!.Value, count.Value);
+                    _builder.Jump(closeLabel);
+                    _builder.MarkLabel(noAverageLabel);
+                    _builder.LoadNothing(destination);
+                    break;
+                }
+            }
+
+            _builder.MarkLabel(closeLabel);
+            _builder.Jump(doneLabel);
+            _builder.MarkLabel(invalidStreamLabel);
+            _builder.LoadNothing(destination);
+            _builder.MarkLabel(doneLabel);
+        }
+
+        private void EmitInlineStreamAggregatePipeline(
+            GesRegisterRef destination,
+            GesRegisterRef source,
+            IReadOnlyList<CollectionSelectorNode> selectors,
+            int prefixCount,
+            CollectionSelectorNode terminal,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            var iterator = state.AllocateTemporary(_builder, context);
+            var item = state.AllocateTemporary(_builder, context);
+            var firstLabel = _builder.AddLabel("pipeline_aggregate_first");
+            var loopLabel = _builder.AddLabel("pipeline_aggregate_next");
+            var emptyLabel = _builder.AddLabel("pipeline_aggregate_empty");
+            var endLabel = _builder.AddLabel("pipeline_aggregate_end");
+            var invalidStreamLabel = _builder.AddLabel("pipeline_aggregate_invalid_stream");
+            var doneLabel = _builder.AddLabel("pipeline_aggregate_done");
+
+            var isAverage = terminal is AverageSelectorNode;
+            GesRegisterRef accumulator = destination;
+            GesRegisterRef? count = null;
+            GesRegisterRef? one = null;
+            if (isAverage)
+            {
+                accumulator = state.AllocateTemporary(_builder, context);
+                count = state.AllocateTemporary(_builder, context);
+                one = state.AllocateTemporary(_builder, context);
+            }
+
+            _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
+
+            _builder.MarkLabel(firstLabel);
+            _builder.StreamNext(item, iterator, emptyLabel);
+            var current = item;
+            for (var index = 0; index < prefixCount; index++)
+            {
+                current = EmitInlinePipelineStep(selectors[index], current, firstLabel, context, state);
+            }
+
+            var firstValue = EmitInlineAggregateValue(terminal, current, context, state);
+            if (firstValue.Id != accumulator.Id) _builder.Move(accumulator, firstValue);
+            if (isAverage)
+            {
+                _builder.LoadInteger(count!.Value, 1);
+                _builder.LoadInteger(one!.Value, 1);
+            }
+
+            _builder.Jump(loopLabel);
+
+            _builder.MarkLabel(loopLabel);
+            _builder.StreamNext(item, iterator, endLabel);
+            current = item;
+            for (var index = 0; index < prefixCount; index++)
+            {
+                current = EmitInlinePipelineStep(selectors[index], current, loopLabel, context, state);
+            }
+
+            var value = EmitInlineAggregateValue(terminal, current, context, state);
+            if (isAverage) _builder.Add(count!.Value, count.Value, one!.Value);
+            _builder.Add(accumulator, accumulator, value);
+            _builder.Jump(loopLabel);
+
+            _builder.MarkLabel(emptyLabel);
+            _builder.StreamClose(iterator);
+            if (isAverage) _builder.LoadNothing(destination);
+            else _builder.LoadInteger(destination, 0);
+            _builder.Jump(doneLabel);
+
+            _builder.MarkLabel(endLabel);
+            _builder.StreamClose(iterator);
+            if (isAverage) _builder.Divide(destination, accumulator, count!.Value);
+            _builder.Jump(doneLabel);
+
+            _builder.MarkLabel(invalidStreamLabel);
+            _builder.LoadNothing(destination);
+            _builder.MarkLabel(doneLabel);
+        }
+
+        private GesRegisterRef EmitInlineAggregateValue(
+            CollectionSelectorNode terminal,
+            GesRegisterRef current,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            return terminal switch
+            {
+                SumSelectorNode sum => IsIdentityProjection(sum.Identifier, sum.Projection)
+                    ? current
+                    : EmitSelectorExpressionForRead(sum.Identifier, current, sum.Projection, context, state),
+                AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection)
+                    ? current
+                    : EmitSelectorExpressionForRead(average.Identifier, current, average.Projection, context, state),
+                _ => throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot aggregate terminal selector node '{terminal.GetType().Name}'.")
+            };
+        }
+
+        private GesRegisterRef EmitInlinePipelineStep(
+            CollectionSelectorNode selector,
+            GesRegisterRef current,
+            GesLabelRef nextLabel,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            switch (selector)
+            {
+                case FilterSelectorNode filter:
+                    if (!IsAlwaysTrue(filter.Predicate))
+                    {
+                        var predicate = EmitSelectorExpressionForRead(filter.Identifier, current, filter.Predicate, context, state);
+                        _builder.JumpIfNotTrue(predicate, nextLabel);
+                    }
+                    return current;
+                case SelectSelectorNode select:
+                    return IsIdentityProjection(select.Identifier, select.Projection)
+                        ? current
+                        : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state);
+                default:
+                    throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot inline non-terminal selector node '{selector.GetType().Name}'.");
+            }
+        }
+
+        private void EmitInlinePipelineTerminal(
+            GesRegisterRef destination,
+            GesRegisterRef current,
+            CollectionSelectorNode terminal,
+            GesLabelRef nextLabel,
+            GesLabelRef endLabel,
+            GesRegisterRef? listBuilder,
+            GesRegisterRef? count,
+            GesRegisterRef? one,
+            GesRegisterRef? hasSum,
+            GesRegisterRef? sum,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            switch (terminal)
+            {
+                case FilterSelectorNode filter:
+                    if (!IsAlwaysTrue(filter.Predicate))
+                    {
+                        var predicate = EmitSelectorExpressionForRead(filter.Identifier, current, filter.Predicate, context, state);
+                        _builder.JumpIfNotTrue(predicate, nextLabel);
+                    }
+                    _builder.ListBuilderAdd(listBuilder!.Value, current);
+                    return;
+                case SelectSelectorNode select:
+                {
+                    var projected = IsIdentityProjection(select.Identifier, select.Projection)
+                        ? current
+                        : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state);
+                    _builder.ListBuilderAdd(listBuilder!.Value, projected);
+                    return;
+                }
+                case CountSelectorNode countSelector:
+                    if (!IsAlwaysTrue(countSelector.Predicate))
+                    {
+                        var predicate = EmitSelectorExpressionForRead(countSelector.Identifier, current, countSelector.Predicate, context, state);
+                        _builder.JumpIfNotTrue(predicate, nextLabel);
+                    }
+                    _builder.Add(count!.Value, count.Value, one!.Value);
+                    return;
+                case SumSelectorNode sumSelector:
+                {
+                    var value = IsIdentityProjection(sumSelector.Identifier, sumSelector.Projection)
+                        ? current
+                        : EmitSelectorExpressionForRead(sumSelector.Identifier, current, sumSelector.Projection, context, state);
+                    EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
+                    return;
+                }
+                case AverageSelectorNode averageSelector:
+                {
+                    var value = IsIdentityProjection(averageSelector.Identifier, averageSelector.Projection)
+                        ? current
+                        : EmitSelectorExpressionForRead(averageSelector.Identifier, current, averageSelector.Projection, context, state);
+                    _builder.Add(count!.Value, count.Value, one!.Value);
+                    EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
+                    return;
+                }
+                case EdgeSelectorNode edge:
+                    if (edge.Predicate is not null && edge.Identifier is not null)
+                    {
+                        var predicate = EmitSelectorExpressionForRead(edge.Identifier, current, edge.Predicate, context, state);
+                        _builder.JumpIfNotTrue(predicate, nextLabel);
+                    }
+
+                    switch (edge.Mode)
+                    {
+                        case "last":
+                            if (current.Id != destination.Id) _builder.Move(destination, current);
+                            return;
+                        case "single":
+                        {
+                            var duplicateLabel = _builder.AddLabel("pipeline_single_duplicate");
+                            _builder.JumpIfTrue(count!.Value, duplicateLabel);
+                            if (current.Id != destination.Id) _builder.Move(destination, current);
+                            _builder.Add(count.Value, count.Value, one!.Value);
+                            _builder.Jump(nextLabel);
+                            _builder.MarkLabel(duplicateLabel);
+                            _builder.LoadNothing(destination);
+                            _builder.Jump(endLabel);
+                            return;
+                        }
+                        default:
+                            if (current.Id != destination.Id) _builder.Move(destination, current);
+                            _builder.Jump(endLabel);
+                            return;
+                    }
+                default:
+                    throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot inline terminal selector node '{terminal.GetType().Name}'.");
+            }
+        }
+
+        private void EmitInlineAccumulateSum(
+            GesRegisterRef sum,
+            GesRegisterRef hasSum,
+            GesRegisterRef value,
+            GesLabelRef nextLabel)
+        {
+            var addLabel = _builder.AddLabel("pipeline_sum_add");
+            _builder.JumpIfTrue(hasSum, addLabel);
+            if (value.Id != sum.Id) _builder.Move(sum, value);
+            _builder.LoadTrue(hasSum);
+            _builder.Jump(nextLabel);
+            _builder.MarkLabel(addLabel);
+            _builder.Add(sum, sum, value);
+        }
+
+        private GesRegisterRef EmitSelectorExpressionForRead(
+            string identifier,
+            GesRegisterRef current,
+            ExpressionNode expression,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            var selectorContext = context.CreateChild();
+            selectorContext.DeclareExisting(identifier, current);
+            return EmitExpressionForRead(expression, selectorContext, state);
+        }
 
         private GesRegisterRef EmitStreamTransformIterator(
             GesRegisterRef iterator,
@@ -912,22 +1271,8 @@ internal static class GesCompiler
                     _builder.Count(destination, countIterator);
                     return;
                 }
-                case SumSelectorNode sum:
-                {
-                    var sumIterator = IsIdentityProjection(sum.Identifier, sum.Projection)
-                        ? iterator
-                        : EmitStreamTransformIterator(iterator, new SelectSelectorNode(sum.Identifier, sum.Projection), context, state);
-                    _builder.Sum(destination, sumIterator);
-                    return;
-                }
-                case AverageSelectorNode average:
-                {
-                    var averageIterator = IsIdentityProjection(average.Identifier, average.Projection)
-                        ? iterator
-                        : EmitStreamTransformIterator(iterator, new SelectSelectorNode(average.Identifier, average.Projection), context, state);
-                    _builder.Average(destination, averageIterator);
-                    return;
-                }
+                case SumSelectorNode or AverageSelectorNode:
+                    throw new GameEventScriptCompileException("GameEventScript binary compiler expects sum and average terminals to be lowered as explicit loops.");
                 case MinSelectorNode min:
                     EmitStreamExtremaFromIterator(destination, iterator, min.Identifier, min.Projection, isMax: false, context, state);
                     return;
@@ -1199,18 +1544,6 @@ internal static class GesCompiler
                 return;
             }
 
-            if (!filter && terminal == GameEventScriptBytecodeOpCode.Sum && IsIdentityProjection(identifier, expression))
-            {
-                _builder.Sum(destination, target);
-                return;
-            }
-
-            if (!filter && terminal == GameEventScriptBytecodeOpCode.Average && IsIdentityProjection(identifier, expression))
-            {
-                _builder.Average(destination, target);
-                return;
-            }
-
             var iterator = state.AllocateTemporary(_builder, context);
             var transformedIterator = state.AllocateTemporary(_builder, context);
             var entry = EmitStreamSelectorHelperExpression(filter ? "count" : terminal.ToString(), identifier, expression, context, out var itemBinding, out var captures);
@@ -1221,12 +1554,6 @@ internal static class GesCompiler
             {
                 case GameEventScriptBytecodeOpCode.Count:
                     _builder.Count(destination, transformedIterator);
-                    return;
-                case GameEventScriptBytecodeOpCode.Sum:
-                    _builder.Sum(destination, transformedIterator);
-                    return;
-                case GameEventScriptBytecodeOpCode.Average:
-                    _builder.Average(destination, transformedIterator);
                     return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support stream terminal '{terminal}'.");

@@ -823,10 +823,12 @@ sequence.
 - `JumpIfTrue cond target`
 - `JumpIfFalse cond target`
 - `JumpIfNotTrue cond target`
+- `JumpIfNothing cond target`
 - `CreateRangeIterator dst from to`
 - `CreateRangeIteratorWithStep dst from to step`
 - `CreateRangeIteratorShort dst fromI16 toI16 stepI16`
 - `StreamCreate dst collection`
+- `StreamCreateOrJump dst collection notStreamableTarget`
 - `StreamNext dst iterator noMoreTarget`
 - `StreamClose iterator`
 - `Call dst entryAddress`
@@ -1125,8 +1127,6 @@ StreamCreate source -> iterator
 StreamMap transformedIterator sourceIterator mapEntry itemBindingRegister captureRegisterList
 StreamFilter filteredIterator sourceIterator predicateEntry itemBindingRegister captureRegisterList
 Count dst source
-Sum dst source
-Average dst source
 StreamMin dst iterator itemBindingRegister projectionEntry
 StreamMax dst iterator itemBindingRegister projectionEntry
 StreamOneWeighted dst iterator itemBindingRegister weightEntry captureRegisterList
@@ -1213,13 +1213,12 @@ register `1`. `StreamMap` yields the helper `ReturnValue`. `StreamFilter` treats
 helper `ReturnValue` as a predicate and yields the original source item only when
 that predicate is true.
 
-`Count`, `Sum`, and `Average` are fixed finite aggregation terminals over
-finite collection-like sources or already-created streams. `Count` returns `0`
-for an empty finite source. `Sum` returns numeric `0` for an empty finite source
-and otherwise folds with normal `Add` semantics starting at the first projected
-item. `Average` returns `nothing` for an empty finite source and otherwise
-divides the summed value by the item count. All three return `nothing` for
-series sources because they would otherwise require unbounded consumption.
+`Count` is a fixed finite aggregation terminal over finite collection-like
+sources or already-created streams. It returns `0` for an empty finite source
+and `nothing` for series sources because they would otherwise require unbounded
+consumption. DSL `:sum` and `:average` selectors are lowered to explicit
+bytecode loops so they can account for normal step budgets and avoid hidden
+stream consumption inside a single opcode.
 
 `StreamMin` and `StreamMax` are fixed extrema terminals. They bind each source
 item to `YSlot`, evaluate `AU` as a projection entry, compare projected numeric

@@ -198,12 +198,36 @@
     },
     {
       "kind": "bytecode",
-      "name": "pipeline selector lowers to stream map and collect list",
+      "name": "pipeline selector lowers to explicit stream loop and list builder",
       "script": "module SideTables\n\non Start(values) {\n  let selected be values[:select item => item + 1]\n  emit Done(count: selected[:count])\n}\n",
       "expectedOpcodes": {
         "contains": [
+          "StreamCreateOrJump",
+          "StreamNext",
+          "ListBuilderCreate",
+          "ListBuilderAdd",
+          "ListBuilderFinish"
+        ],
+        "notContains": [
           "StreamMap",
+          "StreamFilter",
           "StreamCollectList"
+        ]
+      }
+    },
+    {
+      "kind": "bytecode",
+      "name": "sum and average lower to explicit stream loops",
+      "script": "module AggregateLoops\n\non Start(values) {\n  let total be values[:sum]\n  let average be values[:average]\n  let projectedTotal be values[:sum value => value * 2]\n  let projectedAverage be values[:average value => value * 2]\n  emit Done(total: total, average: average, projectedTotal: projectedTotal, projectedAverage: projectedAverage)\n}\n",
+      "expectedOpcodes": {
+        "contains": [
+          "StreamCreateOrJump",
+          "StreamNext",
+          "StreamClose"
+        ],
+        "notContains": [
+          "StreamMap",
+          "StreamFilter"
         ]
       }
     },
@@ -228,8 +252,6 @@
           "StreamFilter",
           "StreamCollectList",
           "Count",
-          "Sum",
-          "Average",
           "StreamMin",
           "StreamMax",
           "Distinct",

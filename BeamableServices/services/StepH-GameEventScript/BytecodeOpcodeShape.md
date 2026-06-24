@@ -196,69 +196,70 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x03 | `JumpIfTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsTrue()`. |
 | 0x04 | `JumpIfFalse` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.IsFalse()`. |
 | 0x05 | `JumpIfNotTrue` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `!X.IsTrue()`, including `nothing`. |
-| 0x06 | `Call` | optional `NormalizeResultAsPredicate` | result register | - | `EntryAddress`=callable/predicate | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. With `NormalizeResultAsPredicate`, the returned value is normalized to boolean or `nothing`. |
-| 0x07 | `CallStandard` | optional `NormalizeResultAsPredicate` | result register | `SecondaryListIndex`=extension shape | `ListIndex`=argument register-list index | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
-| 0x08 | `CallExternal` | optional `NormalizeResultAsPredicate` | result register | `ExternalReferenceIndex` | `ListIndex`=argument register-list index | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
-| 0x09 | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
-| 0x0A | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
-| 0x0B | `EmitMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument register-list index | - | Emits a statically shaped message without tags. |
-| 0x0C | `EmitMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag register-list index | `ListIndex`=argument register-list index | - | Emits a statically shaped message with tags. |
-| 0x0D | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
-| 0x0E | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag register-list index | - | Emits a dynamic message value with tags. |
-| 0x0F | `PublishMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument register-list index | - | Publishes a statically shaped message without tags. |
-| 0x10 | `PublishMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag register-list index | `ListIndex`=argument register-list index | - | Publishes a statically shaped message with tags. |
-| 0x11 | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
-| 0x12 | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag register-list index | - | Publishes a dynamic message value with tags. |
-| 0x13 | `Cast` | - | result register | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. `Cast :tag` validates tag syntax; invalid tag text writes `nothing`. `Cast :vector`/`:point` structurally convert between vectors and points by copying components and unit. |
-| 0x14 | `CastCustom` | - | result register | `XSlot`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
-| 0x15 | `CastUnit` | target numeric unit | result register | `XSlot`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x16 | `CastNumeric` | - | result register | `XSlot`=source | - | - | Coerces `X` through the source-level `:number` type. This is the only numeric path that parses text; invalid text writes `nothing`. Integral values stay integer; otherwise the result is float. |
-| 0x17 | `CheckType` | - | result register | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
-| 0x18 | `CheckCustomType` | - | result register | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
-| 0x19 | `CheckUnit` | target numeric unit | result register | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
-| 0x1A | `CheckNumeric` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), and dice sums are numeric. Text and tags are not parsed here. |
-| 0x1B | `CheckInteger` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a finite integral numeric view. Booleans and dice are integer. Text is not parsed here. |
-| 0x1C | `CheckFractional` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a finite non-integral numeric view. Text is not parsed here. |
-| 0x1D | `Move` | - | result register | `XSlot`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
-| 0x1E | `MemberAccess` | - | result register | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
-| 0x1F | `IndexAccess` | - | result register | `Index`=1-based index | `YSlot`=object | - | Reads a statically known positional element. |
-| 0x20 | `PropertyAccess` | - | result register | `XSlot`=property/index selector | `YSlot`=object | - | Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics. |
-| 0x21 | `BindHandler` | - | result register | `XSlot`=handler/signature register | `ListIndex`=argument register-list index | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
-| 0x22 | `LoadNothing` | - | result register | - | - | - | Loads `nothing`. |
-| 0x23 | `LoadTrue` | - | result register | - | - | - | Loads boolean `true`. |
-| 0x24 | `LoadFalse` | - | result register | - | - | - | Loads boolean `false`. |
-| 0x25 | `LoadInteger` | numeric unit | result register | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
-| 0x26 | `LoadFloat` | numeric unit | result register | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
-| 0x27 | `LoadPercentage` | - | result register | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
-| 0x28 | `LoadText` | - | result register | `StringIndex` | - | - | Loads a text literal. |
-| 0x29 | `LoadTag` | - | result register | `StringIndex` | - | - | Loads a tag literal. |
-| 0x2A | `LoadHandler` | - | result register | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2B | `LoadMessage` | - | result register | `SecondaryListIndex`=message shape | `ListIndex`=argument register-list index | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
-| 0x2C | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value for the next stage-consuming instruction. |
-| 0x2D | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` for the next stage-consuming instruction. |
-| 0x2E | `StageTrue` | - | - | - | - | - | Stages `true` for the next stage-consuming instruction. |
-| 0x2F | `StageFalse` | - | - | - | - | - | Stages `false` for the next stage-consuming instruction. |
-| 0x30 | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer value. |
-| 0x31 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float value. |
-| 0x32 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
-| 0x33 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
-| 0x34 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
-| 0x35 | `CreateDice` | - | result register | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not registers. |
-| 0x36 | `CreateVector` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x37 | `CreatePoint` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
-| 0x38 | `CreateList` | - | result register | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
-| 0x39 | `CreateMap` | - | result register | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
-| 0x3A | `CreateRange` | - | result register | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
-| 0x3B | `CreateRangeWithStep` | - | result register | `XSlot`=from | `YSlot`=to | `AU`=step register | Creates a range value with explicit step. |
-| 0x3C | `CreateRangeIterator` | - | iterator register | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
-| 0x3D | `CreateRangeIteratorWithStep` | - | iterator register | `XSlot`=from | `YSlot`=to | `AU`=step register | Creates a VM-internal range iterator with an explicit step. |
-| 0x3E | `CreateRangeIteratorShort` | - | iterator register | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x3F | `CreateRecord` | - | result register | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside the constructor. |
-| 0x40 | `CreateExternalType` | - | result register | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
-| 0x41 | `HasValue` | - | result register | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
-| 0x42 | `IsEmpty` | - | result register | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
-| 0x43 | `Default` | - | result register | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
-| 0x44..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
+| 0x06 | `JumpIfNothing` | - | - | `ConditionSlot` | `TargetAddress` | - | Branches when `X.Kind` is `Nothing`. |
+| 0x07 | `Call` | optional `NormalizeResultAsPredicate` | result register | - | `EntryAddress`=callable/predicate | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. With `NormalizeResultAsPredicate`, the returned value is normalized to boolean or `nothing`. |
+| 0x08 | `CallStandard` | optional `NormalizeResultAsPredicate` | result register | `SecondaryListIndex`=extension shape | `ListIndex`=argument register-list index | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
+| 0x09 | `CallExternal` | optional `NormalizeResultAsPredicate` | result register | `ExternalReferenceIndex` | `ListIndex`=argument register-list index | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
+| 0x0A | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
+| 0x0B | `ReturnValue` | - | - | `XSlot`=return | - | - | Returns the value in `X` from the current frame. |
+| 0x0C | `EmitMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument register-list index | - | Emits a statically shaped message without tags. |
+| 0x0D | `EmitMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag register-list index | `ListIndex`=argument register-list index | - | Emits a statically shaped message with tags. |
+| 0x0E | `EmitMessageValue` | - | - | `XSlot`=message | - | - | Emits a dynamic message value without tags. |
+| 0x0F | `EmitMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag register-list index | - | Emits a dynamic message value with tags. |
+| 0x10 | `PublishMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument register-list index | - | Publishes a statically shaped message without tags. |
+| 0x11 | `PublishMessageWithTags` | - | `MessageDestination`=outbound message bind id | `SecondaryListIndex`=tag register-list index | `ListIndex`=argument register-list index | - | Publishes a statically shaped message with tags. |
+| 0x12 | `PublishMessageValue` | - | - | `XSlot`=message | - | - | Publishes a dynamic message value without tags. |
+| 0x13 | `PublishMessageValueWithTags` | - | - | `XSlot`=message | `ListIndex`=tag register-list index | - | Publishes a dynamic message value with tags. |
+| 0x14 | `Cast` | - | result register | `XSlot`=source | `TypeOperand`=type kind | - | Converts `X` to the declared built-in type. Custom/record types use `CastCustom`. `Cast :tag` validates tag syntax; invalid tag text writes `nothing`. `Cast :vector`/`:point` structurally convert between vectors and points by copying components and unit. |
+| 0x15 | `CastCustom` | - | result register | `XSlot`=source | `TypeOperand`=custom type string | - | Converts `X` to a custom/record type identified by `Y`. |
+| 0x16 | `CastUnit` | target numeric unit | result register | `XSlot`=source | - | - | Converts `X` to the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x17 | `CastNumeric` | - | result register | `XSlot`=source | - | - | Coerces `X` through the source-level `:number` type. This is the only numeric path that parses text; invalid text writes `nothing`. Integral values stay integer; otherwise the result is float. |
+| 0x18 | `CheckType` | - | result register | `XSlot`=source | `TypeOperand`=type kind | - | Writes whether `X` has the declared built-in type. Custom/record types use `CheckCustomType`. |
+| 0x19 | `CheckCustomType` | - | result register | `XSlot`=source | `TypeOperand`=custom type string | - | Writes whether `X` has the custom/record type identified by `Y`. |
+| 0x1A | `CheckUnit` | target numeric unit | result register | `XSlot`=source | - | - | Writes whether `X` has the numeric unit carried in `UnitAndFlags`. Units are not represented as declared type kinds. |
+| 0x1B | `CheckNumeric` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a runtime numeric view. Numbers, percentages, booleans (`false` = `0`, `true` = `1`), and dice sums are numeric. Text and tags are not parsed here. |
+| 0x1C | `CheckInteger` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a finite integral numeric view. Booleans and dice are integer. Text is not parsed here. |
+| 0x1D | `CheckFractional` | - | result register | `XSlot`=source | - | - | Writes whether `X` has a finite non-integral numeric view. Text is not parsed here. |
+| 0x1E | `Move` | - | result register | `XSlot`=source | - | - | Copies a register value/reference; the source register remains unchanged. |
+| 0x1F | `MemberAccess` | - | result register | `StringIndex`=member name | `YSlot`=object | - | Reads a named member. |
+| 0x20 | `IndexAccess` | - | result register | `Index`=1-based index | `YSlot`=object | - | Reads a statically known positional element. |
+| 0x21 | `PropertyAccess` | - | result register | `XSlot`=property/index selector | `YSlot`=object | - | Reads a dynamic property: integer selectors use index semantics; text/tag selectors use member semantics. |
+| 0x22 | `BindHandler` | - | result register | `XSlot`=handler/signature register | `ListIndex`=argument register-list index | - | Binds ordered argument values to a handler signature. Argument names come from the signature. |
+| 0x23 | `LoadNothing` | - | result register | - | - | - | Loads `nothing`. |
+| 0x24 | `LoadTrue` | - | result register | - | - | - | Loads boolean `true`. |
+| 0x25 | `LoadFalse` | - | result register | - | - | - | Loads boolean `false`. |
+| 0x26 | `LoadInteger` | numeric unit | result register | - | - | `I64`=signed integer | Loads an inline signed `Int64`. |
+| 0x27 | `LoadFloat` | numeric unit | result register | - | - | `F64`=float | Loads an inline IEEE-754 `Float64`. |
+| 0x28 | `LoadPercentage` | - | result register | - | - | `F64`=ratio | Loads an inline percentage ratio as the dedicated percentage value kind. |
+| 0x29 | `LoadText` | - | result register | `StringIndex` | - | - | Loads a text literal. |
+| 0x2A | `LoadTag` | - | result register | `StringIndex` | - | - | Loads a tag literal. |
+| 0x2B | `LoadHandler` | - | result register | - | `ListIndex`=message shape | - | Loads a handler literal. The shape list is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2C | `LoadMessage` | - | result register | `SecondaryListIndex`=message shape | `ListIndex`=argument register-list index | - | Loads a statically shaped message value. Shape is `[messageNameStringIndex, argumentNameStringIndex...]`. |
+| 0x2D | `StageRegister` | - | - | `XSlot`=source | - | - | Stages a register value for the next stage-consuming instruction. |
+| 0x2E | `StageNothing` | - | - | - | - | - | Stages DSL `nothing` for the next stage-consuming instruction. |
+| 0x2F | `StageTrue` | - | - | - | - | - | Stages `true` for the next stage-consuming instruction. |
+| 0x30 | `StageFalse` | - | - | - | - | - | Stages `false` for the next stage-consuming instruction. |
+| 0x31 | `StageInteger` | numeric unit | - | - | - | `I64`=integer payload | Stages an inline integer value. |
+| 0x32 | `StageFloat` | numeric unit | - | - | - | `F64`=float payload | Stages an inline float value. |
+| 0x33 | `StageText` | - | - | `StringIndex` | - | - | Stages a text literal from `StringPool`. |
+| 0x34 | `StageTag` | - | - | `StringIndex` | - | - | Stages a tag literal from `StringPool`. |
+| 0x35 | `StagePercentage` | - | - | - | - | `F64`=ratio | Stages an inline percentage ratio value. |
+| 0x36 | `CreateDice` | - | result register | `Count`=dice count | `ImmediateY`=side count | - | Creates a dice value; `X` and `Y` are not registers. |
+| 0x37 | `CreateVector` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a vector from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x38 | `CreatePoint` | - | result register | `ImmediateX`=first staged component index | - | - | Creates a point from the staged component sequence. `ImmediateX` is `0` for x, `1` for y, or `2` for z; missing components become `0`. |
+| 0x39 | `CreateList` | - | result register | - | - | - | Creates a list from the contiguous staged value sequence immediately before the opcode. |
+| 0x3A | `CreateMap` | - | result register | `SecondaryListIndex`=key names | - | - | Creates a map from key names and the contiguous staged value sequence immediately before the opcode. |
+| 0x3B | `CreateRange` | - | result register | `XSlot`=from | `YSlot`=to | - | Creates a range value with implicit step `1`. |
+| 0x3C | `CreateRangeWithStep` | - | result register | `XSlot`=from | `YSlot`=to | `AU`=step register | Creates a range value with explicit step. |
+| 0x3D | `CreateRangeIterator` | - | iterator register | `XSlot`=from | `YSlot`=to | - | Creates a VM-internal range iterator with default step `+1`. |
+| 0x3E | `CreateRangeIteratorWithStep` | - | iterator register | `XSlot`=from | `YSlot`=to | `AU`=step register | Creates a VM-internal range iterator with an explicit step. |
+| 0x3F | `CreateRangeIteratorShort` | - | iterator register | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
+| 0x40 | `CreateRecord` | - | result register | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside the constructor. |
+| 0x41 | `CreateExternalType` | - | result register | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
+| 0x42 | `HasValue` | - | result register | `XSlot`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
+| 0x43 | `IsEmpty` | - | result register | `XSlot`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
+| 0x44 | `Default` | - | result register | `XSlot`=left | `YSlot`=right | - | Presence/default operator. |
+| 0x45..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Boolean Algebra, Comparison, Math And Random
 
@@ -403,35 +404,34 @@ separate approximate-equality opcode.
 | 0xB9 | `First` | - | result register | `XSlot`=source | - | - | Returns the first element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
 | 0xBA | `Last` | - | result register | `XSlot`=source | - | - | Returns the last element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty sources -> `nothing`. |
 | 0xBB | `Single` | - | result register | `XSlot`=source | - | - | Returns the only element from list, dice, range, map/custom values, text/tag, or stream; invalid/empty/multiple-element sources -> `nothing`. |
-| 0xBC | `StreamCreate` | - | iterator register | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. |
-| 0xBD | `StreamNext` | - | item register | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
-| 0xBE | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
-| 0xBF | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
-| 0xC0 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
-| 0xC1 | `Sum` | - | result register | `XSlot`=source | - | - | Sums finite collection/stream elements. Empty -> `0`; series -> `nothing`. |
-| 0xC2 | `Average` | - | result register | `XSlot`=source | - | - | Averages finite collection/stream elements. Empty/series -> `nothing`. |
-| 0xC3 | `StreamMin` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
-| 0xC4 | `StreamMax` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
-| 0xC5 | `StreamOneWeighted` | - | result register | `XSlot`=iterator | - | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
-| 0xC6 | `StreamTakeWeighted` | - | result register | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
-| 0xC7 | `StreamCollectList` | - | result register | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
-| 0xC8 | `StreamCollectMap` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
-| 0xC9 | `StreamCollectMapValue` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
-| 0xCA | `Distinct` | - | result register | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
-| 0xCB | `DistinctBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
-| 0xCC | `GroupBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct list, map/custom map-backed, and stream sources. |
-| 0xCD | `SortAscending` | - | result register | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
-| 0xCE | `SortDescending` | - | result register | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
-| 0xCF | `OrderByAscending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
-| 0xD0 | `OrderByDescending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
-| 0xD1 | `Reverse` | - | result register | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
-| 0xD2 | `Shuffle` | - | result register | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
-| 0xD3 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
-| 0xD4 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
-| 0xD5 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
-| 0xD6 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
-| 0xD7 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
-| 0xD8..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
+| 0xBC | `StreamCreate` | - | iterator register | `XSlot`=collection | - | - | Creates a VM-internal iterator over a collection or range value. Non-streamable sources write `nothing`. |
+| 0xBD | `StreamCreateOrJump` | - | iterator register | `XSlot`=collection | `TargetAddress`=not-streamable | - | Creates a VM-internal iterator, or writes `nothing` and jumps to `Y` when no stream can be created. |
+| 0xBE | `StreamNext` | - | item register | `XSlot`=iterator | `TargetAddress`=no-more | - | Writes the next item and continues, or jumps to `Y` when exhausted. |
+| 0xBF | `StreamClose` | - | - | `XSlot`=iterator | - | - | Disposes/closes a VM-internal iterator/stream. |
+| 0xC0 | `StreamMap` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=map entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy one-to-one stream transform. The entry result is yielded. |
+| 0xC1 | `StreamFilter` | - | iterator register | `XSlot`=source iterator | `EntryAddress`=predicate entry | `AU`=helper item register, `BU`=capture register-list index | Creates a lazy filtering stream transform. Truthy predicate results yield the original item. |
+| 0xC2 | `StreamMin` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the lowest projected numeric value. Empty/series -> `nothing`. |
+| 0xC3 | `StreamMax` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=projection entry address | Selects the source item with the highest projected numeric value. Empty/series -> `nothing`. |
+| 0xC4 | `StreamOneWeighted` | - | result register | `XSlot`=iterator | - | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects one source item using projected positive finite weights. Empty/no-positive-weight streams -> `nothing`. |
+| 0xC5 | `StreamTakeWeighted` | - | result register | `XSlot`=iterator | `ImmediateY`=count | `AU`=item binding register, `BU`=weight entry address, `CU`=capture register-list index | Selects up to `Y` source items without replacement using projected positive finite weights. Result is a list. |
+| 0xC6 | `StreamCollectList` | - | result register | `XSlot`=iterator | - | - | Materializes an iterator as a list. |
+| 0xC7 | `StreamCollectMap` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address | Materializes an iterator as a map with each source item as the value. |
+| 0xC8 | `StreamCollectMapValue` | - | result register | `XSlot`=iterator | `YSlot`=item binding | `AU`=key entry address, `BU`=value entry address | Materializes an iterator as a map from key and value helper entries. |
+| 0xC9 | `Distinct` | - | result register | `XSlot`=source | - | - | Materializes distinct source items in source order. Supports direct collection fast paths and streams. |
+| 0xCA | `DistinctBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=projection entry address | Materializes source items distinct by projected key. Supports direct collection fast paths and streams. |
+| 0xCB | `GroupBy` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Groups source items by projected key. Supports direct list, map/custom map-backed, and stream sources. |
+| 0xCC | `SortAscending` | - | result register | `XSlot`=source | - | - | Sorts source items ascending. Supports direct list, dice, range, and stream sources. |
+| 0xCD | `SortDescending` | - | result register | `XSlot`=source | - | - | Sorts source items descending. Supports direct list, dice, range, and stream sources. |
+| 0xCE | `OrderByAscending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key ascending. Supports direct list and stream sources. |
+| 0xCF | `OrderByDescending` | - | result register | `XSlot`=source | `YSlot`=item binding | `AU`=key entry address | Orders source items by projected key descending. Supports direct list and stream sources. |
+| 0xD0 | `Reverse` | - | result register | `XSlot`=source | - | - | Reverses list, dice, range, or stream sources. Dice and streams materialize lists; ranges stay ranges. |
+| 0xD1 | `Shuffle` | - | result register | `XSlot`=source | - | - | Shuffles list, dice, range, or stream sources. Result is a list. |
+| 0xD2 | `ListBuilderCreate` | - | builder register | - | - | - | Creates a VM-internal list builder for generated collections. |
+| 0xD3 | `ListBuilderAdd` | - | - | `XSlot`=builder | `YSlot`=item | - | Adds an item and checks `MaxGeneratedCollectionItems`. |
+| 0xD4 | `ListBuilderFinish` | - | result register | `XSlot`=builder | - | - | Materializes the list builder as a list. |
+| 0xD5 | `HasPattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Tests a dice/card pattern and returns boolean. |
+| 0xD6 | `TakePattern` | - | result register | `XSlot`=source/iterator | `ImmediateY`=count for count patterns | `AU`=pattern kind, `BU`=face entry for `CountFace` | Takes items matching a dice/card pattern. Dice sources produce dice; list sources produce lists. |
+| 0xD7..0xFF | reserved | - | - | - | - | - | Reserved tail of Group 3 for future collection, stream, pipeline, extension, or VM opcodes. |
 
 ## Side-Table Summary
 

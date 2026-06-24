@@ -27,6 +27,9 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder JumpIfNotTrue(GesRegisterRef condition, GesLabelRef target)
         => AddOpcode(GameEventScriptBytecodeOpCode.JumpIfNotTrue, x: GesOperand.Register(condition), y: GesOperand.Label(target));
 
+    public GesBinaryBuilder JumpIfNothing(GesRegisterRef condition, GesLabelRef target)
+        => AddOpcode(GameEventScriptBytecodeOpCode.JumpIfNothing, x: GesOperand.Register(condition), y: GesOperand.Label(target));
+
     public GesBinaryBuilder Call(GesRegisterRef destination, GesLabelRef entryAddress, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
         => AddOpcode(GameEventScriptBytecodeOpCode.Call, flags: flags, dst: GesOperand.Register(destination), y: GesOperand.Label(entryAddress));
 
@@ -516,6 +519,9 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder StreamCreate(GesRegisterRef destination, GesRegisterRef collection)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamCreate, destination, collection);
 
+    public GesBinaryBuilder StreamCreateOrJump(GesRegisterRef destination, GesRegisterRef collection, GesLabelRef failureTarget)
+        => AddOpcode(GameEventScriptBytecodeOpCode.StreamCreateOrJump, dst: GesOperand.Register(destination), x: GesOperand.Register(collection), y: GesOperand.Label(failureTarget));
+
     public GesBinaryBuilder StreamNext(GesRegisterRef destination, GesRegisterRef iterator, GesLabelRef exhaustedTarget)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamNext, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Label(exhaustedTarget));
 
@@ -527,12 +533,6 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder StreamFilter(GesRegisterRef destination, GesRegisterRef sourceIterator, GesLabelRef predicateEntry, GesRegisterRef itemBinding, IReadOnlyList<GesRegisterRef> captures)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamFilter, dst: GesOperand.Register(destination), x: GesOperand.Register(sourceIterator), y: GesOperand.Label(predicateEntry), a: GesOperand.Register(itemBinding), b: GesOperand.RegisterList(captures));
-
-    public GesBinaryBuilder Sum(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.Sum, destination, iterator);
-
-    public GesBinaryBuilder Average(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.Average, destination, iterator);
 
     public GesBinaryBuilder StreamMin(GesRegisterRef destination, GesRegisterRef iterator, GesRegisterRef itemBinding, GesLabelRef projectionEntry)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamMin, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Register(itemBinding), a: GesOperand.Label(projectionEntry));

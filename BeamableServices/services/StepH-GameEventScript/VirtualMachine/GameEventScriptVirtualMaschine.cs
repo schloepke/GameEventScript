@@ -701,12 +701,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case StreamFilter:
                             vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
                             break;
-                        case StreamMin:
-                            vmState.GesVmStreamMin(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            break;
-                        case StreamMax:
-                            vmState.GesVmStreamMax(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            break;
                         case StreamOneWeighted:
                             vmState.GesVmStreamOneWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.AU, instruction.BU, instruction.CU, this, vmState.RandomGenerator);
                             break;

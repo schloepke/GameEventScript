@@ -252,8 +252,6 @@
           "StreamFilter",
           "StreamCollectList",
           "Count",
-          "StreamMin",
-          "StreamMax",
           "Distinct",
           "DistinctBy",
           "GroupBy",

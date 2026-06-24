@@ -1127,8 +1127,6 @@ StreamCreate source -> iterator
 StreamMap transformedIterator sourceIterator mapEntry itemBindingRegister captureRegisterList
 StreamFilter filteredIterator sourceIterator predicateEntry itemBindingRegister captureRegisterList
 Count dst source
-StreamMin dst iterator itemBindingRegister projectionEntry
-StreamMax dst iterator itemBindingRegister projectionEntry
 StreamOneWeighted dst iterator itemBindingRegister weightEntry captureRegisterList
 StreamTakeWeighted dst iterator count itemBindingRegister weightEntry captureRegisterList
 StreamCollectList dst iterator
@@ -1220,11 +1218,11 @@ consumption. DSL `:sum` and `:average` selectors are lowered to explicit
 bytecode loops so they can account for normal step budgets and avoid hidden
 stream consumption inside a single opcode.
 
-`StreamMin` and `StreamMax` are fixed extrema terminals. They bind each source
-item to `YSlot`, evaluate `AU` as a projection entry, compare projected numeric
-values using normal less/greater semantics, and return the winning source item.
-Ties keep the earlier source item. Empty finite streams and series sources
-return `nothing`.
+DSL `:min` and `:max` selectors are lowered to explicit bytecode loops. The
+generated loop keeps the first source item as the initial winner, evaluates the
+projection inline for each item, compares projected values with normal
+less/greater semantics, and returns the winning source item. Ties keep the
+earlier source item. Empty finite streams and series sources return `nothing`.
 
 Fixed terminal opcodes cover materializers and operations that need full
 collection semantics: map, distinct, group/order/sort/reverse, weighted

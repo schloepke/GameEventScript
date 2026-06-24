@@ -275,8 +275,6 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StreamClose => [IteratorRegister],
             GameEventScriptBytecodeOpCode.StreamMap => [TargetRegister, SourceIteratorRegister, NextEntry, AuxItemBindingRegister, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamFilter => [TargetRegister, SourceIteratorRegister, PredicateEntry, AuxItemBindingRegister, CaptureRegisterList],
-            GameEventScriptBytecodeOpCode.StreamMin => [TargetRegister, IteratorRegister, ItemBindingRegister, ProjectionEntry],
-            GameEventScriptBytecodeOpCode.StreamMax => [TargetRegister, IteratorRegister, ItemBindingRegister, ProjectionEntry],
             GameEventScriptBytecodeOpCode.StreamOneWeighted => [TargetRegister, IteratorRegister, AuxItemBindingRegister, WeightEntry, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamTakeWeighted => [TargetRegister, IteratorRegister, CountImmediate, AuxItemBindingRegister, WeightEntry, CaptureRegisterList],
             GameEventScriptBytecodeOpCode.StreamCollectList => [TargetRegister, IteratorRegister],

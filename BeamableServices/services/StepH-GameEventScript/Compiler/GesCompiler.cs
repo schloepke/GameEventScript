@@ -671,7 +671,7 @@ internal static class GesCompiler
                     else _builder.First(destination, target);
                     return;
                 case EdgeSelectorNode { Predicate: not null, Identifier: not null } edge:
-                    EmitFilteredEdge(destination, target, edge.Identifier, edge.Predicate, edge.Mode, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { edge }, 0, edge, context, state);
                     return;
                 case DrawSelectorNode draw:
                     if (draw.Count == 1) _builder.First(destination, target);
@@ -684,13 +684,13 @@ internal static class GesCompiler
                     EmitContains(destination, target, contains, context, state);
                     return;
                 case FilterSelectorNode filter:
-                    EmitStreamTransformCollect(destination, target, filter.Identifier, filter.Predicate, filter: true, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
                     return;
                 case SelectSelectorNode select:
-                    EmitStreamTransformCollect(destination, target, select.Identifier, select.Projection, filter: false, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { select }, 0, select, context, state);
                     return;
                 case PredicateSelectorNode predicate:
-                    EmitPredicateTerminal(destination, target, predicate.Identifier, predicate.Predicate, predicate.Operator, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { predicate }, 0, predicate, context, state);
                     return;
                 case CountSelectorNode count:
                     if (IsAlwaysTrue(count.Predicate))
@@ -699,7 +699,7 @@ internal static class GesCompiler
                         return;
                     }
 
-                    EmitStreamTransformTerminal(destination, target, count.Identifier, count.Predicate, GameEventScriptBytecodeOpCode.Count, filter: true, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { count }, 0, count, context, state);
                     return;
                 case SumSelectorNode sum:
                     EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { sum }, 0, sum, context, state);
@@ -708,10 +708,10 @@ internal static class GesCompiler
                     EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { average }, 0, average, context, state);
                     return;
                 case MinSelectorNode min:
-                    EmitStreamExtrema(destination, target, min.Identifier, min.Projection, isMax: false, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { min }, 0, min, context, state);
                     return;
                 case MaxSelectorNode max:
-                    EmitStreamExtrema(destination, target, max.Identifier, max.Projection, isMax: true, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { max }, 0, max, context, state);
                     return;
                 case MapSelectorNode map:
                     EmitStreamCollectMap(destination, target, map, context, state);
@@ -755,7 +755,7 @@ internal static class GesCompiler
                     EmitPattern(destination, target, pattern.Pattern, take: true, context, state);
                     return;
                 case ObjectMatchSelectorNode objectMatch:
-                    EmitObjectMatch(destination, target, objectMatch.Pattern, context, state);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { objectMatch }, 0, objectMatch, context, state);
                     return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
@@ -831,6 +831,7 @@ internal static class GesCompiler
                     MinSelectorNode or
                     MaxSelectorNode or
                     MapSelectorNode => true,
+                ObjectMatchSelectorNode => true,
                 EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
                 SequenceSliceSelectorNode => hasPrefix,
                 DrawSelectorNode => hasPrefix,
@@ -840,7 +841,15 @@ internal static class GesCompiler
         private static bool CanEmitInlineStreamPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
             => terminal switch
             {
-                FilterSelectorNode or SelectSelectorNode or CountSelectorNode or SumSelectorNode or AverageSelectorNode => true,
+                FilterSelectorNode or
+                    SelectSelectorNode or
+                    PredicateSelectorNode or
+                    CountSelectorNode or
+                    SumSelectorNode or
+                    AverageSelectorNode or
+                    MinSelectorNode or
+                    MaxSelectorNode or
+                    ObjectMatchSelectorNode => true,
                 EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
                 _ => false
             };
@@ -885,6 +894,8 @@ internal static class GesCompiler
             GesRegisterRef? one = null;
             GesRegisterRef? hasSum = null;
             GesRegisterRef? sum = null;
+            GesRegisterRef? extremaKey = null;
+            GesRegisterRef? extremaCompare = null;
 
             switch (terminal)
             {
@@ -905,11 +916,22 @@ internal static class GesCompiler
                         _builder.LoadNothing(sum.Value);
                     }
                     break;
+                case PredicateSelectorNode predicate:
+                    _builder.LoadBoolean(destination, predicate.Operator == "all");
+                    break;
                 case SumSelectorNode:
                     hasSum = state.AllocateTemporary(_builder, context);
                     sum = destination;
                     _builder.LoadFalse(hasSum.Value);
                     _builder.LoadNothing(sum.Value);
+                    break;
+                case MinSelectorNode or MaxSelectorNode:
+                    hasSum = state.AllocateTemporary(_builder, context);
+                    extremaKey = state.AllocateTemporary(_builder, context);
+                    extremaCompare = state.AllocateTemporary(_builder, context);
+                    _builder.LoadFalse(hasSum.Value);
+                    _builder.LoadNothing(destination);
+                    _builder.LoadNothing(extremaKey.Value);
                     break;
                 case EdgeSelectorNode { Mode: "single" }:
                     count = state.AllocateTemporary(_builder, context);
@@ -920,6 +942,9 @@ internal static class GesCompiler
                     break;
                 case EdgeSelectorNode:
                     _builder.LoadNothing(destination);
+                    break;
+                case ObjectMatchSelectorNode:
+                    _builder.LoadFalse(destination);
                     break;
             }
 
@@ -932,7 +957,7 @@ internal static class GesCompiler
                 current = EmitInlinePipelineStep(selectors[index], current, nextLabel, context, state);
             }
 
-            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, count, one, hasSum, sum, context, state);
+            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, count, one, hasSum, sum, extremaKey, extremaCompare, context, state);
             _builder.MarkLabel(nextLabel);
             _builder.Jump(loopLabel);
 
@@ -1099,6 +1124,8 @@ internal static class GesCompiler
             GesRegisterRef? one,
             GesRegisterRef? hasSum,
             GesRegisterRef? sum,
+            GesRegisterRef? extremaKey,
+            GesRegisterRef? extremaCompare,
             LoweringContext context,
             ExpressionState state)
         {
@@ -1128,6 +1155,22 @@ internal static class GesCompiler
                     }
                     _builder.Add(count!.Value, count.Value, one!.Value);
                     return;
+                case PredicateSelectorNode predicateSelector:
+                {
+                    var predicate = EmitSelectorExpressionForRead(predicateSelector.Identifier, current, predicateSelector.Predicate, context, state);
+                    if (predicateSelector.Operator == "all")
+                    {
+                        _builder.JumpIfTrue(predicate, nextLabel);
+                        _builder.LoadFalse(destination);
+                        _builder.Jump(endLabel);
+                        return;
+                    }
+
+                    _builder.JumpIfNotTrue(predicate, nextLabel);
+                    _builder.LoadTrue(destination);
+                    _builder.Jump(endLabel);
+                    return;
+                }
                 case SumSelectorNode sumSelector:
                 {
                     var value = IsIdentityProjection(sumSelector.Identifier, sumSelector.Projection)
@@ -1145,6 +1188,12 @@ internal static class GesCompiler
                     EmitInlineAccumulateSum(sum!.Value, hasSum!.Value, value, nextLabel);
                     return;
                 }
+                case MinSelectorNode minSelector:
+                    EmitInlineExtremaStep(destination, current, minSelector.Identifier, minSelector.Projection, hasSum!.Value, extremaKey!.Value, extremaCompare!.Value, isMax: false, nextLabel, context, state);
+                    return;
+                case MaxSelectorNode maxSelector:
+                    EmitInlineExtremaStep(destination, current, maxSelector.Identifier, maxSelector.Projection, hasSum!.Value, extremaKey!.Value, extremaCompare!.Value, isMax: true, nextLabel, context, state);
+                    return;
                 case EdgeSelectorNode edge:
                     if (edge.Predicate is not null && edge.Identifier is not null)
                     {
@@ -1174,9 +1223,53 @@ internal static class GesCompiler
                             _builder.Jump(endLabel);
                             return;
                     }
+                case ObjectMatchSelectorNode objectMatch:
+                {
+                    var match = EmitObjectPatternPredicate(current, objectMatch.Pattern, context, state);
+                    _builder.JumpIfNotTrue(match, nextLabel);
+                    _builder.LoadTrue(destination);
+                    _builder.Jump(endLabel);
+                    return;
+                }
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot inline terminal selector node '{terminal.GetType().Name}'.");
             }
+        }
+
+        private void EmitInlineExtremaStep(
+            GesRegisterRef destination,
+            GesRegisterRef current,
+            string identifier,
+            ExpressionNode projectionExpression,
+            GesRegisterRef hasWinner,
+            GesRegisterRef winnerKey,
+            GesRegisterRef isBetter,
+            bool isMax,
+            GesLabelRef nextLabel,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            var projection = IsIdentityProjection(identifier, projectionExpression)
+                ? current
+                : EmitSelectorExpressionForRead(identifier, current, projectionExpression, context, state);
+            var compareLabel = _builder.AddLabel(isMax ? "pipeline_max_compare" : "pipeline_min_compare");
+            _builder.JumpIfTrue(hasWinner, compareLabel);
+            if (current.Id != destination.Id) _builder.Move(destination, current);
+            if (projection.Id != winnerKey.Id) _builder.Move(winnerKey, projection);
+            _builder.LoadTrue(hasWinner);
+            _builder.Jump(nextLabel);
+
+            _builder.MarkLabel(compareLabel);
+            if (isMax) _builder.Greater(isBetter, projection, winnerKey);
+            else _builder.Less(isBetter, projection, winnerKey);
+            var updateLabel = _builder.AddLabel(isMax ? "pipeline_max_update" : "pipeline_min_update");
+            _builder.JumpIfTrue(isBetter, updateLabel);
+            _builder.LoadTrue(hasWinner);
+            _builder.Jump(nextLabel);
+            _builder.MarkLabel(updateLabel);
+            if (current.Id != destination.Id) _builder.Move(destination, current);
+            if (projection.Id != winnerKey.Id) _builder.Move(winnerKey, projection);
+            _builder.LoadTrue(hasWinner);
         }
 
         private void EmitInlineAccumulateSum(
@@ -1273,12 +1366,6 @@ internal static class GesCompiler
                 }
                 case SumSelectorNode or AverageSelectorNode:
                     throw new GameEventScriptCompileException("GameEventScript binary compiler expects sum and average terminals to be lowered as explicit loops.");
-                case MinSelectorNode min:
-                    EmitStreamExtremaFromIterator(destination, iterator, min.Identifier, min.Projection, isMax: false, context, state);
-                    return;
-                case MaxSelectorNode max:
-                    EmitStreamExtremaFromIterator(destination, iterator, max.Identifier, max.Projection, isMax: true, context, state);
-                    return;
                 case MapSelectorNode map:
                     EmitStreamCollectMapFromIterator(destination, iterator, map, context, state);
                     return;
@@ -1347,29 +1434,6 @@ internal static class GesCompiler
             using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}");
             var helperContext = LoweringContext.ForRoutineWithParent(helper, parentContext);
             var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(parentState.NextRegister));
-            _builder.ReturnValue(result);
-            return helper.EntryLabel;
-        }
-
-        private GesLabelRef EmitObjectMatchHelperExpression(
-            ObjectMatchPatternNode pattern,
-            LoweringContext parentContext,
-            out GesRegisterRef itemBinding,
-            out IReadOnlyList<GesRegisterRef> captureRegisters)
-        {
-            var captures = ResolveStreamCaptures(pattern, parentContext);
-            captureRegisters = captures.Select(capture => capture.SourceRegister).ToArray();
-            using var sourceRange = _builder.SourceRange(pattern.SourceRange);
-            using var helper = _builder.BeginHelper($"object_match_{_helperIndex++}", new[] { "item" }.Concat(captures.Select(capture => capture.Name)).ToArray());
-            itemBinding = helper.Arguments[0];
-            var helperContext = LoweringContext.ForRoutine(helper);
-            helperContext.DeclareExisting("item", itemBinding);
-            for (var index = 0; index < captures.Count; index++)
-            {
-                helperContext.DeclareExisting(captures[index].Name, helper.Arguments[index + 1]);
-            }
-
-            var result = EmitObjectPatternPredicate(itemBinding, pattern, helperContext, new ExpressionState(helperContext.RegisterCount));
             _builder.ReturnValue(result);
             return helper.EntryLabel;
         }
@@ -1473,107 +1537,6 @@ internal static class GesCompiler
             else _builder.TakeFirst(destination, source, ToShort(choose.Count, "choose count"));
         }
 
-        private void EmitStreamTransformCollect(
-            GesRegisterRef destination,
-            GesRegisterRef target,
-            string identifier,
-            ExpressionNode expression,
-            bool filter,
-            LoweringContext context,
-            ExpressionState state)
-        {
-            var iterator = state.AllocateTemporary(_builder, context);
-            var transformedIterator = state.AllocateTemporary(_builder, context);
-            var entry = EmitStreamSelectorHelperExpression(filter ? "filter" : "select", identifier, expression, context, out var itemBinding, out var captures);
-            _builder.StreamCreate(iterator, target);
-            if (filter) _builder.StreamFilter(transformedIterator, iterator, entry, itemBinding, captures);
-            else _builder.StreamMap(transformedIterator, iterator, entry, itemBinding, captures);
-            _builder.StreamCollectList(destination, transformedIterator);
-        }
-
-        private void EmitPredicateTerminal(
-            GesRegisterRef destination,
-            GesRegisterRef target,
-            string identifier,
-            ExpressionNode predicate,
-            string op,
-            LoweringContext context,
-            ExpressionState state)
-        {
-            var iterator = state.AllocateTemporary(_builder, context);
-            var predicateIterator = state.AllocateTemporary(_builder, context);
-            var entry = EmitStreamSelectorHelperExpression(op, identifier, predicate, context, out var itemBinding, out var captures);
-            _builder.StreamCreate(iterator, target);
-            _builder.StreamMap(predicateIterator, iterator, entry, itemBinding, captures);
-            if (op == "all") _builder.HasAll(destination, predicateIterator);
-            else _builder.HasAny(destination, predicateIterator);
-        }
-
-        private void EmitFilteredEdge(
-            GesRegisterRef destination,
-            GesRegisterRef target,
-            string identifier,
-            ExpressionNode predicate,
-            string mode,
-            LoweringContext context,
-            ExpressionState state)
-        {
-            var iterator = state.AllocateTemporary(_builder, context);
-            var filteredIterator = state.AllocateTemporary(_builder, context);
-            var entry = EmitStreamSelectorHelperExpression(mode, identifier, predicate, context, out var itemBinding, out var captures);
-            _builder.StreamCreate(iterator, target);
-            _builder.StreamFilter(filteredIterator, iterator, entry, itemBinding, captures);
-            if (mode == "last") _builder.Last(destination, filteredIterator);
-            else if (mode == "single") _builder.Single(destination, filteredIterator);
-            else _builder.First(destination, filteredIterator);
-        }
-
-        private void EmitStreamTransformTerminal(
-            GesRegisterRef destination,
-            GesRegisterRef target,
-            string identifier,
-            ExpressionNode expression,
-            GameEventScriptBytecodeOpCode terminal,
-            bool filter,
-            LoweringContext context,
-            ExpressionState state)
-        {
-            if (filter && terminal == GameEventScriptBytecodeOpCode.Count && IsAlwaysTrue(expression))
-            {
-                _builder.Count(destination, target);
-                return;
-            }
-
-            var iterator = state.AllocateTemporary(_builder, context);
-            var transformedIterator = state.AllocateTemporary(_builder, context);
-            var entry = EmitStreamSelectorHelperExpression(filter ? "count" : terminal.ToString(), identifier, expression, context, out var itemBinding, out var captures);
-            _builder.StreamCreate(iterator, target);
-            if (filter) _builder.StreamFilter(transformedIterator, iterator, entry, itemBinding, captures);
-            else _builder.StreamMap(transformedIterator, iterator, entry, itemBinding, captures);
-            switch (terminal)
-            {
-                case GameEventScriptBytecodeOpCode.Count:
-                    _builder.Count(destination, transformedIterator);
-                    return;
-                default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support stream terminal '{terminal}'.");
-            }
-        }
-
-        private void EmitStreamExtrema(GesRegisterRef destination, GesRegisterRef target, string identifier, ExpressionNode projection, bool isMax, LoweringContext context, ExpressionState state)
-        {
-            var iterator = state.AllocateTemporary(_builder, context);
-            _builder.StreamCreate(iterator, target);
-            EmitStreamExtremaFromIterator(destination, iterator, identifier, projection, isMax, context, state);
-        }
-
-        private void EmitStreamExtremaFromIterator(GesRegisterRef destination, GesRegisterRef iterator, string identifier, ExpressionNode projection, bool isMax, LoweringContext context, ExpressionState state)
-        {
-            var entry = EmitSelectorHelperExpression(isMax ? "max" : "min", identifier, projection, context, state, out var itemBinding);
-            if (isMax) _builder.StreamMax(destination, iterator, itemBinding, entry);
-            else _builder.StreamMin(destination, iterator, itemBinding, entry);
-        }
-
         private void EmitStreamCollectMap(GesRegisterRef destination, GesRegisterRef target, MapSelectorNode map, LoweringContext context, ExpressionState state)
         {
             var iterator = state.AllocateTemporary(_builder, context);
@@ -1593,16 +1556,6 @@ internal static class GesCompiler
 
             var valueEntry = EmitSelectorHelperExpression("map_value", map.Identifier, map.ValueProjection, context, state, itemBinding);
             _builder.StreamCollectMapValue(destination, iterator, itemBinding, keyEntry, valueEntry);
-        }
-
-        private void EmitObjectMatch(GesRegisterRef destination, GesRegisterRef target, ObjectMatchPatternNode pattern, LoweringContext context, ExpressionState state)
-        {
-            var iterator = state.AllocateTemporary(_builder, context);
-            var matchIterator = state.AllocateTemporary(_builder, context);
-            var entry = EmitObjectMatchHelperExpression(pattern, context, out var itemBinding, out var captures);
-            _builder.StreamCreate(iterator, target);
-            _builder.StreamMap(matchIterator, iterator, entry, itemBinding, captures);
-            _builder.HasAny(destination, matchIterator);
         }
 
         private GesRegisterRef EmitObjectPatternPredicate(GesRegisterRef target, ObjectMatchPatternNode pattern, LoweringContext context, ExpressionState state)

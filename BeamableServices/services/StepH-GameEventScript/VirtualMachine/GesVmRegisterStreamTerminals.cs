@@ -58,16 +58,6 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    internal static void GesVmStreamMin(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
-    {
-        GesVmStreamMinMax(vmState, destinationRegister, in iterator, itemSlot, projectionEntryAddress, evaluator, isMax: false);
-    }
-
-    internal static void GesVmStreamMax(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator)
-    {
-        GesVmStreamMinMax(vmState, destinationRegister, in iterator, itemSlot, projectionEntryAddress, evaluator, isMax: true);
-    }
-
     internal static void GesVmStreamOneWeighted(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort weightEntryAddress, ushort captureSlotListIndex, IGesVmStreamEntryEvaluator evaluator,
         GesVmXoshiroRandom randomGenerator)
     {
@@ -229,53 +219,4 @@ internal static class GesVmRegisterStreamTerminals
         }
     }
 
-    private static void GesVmStreamMinMax(GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort itemSlot, ushort projectionEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool isMax)
-    {
-        if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
-        {
-            vmState.SetNothing(destinationRegister);
-            return;
-        }
-
-        var item = new GesVmValue();
-        var projection = new GesVmValue();
-        var winner = new GesVmValue();
-        var winnerProjection = new GesVmValue();
-        var hasWinner = false;
-        try
-        {
-            while (stream.TryNext(ref item))
-            {
-                if (!evaluator.TryEvaluateStreamEntry(projectionEntryAddress, itemSlot, ref item, null, ref projection))
-                {
-                    vmState.SetNothing(destinationRegister);
-                    return;
-                }
-
-                if (!hasWinner)
-                {
-                    winner = item;
-                    winnerProjection = projection;
-                    hasWinner = true;
-                    continue;
-                }
-
-                var left = projection.AsNumericWithUnit(out var leftUnit);
-                var right = winnerProjection.AsNumericWithUnit(out var rightUnit);
-                if (leftUnit != rightUnit || double.IsNaN(left) || double.IsNaN(right)) continue;
-                if ((isMax && left > right) || (!isMax && left < right))
-                {
-                    winner = item;
-                    winnerProjection = projection;
-                }
-            }
-
-            if (hasWinner) vmState.SetValue(destinationRegister, in winner);
-            else vmState.SetNothing(destinationRegister);
-        }
-        finally
-        {
-            if (stream is IDisposable disposable) disposable.Dispose();
-        }
-    }
 }

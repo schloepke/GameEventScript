@@ -48,7 +48,7 @@ internal sealed class GesParser
     }
 
     private static bool IsCollectionZipOperator(GesToken token)
-        => token.Kind == Tag && string.Equals(token.Text, ":zip", StringComparison.Ordinal);
+        => token.Kind == Zip;
 
     private sealed class GameEventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
     {
@@ -734,7 +734,7 @@ internal sealed class GesParser
     private SeededRandomStatementNode ParseSeededRandomStatement()
     {
         var startToken = Current;
-        Expect(Tag);
+        Expect(KeywordRandom);
         SkipNewLines();
         Expect(With);
         SkipNewLines();
@@ -1403,18 +1403,20 @@ internal sealed class GesParser
             return ParseExtensionCallExpression();
         }
 
-        if (MatchTag(":clamp"))
+        if (Match(Clamp))
         {
             return ParseClampExpression();
         }
 
-        if (MatchTag(":min"))
+        if (Is(Min) && IsNextSignificantWord("of"))
         {
+            Advance();
             return ParseVariadicTaggedExpression("min");
         }
 
-        if (MatchTag(":max"))
+        if (Is(Max) && IsNextSignificantWord("of"))
         {
+            Advance();
             return ParseVariadicTaggedExpression("max");
         }
 
@@ -2022,7 +2024,7 @@ internal sealed class GesParser
             return ParseRangeExpressionCore();
         }
 
-        if (MatchTag(":random"))
+        if (Match(KeywordRandom))
         {
             SkipNewLines();
             if (Match(With))
@@ -2033,8 +2035,11 @@ internal sealed class GesParser
             return ParseRandomExpression();
         }
 
-        if (MatchTag(":dice"))
+        if (Is(Roll) && IsNextSignificantWord("dice"))
         {
+            Advance();
+            SkipNewLines();
+            ExpectWord("dice");
             return ParseDiceExpression();
         }
 
@@ -2494,7 +2499,7 @@ internal sealed class GesParser
         if (MatchWord("at"))
         {
             SkipNewLines();
-            ExpectWord("random");
+            Expect(KeywordRandom);
             atRandom = true;
             SkipNewLines();
         }
@@ -2751,7 +2756,7 @@ internal sealed class GesParser
 
     private bool IsSeededRandomStatementStart()
     {
-        if (Current.Kind != Tag || !string.Equals(Current.Text, ":random", StringComparison.Ordinal))
+        if (Current.Kind != KeywordRandom)
         {
             return false;
         }
@@ -2857,6 +2862,7 @@ internal sealed class GesParser
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
             IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
             IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle or
+            KeywordRandom or Clamp or Min or Max or Roll or
             LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()
@@ -3000,13 +3006,29 @@ internal sealed class GesParser
 
     private bool MatchWord(string word)
     {
-        if (Current.Kind == Identifier && string.Equals(Current.Text, word, StringComparison.Ordinal))
+        if (IsWord(word))
         {
             Advance();
             return true;
         }
 
         return false;
+    }
+
+    private bool IsWord(string word)
+        => Current.Kind == Identifier && string.Equals(Current.Text, word, StringComparison.Ordinal);
+
+    private bool IsNextSignificantWord(string word)
+    {
+        var lookahead = _index + 1;
+        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
+        {
+            lookahead++;
+        }
+
+        return lookahead < _tokens.Count &&
+               _tokens[lookahead].Kind == Identifier &&
+               string.Equals(_tokens[lookahead].Text, word, StringComparison.Ordinal);
     }
 
     private void ExpectWord(string word)

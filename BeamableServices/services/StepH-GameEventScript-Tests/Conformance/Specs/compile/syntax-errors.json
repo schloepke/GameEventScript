@@ -77,6 +77,54 @@
     },
     {
       "kind": "compileError",
+      "name": "legacy random tag operator is rejected",
+      "script": "on Start {\n  let value be :random from 1 to 6\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy clamp tag operator is rejected",
+      "script": "on Start {\n  let value be :clamp 5 between 1 and 10\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy min tag operator is rejected",
+      "script": "on Start {\n  let value be :min of 1 and 2\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy max tag operator is rejected",
+      "script": "on Start {\n  let value be :max of 1 and 2\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy zip tag operator is rejected",
+      "script": "on Start {\n  let value be [1] :zip [2]\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy dice tag roll is rejected",
+      "script": "on Start {\n  let value be :dice 4d6\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "legacy floor prefix builtin is rejected",
       "script": "on Start {\n  let value be #floor 10.4\n}",
       "expectedError": {
@@ -110,7 +158,7 @@
     {
       "kind": "compileError",
       "name": "seeded random blocks cannot be value expressions",
-      "script": "on Start(seed) {\n  let values be :random with seed {\n    emit Done\n  }\n}",
+      "script": "on Start(seed) {\n  let values be random with seed {\n    emit Done\n  }\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -118,7 +166,7 @@
     {
       "kind": "compileError",
       "name": "drop selector requires a supported scope",
-      "script": "on Broken {\n  let x be :dice 4d6[:drop middle 1]\n}",
+      "script": "on Broken {\n  let x be roll dice 4d6[:drop middle 1]\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -126,7 +174,7 @@
     {
       "kind": "compileError",
       "name": "dice counts must be positive integers",
-      "script": "on Broken {\n  let x be :dice 0d6\n}",
+      "script": "on Broken {\n  let x be roll dice 0d6\n}",
       "expectedError": {
         "phase": "syntax"
       }

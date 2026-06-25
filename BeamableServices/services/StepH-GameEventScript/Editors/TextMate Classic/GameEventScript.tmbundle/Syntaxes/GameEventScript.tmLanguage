@@ -106,11 +106,11 @@
 		</dict>
 		<key>declarations</key>
 		<dict>
-			<key>patterns</key>
-			<array>
-				<dict>
-					<key>captures</key>
+				<key>patterns</key>
+					<array>
 					<dict>
+						<key>captures</key>
+						<dict>
 						<key>1</key>
 						<dict>
 							<key>name</key>
@@ -226,8 +226,8 @@
 		</dict>
 		<key>extensions-and-types</key>
 		<dict>
-			<key>patterns</key>
-			<array>
+				<key>patterns</key>
+				<array>
 					<dict>
 						<key>match</key>
 						<string>:tag\b</string>
@@ -323,6 +323,69 @@
 		<dict>
 			<key>patterns</key>
 			<array>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(roll)([ \t]+)(dice)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(random)([ \t]+)(with|from)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(clamp)(?=\s)</string>
+					<key>name</key>
+					<string>keyword.operator.word.gameeventscript</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.operator.word.gameeventscript</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(min|max)([ \t]+)(of)\b</string>
+					<key>name</key>
+					<string>meta.keyword-phrase.gameeventscript</string>
+				</dict>
 				<dict>
 					<key>captures</key>
 					<dict>
@@ -676,14 +739,20 @@
 					<key>name</key>
 					<string>keyword.other.definition.gameeventscript</string>
 				</dict>
-				<dict>
-					<key>match</key>
-					<string>\b(?:or|xor|and|not|is|empty|div|mod|rem)\b</string>
-					<key>name</key>
-					<string>keyword.operator.word.gameeventscript</string>
-				</dict>
-				<dict>
-					<key>match</key>
+					<dict>
+						<key>match</key>
+						<string>\b(?:or|xor|and|not|is|empty|div|mod|rem)\b</string>
+						<key>name</key>
+						<string>keyword.operator.word.gameeventscript</string>
+					</dict>
+					<dict>
+						<key>match</key>
+						<string>\b(?:random|clamp|min|max|zip)\b</string>
+						<key>name</key>
+						<string>keyword.operator.word.gameeventscript</string>
+					</dict>
+					<dict>
+						<key>match</key>
 					<string>\b(?:emit|publish)\b</string>
 					<key>name</key>
 					<string>keyword.control.emit.gameeventscript</string>

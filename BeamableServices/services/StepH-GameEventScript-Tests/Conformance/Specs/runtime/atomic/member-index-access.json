@@ -399,7 +399,7 @@
     {
       "kind": "scriptApi",
       "name": "dice member and index access",
-      "script": "module AtomicDiceAccess\non Start {\n  let value be :dice 3d6\n  emit Done(member: value.missing, first: value[1], third: value[3], indexZero: value[0], indexOut: value[4])\n}",
+      "script": "module AtomicDiceAccess\non Start {\n  let value be roll dice 3d6\n  emit Done(member: value.missing, first: value[1], third: value[3], indexZero: value[0], indexOut: value[4])\n}",
       "randomSequence": [
         "6",
         "4",

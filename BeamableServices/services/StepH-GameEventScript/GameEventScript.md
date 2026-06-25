@@ -77,8 +77,11 @@ Names are intentionally narrow:
   at compile time. Unknown identifiers are compile errors; they do not evaluate
   to `nothing`.
 - Message names start uppercase and contain letters.
-- Tags start with `:` and a lowercase tag name.
-- Type names are tags. Built-in type tags are reserved by the language.
+- Tags start with `#` and a lowercase tag name. `#true`, `#false`, `#pi`,
+  and `#infinity` are ordinary tag values.
+- Type references, selectors, generated collection forms, and namespace-like
+  extension references use `:`. Built-in type names are reserved by the
+  language.
 
 Text literals can use single or double quotes. The quote character is escaped by
 doubling it:
@@ -123,7 +126,7 @@ Message-name handlers match by message name and tags, but receive one
 `:message` value instead of normal message arguments:
 
 ```ges
-on Hit as message matching :enemy {
+on Hit as message matching #enemy {
   emit Heard(name: message.name, tags: message.tags)
 }
 ```
@@ -152,7 +155,7 @@ on undeliverable as message {
 Handlers can filter tags:
 
 ```ges
-on Radio as message matching :open, :enemy without :encrypted {
+on Radio as message matching #open, #enemy without #encrypted {
   emit Intercepted(message: message)
 }
 ```
@@ -170,10 +173,10 @@ the host publish hook.
 ```ges
 emit Done
 emit Done(value: 10)
-emit Done(value: 10) with :combat, :visible
+emit Done(value: 10) with #combat, #visible
 
 publish Fire(target: enemy)
-publish Scan with [:radar, :active]
+publish Scan with [#radar, #active]
 ```
 
 Tags after `with` can be tags or lists of tags.
@@ -227,16 +230,16 @@ range to a value first.
 
 ### Seeded Random Scope
 
-`:` `random with` evaluates a body under a deterministic sub-random scope. The
+`random with` evaluates a body under a deterministic sub-random scope. The
 seed must statically resolve to a unitless integer number; dynamic seeds should
 be cast explicitly with `as :number`.
 
 ```ges
-:random with seed as :number {
-  emit Roll(value: :random from 1 to 6)
+random with seed as :number {
+  emit Roll(value: random from 1 to 6)
 }
 
-let value be :random with 123 (:random from 1 to 100)
+let value be random with 123 (random from 1 to 100)
 ```
 
 ## Expressions and Operators
@@ -248,7 +251,7 @@ From high to low precedence:
 
 1. Postfix: member access `x.y`, lookup/selector `x[...]`
 2. Power: `^`, `²`, `³`
-3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, tagged unary helpers
+3. Unary: `-`, `not`, `!`, `~`, `¬`, `empty`, prefix intrinsics
 4. Multiplicative: `*`, `/`, `div`, `mod`, `rem`
 5. Additive: `+`, `-`
 6. Relational: `<`, `>`, `<=`, `>=`, `≤`, `≥`
@@ -288,9 +291,9 @@ keyword.
 
 ```ges
 let status be
-  :dead when hp <= 0,
-  :wounded when hp < maxHp,
-  otherwise :healthy
+  #dead when hp <= 0,
+  #wounded when hp < maxHp,
+  otherwise #healthy
 ```
 
 ### Predicate Sugar
@@ -325,7 +328,7 @@ value is empty
 value has value
 ```
 
-### Prefix Helpers
+### Prefix Intrinsics and Selectors
 
 ```ges
 items[:count]
@@ -349,20 +352,20 @@ round half down value
 rad degrees
 deg radians
 wrap degree value
-:clamp value between 0 and 100
-:min of a and b and c
-:max of a and b and c
+clamp value between 0 and 100
+min of a and b and c
+max of a and b and c
 ```
 
 `x[:count]` counts text and tag characters by raw text, so `#active[:count]`
 is `6`.
 
 `x[:keys]`, `x[:values]`, and `x[:entries]` are defined only for maps and
-map-backed custom type values. `x[:keys]` returns a list of tag keys, `x[:values]`
-returns the corresponding values, and `:entries` returns maps with `key` and
-`value` fields. All three projections use stable ordinal key order. If the
-operand is `nothing`, the result is `nothing`; if the operand is any other
-non-map value, the result is also `nothing`.
+map-backed custom type values. `x[:keys]` returns a list of tag keys,
+`x[:values]` returns the corresponding values, and `x[:entries]` returns maps
+with `key` and `value` fields. All three projections use stable ordinal key
+order. If the operand is `nothing`, the result is `nothing`; if the operand is
+any other non-map value, the result is also `nothing`.
 
 Square and cube roots lower to powers with exponents `0.5` and `1/3`. `exp`
 is the natural exponential counterpart of `ln`.
@@ -413,8 +416,8 @@ defined representation for it. A cast that would create a syntactically invalid
 value writes `nothing` instead of manufacturing a malformed value.
 
 Tag casts are strict. A runtime tag name is valid only when it matches the same
-shape as source tag names: the first character must be a lowercase letter and
-all following characters must be letters. Empty tags, numeric text, unit text,
+shape as `#` tag names: the first character must be a lowercase letter and all
+following characters must be letters. Empty tags, numeric text, unit text,
 punctuation, whitespace, brackets, colons inside the value, and underscores are
 invalid tag names. `nothing as :tag` is `nothing`; numeric values and quantities
 cast to `:tag` as `nothing`; formatted vector, point, list, map, dice, and range
@@ -432,7 +435,7 @@ Vector and point casts are structural conversions. A vector can be cast to a
 point by copying `x`, `y`, `z`, and the optional unit; a point can be cast to a
 vector the same way. This is a type reshape, not vector/point arithmetic.
 
-Custom record types are also type tags:
+Custom record types are type references using the same `:name` syntax:
 
 ```ges
 record :unit as {
@@ -476,7 +479,7 @@ numeric exponent of `0` or `1`; booleans participate in the normal lenient
 numeric coercion, so `10m ^ true` is `10m` and `10m ^ false` is unitless `1`.
 Other quantity powers produce numeric `NaN` unless an operand is `nothing`.
 
-Numeric checks are keyword constructs, not `:` type tags:
+Numeric checks are keyword constructs, not `:` type references:
 
 ```ges
 value is numeric
@@ -484,8 +487,8 @@ value is integer
 value is fractional
 ```
 
-`:integer` and `:float` are not built-in type tags. In expression positions they
-are ordinary tags.
+`:integer` and `:float` are not source-level type references. Use `is integer`
+or `is fractional` for checks, and `as :number` for explicit numeric casts.
 
 Numeric checks and implicit numeric views use the following rules. A runtime
 value has an `AsNumeric` value exactly when `is numeric` is true. The explicit
@@ -562,10 +565,11 @@ let a be 100 as :quantity(m)
 let b be 90 as :quantity(°)
 ```
 
-`:` `percentage` is not a quantity unit; it is a separate value kind. The names
-`:meter`, `:second`, `:degree`, and `:seconds` are ordinary free tags, not
-quantity type aliases. Use `:quantity(m)`, `:quantity(s)`, or
-`:quantity(°)`/`:quantity(degree)` for casts and checks.
+`:percentage` is not a quantity unit; it is a separate value kind. The names
+`meter`, `second`, `degree`, and `seconds` are not quantity type aliases, and
+the old `:meter`/`:degree` style is not a tag literal. Use
+`:quantity(m)`, `:quantity(s)`, or `:quantity(°)`/`:quantity(degree)` for casts
+and checks; use `#meter` or `#degree` only when an ordinary tag value is meant.
 
 ### Percentages
 
@@ -596,7 +600,7 @@ Text is quoted. Tags are lowercase symbolic values:
 
 ```ges
 let name be 'Scout'
-let state be :active
+let state be #active
 ```
 
 Tags are not empty. Tags are text-like symbolic values: they use the same raw
@@ -622,11 +626,13 @@ points; points are not scalar-multiplied or scalar-divided.
 
 ### Range
 
-Ranges are finite integer ranges:
+Ranges are finite numeric ranges. Bounds and step values can be integer or
+floating-point numeric values:
 
 ```ges
 let r be from 1 to 10
 let stepped be from 10 to 0 step -2
+let fractional be from 1.5 to 3.5 step 0.5
 ```
 
 ### Series
@@ -673,7 +679,7 @@ let callback be Done(value)
 
 `nothing` is the absence value. NaN is not a DSL value or special tag. If an
 internal numeric operation produces NaN, the script-visible value behaves as
-`nothing`. The spelling `:nan` is an ordinary tag with no numeric meaning.
+`nothing`. The spelling `#nan` is an ordinary tag with no numeric meaning.
 
 `empty` is true for:
 
@@ -722,13 +728,16 @@ let unit be [name: 'Ada', hp: 10]
 let flags be [enemy:, visible:, armed:]
 ```
 
-Lookups use member syntax or bracket syntax. Literal text and tag selectors are
-member lookups; dynamic selectors are resolved at runtime.
+Lookups use member syntax or bracket syntax. Literal text and tag keys are
+member lookups; dynamic selectors are resolved at runtime. `x[:name]` is the
+selector shorthand for the member/key named `name`, while `x[#name]` uses the
+tag value `#name` as a dynamic key.
 
 ```ges
 unit.name
 unit['name']
 unit[:name]
+unit[#name]
 ```
 
 Dynamic map lookup with a non-text and non-tag key returns `nothing`.
@@ -742,12 +751,12 @@ indexes are 1-based.
 ```ges
 let firstItem be items[1]
 let hp be unit[:hp]
-let hasEnemyFlag be :enemy in flags
+let hasEnemyFlag be #enemy in flags
 let containsUnit be unit in values of units
 ```
 
 `x in y` checks membership in `y`. Text and tags use ordinal substring
-matching over their raw text, without a leading `:` for tags. Lists and dice
+matching over their raw text, without the leading `#` for tags. Lists and dice
 check whether one item equals `x`. Ranges check whether numeric `x` is one of
 the range terms. Maps and map-like values check whether text/tag `x` is a
 visible key; non-text keys are false. Vector and point values check their
@@ -769,9 +778,11 @@ sequence, the result is `false`. `nothing starts with y` and
 `nothing ends with y` produce `nothing`; other unsupported shapes return
 `false`.
 
-### Streamable Selectors
+### Iterator-Backed Selectors
 
-Selectors operate on lists, ranges, dice, and other enumerable values.
+Selectors operate on lists, ranges, dice, maps, custom map-backed values, text,
+tags, and other iterable values. Selector chains lower to explicit iterator
+loops when no direct fast path exists.
 
 ```ges
 units[:filter unit where unit.hp > 0]
@@ -815,7 +826,8 @@ units[:first unit where unit.hp > 0]
 ```
 
 Without a filter, `:first`, `:last`, and `:single` are direct terminals for
-lists, dice, ranges, maps, custom map-backed values, text, tags, and streams.
+lists, dice, ranges, maps, custom map-backed values, text, tags, and iterator
+chains.
 Empty, unsupported, or invalid sources yield `nothing`; `:single` also yields
 `nothing` when more than one element is present.
 
@@ -831,29 +843,29 @@ units[:group by unit => unit.team]
 ```
 
 `:sort ascending` and `:sort descending` are defined for lists, dice, ranges,
-and streams. Lists and streams materialize sorted lists. Dice also materialize a
-list so the requested order is preserved instead of being normalized back into
-dice order. Ranges stay ranges when the requested direction can be represented
-by swapping the range bounds and negating the step. Maps are already
-key-canonical and are not sort targets; sorting a map yields `nothing`.
+and iterator chains. Lists and iterator chains materialize sorted lists. Dice
+also materialize a list so the requested order is preserved instead of being
+normalized back into dice order. Ranges stay ranges when the requested direction
+can be represented by swapping the range bounds and negating the step. Maps are
+already key-canonical and are not sort targets; sorting a map yields `nothing`.
 
-`:order by` is defined for lists and streams only. It orders the original items
-by the projected key and materializes a list. Dice, ranges, maps, scalars, and
-`nothing` yield `nothing` for `:order by` because projecting a sort key over
-those direct values is not a meaningful collection operation.
+`:order by` is defined for lists and iterator chains only. It orders the
+original items by the projected key and materializes a list. Dice, ranges, maps,
+scalars, and `nothing` yield `nothing` for `:order by` because projecting a sort
+key over those direct values is not a meaningful collection operation.
 
-`:distinct` is defined for lists, dice, and streams. Lists keep their first
-occurrence order, dice keep their dice result type, and streams materialize a
-list. `:distinct by` is defined only for lists and streams because the
-projection operates on structured items. Dice and other non-list values yield
-`nothing` for `:distinct by`.
+`:distinct` is defined for lists, dice, and iterator chains. Lists keep their
+first occurrence order, dice keep their dice result type, and iterator chains
+materialize a list. `:distinct by` is defined only for lists and iterator
+chains because the projection operates on structured items. Dice and other
+non-list values yield `nothing` for `:distinct by`.
 
-`:group by` is defined for lists, maps, and streams. Lists and streams group
-their source items by the projected key and return a map from the projected key
-text to a list of matching source items. Maps group their visible values in
-stable key order. Direct dice, ranges, text, tags, scalars, and `nothing` yield
-`nothing`; dice and ranges are scalar-like direct values for grouping and must
-be streamed explicitly when per-element grouping is wanted.
+`:group by` is defined for lists, maps, and iterator chains. Lists and iterator
+chains group their source items by the projected key and return a map from the
+projected key text to a list of matching source items. Maps group their visible
+values in stable key order. Direct dice, ranges, text, tags, scalars, and
+`nothing` yield `nothing`; dice and ranges are scalar-like direct values for
+grouping and must be iterated explicitly when per-element grouping is wanted.
 
 ### Map Selector
 
@@ -874,8 +886,8 @@ items[:contains all required]
 
 text starts with 'A'
 text ends with 'Z'
-:active starts with 'act'
-'active' ends with :ive
+#active starts with 'act'
+'active' ends with #ive
 ```
 
 ### Slice, Shuffle, Draw, and Choose
@@ -901,13 +913,13 @@ choice evaluates the `weighted by` expression per candidate and chooses without
 replacement from positive finite weights. `:choose 1 weighted by ...` returns
 one item or `nothing`; `:choose n weighted by ...` returns a list.
 
-`:reverse` is defined for lists, dice, ranges, and streams. Lists reverse into
-lists. Dice reverse into lists so the requested order is preserved instead of
-being normalized back into dice order. Ranges reverse into ranges by swapping
-the effective bounds and negating the step. Streams materialize reversed lists.
-Maps, scalars, and `nothing` yield `nothing`.
+`:reverse` is defined for lists, dice, ranges, and iterator chains. Lists
+reverse into lists. Dice reverse into lists so the requested order is preserved
+instead of being normalized back into dice order. Ranges reverse into ranges by
+swapping the effective bounds and negating the step. Iterator chains materialize
+reversed lists. Maps, scalars, and `nothing` yield `nothing`.
 
-`:shuffle` is defined for lists, dice, ranges, and streams and always
+`:shuffle` is defined for lists, dice, ranges, and iterator chains and always
 materializes a list. This allows game-oriented cases such as shuffling a card
 range with `from 1 to 32[:shuffle]`. Maps, scalars, and `nothing` yield
 `nothing`.
@@ -959,7 +971,7 @@ Collection-level binary operators:
 ```ges
 a | b
 a & b
-a :zip b
+a zip b
 ```
 
 Collection addition uses `+` for single-value insertion. `list + any` appends
@@ -1000,24 +1012,28 @@ containing any other value produces `nothing`.
 
 `+` concatenates text when either operand is text. The non-text operand is
 formatted with the same text representation used by `as :text`, so
-`'100' + '200'` is `'100200'` and `'hp: ' + 10` is `'hp: 10'`. `:combine`,
-`:merge`, `:except`, and `:intersect` are not reserved collection operators; in
-expression position they are ordinary tags.
+`'100' + '200'` is `'100200'` and `'hp: ' + 10` is `'hp: 10'`. `#combine`,
+`#merge`, `#except`, and `#intersect` are ordinary tag values. The old
+`:combine`, `:merge`, `:except`, and `:intersect` collection operators are not
+reserved language forms.
 
 ## Randomness, Dice, and Series
 
-Random values are drawn from the runtime random generator:
+`random` is a built-in random expression form. Random values are drawn from the
+runtime random generator:
 
 ```ges
-let roll be :random from 1 to 6
+let dieRoll be random from 1 to 6
 let chance be chance 25%
 ```
 
-Dice rolls use `:dice NdM` and produce sorted dice values:
+Dice rolls use `roll dice NdM` and produce sorted dice values. This phrase
+consumes random. `:dice(...)` remains the deterministic dice constructor and
+`:dice` remains the dice type reference:
 
 ```ges
-let roll be :dice 5d6
-let hasFullHouse be roll[:has full house]
+let diceRoll be roll dice 5d6
+let hasFullHouse be diceRoll[:has full house]
 ```
 
 Series are deterministic and numeric. Use selectors to read or derive finite
@@ -1094,8 +1110,8 @@ Core host concepts:
 - `GameEventScriptBinary`: portable binary-oriented representation.
 - `GameEventScriptHost`: dispatch host with local queue and publish hook.
 - `GameEventScriptSession`: mutable runtime state created from a loaded host;
-  it owns the active queue, context, random stream, runtime budget and active
-  fibers.
+  it owns the active queue, context, random generator, runtime budget and active
+  invocation state.
 - `GameEventScriptRuntimeLimits`: execution, loop, range, dice, and queue limits.
 - `IGameEventScriptRuntimeObserver`: optional host observer for message output,
   dispatch lifecycle, and runtime-limit events.

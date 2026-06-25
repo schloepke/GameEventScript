@@ -20,7 +20,7 @@
     {
       "kind": "bytecode",
       "name": "random take lowers integer and float variants separately",
-      "script": "module RandomTakes\n\non Start {\n  let integerValue be :random from 1 to 6\n  let floatValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)\n}\n",
+      "script": "module RandomTakes\n\non Start {\n  let integerValue be random from 1 to 6\n  let floatValue be random from 0.0 to 1.0\n  let mixedValue be random from 1 to 2.0\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)\n}\n",
       "expectedOpcodes": {
         "counts": {
           "RandomTake": 1,
@@ -154,7 +154,7 @@
     {
       "kind": "bytecode",
       "name": "loop iterators and constant random scopes lower to direct opcodes",
-      "script": "module SideTables\n\non Start {\n  for item from 1 to 3 emit Tick(value: item)\n  :random with -7 {\n    emit Done(value: :random from 1 to 6)\n  }\n}\n",
+      "script": "module SideTables\n\non Start {\n  for item from 1 to 3 emit Tick(value: item)\n  random with -7 {\n    emit Done(value: random from 1 to 6)\n  }\n}\n",
       "expectedOpcodes": {
         "contains": [
           "CreateRangeIteratorShort",
@@ -185,7 +185,7 @@
     {
       "kind": "bytecode",
       "name": "explicit integer seed lowers to dynamic random push",
-      "script": "module RandomScopes\n\non Start(seed) {\n  let value be :random with (seed as :number) 1\n  emit Done(value: value)\n}\n",
+      "script": "module RandomScopes\n\non Start(seed) {\n  let value be random with (seed as :number) 1\n  emit Done(value: value)\n}\n",
       "expectedOpcodes": {
         "contains": [
           "RandomPush",

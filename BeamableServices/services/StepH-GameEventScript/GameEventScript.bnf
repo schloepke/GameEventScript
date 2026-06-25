@@ -40,7 +40,7 @@ TagPublishClause ::= "with" Expression { "," Expression }
 LetStatement ::= "let" Identifier [ "as" TypeReference ] "be" Expression
 IfStatement ::= "if" Expression StatementBody [ "else" StatementBody ]
 ForStatement ::= "for" Identifier ( "in" Expression | RangeIterationSource ) StatementBody
-SeededRandomStatement ::= ":random" "with" Expression StatementBody
+SeededRandomStatement ::= "random" "with" Expression StatementBody
 ExpressionStatement ::= Expression
 
 StatementBody ::= Statement | "{" Separators [ Statement { StatementSeparator Statement } ] Separators "}"
@@ -53,7 +53,7 @@ ImplicationArrow ::= "->" | "→" | "⇒"
 DefaultExpression ::= CollectionUnionExpression { ":default" CollectionUnionExpression }
 CollectionUnionExpression ::= CollectionIntersectExpression { "|" CollectionIntersectExpression }
 CollectionIntersectExpression ::= CollectionZipExpression { "&" CollectionZipExpression }
-CollectionZipExpression ::= OrExpression { ":zip" OrExpression }
+CollectionZipExpression ::= OrExpression { "zip" OrExpression }
 
 OrExpression ::= XorExpression { ( "∨" | "or" ) XorExpression }
 XorExpression ::= AndExpression { ( "xor" | "⊕" ) AndExpression }
@@ -98,12 +98,11 @@ NotOperator ::= "!" | "~" | "¬" | "not"
 PowerExpression ::= PowerBaseExpression [ ( "^" UnaryExpression ) | SuperscriptPower ]
 PowerBaseExpression ::= ExtensionCallExpression
                       | ClampExpression
-                      | VariadicTaggedExpression
+                      | VariadicExpression
                       | PostfixExpression
 
-UnaryTag ::= ":len" | ":chance" | ":keys" | ":values" | ":entries" | ":abs" | ":ln" | ":sqrt" | "√" | ":cbrt" | "∛"
-VariadicTaggedExpression ::= ( ":min" | ":max" ) "of" Expression { "and" Expression }
-ClampExpression ::= ":clamp" UnaryExpression "between" Expression "and" Expression
+VariadicExpression ::= ( "min" | "max" ) "of" Expression { "and" Expression }
+ClampExpression ::= "clamp" UnaryExpression "between" Expression "and" Expression
 
 PostfixExpression ::= PrimaryExpression { PostfixSuffix }
 PostfixSuffix ::= "." Identifier | "[" CollectionSelector "]"
@@ -139,8 +138,9 @@ UngroupedLabeledArgumentList ::= LabeledArgument { LabeledArgument }
 OfArgumentList ::= "of" Expression { "and" Expression }
 ArgumentLabel ::= Identifier | "to"
 
-Literal ::= Number | Percentage | UnitNumber | TextLiteral | "true" | "false" | "nothing"
-TagLiteral ::= ":" TagName | ":infinity" | ":negativeinfinity" | ":pi" | ":e" | ":euler" | ":tau" | ":phi" | "∞" | "∏" | "ℇ" | "τ" | "φ"
+Literal ::= Number | Percentage | UnitNumber | TextLiteral | TagLiteral | "true" | "false" | "nothing" | MathConstant
+TagLiteral ::= "#" TagName
+MathConstant ::= "infinity" | "pi" | "e" | "tau" | "∞" | "∏" | "ℇ" | "τ"
 
 BracketLiteral ::= ListLiteral | MapLiteral
 ListLiteral ::= "[" [ ExpressionList ] "]"
@@ -153,11 +153,11 @@ OfListLiteral ::= "of" Expression { "and" Expression }
 GeneratedListExpression ::= ":list" "[" GeneratedCollectionSelector "]"
 GeneratedCollectionSelector ::= ":select" Identifier ( RangeIterationSource | "in" Expression ) [ "where" Expression ] ProjectionArrow Expression
 
-RandomExpression ::= ":random" [ "from" ] AdditiveExpression "to" AdditiveExpression
-SeededRandomExpression ::= ":random" "with" Expression Expression
+RandomExpression ::= "random" [ "from" ] AdditiveExpression "to" AdditiveExpression
+SeededRandomExpression ::= "random" "with" Expression Expression
 RangeExpression ::= RangeIterationSource
 RangeIterationSource ::= "from" Expression "to" Expression [ "step" Expression ]
-DiceExpression ::= ":dice" Number DiceSeparator Number
+DiceExpression ::= "roll" "dice" Number DiceSeparator Number
 DiceSeparator ::= "d"
 
 CollectionSelector ::= StructuredCollectionSelector | Expression

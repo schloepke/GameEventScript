@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "random and dice outcomes are deterministic with sequence",
-      "script": "on Roll {\n  let a be :random 1 to 6\n  let b be :dice 4d6[:take highest 2]\n  emit Result(randomValue: a, diceValue: b)\n}",
+      "script": "on Roll {\n  let a be random 1 to 6\n  let b be roll dice 4d6[:take highest 2]\n  emit Result(randomValue: a, diceValue: b)\n}",
       "randomSequence": [
         "4",
         "1",
@@ -43,7 +43,7 @@
     {
       "kind": "scriptApi",
       "name": "sequential steps share random sequence",
-      "script": "on Roll {\n  let value be :dice 2d6\n  emit Rolled(value: value)\n}",
+      "script": "on Roll {\n  let value be roll dice 2d6\n  emit Rolled(value: value)\n}",
       "randomSequence": [
         "1",
         "6",
@@ -191,7 +191,7 @@
     {
       "kind": "scriptApi",
       "name": "shuffle draw choose and seeded random scopes are deterministic",
-      "script": "on Start(enemies, seed as :number) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  let seededSecond be :random with seed :list[:select item from 1 to 4 => :random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
+      "script": "on Start(enemies, seed as :number) {\n  let cards be [1, 2, 3, 4, 5][:shuffle]\n  let hand be cards[:draw 3]\n  let restCards be cards[:drop first 3]\n  let target be enemies[:choose 1 enemy where enemy.alive]\n  let randomTargets be enemies[:choose 2 at random enemy where enemy.alive]\n  let seededFirst be random with seed :list[:select item from 1 to 4 => random from 1 to 20]\n  let seededSecond be random with seed :list[:select item from 1 to 4 => random from 1 to 20]\n  emit Done(hand_1: hand[1], hand_2: hand[2], hand_3: hand[3], rest_1: restCards[1], rest_2: restCards[2], target: target.name, random_1: randomTargets[1].name, random_2: randomTargets[2].name, seededSame: seededFirst = seededSecond)\n}",
       "randomSequence": [
         "1",
         "0",
@@ -317,7 +317,7 @@
     {
       "kind": "scriptApi",
       "name": "dynamic invalid seeded random seed still restores outer random scope",
-      "script": "on Start {\n  let bad as :number be nothing\n  :random with bad {\n    let inner be :random from 1 to 6\n  }\n  emit Done(valuePresent: (:random from 1 to 6) has value)\n}",
+      "script": "on Start {\n  let bad as :number be nothing\n  random with bad {\n    let inner be random from 1 to 6\n  }\n  emit Done(valuePresent: (random from 1 to 6) has value)\n}",
       "steps": [
         {
           "input": {
@@ -341,17 +341,17 @@
     {
       "kind": "scriptApi",
       "name": "reversed random bounds and invalid collection draws stay lenient",
-      "script": "on Roll(min, max) {\n  let value be :random from min to max\n  let none as :number be nothing\n  let nothingValue be :random from none to max\n  let invalidValue be :random from 'hello' to max\n  let tags be 123\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, nothingValue: nothingValue, invalidValue: invalidValue, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
+      "script": "on Roll(low, high) {\n  let value be random from low to high\n  let none as :number be nothing\n  let nothingValue be random from none to high\n  let invalidValue be random from 'hello' to high\n  let tags be 123\n  let shuffledTags be tags[:shuffle]\n  let drawnTag be tags[:draw 1]\n  emit Done(valuePresent: value has value, nothingValue: nothingValue, invalidValue: invalidValue, shuffledTags: shuffledTags, drawnTag: drawnTag)\n}",
       "steps": [
         {
           "input": {
             "name": "Roll",
             "args": {
-              "min": {
+              "low": {
                 "type": ":integer",
                 "value": "9"
               },
-              "max": {
+              "high": {
                 "type": ":integer",
                 "value": "2"
               }
@@ -387,7 +387,7 @@
     {
       "kind": "scriptApi",
       "name": "random can produce integer double and mixed values",
-      "script": "on Roll {\n  let integerValue be :random from 1 to 6\n  let floatValue be :random from 0.0 to 1.0\n  let mixedValue be :random from 1 to 2.0\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)\n}",
+      "script": "on Roll {\n  let integerValue be random from 1 to 6\n  let floatValue be random from 0.0 to 1.0\n  let mixedValue be random from 1 to 2.0\n  emit Done(integerValue: integerValue, floatValue: floatValue, mixedValue: mixedValue)\n}",
       "randomSequence": [
         "4",
         "0.25",
@@ -424,7 +424,7 @@
     {
       "kind": "scriptApi",
       "name": "random integer bounds preserve int64 values",
-      "script": "on Roll {\n  let maxValue be :random from 9223372036854775807 to 9223372036854775807\n  let negativeValue be :random from 0 - 9223372036854775807 to 0 - 9223372036854775807\n  emit Done(maxValue: maxValue, negativeValue: negativeValue)\n}",
+      "script": "on Roll {\n  let maxValue be random from 9223372036854775807 to 9223372036854775807\n  let negativeValue be random from 0 - 9223372036854775807 to 0 - 9223372036854775807\n  emit Done(maxValue: maxValue, negativeValue: negativeValue)\n}",
       "steps": [
         {
           "input": {
@@ -452,7 +452,7 @@
     {
       "kind": "scriptApi",
       "name": "random upper bound keeps arithmetic together",
-      "script": "on Mixed(max) {\n  if :random 1 to max * 2 > 3 {\n    emit Passed\n  }\n}",
+      "script": "on Mixed(high) {\n  if random 1 to high * 2 > 3 {\n    emit Passed\n  }\n}",
       "randomSequence": [
         "5"
       ],
@@ -461,7 +461,7 @@
           "input": {
             "name": "Mixed",
             "args": {
-              "max": {
+              "high": {
                 "type": ":integer",
                 "value": "3"
               }
@@ -842,7 +842,7 @@
     {
       "kind": "scriptApi",
       "name": "dice limit observer event",
-      "script": "on Start {\n  let roll be :dice 6d6\n  emit Done(count: roll[:count])\n}",
+      "script": "on Start {\n  let diceRoll be roll dice 6d6\n  emit Done(count: diceRoll[:count])\n}",
       "runtimeLimits": {
         "maxDiceCount": 4
       },
@@ -874,7 +874,7 @@
     {
       "kind": "scriptApi",
       "name": "dice slicing and sorting semantics",
-      "script": "on Roll {\n  let baseDice be :dice 4d6\n  let kept be :dice 4d6[:take highest 2]\n  let dropped be :dice 4d6[:drop lowest 1]\n  let resorted be baseDice[:sort ascending]\n  let emptyDrop be :dice 2d6[:drop lowest 3]\n  let takeTooMany be :dice 4d6[:take highest 5]\n  let diceTotal be :dice 2d6 + 1\n  emit Done(baseDice: baseDice, baseLen: baseDice[:count], base_1: baseDice[1], base_2: baseDice[2], base_3: baseDice[3], base_4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: emptyDrop[:count], takeTooManyLen: takeTooMany[:count], diceTotal: diceTotal)\n}",
+      "script": "on Roll {\n  let baseDice be roll dice 4d6\n  let kept be roll dice 4d6[:take highest 2]\n  let dropped be roll dice 4d6[:drop lowest 1]\n  let resorted be baseDice[:sort ascending]\n  let emptyDrop be roll dice 2d6[:drop lowest 3]\n  let takeTooMany be roll dice 4d6[:take highest 5]\n  let diceTotal be roll dice 2d6 + 1\n  emit Done(baseDice: baseDice, baseLen: baseDice[:count], base_1: baseDice[1], base_2: baseDice[2], base_3: baseDice[3], base_4: baseDice[4], kept: kept, dropped: dropped, resorted: resorted, emptyDropLen: emptyDrop[:count], takeTooManyLen: takeTooMany[:count], diceTotal: diceTotal)\n}",
       "randomSequence": [
         "2",
         "6",

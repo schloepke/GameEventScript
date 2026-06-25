@@ -460,7 +460,7 @@ public sealed class GameEventScriptHostSteppingTests
 
                 on Start(values, seed as :number) {
                   let total be values[:filter value where value is high][:select value => boost(value)][:sum value => value]
-                  let seeded be :random with seed :list[:select item from 1 to 3 => :random from 1 to 6]
+                  let seeded be random with seed :list[:select item from 1 to 3 => random from 1 to 6]
                   let label be 'high' when total > 6, otherwise 'low'
                   emit Done(total: total, first: seeded[1], label: label)
                 }

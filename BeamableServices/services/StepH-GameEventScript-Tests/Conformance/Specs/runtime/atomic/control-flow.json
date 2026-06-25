@@ -333,7 +333,7 @@
     {
       "kind": "scriptApi",
       "name": "seeded random statement restores outer flow",
-      "script": "module AtomicControlSeededRandom\non Start(seed as :number) {\n  :random with seed {\n    let inner be :random from 1 to 6\n    emit Roll(scope: 'inner', value: inner)\n  }\n\n  emit Done(after: true)\n}",
+      "script": "module AtomicControlSeededRandom\non Start(seed as :number) {\n  random with seed {\n    let inner be random from 1 to 6\n    emit Roll(scope: 'inner', value: inner)\n  }\n\n  emit Done(after: true)\n}",
       "steps": [
         {
           "input": {

@@ -5,7 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "extensions support unary variadic labeled and predicate calls",
-      "script": "on Start(value, heading, target) {\n  let values be of 10 and 20 and 30\n  let floored be floor value\n  let flooredCall be floor(value)\n  let floorPredicate be nothing\n  let maxed be :max of 2 and 8 and 5\n  let turnA be :nav.shortestTurn from: heading to: target\n  let turnB be :nav.shortestTurn(from: heading, to: target)\n  let northA be heading is :nav.isNorth\n  let northB be :nav.isNorth heading\n  let vectorTotal be :test.vectorSum :vector(1m, 2m, 3m)\n  let asList as :list be of 10 and 20 and 30\n  emit Done(floored: floored, flooredCall: flooredCall, floorPredicate: floorPredicate, maxed: maxed, turnA: turnA, turnB: turnB, northA: northA, northB: northB, vectorTotal: vectorTotal, valuesIsList: values is :list, valuesLen: values[:count], list_2: asList[2])\n}",
+      "script": "on Start(value, heading, target) {\n  let values be of 10 and 20 and 30\n  let floored be floor value\n  let flooredCall be floor(value)\n  let floorPredicate be nothing\n  let maxed be max of 2 and 8 and 5\n  let turnA be :nav.shortestTurn from: heading to: target\n  let turnB be :nav.shortestTurn(from: heading, to: target)\n  let northA be heading is :nav.isNorth\n  let northB be :nav.isNorth heading\n  let vectorTotal be :test.vectorSum :vector(1m, 2m, 3m)\n  let asList as :list be of 10 and 20 and 30\n  emit Done(floored: floored, flooredCall: flooredCall, floorPredicate: floorPredicate, maxed: maxed, turnA: turnA, turnB: turnB, northA: northA, northB: northB, vectorTotal: vectorTotal, valuesIsList: values is :list, valuesLen: values[:count], list_2: asList[2])\n}",
       "steps": [
         {
           "input": {

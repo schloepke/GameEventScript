@@ -66,6 +66,10 @@
           "name": "keyword.operator.word.gameeventscript"
         },
         {
+          "match": "\\b(?:random|clamp|min|max|zip)\\b",
+          "name": "keyword.operator.word.gameeventscript"
+        },
+        {
           "match": "\\b(?:emit|publish)\\b",
           "name": "keyword.control.emit.gameeventscript"
         }
@@ -462,6 +466,46 @@
     },
     "key-phrases": {
       "patterns": [
+        {
+          "match": "\\b(roll)([ \\t]+)(dice)\\b",
+          "name": "meta.keyword-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.word.gameeventscript"
+            },
+            "3": {
+              "name": "keyword.operator.word.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(random)([ \\t]+)(with|from)\\b",
+          "name": "meta.keyword-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.word.gameeventscript"
+            },
+            "3": {
+              "name": "keyword.operator.word.gameeventscript"
+            }
+          }
+        },
+        {
+          "match": "\\b(clamp)(?=\\s)",
+          "name": "keyword.operator.word.gameeventscript"
+        },
+        {
+          "match": "\\b(min|max)([ \\t]+)(of)\\b",
+          "name": "meta.keyword-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.word.gameeventscript"
+            },
+            "3": {
+              "name": "keyword.operator.word.gameeventscript"
+            }
+          }
+        },
         {
           "match": "\\b(has)([ \\t]+)(value)\\b",
           "name": "meta.keyword-phrase.gameeventscript",

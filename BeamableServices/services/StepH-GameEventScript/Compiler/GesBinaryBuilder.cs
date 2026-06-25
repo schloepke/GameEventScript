@@ -188,7 +188,7 @@ internal sealed partial class GesBinaryBuilder
         var optimizedItems = _optimize ? RunDefaultOptimizationPasses(planItems) : planItems.ToArray();
         var labelAddresses = ResolveLabelAddresses(optimizedItems);
         var registerMap = AllocateRegisters(optimizedItems);
-        var items = PatchRoutineSlotLocals(optimizedItems, registerMap);
+        var items = PatchRoutineRegisterLocals(optimizedItems, registerMap);
         var builder = new BinaryMaterializer()
             .WithVersion(_version)
             .WithModuleName(_moduleName)
@@ -442,7 +442,7 @@ internal sealed partial class GesBinaryBuilder
         switch (operand.Kind)
         {
             case GesOperandKind.Register:
-                instruction.DestinationSlot = ResolveRegister(operand.RegisterRef, registerMap);
+                instruction.DestinationRegister = ResolveRegister(operand.RegisterRef, registerMap);
                 return;
             case GesOperandKind.Bind:
                 instruction.MessageDestination = bindIds[operand.BindRef.Id];
@@ -467,7 +467,7 @@ internal sealed partial class GesBinaryBuilder
             case GesOperandKind.None:
                 return;
             case GesOperandKind.Register:
-                instruction.XSlot = ResolveRegister(operand.RegisterRef, registerMap);
+                instruction.XRegister = ResolveRegister(operand.RegisterRef, registerMap);
                 return;
             case GesOperandKind.Text:
                 instruction.StringIndex = resolveText(operand.TextValue!);
@@ -482,13 +482,13 @@ internal sealed partial class GesBinaryBuilder
                 instruction.BindId = bindIds[operand.BindRef.Id];
                 return;
             case GesOperandKind.Label:
-                instruction.XSlot = labelAddresses[operand.LabelRef.Id];
+                instruction.XRegister = labelAddresses[operand.LabelRef.Id];
                 return;
             case GesOperandKind.Type:
                 instruction.TypeOperand = (ushort)operand.TypeKind;
                 return;
             case GesOperandKind.UShort:
-                instruction.XSlot = operand.UShort;
+                instruction.XRegister = operand.UShort;
                 return;
             case GesOperandKind.Short:
                 instruction.ImmediateX = operand.Short;
@@ -512,7 +512,7 @@ internal sealed partial class GesBinaryBuilder
             case GesOperandKind.None:
                 return;
             case GesOperandKind.Register:
-                instruction.YSlot = ResolveRegister(operand.RegisterRef, registerMap);
+                instruction.YRegister = ResolveRegister(operand.RegisterRef, registerMap);
                 return;
             case GesOperandKind.Label:
                 instruction.TargetAddress = labelAddresses[operand.LabelRef.Id];
@@ -599,8 +599,8 @@ internal sealed partial class GesBinaryBuilder
     }
 
     private static ushort ResolveRegister(GesRegisterRef register, IReadOnlyDictionary<int, ushort> registerMap)
-        => registerMap.TryGetValue(register.Id, out var slot)
-            ? slot
+        => registerMap.TryGetValue(register.Id, out var registerIndex)
+            ? registerIndex
             : throw new InvalidOperationException($"Register '{register.Id}' was not allocated.");
 
     private IReadOnlyDictionary<int, ushort> AllocateRegisters(IReadOnlyList<PlanItem> items)
@@ -615,9 +615,9 @@ internal sealed partial class GesBinaryBuilder
             result[register.Id] = nextPinned++;
         }
 
-        var active = new List<(int RegisterId, int End, ushort Slot)>();
-        var freeSlots = new Stack<ushort>();
-        var nextTempSlot = nextPinned;
+        var active = new List<(int RegisterId, int End, ushort Register)>();
+        var freeRegisters = new Stack<ushort>();
+        var nextTempRegister = nextPinned;
         foreach (var interval in intervals
                      .Where(interval => _registers[interval.RegisterId].IsTemporary)
                      .OrderBy(interval => interval.Start)
@@ -626,13 +626,13 @@ internal sealed partial class GesBinaryBuilder
             for (var index = active.Count - 1; index >= 0; index--)
             {
                 if (active[index].End >= interval.Start) continue;
-                freeSlots.Push(active[index].Slot);
+                freeRegisters.Push(active[index].Register);
                 active.RemoveAt(index);
             }
 
-            var slot = freeSlots.Count > 0 ? freeSlots.Pop() : nextTempSlot++;
-            result[interval.RegisterId] = slot;
-            active.Add((interval.RegisterId, interval.End, slot));
+            var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
+            result[interval.RegisterId] = register;
+            active.Add((interval.RegisterId, interval.End, register));
         }
 
         foreach (var interval in intervals.Where(interval => !_registers[interval.RegisterId].IsTemporary))
@@ -757,9 +757,9 @@ internal sealed partial class GesBinaryBuilder
                 if (!result.ContainsKey(register.Id)) result[register.Id] = nextPinned++;
             }
 
-            var active = new List<(int RegisterId, int End, ushort Slot)>();
-            var freeSlots = new Stack<ushort>();
-            var nextTempSlot = nextPinned;
+            var active = new List<(int RegisterId, int End, ushort Register)>();
+            var freeRegisters = new Stack<ushort>();
+            var nextTempRegister = nextPinned;
             if (intervalsByRoutine.TryGetValue(routine.Id, out var routineIntervals))
             {
                 foreach (var interval in routineIntervals
@@ -770,13 +770,13 @@ internal sealed partial class GesBinaryBuilder
                     for (var index = active.Count - 1; index >= 0; index--)
                     {
                         if (active[index].End >= interval.Start) continue;
-                        freeSlots.Push(active[index].Slot);
+                        freeRegisters.Push(active[index].Register);
                         active.RemoveAt(index);
                     }
 
-                    var slot = freeSlots.Count > 0 ? freeSlots.Pop() : nextTempSlot++;
-                    result[interval.RegisterId] = slot;
-                    active.Add((interval.RegisterId, interval.End, slot));
+                    var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
+                    result[interval.RegisterId] = register;
+                    active.Add((interval.RegisterId, interval.End, register));
                 }
             }
         }
@@ -789,9 +789,9 @@ internal sealed partial class GesBinaryBuilder
                 result[register.Id] = nextPinned++;
             }
 
-            var active = new List<(int RegisterId, int End, ushort Slot)>();
-            var freeSlots = new Stack<ushort>();
-            var nextTempSlot = nextPinned;
+            var active = new List<(int RegisterId, int End, ushort Register)>();
+            var freeRegisters = new Stack<ushort>();
+            var nextTempRegister = nextPinned;
             foreach (var interval in globalIntervals
                          .Where(interval => _registers[interval.RegisterId].IsTemporary)
                          .OrderBy(interval => interval.Start)
@@ -800,13 +800,13 @@ internal sealed partial class GesBinaryBuilder
                 for (var index = active.Count - 1; index >= 0; index--)
                 {
                     if (active[index].End >= interval.Start) continue;
-                    freeSlots.Push(active[index].Slot);
+                    freeRegisters.Push(active[index].Register);
                     active.RemoveAt(index);
                 }
 
-                var slot = freeSlots.Count > 0 ? freeSlots.Pop() : nextTempSlot++;
-                result[interval.RegisterId] = slot;
-                active.Add((interval.RegisterId, interval.End, slot));
+                var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
+                result[interval.RegisterId] = register;
+                active.Add((interval.RegisterId, interval.End, register));
             }
         }
 

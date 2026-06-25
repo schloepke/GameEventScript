@@ -30,8 +30,8 @@ internal static class GameEventScriptVmStateDumper
 
         builder
             .Append("CodeSegmentSize: ").AppendLine(state.CodeSegmentSize.ToString(CultureInfo.InvariantCulture))
-            .Append("MaxRegisterSize: ").AppendLine(state.MaxRegisterSlots.ToString(CultureInfo.InvariantCulture))
-            .Append("CurrentRegisterArraySize: ").AppendLine(state.RegisterSlots.Length.ToString(CultureInfo.InvariantCulture))
+            .Append("MaxRegisterSize: ").AppendLine(state.MaxRegisterCount.ToString(CultureInfo.InvariantCulture))
+            .Append("CurrentRegisterArraySize: ").AppendLine(state.RegisterValues.Length.ToString(CultureInfo.InvariantCulture))
             .Append("CurrentRandomStackSize: ").AppendLine(state.RandomGeneratorsPointer.ToString(CultureInfo.InvariantCulture))
             .AppendLine();
 
@@ -177,7 +177,7 @@ internal static class GameEventScriptVmStateDumper
         }
 
         var end = start + length;
-        if (start < 0 || end > state.RegisterSlots.Length)
+        if (start < 0 || end > state.RegisterValues.Length)
         {
             builder
                 .Append(indent)
@@ -196,7 +196,7 @@ internal static class GameEventScriptVmStateDumper
                 .Append('r').Append(localIndex.ToString(CultureInfo.InvariantCulture))
                 .Append(" @").Append(absoluteIndex.ToString(CultureInfo.InvariantCulture))
                 .Append(" = ")
-                .AppendLine(FormatRegister(state.RegisterSlots[absoluteIndex]));
+                .AppendLine(FormatRegister(state.RegisterValues[absoluteIndex]));
         }
     }
 

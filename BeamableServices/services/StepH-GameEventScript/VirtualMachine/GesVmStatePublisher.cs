@@ -7,16 +7,16 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmStatePublisher
 {
-    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentRegisters, bool publish, GameEventScriptSession session)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
-        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentSlots.Length != signature.ArgumentNames.Count) return false;
+        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
         var messageName = vmState.FetchStringByPointer(signature.Name);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
-        for (var index = 0; index < argumentSlots.Length; index++)
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
+        for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentSlots[index])));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
         }
 
         try
@@ -29,22 +29,22 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentSlots, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, ReadOnlySpan<ushort> argumentRegisters, ReadOnlySpan<ushort> tagRegisters, bool publish, GameEventScriptSession session)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
-        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentSlots.Length != signature.ArgumentNames.Count) return false;
+        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
         var messageName = vmState.FetchStringByPointer(signature.Name);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
-        for (var index = 0; index < argumentSlots.Length; index++)
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
+        for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentSlots[index])));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
         }
 
-        var tags = new List<string>(tagSlots.Length);
-        for (var index = 0; index < tagSlots.Length; index++)
+        var tags = new List<string>(tagRegisters.Length);
+        for (var index = 0; index < tagRegisters.Length; index++)
         {
-            AddTagsToList(tags, GameEventScriptValueFactory.FromVmValue(in vmState.Register(tagSlots[index])));
+            AddTagsToList(tags, GameEventScriptValueFactory.FromVmValue(in vmState.Register(tagRegisters[index])));
         }
 
         try
@@ -57,21 +57,21 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool GesVmPublishMessageValue(this GesVmState vmState, ref GesVmValue messageSlot, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValue(this GesVmState vmState, ref GesVmValue messageValue, bool publish, GameEventScriptSession session)
     {
-        if (messageSlot.Kind is Message && messageSlot.ObjectValue is GameEventScriptMessage msg)
+        if (messageValue.Kind is Message && messageValue.ObjectValue is GameEventScriptMessage msg)
         {
             return publish ? session.Publish(msg) : session.Emit(msg);
         }
         return false;
     }
-    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, ref GesVmValue messageSlot, ReadOnlySpan<ushort> tagSlots, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, ref GesVmValue messageValue, ReadOnlySpan<ushort> tagRegisters, bool publish, GameEventScriptSession session)
     {
-        if (messageSlot.Kind is not Message || messageSlot.ObjectValue is not GameEventScriptMessage msg) return false;
-        var tags = new List<string>(tagSlots.Length);
-        for (var index = 0; index < tagSlots.Length; index++)
+        if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
+        var tags = new List<string>(tagRegisters.Length);
+        for (var index = 0; index < tagRegisters.Length; index++)
         {
-            AddTagsToList(tags, GameEventScriptValueFactory.FromVmValue(in vmState.Register(tagSlots[index])));
+            AddTagsToList(tags, GameEventScriptValueFactory.FromVmValue(in vmState.Register(tagRegisters[index])));
         }
         return publish ? session.Publish(msg.WithTags(tags)) : session.Emit(msg.WithTags(tags));
     }

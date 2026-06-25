@@ -42,7 +42,7 @@ internal class GesVmState
     internal ushort CallStackPointer { get; private set; }
     internal CallFrame[] CallStack { get; init; }
 
-    internal GesVmValue[] RegisterSlots { get; private set; }
+    internal GesVmValue[] RegisterValues { get; private set; }
     private GesVmValue _overflowRegister;
 
     internal ushort RandomGeneratorsPointer { get; private set; } = 0;
@@ -62,12 +62,12 @@ internal class GesVmState
     internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; private set; }
 
     internal readonly ushort CodeSegmentSize;
-    internal readonly int MaxRegisterSlots;
+    internal readonly int MaxRegisterCount;
     
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
     internal GesVmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
     {
-        MaxRegisterSlots = Math.Max(InitialRegisterCapacity, (int)registerSize);
+        MaxRegisterCount = Math.Max(InitialRegisterCapacity, (int)registerSize);
         EmptyList = [];
         Binary = binary;
         StringPool = BuildStringPool(binary.TextConstantTable);
@@ -75,7 +75,7 @@ internal class GesVmState
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterSlots = new GesVmValue[InitialRegisterCapacity];
+        RegisterValues = new GesVmValue[InitialRegisterCapacity];
         RandomGenerators = new GesVmXoshiroRandom[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = new GesVmXoshiroRandom(0);
@@ -167,13 +167,13 @@ internal class GesVmState
         {
             if (!EnsureRegisterCapacity(1)) return false;
             RegisterFrameLength = 1;
-            RegisterSlots[0].SetMessage(message);
+            RegisterValues[0].SetMessage(message);
         }
         State = Processing;
         ProcessingMessage = message;
         return true;
     }
-    internal ref GesVmValue Register(ushort index) => ref RegisterSlots[index + RegisterFrameStart];
+    internal ref GesVmValue Register(ushort index) => ref RegisterValues[index + RegisterFrameStart];
     internal bool IsRegisterTrue(ushort index)
     {
         ref var value = ref Register(index);
@@ -194,7 +194,7 @@ internal class GesVmState
         ref var value = ref Register(index);
         return value.Kind is GameEventScriptBytecodeTypeKind.Nothing;
     }
-    internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterSlots[index + RegisterFrameStart + RegisterFrameLength];
+    internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterValues[index + RegisterFrameStart + RegisterFrameLength];
     internal void SetNothing(ushort index) => Register(index).SetNothing();
     internal void SetValue(ushort index, in GesVmValue value) => Register(index) = value;
     internal void SetBoolean(ushort index, bool value) => Register(index).SetBoolean(value);
@@ -253,7 +253,7 @@ internal class GesVmState
         RegisterFrameLength = 0;
         StageLength = 0;
         RandomGeneratorsPointer = 0;
-        for (var i = 0; i < RegisterSlots.Length; i++) RegisterSlots[i].SetNothing();
+        for (var i = 0; i < RegisterValues.Length; i++) RegisterValues[i].SetNothing();
         ProcessingMessage = null;
         State = Ready;
     }
@@ -307,11 +307,11 @@ internal class GesVmState
         RegisterFrameStart = callFrame.RegisterFrameStart;
         RegisterFrameLength = callFrame.RegisterFrameLength;
         StageLength = 0;
-        if (callFrame.ResultRegisterIndex.HasValue) RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart].SetNothing();
+        if (callFrame.ResultRegisterIndex.HasValue) RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart].SetNothing();
     }
     internal void ReturnValue(ushort registerIndex)
     {
-        var result = RegisterSlots[registerIndex + RegisterFrameStart];
+        var result = RegisterValues[registerIndex + RegisterFrameStart];
         if (CallStackPointer == 0)
         {
             ClearRegisterRange(RegisterFrameStart, RegisterFrameLength + StageLength);
@@ -329,33 +329,33 @@ internal class GesVmState
         StageLength = 0;
         if (!callFrame.ResultRegisterIndex.HasValue) return;
         if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
-        RegisterSlots[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
+        RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
     internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
     internal string FetchStringByPointer(ushort index) => StringPool[index];
     internal ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
-    internal void ModifyLocalSlots(short slotCount)
+    internal void ModifyLocalRegisters(short registerCount)
     {
-        switch (slotCount)
+        switch (registerCount)
         {
             case > 0:
-                var requiredTotalSlots = RegisterFrameStart + RegisterFrameLength + slotCount;
-                if (EnsureRegisterCapacity(requiredTotalSlots))
+                var requiredTotalRegisters = RegisterFrameStart + RegisterFrameLength + registerCount;
+                if (EnsureRegisterCapacity(requiredTotalRegisters))
                 {
-                    RegisterFrameLength += (ushort)slotCount;
+                    RegisterFrameLength += (ushort)registerCount;
                 }
 
                 break;
             case < 0:
-                var tempSlotCount = -slotCount;
-                if (RegisterFrameLength < tempSlotCount)
+                var tempRegisterCount = -registerCount;
+                if (RegisterFrameLength < tempRegisterCount)
                 {
-                    RaiseError("Inconsistent register frame length. Cannot remove more slots than are available.");
+                    RaiseError("Inconsistent register frame length. Cannot remove more registers than are available.");
                 }
                 else
                 {
-                    ClearRegisterRange(RegisterFrameStart + RegisterFrameLength - tempSlotCount, tempSlotCount);
-                    RegisterFrameLength -= (ushort)tempSlotCount;
+                    ClearRegisterRange(RegisterFrameStart + RegisterFrameLength - tempRegisterCount, tempRegisterCount);
+                    RegisterFrameLength -= (ushort)tempRegisterCount;
                 }
 
                 break;
@@ -366,36 +366,36 @@ internal class GesVmState
         ClearRegisterRange(RegisterFrameStart + RegisterFrameLength, StageLength);
         StageLength = 0;
     }
-    internal void StageRegister(ushort index) => AddStageSlot() = RegisterSlots[index + RegisterFrameStart];
-    internal void StageValue(ref GesVmValue value) => AddStageSlot() = value;
-    internal void StageNothing() => AddStageSlot().SetNothing();
-    internal void StageBoolean(bool value) => AddStageSlot().SetBoolean(value);
-    internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetInteger(value, unit);
-    internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit) => AddStageSlot().SetFloat(value, unit);
-    internal void StagePercentage(double value) => AddStageSlot().SetPercentage(value);
-    internal void StageTextConstant(ushort constantIndex) => AddStageSlot().SetText(FetchStringByPointer(constantIndex));
-    internal void StageTagConstant(ushort constantIndex) => AddStageSlot().SetTag(FetchStringByPointer(constantIndex));
-    private ref GesVmValue AddStageSlot()
+    internal void StageRegister(ushort index) => AddStageRegister() = RegisterValues[index + RegisterFrameStart];
+    internal void StageValue(ref GesVmValue value) => AddStageRegister() = value;
+    internal void StageNothing() => AddStageRegister().SetNothing();
+    internal void StageBoolean(bool value) => AddStageRegister().SetBoolean(value);
+    internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit) => AddStageRegister().SetInteger(value, unit);
+    internal void StageFloat(double value, GameEventScriptBytecodeInstructionUnit unit) => AddStageRegister().SetFloat(value, unit);
+    internal void StagePercentage(double value) => AddStageRegister().SetPercentage(value);
+    internal void StageTextConstant(ushort constantIndex) => AddStageRegister().SetText(FetchStringByPointer(constantIndex));
+    internal void StageTagConstant(ushort constantIndex) => AddStageRegister().SetTag(FetchStringByPointer(constantIndex));
+    private ref GesVmValue AddStageRegister()
     {
         var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;
         if (!EnsureRegisterCapacity(stageRegisterIndex + 1)) return ref _overflowRegister;
         StageLength++;
-        return ref RegisterSlots[stageRegisterIndex];
+        return ref RegisterValues[stageRegisterIndex];
     }
-    private bool EnsureRegisterCapacity(int requiredSlots)
+    private bool EnsureRegisterCapacity(int requiredRegisters)
     {
-        if (requiredSlots <= RegisterSlots.Length) return true;
-        if (requiredSlots > MaxRegisterSlots) return RaiseError($"Register overflow. Required {requiredSlots} slots but maximum is {MaxRegisterSlots}.");
-        var newLength = RegisterSlots.Length;
+        if (requiredRegisters <= RegisterValues.Length) return true;
+        if (requiredRegisters > MaxRegisterCount) return RaiseError($"Register overflow. Required {requiredRegisters} registers but maximum is {MaxRegisterCount}.");
+        var newLength = RegisterValues.Length;
         do
         {
-            newLength = Math.Min(newLength + RegisterCapacityGrowth, MaxRegisterSlots);
-        } while (newLength < requiredSlots);
+            newLength = Math.Min(newLength + RegisterCapacityGrowth, MaxRegisterCount);
+        } while (newLength < requiredRegisters);
 
-        var oldLength = RegisterSlots.Length;
+        var oldLength = RegisterValues.Length;
         var expanded = new GesVmValue[newLength];
-        Array.Copy(RegisterSlots, expanded, oldLength);
-        RegisterSlots = expanded;
+        Array.Copy(RegisterValues, expanded, oldLength);
+        RegisterValues = expanded;
 
         return true;
     }
@@ -404,7 +404,7 @@ internal class GesVmState
         var end = start + count;
         for (var index = start; index < end; index++)
         {
-            RegisterSlots[index].SetNothing();
+            RegisterValues[index].SetNothing();
         }
     }
  

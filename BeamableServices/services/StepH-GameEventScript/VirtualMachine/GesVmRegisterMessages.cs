@@ -22,18 +22,18 @@ internal static class GesVmRegisterMessages
         }
         vmState.SetMessageHandler(destinationRegister, GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
-    internal static void CreateMessage(this GesVmState vmState, ushort destinationRegister, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentSlots)
+    internal static void CreateMessage(this GesVmState vmState, ushort destinationRegister, ReadOnlySpan<ushort> shape, ReadOnlySpan<ushort> argumentRegisters)
     {
-        if (shape.Length == 0 || argumentSlots.Length != shape.Length - 1)
+        if (shape.Length == 0 || argumentRegisters.Length != shape.Length - 1)
         {
-            vmState.RaiseError("Message signature shape and argument slots mismatch");
+            vmState.RaiseError("Message signature shape and argument registers mismatch");
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentSlots.Length];
-        for (var index = 0; index < argumentSlots.Length; index++)
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
+        for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(shape[index + 1]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentSlots[index])));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(shape[index + 1]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
         }
         try
         {
@@ -44,7 +44,7 @@ internal static class GesVmRegisterMessages
             vmState.SetNothing(destinationRegister);
         }
     }
-    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesVmValue handler, ReadOnlySpan<ushort> argumentSlots)
+    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesVmValue handler, ReadOnlySpan<ushort> argumentRegisters)
     {
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
         {
@@ -52,10 +52,10 @@ internal static class GesVmRegisterMessages
             return;
         }
 
-        var arguments = new GameEventScriptValue[argumentSlots.Length];
+        var arguments = new GameEventScriptValue[argumentRegisters.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
-            arguments[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentSlots[index]));
+            arguments[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
         }
         if (signature.TryCreateMessage(arguments, out var message))
         {

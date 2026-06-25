@@ -97,7 +97,7 @@ internal static class GameEventScriptOpcodePrinter
         return instruction.OpCode switch
         {
             GameEventScriptBytecodeOpCode.Nop => [],
-            GameEventScriptBytecodeOpCode.SlotLocals => [LocalRegisterDelta],
+            GameEventScriptBytecodeOpCode.RegisterLocals => [LocalRegisterDelta],
             GameEventScriptBytecodeOpCode.Jump => [JumpTarget],
             GameEventScriptBytecodeOpCode.JumpIfTrue => [ConditionRegister, JumpTarget],
             GameEventScriptBytecodeOpCode.JumpIfFalse => [ConditionRegister, JumpTarget],

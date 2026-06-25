@@ -61,7 +61,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_result] // "Done(
 .segment code
 
 Start:				 // handler Start(value)
-					SlotLocals #11
+					RegisterLocals #11
 					LoadInteger r11, #5
 					Add r1, r0, r11
 					LoadInteger r11, #3
@@ -137,7 +137,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_count] /
 .segment code
 
 Start:				 // handler Start()
-					SlotLocals #8
+					RegisterLocals #8
 					ListBuilderCreate r4
 					CreateRangeIteratorShort r5, #1, #100, #1
 Start_3:			IteratorNext r1, r5, Start_8
@@ -232,7 +232,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_doubled, T_label,
 .segment code
 
 Start:				 // handler Start()
-					SlotLocals #5
+					RegisterLocals #5
 					StageInteger #21
 					StageText T_ok // "ok"
 					CreateRecord r0, Record_sample // "sample(_, label)"
@@ -244,7 +244,7 @@ Start:				 // handler Start()
 					ReturnVoid
 
 record_sample:		 // record sample(_, label)
-					SlotLocals #3
+					RegisterLocals #3
 					CastNumeric r0, r0
 					Cast r1, r1, Text
 					LoadInteger r3, #2
@@ -314,7 +314,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 .segment code
 
 Start:				 // handler Start()
-					SlotLocals #12
+					RegisterLocals #12
 					StageInteger #1
 					StageInteger #2
 					StageInteger #3
@@ -477,7 +477,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 .segment code
 
 Start:				 // handler Start(values)
-					SlotLocals #23
+					RegisterLocals #23
 					IteratorCreateOrJump r16, r0, Start_21
 					LoadFalse r17
 					LoadNothing r18
@@ -646,7 +646,7 @@ Start_164:			Move r15, r18
 					ReturnVoid
 
 predicate_high:		 // predicate high(value)
-					SlotLocals #2
+					RegisterLocals #2
 					CastNumeric r0, r0
 					LoadInteger r1, #10
 					GreaterOrEqual r2, r0, r1

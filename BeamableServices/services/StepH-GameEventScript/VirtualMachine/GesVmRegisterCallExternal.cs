@@ -8,25 +8,25 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCallExternal
 {
-    internal static void GesVmCallStandard(this GesVmState state, ushort destinationRegister, ushort extensionShapeIndex, ushort argumentSlotList, bool isPredicate)
+    internal static void GesVmCallStandard(this GesVmState state, ushort destinationRegister, ushort extensionShapeIndex, ushort argumentRegisterList, bool isPredicate)
     {
         var shape = state.FetchUInt16SliceTableByPointer(extensionShapeIndex);
-        var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
-        if (shape.Length < 2 || argumentSlots.Length != shape.Length - 2)
+        var argumentRegisters = state.FetchUInt16SliceTableByPointer(argumentRegisterList);
+        if (shape.Length < 2 || argumentRegisters.Length != shape.Length - 2)
         {
             state.SetNothing(destinationRegister);
             state.RaiseError("Invalid standard extension call shape.");
             return;
         }
 
-        var argumentCount = argumentSlots.Length;
+        var argumentCount = argumentRegisters.Length;
         var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                ref readonly var argument = ref state.Register(argumentSlots[argumentIndex]);
+                ref readonly var argument = ref state.Register(argumentRegisters[argumentIndex]);
                 arguments[argumentIndex] = GameEventScriptValueFactory.FromVmValue(in argument);
             }
 
@@ -61,7 +61,7 @@ internal static class GesVmRegisterCallExternal
         }
     }
 
-    internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentSlotList, GameEventScriptSession session, bool isPredicate)
+    internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GameEventScriptSession session, bool isPredicate)
     {
         if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GameEventScriptBinaryBindKind.ExtensionCall)
         {
@@ -71,8 +71,8 @@ internal static class GesVmRegisterCallExternal
         }
 
         var bind = state.ExtensionCallBinds[externalBindId];
-        var argumentSlots = state.FetchUInt16SliceTableByPointer(argumentSlotList);
-        if (argumentSlots.Length != bind.ArgumentNames.Count)
+        var argumentRegisters = state.FetchUInt16SliceTableByPointer(argumentRegisterList);
+        if (argumentRegisters.Length != bind.ArgumentNames.Count)
         {
             state.SetNothing(destinationRegister);
             state.RaiseError("External extension call argument count does not match the reference shape.");
@@ -86,14 +86,14 @@ internal static class GesVmRegisterCallExternal
             return;
         }
 
-        var argumentCount = argumentSlots.Length;
+        var argumentCount = argumentRegisters.Length;
         var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                ref readonly var argument = ref state.Register(argumentSlots[argumentIndex]);
+                ref readonly var argument = ref state.Register(argumentRegisters[argumentIndex]);
                 arguments[argumentIndex] = GameEventScriptValueFactory.FromVmValue(in argument);
             }
 

@@ -197,12 +197,12 @@ public struct GameEventScriptBytecodeInstruction
 
     [FieldOffset(1)] public byte UnitAndFlags;
 
-    [FieldOffset(2)] public ushort DestinationSlot;
+    [FieldOffset(2)] public ushort DestinationRegister;
     [FieldOffset(2)] public ushort MessageDestination;
     
     [FieldOffset(4)] public short ImmediateX;
-    [FieldOffset(4)] public ushort ConditionSlot;
-    [FieldOffset(4)] public ushort XSlot;
+    [FieldOffset(4)] public ushort ConditionRegister;
+    [FieldOffset(4)] public ushort XRegister;
     [FieldOffset(4)] public ushort StringIndex;
     [FieldOffset(4)] public ushort SecondaryListIndex;
     [FieldOffset(4)] public ushort BindId;
@@ -211,7 +211,7 @@ public struct GameEventScriptBytecodeInstruction
 
     [FieldOffset(6)] public short ImmediateY;
     [FieldOffset(6)] public ushort TargetAddress;
-    [FieldOffset(6)] public ushort YSlot;
+    [FieldOffset(6)] public ushort YRegister;
     [FieldOffset(6)] public ushort EntryAddress;
     [FieldOffset(6)] public ushort SecondaryStringIndex;
     [FieldOffset(6)] public ushort ListIndex;
@@ -286,7 +286,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     #region Group 1 - control, calls, messages, types, values
 
     Nop = 0x00,
-    SlotLocals = 0x01,
+    RegisterLocals = 0x01,
     Jump = 0x02,
     JumpIfTrue = 0x03,
     JumpIfFalse = 0x04,

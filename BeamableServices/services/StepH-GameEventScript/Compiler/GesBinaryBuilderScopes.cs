@@ -82,7 +82,7 @@ internal sealed partial class GesBinaryBuilder
             routine.Bind = AddBind(kind.Value, name, routine.ArgumentNames, entryLabel, id, requiredTags, excludedTags);
         }
 
-        SlotLocals(0);
+        RegisterLocals(0);
         return new GesBinaryRoutineScope(this, routine);
     }
 
@@ -130,7 +130,7 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private PlanItem[] PatchRoutineSlotLocals(
+    private PlanItem[] PatchRoutineRegisterLocals(
         IReadOnlyList<PlanItem> items,
         IReadOnlyDictionary<int, ushort> registerMap)
     {
@@ -139,30 +139,30 @@ internal sealed partial class GesBinaryBuilder
         var result = items.ToArray();
         foreach (var routine in _routines)
         {
-            var slotLocalsIndex = FindRoutineSlotLocalsIndex(result, routine);
-            var maxSlot = -1;
+            var registerLocalsIndex = FindRoutineRegisterLocalsIndex(result, routine);
+            var maxRegisterIndex = -1;
             foreach (var register in _registers.Where(register => register.RoutineId == routine.Id))
             {
-                if (registerMap.TryGetValue(register.Id, out var slot) && slot > maxSlot)
+                if (registerMap.TryGetValue(register.Id, out var registerIndex) && registerIndex > maxRegisterIndex)
                 {
-                    maxSlot = slot;
+                    maxRegisterIndex = registerIndex;
                 }
             }
 
-            var localCount = Math.Max(0, maxSlot + 1 - routine.ArgumentRegisters.Count);
+            var localCount = Math.Max(0, maxRegisterIndex + 1 - routine.ArgumentRegisters.Count);
             if (localCount > short.MaxValue)
             {
                 throw new InvalidOperationException($"Routine '{routine.Name}' requires too many local registers: {localCount}.");
             }
 
-            var instruction = result[slotLocalsIndex].Instruction!;
-            result[slotLocalsIndex] = PlanItem.ForInstruction(instruction with { Count = (short)localCount }, result[slotLocalsIndex].SourceRange);
+            var instruction = result[registerLocalsIndex].Instruction!;
+            result[registerLocalsIndex] = PlanItem.ForInstruction(instruction with { Count = (short)localCount }, result[registerLocalsIndex].SourceRange);
         }
 
         return result;
     }
 
-    private static int FindRoutineSlotLocalsIndex(IReadOnlyList<PlanItem> items, RoutinePlan routine)
+    private static int FindRoutineRegisterLocalsIndex(IReadOnlyList<PlanItem> items, RoutinePlan routine)
     {
         for (var index = 0; index < items.Count; index++)
         {
@@ -170,7 +170,7 @@ internal sealed partial class GesBinaryBuilder
             for (var instructionIndex = index + 1; instructionIndex < items.Count; instructionIndex++)
             {
                 if (items[instructionIndex].Label.HasValue) break;
-                if (items[instructionIndex].Instruction?.OpCode == GameEventScriptBytecodeOpCode.SlotLocals)
+                if (items[instructionIndex].Instruction?.OpCode == GameEventScriptBytecodeOpCode.RegisterLocals)
                 {
                     return instructionIndex;
                 }
@@ -179,7 +179,7 @@ internal sealed partial class GesBinaryBuilder
             break;
         }
 
-        throw new InvalidOperationException($"Routine '{routine.Name}' does not have a SlotLocals prolog.");
+        throw new InvalidOperationException($"Routine '{routine.Name}' does not have a RegisterLocals prolog.");
     }
 
     internal sealed class GesBinaryRoutineScope : IDisposable

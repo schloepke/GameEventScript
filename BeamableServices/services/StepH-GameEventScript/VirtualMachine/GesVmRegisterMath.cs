@@ -2025,24 +2025,24 @@ internal static class GesVmRegisterMath
         if (double.IsNegativeInfinity(number) || number < long.MinValue) return long.MinValue;
         return (long)Math.Truncate(number);
     }
-    internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, in GesVmValue termSlot)
+    internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, in GesVmValue termValue)
     {
         var dst = new GesVmValue();
-        GesVmTerm(ref dst, in source, in termSlot, vmState);
+        GesVmTerm(ref dst, in source, in termValue, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmTerm(ref GesVmValue dst, in GesVmValue source, in GesVmValue termSlot, GesVmState state)
+    private static void GesVmTerm(ref GesVmValue dst, in GesVmValue source, in GesVmValue termValue, GesVmState state)
     {
         long index;
         bool ret;
-        switch (termSlot.Kind)
+        switch (termValue.Kind)
         {
             case Integer:
-                index = termSlot.IntegerValue;
+                index = termValue.IntegerValue;
                 ret = true;
                 break;
             case Float or Percentage:
-                switch (termSlot.FloatValue)
+                switch (termValue.FloatValue)
                 {
                     case double.NaN:
                         index = 0;
@@ -2057,20 +2057,20 @@ internal static class GesVmRegisterMath
                         ret = true;
                         break;
                     default:
-                        index = (long)termSlot.FloatValue;
+                        index = (long)termValue.FloatValue;
                         ret = true;
                         break;
                 }
 
                 break;
             case GameEventScriptBytecodeTypeKind.Boolean:
-                index = termSlot.IsTrue ? 1 : 0;
+                index = termValue.IsTrue ? 1 : 0;
                 ret = true;
                 break;
             default:
-                if (termSlot.IsNumeric)
+                if (termValue.IsNumeric)
                 {
-                    switch (termSlot.AsNumeric)
+                    switch (termValue.AsNumeric)
                     {
                         case Double.NaN:
                             index = 0;
@@ -2085,7 +2085,7 @@ internal static class GesVmRegisterMath
                             ret = true;
                             break;
                         default:
-                            index = (long)termSlot.AsNumeric;
+                            index = (long)termValue.AsNumeric;
                             ret = true;
                             break;
                     }

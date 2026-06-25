@@ -88,40 +88,40 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
                         case Nop:
                             break;
-                        case SlotLocals:
-                            vmState.ModifyLocalSlots(instruction.Count);
+                        case RegisterLocals:
+                            vmState.ModifyLocalRegisters(instruction.Count);
                             break;
                         case Jump:
                             vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfTrue:
-                            if (vmState.IsRegisterTrue(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterTrue(instruction.ConditionRegister)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfFalse:
-                            if (vmState.IsRegisterFalse(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterFalse(instruction.ConditionRegister)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfNotTrue:
-                            if (vmState.IsRegisterNotTrue(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterNotTrue(instruction.ConditionRegister)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case JumpIfNothing:
-                            if (vmState.IsRegisterNothing(instruction.ConditionSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            if (vmState.IsRegisterNothing(instruction.ConditionRegister)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
 
                         case Call:
-                            vmState.CallAddress(instruction.TargetAddress, instruction.DestinationSlot, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.CallAddress(instruction.TargetAddress, instruction.DestinationRegister, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
                         case CallStandard:
-                            vmState.GesVmCallStandard(instruction.DestinationSlot, instruction.SecondaryListIndex, instruction.ListIndex, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.GesVmCallStandard(instruction.DestinationRegister, instruction.SecondaryListIndex, instruction.ListIndex, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
                         case CallExternal:
-                            vmState.GesVmCallExternal(instruction.DestinationSlot, instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
 
                         case ReturnVoid:
                             vmState.ReturnVoid();
                             break;
                         case ReturnValue:
-                            vmState.ReturnValue(instruction.XSlot);
+                            vmState.ReturnValue(instruction.XRegister);
                             break;
 
                         case EmitMessage:
@@ -132,10 +132,10 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                                 vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
                             break;
                         case EmitMessageValue:
-                            vmState.GesVmPublishMessageValue(ref vmState.Register(instruction.XSlot), false, session);
+                            vmState.GesVmPublishMessageValue(ref vmState.Register(instruction.XRegister), false, session);
                             break;
                         case EmitMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(ref vmState.Register(instruction.XSlot), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
+                            vmState.GesVmPublishMessageValueWithTags(ref vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                             break;
 
                         case PublishMessage:
@@ -146,93 +146,93 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                                 vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), true, session);
                             break;
                         case PublishMessageValue:
-                            vmState.GesVmPublishMessageValue(ref vmState.Register(instruction.XSlot), true, session);
+                            vmState.GesVmPublishMessageValue(ref vmState.Register(instruction.XRegister), true, session);
                             break;
                         case PublishMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(ref vmState.Register(instruction.XSlot), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
+                            vmState.GesVmPublishMessageValueWithTags(ref vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                             break;
 
                         case Cast:
-                            vmState.GesVmCast(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TypeKind, session);
+                            vmState.GesVmCast(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TypeKind, session);
                             break;
                         case CastCustom:
-                            vmState.GesVmCastCustom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
+                            vmState.GesVmCastCustom(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.SecondaryStringIndex);
                             break;
                         case CastUnit:
-                            vmState.GesVmCastUnit(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.Unit);
+                            vmState.GesVmCastUnit(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.Unit);
                             break;
                         case CastNumeric:
-                            vmState.GesVmCastNumeric(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCastNumeric(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
 
                         case CheckType:
-                            vmState.GesVmCheckType(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TypeKind);
+                            vmState.GesVmCheckType(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TypeKind);
                             break;
                         case CheckCustomType:
-                            vmState.GesVmCheckCustomType(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.SecondaryStringIndex);
+                            vmState.GesVmCheckCustomType(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.SecondaryStringIndex);
                             break;
                         case CheckUnit:
-                            vmState.GesVmCheckUnit(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.Unit);
+                            vmState.GesVmCheckUnit(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.Unit);
                             break;
                         case CheckNumeric:
-                            vmState.GesVmCheckNumeric(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCheckNumeric(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case CheckInteger:
-                            vmState.GesVmCheckInteger(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCheckInteger(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case CheckFractional:
-                            vmState.GesVmCheckFractional(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCheckFractional(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
 
                         case Move:
-                            vmState.Register(instruction.DestinationSlot) = vmState.Register(instruction.XSlot);
+                            vmState.Register(instruction.DestinationRegister) = vmState.Register(instruction.XRegister);
                             break;
                         case MemberAccess:
-                            vmState.GesVmMemberAccess(instruction.DestinationSlot, vmState.FetchStringByPointer(instruction.StringIndex), vmState.Register(instruction.YSlot));
+                            vmState.GesVmMemberAccess(instruction.DestinationRegister, vmState.FetchStringByPointer(instruction.StringIndex), vmState.Register(instruction.YRegister));
                             break;
                         case IndexAccess:
-                            vmState.GesVmIndexAccess(instruction.DestinationSlot, instruction.Index, vmState.Register(instruction.YSlot));
+                            vmState.GesVmIndexAccess(instruction.DestinationRegister, instruction.Index, vmState.Register(instruction.YRegister));
                             break;
                         case PropertyAccess:
-                            vmState.GesVmPropertyAccess(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmPropertyAccess(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case BindHandler:
-                            vmState.BindHandler(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
+                            vmState.BindHandler(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
                             break;
 
                         case LoadNothing:
-                            vmState.Register(instruction.DestinationSlot).SetNothing();
+                            vmState.Register(instruction.DestinationRegister).SetNothing();
                             break;
                         case LoadTrue:
-                            vmState.Register(instruction.DestinationSlot).SetBoolean(true);
+                            vmState.Register(instruction.DestinationRegister).SetBoolean(true);
                             break;
                         case LoadFalse:
-                            vmState.Register(instruction.DestinationSlot).SetBoolean(false);
+                            vmState.Register(instruction.DestinationRegister).SetBoolean(false);
                             break;
                         case LoadInteger:
-                            vmState.Register(instruction.DestinationSlot).SetInteger(instruction.I64, instruction.Unit);
+                            vmState.Register(instruction.DestinationRegister).SetInteger(instruction.I64, instruction.Unit);
                             break;
                         case LoadFloat:
-                            vmState.Register(instruction.DestinationSlot).SetFloat(instruction.F64, instruction.Unit);
+                            vmState.Register(instruction.DestinationRegister).SetFloat(instruction.F64, instruction.Unit);
                             break;
                         case LoadPercentage:
-                            vmState.Register(instruction.DestinationSlot).SetPercentage(instruction.F64);
+                            vmState.Register(instruction.DestinationRegister).SetPercentage(instruction.F64);
                             break;
                         case LoadText:
-                            vmState.SetTextPointer(instruction.DestinationSlot, instruction.StringIndex);
+                            vmState.SetTextPointer(instruction.DestinationRegister, instruction.StringIndex);
                             break;
                         case LoadTag:
-                            vmState.SetTagPointer(instruction.DestinationSlot, instruction.StringIndex);
+                            vmState.SetTagPointer(instruction.DestinationRegister, instruction.StringIndex);
                             break;
                         case LoadHandler:
-                            vmState.CreateMessageSignature(instruction.DestinationSlot, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
+                            vmState.CreateMessageSignature(instruction.DestinationRegister, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
                             break;
                         case LoadMessage:
-                            vmState.CreateMessage(instruction.DestinationSlot, vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
+                            vmState.CreateMessage(instruction.DestinationRegister, vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex));
                             break;
 
                         case StageRegister:
-                            vmState.StageRegister(instruction.XSlot);
+                            vmState.StageRegister(instruction.XRegister);
                             break;
                         case StageNothing:
                             vmState.StageNothing();
@@ -260,62 +260,62 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
 
                         case CreateDice:
-                            vmState.GesVmCreateDice(instruction.DestinationSlot, instruction.Count, instruction.ImmediateY, session);
+                            vmState.GesVmCreateDice(instruction.DestinationRegister, instruction.Count, instruction.ImmediateY, session);
                             break;
                         case CreateVector:
-                            vmState.GesVmCreateVector(instruction.DestinationSlot, instruction.ImmediateX);
+                            vmState.GesVmCreateVector(instruction.DestinationRegister, instruction.ImmediateX);
                             vmState.ClearStage();
                             break;
                         case CreatePoint:
-                            vmState.GesVmCreatePoint(instruction.DestinationSlot, instruction.ImmediateX);
+                            vmState.GesVmCreatePoint(instruction.DestinationRegister, instruction.ImmediateX);
                             vmState.ClearStage();
                             break;
                         case CreateList:
-                            vmState.GesVmCreateList(instruction.DestinationSlot);
+                            vmState.GesVmCreateList(instruction.DestinationRegister);
                             vmState.ClearStage();
                             break;
                         case CreateMap:
-                            vmState.GesVmCreateMap(instruction.DestinationSlot, instruction.SecondaryListIndex);
+                            vmState.GesVmCreateMap(instruction.DestinationRegister, instruction.SecondaryListIndex);
                             vmState.ClearStage();
                             break;
                         case CreateRange:
-                            vmState.GesVmCreateRange(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmCreateRange(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case CreateRangeWithStep:
-                            vmState.GesVmCreateRange(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            vmState.GesVmCreateRange(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIterator:
-                            vmState.GesVmCreateRangeIterator(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), session);
+                            vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), session);
                             break;
                         case CreateRangeIteratorWithStep:
-                            vmState.GesVmCreateRangeIterator(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), session);
+                            vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), session);
                             break;
                         case CreateRangeIteratorShort:
                             if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                             {
-                                vmState.Register(instruction.DestinationSlot).SetIterator(new GesVmIntegerRangeIterator(0, 0, 0));
+                                vmState.Register(instruction.DestinationRegister).SetIterator(new GesVmIntegerRangeIterator(0, 0, 0));
                                 break;
                             }
 
-                            vmState.Register(instruction.DestinationSlot).SetIterator(new GesVmIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                            vmState.Register(instruction.DestinationRegister).SetIterator(new GesVmIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                             break;
                         case CreateRecord:
-                            vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationSlot);
+                            vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationRegister);
                             break;
                         case CreateExternalType:
-                            vmState.GesVmCreateExternalType(instruction.DestinationSlot, instruction.BindId, instruction.ListIndex);
+                            vmState.GesVmCreateExternalType(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex);
                             vmState.ClearStage();
                             break;
 
                         case HasValue:
-                            vmState.Register(instruction.DestinationSlot).SetBoolean(vmState.Register(instruction.XSlot).HasValue);
+                            vmState.Register(instruction.DestinationRegister).SetBoolean(vmState.Register(instruction.XRegister).HasValue);
                             break;
                         case IsEmpty:
-                            vmState.Register(instruction.DestinationSlot).SetBoolean(!vmState.Register(instruction.XSlot).HasValue);
+                            vmState.Register(instruction.DestinationRegister).SetBoolean(!vmState.Register(instruction.XRegister).HasValue);
                             break;
                         case Default:
-                            var a = vmState.Register(instruction.XSlot);
-                            vmState.Register(instruction.DestinationSlot) = a.HasValue ? a : vmState.Register(instruction.YSlot);
+                            var a = vmState.Register(instruction.XRegister);
+                            vmState.Register(instruction.DestinationRegister) = a.HasValue ? a : vmState.Register(instruction.YRegister);
                             break;
 
                         #endregion
@@ -323,91 +323,91 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         #region Group 2 - boolean algebra, comparison, math and random
 
                         case Or:
-                            vmState.GesVmOr(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmOr(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case And:
-                            vmState.GesVmAnd(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmAnd(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Xor:
-                            vmState.GesVmXor(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmXor(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Implies:
-                            vmState.GesVmImplies(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmImplies(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Not:
-                            vmState.GesVmNot(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmNot(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Equal:
-                            vmState.GesVmEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmEqual(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case NotEqual:
-                            vmState.GesVmNotEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmNotEqual(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case Less:
-                            vmState.GesVmLess(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmLess(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case Greater:
-                            vmState.GesVmGreater(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmGreater(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case LessOrEqual:
-                            vmState.GesVmLessOrEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmLessOrEqual(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case GreaterOrEqual:
-                            vmState.GesVmGreaterOrEqual(instruction.DestinationSlot, in vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmGreaterOrEqual(instruction.DestinationRegister, in vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case Add:
-                            vmState.GesVmAdd(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmAdd(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Subtract:
-                            vmState.GesVmSubtract(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmSubtract(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Multiply:
-                            vmState.GesVmMultiply(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmMultiply(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Divide:
-                            vmState.GesVmDivide(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmDivide(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Power:
-                            vmState.GesVmPower(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmPower(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case IntegerDivide:
-                            vmState.GesVmFloorDivide(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmFloorDivide(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Modulo:
-                            vmState.GesVmModulo(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmModulo(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Remainder:
-                            vmState.GesVmRemainder(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmRemainder(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Min:
-                            vmState.GesVmMin(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmMin(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Max:
-                            vmState.GesVmMax(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmMax(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Negate:
-                            vmState.GesVmNegate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmNegate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Abs:
-                            vmState.GesVmAbs(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmAbs(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case LogN:
-                            vmState.GesVmNaturalLog(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmNaturalLog(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Chance:
-                            vmState.GesVmChance(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmChance(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Clamp:
-                            vmState.GesVmClamp(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            vmState.GesVmClamp(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                             break;
                         case RandomTake:
-                            vmState.GesVmRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.RandomGenerator);
+                            vmState.GesVmRandom(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.RandomGenerator);
                             break;
                         case RandomTakeFloat:
-                            vmState.GesVmRandomFloat(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.RandomGenerator);
+                            vmState.GesVmRandomFloat(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.RandomGenerator);
                             break;
                         case RandomPush:
-                            var seed = vmState.Register(instruction.XSlot);
+                            var seed = vmState.Register(instruction.XRegister);
                             vmState.PushRandom(seed.Kind == Integer ? new GesVmXoshiroRandom(seed.IntegerValue) : vmState.RandomGenerator);
                             break;
                         case RandomPushConstant:
@@ -417,127 +417,127 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.PopRandom();
                             break;
                         case Term:
-                            vmState.GesVmTerm(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmTerm(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Exp:
-                            vmState.GesVmExp(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmExp(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Floor:
-                            vmState.GesVmFloor(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmFloor(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Ceil:
-                            vmState.GesVmCeil(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCeil(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Truncate:
-                            vmState.GesVmTruncate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmTruncate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case RoundHalfEven:
-                            vmState.GesVmRoundHalfEven(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmRoundHalfEven(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case RoundHalfUp:
-                            vmState.GesVmRoundHalfUp(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmRoundHalfUp(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case RoundHalfDown:
-                            vmState.GesVmRoundHalfDown(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmRoundHalfDown(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case DegreeToRadians:
-                            vmState.GesVmDegreeToRadians(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmDegreeToRadians(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case DegreeFromRadians:
-                            vmState.GesVmDegreeFromRadians(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmDegreeFromRadians(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case WrapDegree:
-                            vmState.GesVmWrapDegree(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmWrapDegree(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Sin:
-                            vmState.GesVmSin(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmSin(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Cos:
-                            vmState.GesVmCos(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCos(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Tan:
-                            vmState.GesVmTan(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmTan(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Asin:
-                            vmState.GesVmAsin(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmAsin(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Acos:
-                            vmState.GesVmAcos(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmAcos(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Atan:
-                            vmState.GesVmAtan(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmAtan(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Atan2:
-                            vmState.GesVmAtan2(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmAtan2(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Hypot2D:
-                            vmState.GesVmHypot2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmHypot2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Hypot3D:
-                            vmState.GesVmHypot3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            vmState.GesVmHypot3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                             break;
                         case Distance:
-                            vmState.GesVmDistance(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmDistance(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Distance2D:
-                            vmState.GesVmDistance2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            vmState.GesVmDistance2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
                             break;
                         case Distance3D:
-                            vmState.GesVmDistance3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            vmState.GesVmDistance3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
                             break;
                         case DistanceSquared:
-                            vmState.GesVmDistanceSquared(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmDistanceSquared(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case DistanceSquared2D:
-                            vmState.GesVmDistanceSquared2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            vmState.GesVmDistanceSquared2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
                             break;
                         case DistanceSquared3D:
-                            vmState.GesVmDistanceSquared3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            vmState.GesVmDistanceSquared3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
                             break;
                         case LengthSquared:
-                            vmState.GesVmLengthSquared(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmLengthSquared(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case LengthSquared2D:
-                            vmState.GesVmLengthSquared2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmLengthSquared2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case LengthSquared3D:
-                            vmState.GesVmLengthSquared3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            vmState.GesVmLengthSquared3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                             break;
                         case Normalize:
-                            vmState.GesVmNormalize(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmNormalize(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Normalize2D:
-                            vmState.GesVmNormalize2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmNormalize2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Normalize3D:
-                            vmState.GesVmNormalize3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
+                            vmState.GesVmNormalize3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                             break;
                         case Dot:
-                            vmState.GesVmDot(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmDot(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Dot2D:
-                            vmState.GesVmDot2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            vmState.GesVmDot2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
                             break;
                         case Dot3D:
-                            vmState.GesVmDot3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            vmState.GesVmDot3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
                             break;
                         case Cross:
-                            vmState.GesVmCross(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmCross(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Cross2D:
-                            vmState.GesVmCross2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            vmState.GesVmCross2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
                             break;
                         case Cross3D:
-                            vmState.GesVmCross3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            vmState.GesVmCross3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
                             break;
                         case AngleBetween:
-                            vmState.GesVmAngleBetween(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmAngleBetween(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case AngleBetween2D:
-                            vmState.GesVmAngleBetween2D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
+                            vmState.GesVmAngleBetween2D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU));
                             break;
                         case AngleBetween3D:
-                            vmState.GesVmAngleBetween3D(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
+                            vmState.GesVmAngleBetween3D(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), vmState.Register(instruction.BU), vmState.Register(instruction.CU), vmState.Register(instruction.DU));
                             break;
 
                         #endregion
@@ -545,182 +545,182 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         #region Group 3 - text, collection, iterators
 
                         case TakeFirst:
-                            vmState.GesVmTakeFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeFirst(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case DropFirst:
-                            vmState.GesVmDropFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropFirst(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case TakeLast:
-                            vmState.GesVmTakeLast(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeLast(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case DropLast:
-                            vmState.GesVmDropLast(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropLast(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case TakeHighest:
-                            vmState.GesVmTakeHighest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeHighest(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case TakeLowest:
-                            vmState.GesVmTakeLowest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmTakeLowest(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case DropHighest:
-                            vmState.GesVmDropHighest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropHighest(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case DropLowest:
-                            vmState.GesVmDropLowest(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
+                            vmState.GesVmDropLowest(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY);
                             break;
                         case OneRandom:
-                            vmState.GesVmOneRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.RandomGenerator);
+                            vmState.GesVmOneRandom(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.RandomGenerator);
                             break;
                         case TakeRandom:
-                            vmState.GesVmTakeRandom(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY, vmState.RandomGenerator);
+                            vmState.GesVmTakeRandom(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.ImmediateY, vmState.RandomGenerator);
                             break;
                         case OneWeighted:
-                            vmState.GesVmOneWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.RandomGenerator);
+                            vmState.GesVmOneWeighted(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.RandomGenerator);
                             break;
                         case TakeWeighted:
-                            vmState.GesVmTakeWeighted(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.AU), instruction.ImmediateY, vmState.RandomGenerator);
+                            vmState.GesVmTakeWeighted(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.AU), instruction.ImmediateY, vmState.RandomGenerator);
                             break;
                         case Count:
-                            vmState.GesVmCount(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmCount(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case StartsWith:
-                            vmState.GesVmStartsWith(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmStartsWith(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case EndsWith:
-                            vmState.GesVmEndsWith(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmEndsWith(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Contains:
-                            vmState.GesVmContains(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmContains(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case ContainsAny:
-                            vmState.GesVmContainsAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), requireAll: false);
+                            vmState.GesVmContainsAnyAll(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), requireAll: false);
                             break;
                         case ContainsAll:
-                            vmState.GesVmContainsAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), requireAll: true);
+                            vmState.GesVmContainsAnyAll(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), requireAll: true);
                             break;
                         case ContainsValue:
-                            vmState.GesVmContainsValue(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmContainsValue(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Union:
-                            vmState.GesVmUnion(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmUnion(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Intersect:
-                            vmState.GesVmIntersect(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmIntersect(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case Zip:
-                            vmState.GesVmZip(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot));
+                            vmState.GesVmZip(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case KeysOfMap:
-                            vmState.GesVmKeys(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmKeys(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case ValuesOfMap:
-                            vmState.GesVmValues(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmValues(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case EntriesOfMap:
-                            vmState.GesVmEntries(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmEntries(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case GameEventScriptBytecodeOpCode.First:
-                            vmState.GesVmFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmFirst(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case GameEventScriptBytecodeOpCode.Last:
-                            vmState.GesVmLast(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmLast(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case GameEventScriptBytecodeOpCode.Single:
-                            vmState.GesVmSingle(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmSingle(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case IteratorCreate:
-                            vmState.GesVmIteratorCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmIteratorCreate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case IteratorCreateOrJump:
-                            vmState.GesVmIteratorCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
-                            if (vmState.IsRegisterNothing(instruction.DestinationSlot)) vmState.JumpAddress(instruction.TargetAddress);
+                            vmState.GesVmIteratorCreate(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
+                            if (vmState.IsRegisterNothing(instruction.DestinationRegister)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
                         case IteratorNext:
                         {
-                            vmState.GesVmIteratorNext(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TargetAddress);
-                            if (vmState.Register(instruction.DestinationSlot).Kind is not Nothing)
+                            vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress);
+                            if (vmState.Register(instruction.DestinationRegister).Kind is not Nothing)
                             {
                                 session.RuntimeBudget.TryConsumeLoopIteration("For loop iteration exceeds the configured limit.");
                             }
                             break;
                         }
                         case IteratorClose:
-                            vmState.GesVmIteratorClose(instruction.XSlot);
+                            vmState.GesVmIteratorClose(instruction.XRegister);
                             break;
                         case HasAny:
-                            vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), false);
+                            vmState.GesVmHasAnyAll(instruction.DestinationRegister, vmState.Register(instruction.XRegister), false);
                             break;
                         case HasAll:
-                            vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), true);
+                            vmState.GesVmHasAnyAll(instruction.DestinationRegister, vmState.Register(instruction.XRegister), true);
                             break;
                         case Distinct:
-                            vmState.GesVmDistinct(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmDistinct(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case SortAscending:
-                            vmState.GesVmSortAscending(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmSortAscending(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case SortDescending:
-                            vmState.GesVmSortDescending(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmSortDescending(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Reverse:
-                            vmState.GesVmReverse(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                            vmState.GesVmReverse(instruction.DestinationRegister, vmState.Register(instruction.XRegister));
                             break;
                         case Shuffle:
-                            vmState.GesVmShuffle(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.RandomGenerator);
+                            vmState.GesVmShuffle(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.RandomGenerator);
                             break;
                         case ListBuilderCreate:
-                            vmState.GesVmCreateListBuilder(instruction.DestinationSlot);
+                            vmState.GesVmCreateListBuilder(instruction.DestinationRegister);
                             break;
                         case ListBuilderAdd:
-                            vmState.GesVmListBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot));
+                            vmState.GesVmListBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister));
                             break;
                         case ListBuilderFinish:
-                            vmState.GesVmListBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            vmState.GesVmListBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case MapBuilderCreate:
-                            vmState.GesVmCreateMapBuilder(instruction.DestinationSlot);
+                            vmState.GesVmCreateMapBuilder(instruction.DestinationRegister);
                             break;
                         case MapBuilderAdd:
-                            vmState.GesVmMapBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            vmState.GesVmMapBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
                             break;
                         case MapBuilderFinish:
-                            vmState.GesVmMapBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            vmState.GesVmMapBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case DistinctBuilderCreate:
-                            vmState.GesVmCreateDistinctBuilder(instruction.DestinationSlot);
+                            vmState.GesVmCreateDistinctBuilder(instruction.DestinationRegister);
                             break;
                         case DistinctBuilderAdd:
-                            vmState.GesVmDistinctBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            vmState.GesVmDistinctBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
                             break;
                         case DistinctBuilderFinish:
-                            vmState.GesVmDistinctBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            vmState.GesVmDistinctBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case GroupBuilderCreate:
-                            vmState.GesVmCreateGroupBuilder(instruction.DestinationSlot);
+                            vmState.GesVmCreateGroupBuilder(instruction.DestinationRegister);
                             break;
                         case GroupBuilderAdd:
-                            vmState.GesVmGroupBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            vmState.GesVmGroupBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
                             break;
                         case GroupBuilderFinish:
-                            vmState.GesVmGroupBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            vmState.GesVmGroupBuilderFinish(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case OrderBuilderCreate:
-                            vmState.GesVmCreateOrderBuilder(instruction.DestinationSlot);
+                            vmState.GesVmCreateOrderBuilder(instruction.DestinationRegister);
                             break;
                         case OrderBuilderAdd:
-                            vmState.GesVmOrderBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            vmState.GesVmOrderBuilderAdd(vmState.Register(instruction.XRegister), in vmState.Register(instruction.YRegister), in vmState.Register(instruction.AU));
                             break;
                         case OrderBuilderFinishAscending:
-                            vmState.GesVmOrderBuilderFinishAscending(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            vmState.GesVmOrderBuilderFinishAscending(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case OrderBuilderFinishDescending:
-                            vmState.GesVmOrderBuilderFinishDescending(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            vmState.GesVmOrderBuilderFinishDescending(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case HasPattern:
-                            vmState.GesVmHasPattern(instruction.DestinationSlot, vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, vmState.Register(instruction.BU));
+                            vmState.GesVmHasPattern(instruction.DestinationRegister, vmState.Register(instruction.XRegister), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, vmState.Register(instruction.BU));
                             break;
                         case TakePattern:
-                            vmState.GesVmTakePattern(instruction.DestinationSlot, vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, vmState.Register(instruction.BU));
+                            vmState.GesVmTakePattern(instruction.DestinationRegister, vmState.Register(instruction.XRegister), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, vmState.Register(instruction.BU));
                             break;
 
                         #endregion

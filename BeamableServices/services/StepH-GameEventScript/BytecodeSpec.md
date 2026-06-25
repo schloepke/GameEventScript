@@ -11,7 +11,7 @@ is still part of the VM target state for calls, return addresses, frame
 metadata, scoped locals, and resumable execution. The C# call stack is not part
 of script control flow.
 
-The public artifact exposes one global linear `Code` segment, `MaxFrameSlots`,
+The public artifact exposes one global linear `Code` segment, `MaxFrameRegisters`,
 entry addresses for handlers, callables, and type-field helpers, plus normalized
 tables for strings, ushort lists, external references, debug metadata, and
 pipelines. High-level language constructs lower either to normal linear
@@ -102,7 +102,7 @@ booleans and `nothing` have dedicated opcodes; integer and float payloads use
 raw 64-bit bits split over `A`/`B`; text, tags, and handler message names point
 into `StringPool`.
 
-`MaxFrameSlots` is the maximum local register count needed by any handler or
+`MaxFrameRegisters` is the maximum local register count needed by any handler or
 callable frame, including parameters, user `let` bindings, compiler temporaries,
 loop temporaries, and high-level operation temporaries.
 
@@ -212,7 +212,7 @@ The portable metadata carries the hint:
 HandlerParameterEntry
   ExternalLabel
   LocalName
-  Slot
+  Register
   TypeName?
 ```
 
@@ -220,7 +220,7 @@ The executable code should contain explicit coercion instructions so the program
 counter and dump show where normalization happens:
 
 ```text
-@0000 SlotLocals locals+=localCount
+@0000 RegisterLocals locals+=localCount
 @0001 Cast dst=r0 src=r0 kind=Custom type=:unit
 @0002 Cast dst=r1 src=r1 kind=Integer
 ```
@@ -262,9 +262,9 @@ word plus an aligned 8-byte payload word.
 Instruction
   OpCode
   UnitAndFlags
-  DestinationSlot
-  XSlot, YSlot
-  ConditionSlot, TargetAddress, EntryAddress
+  DestinationRegister
+  XRegister, YRegister
+  ConditionRegister, TargetAddress, EntryAddress
   StringIndex, ListIndex, SecondaryListIndex, ExternalReferenceIndex, TypeOperand
   Count
   ImmediateX, ImmediateY, Index
@@ -275,9 +275,9 @@ Instruction
 
 Operands are interpreted by opcode:
 
-- `DestinationSlot`: destination register for value-producing instructions.
-- `XSlot`, `YSlot`: primary-word register operands.
-- `ConditionSlot`, `TargetAddress`, `EntryAddress`: primary-word control-flow aliases.
+- `DestinationRegister`: destination register for value-producing instructions.
+- `XRegister`, `YRegister`: primary-word register operands.
+- `ConditionRegister`, `TargetAddress`, `EntryAddress`: primary-word control-flow aliases.
 - `StringIndex`, `ListIndex`, `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`:
   primary-word pool/table or type operands.
 - `ImmediateX`, `ImmediateY`: compact signed immediates in the primary word.
@@ -294,7 +294,7 @@ Operands are interpreted by opcode:
 - Pool-backed opcodes use the documented `StringPool` or `UShortListPool`
   indices directly through aliases such as `StringIndex`, `ListIndex`,
   `SecondaryListIndex`, `AU`, or `BU`.
-- `SlotLocals Count` is the required prolog instruction for every executable
+- `RegisterLocals Count` is the required prolog instruction for every executable
   entry address. Entry prologs use a non-negative signed count and add local
   registers beyond the arguments already present in the frame. Negative counts are
   only valid for normal scope exits. The bind/export tables do not carry this
@@ -352,9 +352,9 @@ Large structured metadata belongs in tables and pools, not nested instruction
 objects. Examples: `UShortListPool` message shapes/register lists, `StringPool`
 names, bind tables, and optional debug layouts.
 
-An instruction that produces a `nothing` value writes it to `DestinationSlot`. Returning
+An instruction that produces a `nothing` value writes it to `DestinationRegister`. Returning
 without a value uses `ReturnVoid`; returning a register value uses
-`ReturnValue XSlot`. There is no implicit push. There are no operand-stack `Pop` or
+`ReturnValue XRegister`. There is no implicit push. There are no operand-stack `Pop` or
 `Duplicate` instructions in the portable target model.
 
 ## Execution Model
@@ -377,9 +377,9 @@ Frame
   EntryKind
   EntryIndex
   ReturnAddress
-  ReturnDestinationSlot
+  ReturnDestinationRegister
   FrameBase
-  SlotCount
+  RegisterCount
   ScopeMark
   RandomMark
 ```
@@ -396,7 +396,7 @@ operation-local debug state such as selector index or item index.
 ## Entry Tables
 
 Handlers and callables are metadata over the shared code segment. Their
-`EntryAddress` points at a `SlotLocals` prolog instruction. The instruction
+`EntryAddress` points at a `RegisterLocals` prolog instruction. The instruction
 immediately after the prolog is the first executable body instruction. Handler
 and callable arguments are already present in registers `0..n-1` when their frame
 starts.
@@ -419,11 +419,11 @@ CallableEntry
   SignatureLabels
   SignatureId
   EntryAddress
-  ReturnSlot
+  ReturnRegister
 ```
 
 The local register count is intentionally not part of the bind/export metadata. It
-is encoded as non-negative `SlotLocals Count` at the entry address because it is
+is encoded as non-negative `RegisterLocals Count` at the entry address because it is
 a VM execution detail needed equally by exported handlers/callables and private
 helper entries.
 
@@ -468,7 +468,7 @@ TypeFieldEntry
   MinimumAddress?
   MaximumAddress?
   ComputedAddress?
-  ReturnSlot
+  ReturnRegister
 ```
 
 These addresses point at expression code that writes one value into the declared
@@ -558,20 +558,20 @@ the preloaded argument registers.
 
 ### Scopes
 
-- `SlotLocals Count`
+- `RegisterLocals Count`
 
-Scopes are explicit signed local register deltas. `SlotLocals Count` extends the
+Scopes are explicit signed local register deltas. `RegisterLocals Count` extends the
 same frame by `Count` registers when `Count > 0`, and clears/releases `-Count`
 registers when `Count < 0`. Register addresses stay absolute in the current frame, so
 reserving two locals from active registers `r0..r3` exposes `r0..r5`. Existing
 parent registers remain visible and are not rolled back by scope exit. The compiler
 must emit matching deltas for normal exits; `ReturnValue` and `ReturnVoid`
-discard the whole active frame, so no negative `SlotLocals` is needed
+discard the whole active frame, so no negative `RegisterLocals` is needed
 immediately before a return.
 
 ### Arithmetic and Logic
 
-Binary operations read source registers and write `DestinationSlot`:
+Binary operations read source registers and write `DestinationRegister`:
 
 ```text
 Add dst=r3 left=r1 right=r2
@@ -901,7 +901,7 @@ Call frame state:
 ReturnAddress
 CallableIndex
 CallerFrameBase
-ReturnDestinationSlot
+ReturnDestinationRegister
 ScopeMark
 RandomMark
 ```
@@ -918,30 +918,30 @@ Loops should be compiled to explicit loop control instructions and jumps.
 Range loop shape:
 
 ```text
-@0200 SlotLocals locals+=loopLocalCount
+@0200 RegisterLocals locals+=loopLocalCount
 @0201 CreateRangeIteratorShort dst=rIterator from=1 to=20 step=1
 @0202 IteratorNext dst=rItem iterator=rIterator noMore=@0210
-@0203 SlotLocals locals+=iterationLocalCount
+@0203 RegisterLocals locals+=iterationLocalCount
 @0204 Move dst=rIdentifier src=rItem
 @0205 ...
-@0208 SlotLocals locals-=iterationLocalCount
+@0208 RegisterLocals locals-=iterationLocalCount
 @0209 Jump @0202
 @0210 IteratorClose iterator=rIterator
-@0211 SlotLocals locals-=loopLocalCount
+@0211 RegisterLocals locals-=loopLocalCount
 ```
 
 Collection loop shape:
 
 ```text
-@0300 SlotLocals locals+=loopLocalCount
+@0300 RegisterLocals locals+=loopLocalCount
 @0301 IteratorCreate dst=rIterator source=rValues
 @0302 IteratorNext dst=rItem iterator=rIterator noMore=@0310
-@0303 SlotLocals locals+=iterationLocalCount
+@0303 RegisterLocals locals+=iterationLocalCount
 @0304 ...
-@0308 SlotLocals locals-=iterationLocalCount
+@0308 RegisterLocals locals-=iterationLocalCount
 @0309 Jump @0302
 @0310 IteratorClose iterator=rIterator
-@0311 SlotLocals locals-=loopLocalCount
+@0311 RegisterLocals locals-=loopLocalCount
 ```
 
 Loop runtime state is stored in the VM-internal iterator value held by the
@@ -1067,7 +1067,7 @@ registered as `OutboundMessage` bind entries. Direct
 `EmitMessage*`/`PublishMessage*` opcodes store the outbound message bind id in
 `MessageDestination`, the argument register-list in `ListIndex`, and tagged forms
 store the tag register-list in `SecondaryListIndex`. Dynamic message values use the
-message register in `XSlot`; tagged dynamic forms store their concrete tag register-list
+message register in `XRegister`; tagged dynamic forms store their concrete tag register-list
 index in `ListIndex`. Static outbound message signatures are not duplicated as
 message-shape entries in `UShortListPool`; only the argument and tag register-lists
 remain there. Zero-argument messages use a concrete empty argument-list entry in
@@ -1255,20 +1255,20 @@ Generated collection expressions lower to normal linear iterator control flow:
 
 ```text
 ListBuilderCreate builder
-SlotLocals locals+=collectionLocalCount
+RegisterLocals locals+=collectionLocalCount
 CreateRangeIterator* / IteratorCreate iterator
 loop:
   IteratorNext item iterator noMore
-  SlotLocals locals+=iterationLocalCount
+  RegisterLocals locals+=iterationLocalCount
   Move identifier item
   optional predicate + JumpIfNotTrue skipProjection
   projection expression
   ListBuilderAdd builder projected
-  SlotLocals locals-=iterationLocalCount
+  RegisterLocals locals-=iterationLocalCount
   Jump loop
 noMore:
 IteratorClose iterator
-SlotLocals locals-=collectionLocalCount
+RegisterLocals locals-=collectionLocalCount
 ListBuilderFinish dst builder
 ```
 
@@ -1315,13 +1315,13 @@ register operands:
 ```text
 code[26]
 @0000 L_handler_Start:
-@0000 SlotLocals locals+=5
-@0001 SlotLocals locals+=1
+@0000 RegisterLocals locals+=5
+@0001 RegisterLocals locals+=1
 @0003 IteratorCreate dst=r2 source=r0
 @0004 IteratorNext dst=r3 iterator=r2 noMore=@0010
 @0005 ...
 @0010 IteratorClose iterator=r2
-@0011 SlotLocals locals-=1
+@0011 RegisterLocals locals-=1
 @0012 ReturnVoid
 ```
 
@@ -1334,7 +1334,7 @@ handler DamageTaken(unit, amount)
     amount -> r1 as :number
 
 @0000 L_handler_DamageTaken:
-@0000 SlotLocals locals+=localCount
+@0000 RegisterLocals locals+=localCount
 @0001 Cast dst=r0 src=r0 kind=Custom type=:unit
 @0002 Cast dst=r1 src=r1 kind=Integer
 @0003 ...

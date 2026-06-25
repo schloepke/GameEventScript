@@ -66,9 +66,9 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 BU
   field System.UInt16 BindId
   field System.UInt16 CU
-  field System.UInt16 ConditionSlot
+  field System.UInt16 ConditionRegister
   field System.UInt16 DU
-  field System.UInt16 DestinationSlot
+  field System.UInt16 DestinationRegister
   field System.UInt16 EntryAddress
   field System.UInt16 Index
   field System.UInt16 ListIndex
@@ -78,8 +78,8 @@ struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field System.UInt16 StringIndex
   field System.UInt16 TargetAddress
   field System.UInt16 TypeOperand
-  field System.UInt16 XSlot
-  field System.UInt16 YSlot
+  field System.UInt16 XRegister
+  field System.UInt16 YRegister
   field System.UInt64 Payload
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNone = 0
@@ -96,7 +96,7 @@ static class StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits
   method static System.String ToTypeName(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field Nop = 0
-  enum-field SlotLocals = 1
+  enum-field RegisterLocals = 1
   enum-field Jump = 2
   enum-field JumpIfTrue = 3
   enum-field JumpIfFalse = 4

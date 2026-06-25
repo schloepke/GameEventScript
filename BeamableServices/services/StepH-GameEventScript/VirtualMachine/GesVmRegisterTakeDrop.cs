@@ -573,7 +573,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         var selected = new bool[source.Length];
-        SelectExtremeSlots(source, source.Length, selected, selectedCount, highest);
+        SelectExtremeItems(source, source.Length, selected, selectedCount, highest);
         var list = new GesVmValue[source.Length - selectedCount];
         var target = 0;
         for (var i = 0; i < source.Length; i++)
@@ -584,7 +584,7 @@ internal static class GesVmRegisterTakeDrop
 
         dst.SetList(list);
     }
-    private static void SelectExtremeSlots(GesVmValue[] items, int length, bool[] selected, int selectedCount, bool highest)
+    private static void SelectExtremeItems(GesVmValue[] items, int length, bool[] selected, int selectedCount, bool highest)
     {
         for (var i = 0; i < selectedCount; i++)
         {
@@ -776,7 +776,7 @@ internal static class GesVmRegisterTakeDrop
             }
 
             var selected = new bool[itemCount];
-            SelectExtremeSlots(buffer, itemCount, selected, selectedCount, highest);
+            SelectExtremeItems(buffer, itemCount, selected, selectedCount, highest);
             var list = new GesVmValue[itemCount - selectedCount];
             var target = 0;
             for (var i = 0; i < itemCount; i++)

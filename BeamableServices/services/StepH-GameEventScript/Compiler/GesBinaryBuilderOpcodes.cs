@@ -12,8 +12,8 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder Nop()
         => AddOpcode(GameEventScriptBytecodeOpCode.Nop);
 
-    public GesBinaryBuilder SlotLocals(short count)
-        => AddOpcode(GameEventScriptBytecodeOpCode.SlotLocals, count: count);
+    public GesBinaryBuilder RegisterLocals(short count)
+        => AddOpcode(GameEventScriptBytecodeOpCode.RegisterLocals, count: count);
 
     public GesBinaryBuilder Jump(GesLabelRef target)
         => AddOpcode(GameEventScriptBytecodeOpCode.Jump, y: GesOperand.Label(target));

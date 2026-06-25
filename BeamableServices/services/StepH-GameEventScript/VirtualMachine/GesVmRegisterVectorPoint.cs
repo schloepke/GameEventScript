@@ -31,8 +31,8 @@ internal static class GesVmRegisterVectorPoint
                     var liftedUnit = first.Unit;
                     if (vmState.StageLength > 1)
                     {
-                        ref readonly var zSlot = ref vmState.RegisterStaged(1);
-                        liftedZ = zSlot.AsNumericWithUnit(out var liftedUnitZ);
+                        ref readonly var zValue = ref vmState.RegisterStaged(1);
+                        liftedZ = zValue.AsNumericWithUnit(out var liftedUnitZ);
                         if (double.IsNaN(liftedZ) || liftedUnit != liftedUnitZ)
                         {
                             vmState.SetNothing(destinationRegister);
@@ -114,8 +114,8 @@ internal static class GesVmRegisterVectorPoint
                     var liftedUnit = first.Unit;
                     if (vmState.StageLength > 1)
                     {
-                        ref readonly var zSlot = ref vmState.RegisterStaged(1);
-                        liftedZ = zSlot.AsNumericWithUnit(out var liftedUnitZ);
+                        ref readonly var zValue = ref vmState.RegisterStaged(1);
+                        liftedZ = zValue.AsNumericWithUnit(out var liftedUnitZ);
                         if (double.IsNaN(liftedZ) || liftedUnit != liftedUnitZ)
                         {
                             vmState.SetNothing(destinationRegister);

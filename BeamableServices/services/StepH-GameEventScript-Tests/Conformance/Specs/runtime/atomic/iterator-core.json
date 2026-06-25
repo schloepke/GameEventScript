@@ -1,12 +1,12 @@
 {
   "version": 1,
-  "name": "RuntimeAtomicStreamCore",
+  "name": "RuntimeAtomicIteratorCore",
   "level": "atomic",
   "tests": [
     {
       "kind": "scriptApi",
-      "name": "stream create next close over source kinds",
-      "script": "module AtomicStreamCreateNextClose\non Start {\n  let values be [1, 2, 3]\n  let dice as :dice be [6, 4, 2]\n  let text be 'abc'\n  let tags be #boss\n  let map be [a: 1, b: 2]\n  let range as :range be from 1 to 4\n  let fromRange be range[:select item => item * 2]\n  let fromList be values[:select item => item + 10]\n  let fromDice be dice[:select item => item]\n  let fromText be text[:select item => item]\n  let fromTag be tags[:select item => item]\n  let fromMap be map[:select item => item]\n  let fromEmptyList be [][:select item => item]\n  emit Done(fromRange: fromRange, fromList: fromList, fromDice: fromDice, fromText: fromText, fromTag: fromTag, fromMap: fromMap, fromEmptyList: fromEmptyList)\n}",
+      "name": "iterator create next close over source kinds",
+      "script": "module AtomicIteratorCreateNextClose\non Start {\n  let values be [1, 2, 3]\n  let dice as :dice be [6, 4, 2]\n  let text be 'abc'\n  let tags be #boss\n  let map be [a: 1, b: 2]\n  let range as :range be from 1 to 4\n  let fromRange be range[:select item => item * 2]\n  let fromList be values[:select item => item + 10]\n  let fromDice be dice[:select item => item]\n  let fromText be text[:select item => item]\n  let fromTag be tags[:select item => item]\n  let fromMap be map[:select item => item]\n  let fromEmptyList be [][:select item => item]\n  emit Done(fromRange: fromRange, fromList: fromList, fromDice: fromDice, fromText: fromText, fromTag: fromTag, fromMap: fromMap, fromEmptyList: fromEmptyList)\n}",
       "steps": [
         {
           "input": {
@@ -135,8 +135,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "has any and all direct and streams",
-      "script": "module AtomicHasAnyAllDirectAndStreams\non Start {\n  let values be [true, false, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 0 to 2\n  let text be '10'\n  let map be [a: false, b: true]\n  emit Done(listAny: values[:any value where value], listAll: values[:all value where value], emptyAny: emptyList[:any value where value], emptyAll: emptyList[:all value where value], diceAny: dice[:any value where value], diceAll: dice[:all value where value], rangeAny: range[:any value where value], rangeAll: range[:all value where value], textAny: text[:any value where value], textAll: text[:all value where value], mapAny: map[:any value where value], mapAll: map[:all value where value], streamAnyHit: [1, 2, 3][:any value where value > 2], streamAnyMiss: [1, 2, 3][:any value where value > 9], streamAllHit: [1, 2, 3][:all value where value > 0], streamAllMiss: [1, 2, 3][:all value where value > 1])\n}",
+      "name": "has any and all direct and iterators",
+      "script": "module AtomicHasAnyAllDirectAndIterators\non Start {\n  let values be [true, false, true]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 0 to 2\n  let text be '10'\n  let map be [a: false, b: true]\n  emit Done(listAny: values[:any value where value], listAll: values[:all value where value], emptyAny: emptyList[:any value where value], emptyAll: emptyList[:all value where value], diceAny: dice[:any value where value], diceAll: dice[:all value where value], rangeAny: range[:any value where value], rangeAll: range[:all value where value], textAny: text[:any value where value], textAll: text[:all value where value], mapAny: map[:any value where value], mapAll: map[:all value where value], iteratorAnyHit: [1, 2, 3][:any value where value > 2], iteratorAnyMiss: [1, 2, 3][:any value where value > 9], iteratorAllHit: [1, 2, 3][:all value where value > 0], iteratorAllMiss: [1, 2, 3][:all value where value > 1])\n}",
       "steps": [
         {
           "input": {
@@ -187,19 +187,19 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "streamAllHit": {
+                "iteratorAllHit": {
                   "type": ":boolean",
                   "value": true
                 },
-                "streamAllMiss": {
+                "iteratorAllMiss": {
                   "type": ":boolean",
                   "value": false
                 },
-                "streamAnyHit": {
+                "iteratorAnyHit": {
                   "type": ":boolean",
                   "value": true
                 },
-                "streamAnyMiss": {
+                "iteratorAnyMiss": {
                   "type": ":boolean",
                   "value": false
                 },
@@ -219,8 +219,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream map filter collect list chains",
-      "script": "module AtomicStreamSelectFilterCollectList\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let mapped be values[:select value => value * 10]\n  let filtered be values[:filter value where value mod 2 = 1]\n  let chained be values[:filter value where value >= 2][:select value => value * 2][:filter value where value > 5]\n  let capturedBase be 100\n  let captured be values[:select value => value + capturedBase]\n  emit Done(mapped: mapped, filtered: filtered, chained: chained, captured: captured)\n}",
+      "name": "iterator map filter collect list chains",
+      "script": "module AtomicIteratorSelectFilterCollectList\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let mapped be values[:select value => value * 10]\n  let filtered be values[:filter value where value mod 2 = 1]\n  let chained be values[:filter value where value >= 2][:select value => value * 2][:filter value where value > 5]\n  let capturedBase be 100\n  let captured be values[:select value => value + capturedBase]\n  emit Done(mapped: mapped, filtered: filtered, chained: chained, captured: captured)\n}",
       "steps": [
         {
           "input": {
@@ -323,8 +323,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream contains terminals",
-      "script": "module AtomicStreamContainsTerminals\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 5\n  let text be 'abcd'\n  let map be [alpha: 10, beta: 20]\n  emit Done(listContainsHit: values[:filter value where value > 2][:contains 4], listContainsMiss: values[:filter value where value > 2][:contains 2], listAnyHit: values[:filter value where value > 2][:contains any [1, 5]], listAnyMiss: values[:filter value where value > 2][:contains any [1, 2]], listAllHit: values[:filter value where value > 2][:contains all [3, 5]], listAllMiss: values[:filter value where value > 2][:contains all [3, 2]], diceContainsHit: dice[:select roll => roll][:contains 4], diceAnyHit: dice[:select roll => roll][:contains any [1, 6]], diceAllHit: dice[:select roll => roll][:contains all [6, 2]], rangeContainsHit: range[:select item => item][:contains 4], rangeAnyHit: range[:select item => item][:contains any [0, 5]], rangeAllHit: range[:select item => item][:contains all [1, 5]], textContainsHit: text[:select char => char][:contains 'b'], textAllHit: text[:select char => char][:contains all ['a', 'd']], mapContainsHit: map[:select value => value][:contains 10], mapAnyHit: map[:select value => value][:contains any [99, 20]], mapAllHit: map[:select value => value][:contains all [10, 20]])\n}",
+      "name": "iterator contains terminals",
+      "script": "module AtomicIteratorContainsTerminals\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 5\n  let text be 'abcd'\n  let map be [alpha: 10, beta: 20]\n  emit Done(listContainsHit: values[:filter value where value > 2][:contains 4], listContainsMiss: values[:filter value where value > 2][:contains 2], listAnyHit: values[:filter value where value > 2][:contains any [1, 5]], listAnyMiss: values[:filter value where value > 2][:contains any [1, 2]], listAllHit: values[:filter value where value > 2][:contains all [3, 5]], listAllMiss: values[:filter value where value > 2][:contains all [3, 2]], diceContainsHit: dice[:select roll => roll][:contains 4], diceAnyHit: dice[:select roll => roll][:contains any [1, 6]], diceAllHit: dice[:select roll => roll][:contains all [6, 2]], rangeContainsHit: range[:select item => item][:contains 4], rangeAnyHit: range[:select item => item][:contains any [0, 5]], rangeAllHit: range[:select item => item][:contains all [1, 5]], textContainsHit: text[:select char => char][:contains 'b'], textAllHit: text[:select char => char][:contains all ['a', 'd']], mapContainsHit: map[:select value => value][:contains 10], mapAnyHit: map[:select value => value][:contains any [99, 20]], mapAllHit: map[:select value => value][:contains all [10, 20]])\n}",
       "steps": [
         {
           "input": {
@@ -411,8 +411,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream take and drop direct slices",
-      "script": "module AtomicStreamTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], takeHighest: values[:filter value where value > 1][:take highest 2], takeLowest: values[:filter value where value > 1][:take lowest 2], dropHighest: values[:filter value where value > 1][:drop highest 2], dropLowest: values[:filter value where value > 1][:drop lowest 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
+      "name": "iterator take and drop direct slices",
+      "script": "module AtomicIteratorTakeDropDirectSlices\non Start {\n  let values be [1, 2, 3, 4, 5]\n  emit Done(takeFirst: values[:filter value where value > 1][:take first 2], dropFirst: values[:filter value where value > 1][:drop first 2], takeLast: values[:filter value where value > 1][:take last 2], dropLast: values[:filter value where value > 1][:drop last 2], takeHighest: values[:filter value where value > 1][:take highest 2], takeLowest: values[:filter value where value > 1][:take lowest 2], dropHighest: values[:filter value where value > 1][:drop highest 2], dropLowest: values[:filter value where value > 1][:drop lowest 2], mappedTakeFirst: values[:select value => value * 10][:take first 2])\n}",
       "steps": [
         {
           "input": {
@@ -700,8 +700,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "take drop stream boundary counts",
-      "script": "module AtomicTakeDropStreamBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyStream be values[:filter value where false]\n  emit Done(takeFirstTooMany: values[:filter value where true][:take first 9], dropFirstTooManyLen: values[:filter value where true][:drop first 9][:count], takeLastTooMany: values[:filter value where true][:take last 9], dropLastTooManyLen: values[:filter value where true][:drop last 9][:count], takeHighestTooMany: values[:filter value where true][:take highest 9], dropHighestTooManyLen: values[:filter value where true][:drop highest 9][:count], takeLowestTooMany: values[:filter value where true][:take lowest 9], dropLowestTooManyLen: values[:filter value where true][:drop lowest 9][:count], emptyTakeFirstLen: emptyStream[:take first 2][:count], emptyDropLastLen: emptyStream[:drop last 2][:count], emptyTakeHighestLen: emptyStream[:take highest 2][:count], emptyDropLowestLen: emptyStream[:drop lowest 2][:count])\n}",
+      "name": "take drop iterator boundary counts",
+      "script": "module AtomicTakeDropIteratorBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyIterator be values[:filter value where false]\n  emit Done(takeFirstTooMany: values[:filter value where true][:take first 9], dropFirstTooManyLen: values[:filter value where true][:drop first 9][:count], takeLastTooMany: values[:filter value where true][:take last 9], dropLastTooManyLen: values[:filter value where true][:drop last 9][:count], takeHighestTooMany: values[:filter value where true][:take highest 9], dropHighestTooManyLen: values[:filter value where true][:drop highest 9][:count], takeLowestTooMany: values[:filter value where true][:take lowest 9], dropLowestTooManyLen: values[:filter value where true][:drop lowest 9][:count], emptyTakeFirstLen: emptyIterator[:take first 2][:count], emptyDropLastLen: emptyIterator[:drop last 2][:count], emptyTakeHighestLen: emptyIterator[:take highest 2][:count], emptyDropLowestLen: emptyIterator[:drop lowest 2][:count])\n}",
       "steps": [
         {
           "input": {
@@ -820,7 +820,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "weighted choose lowers to stream weighted terminals",
+      "name": "weighted choose lowers to iterator weighted terminals",
       "randomSequence": [
         "9",
         "0",
@@ -920,7 +920,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "weighted choose duplicate weights preserve deterministic stream order",
+      "name": "weighted choose duplicate weights preserve deterministic iterator order",
       "randomSequence": [
         "0",
         "0",
@@ -1151,7 +1151,7 @@
         "0",
         "0"
       ],
-      "script": "module AtomicRandomChooseBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 10 to 12\n  let emptyStream be values[:filter value where false]\n  emit Done(listOne: values[:choose 1 at random], listTakeTooMany: values[:choose 9 at random], emptyListOne: emptyList[:choose 1 at random], emptyListTakeLen: emptyList[:choose 2 at random][:count], diceOne: dice[:choose 1 at random], diceTakeTooMany: dice[:choose 9 at random], emptyDiceOne: emptyDice[:choose 1 at random], emptyDiceTakeLen: emptyDice[:choose 2 at random][:count], rangeOne: range[:choose 1 at random], rangeTakeTooMany: range[:choose 9 at random], streamTakeTooMany: values[:filter value where true][:choose 9 at random], emptyStreamOne: emptyStream[:choose 1 at random], emptyStreamTakeLen: emptyStream[:choose 2 at random][:count], invalidIntOne: 10[:choose 1 at random], invalidIntTake: 10[:choose 2 at random], invalidMapTake: [a: 1][:choose 2 at random])\n}",
+      "script": "module AtomicRandomChooseBoundaries\non Start {\n  let values be [1, 2, 3]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 10 to 12\n  let emptyIterator be values[:filter value where false]\n  emit Done(listOne: values[:choose 1 at random], listTakeTooMany: values[:choose 9 at random], emptyListOne: emptyList[:choose 1 at random], emptyListTakeLen: emptyList[:choose 2 at random][:count], diceOne: dice[:choose 1 at random], diceTakeTooMany: dice[:choose 9 at random], emptyDiceOne: emptyDice[:choose 1 at random], emptyDiceTakeLen: emptyDice[:choose 2 at random][:count], rangeOne: range[:choose 1 at random], rangeTakeTooMany: range[:choose 9 at random], iteratorTakeTooMany: values[:filter value where true][:choose 9 at random], emptyIteratorOne: emptyIterator[:choose 1 at random], emptyIteratorTakeLen: emptyIterator[:choose 2 at random][:count], invalidIntOne: 10[:choose 1 at random], invalidIntTake: 10[:choose 2 at random], invalidMapTake: [a: 1][:choose 2 at random])\n}",
       "steps": [
         {
           "input": {
@@ -1188,10 +1188,10 @@
                   "type": ":integer",
                   "value": "0"
                 },
-                "emptyStreamOne": {
+                "emptyIteratorOne": {
                   "type": ":nothing"
                 },
-                "emptyStreamTakeLen": {
+                "emptyIteratorTakeLen": {
                   "type": ":integer",
                   "value": "0"
                 },
@@ -1246,7 +1246,7 @@
                     }
                   ]
                 },
-                "streamTakeTooMany": {
+                "iteratorTakeTooMany": {
                   "type": ":list",
                   "items": [
                     {
@@ -1403,7 +1403,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream collect map and map value",
+      "name": "iterator collect map and map value",
       "script": "module AtomicMapSelectorLoop\non Start {\n  let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: '', hp: 99, team: #hidden]]\n  let emptyUnits be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  let text be 'aba'\n  let sourceMap be [b: 2, a: 1]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let emptyById be emptyUnits[:map unit by unit.id]\n  let diceMap be dice[:map roll by roll]\n  let rangeMap be range[:map value by value]\n  let textMap be text[:map char by char]\n  let mapValueMap be sourceMap[:map value by value => value * 10]\n  let invalidIntegerMap be 10[:map value by value]\n  emit Done(byIdCount: byId[:count], rookHp: byId[#rook].hp, rookTeam: byId[#rook].team, mageHp: byId[#mage].hp, hpByIdCount: hpById[:count], hpRook: hpById[#rook], hpMage: hpById[#mage], missingEmpty: byId[''], emptyByIdLen: emptyById[:count], diceMapLen: diceMap[:count], diceSix: diceMap['6'], diceFour: diceMap['4'], rangeMapLen: rangeMap[:count], rangeTwo: rangeMap['2'], textMapLen: textMap[:count], textA: textMap['a'], textB: textMap['b'], mapValueLen: mapValueMap[:count], mapValueOne: mapValueMap['1'], mapValueTwo: mapValueMap['2'], invalidIntegerMapLen: invalidIntegerMap[:count])\n}",
       "steps": [
         {
@@ -1506,8 +1506,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream collect map duplicate keys use last value",
-      "script": "module AtomicMapSelectorDuplicateKeys\non Start {\n  let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: #mage, hp: 8, team: #gold]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let streamById be units[:filter unit where true][:map unit by unit.id]\n  emit Done(byIdLen: byId[:count], rookHp: byId[#rook].hp, rookTeam: byId[#rook].team, mageHp: byId[#mage].hp, mageTeam: byId[#mage].team, hpByIdLen: hpById[:count], hpRook: hpById[#rook], hpMage: hpById[#mage], streamRookHp: streamById[#rook].hp, streamMageTeam: streamById[#mage].team)\n}",
+      "name": "iterator collect map duplicate keys use last value",
+      "script": "module AtomicMapSelectorDuplicateKeys\non Start {\n  let units be [[id: #rook, hp: 10, team: #blue], [id: #mage, hp: 6, team: #red], [id: #rook, hp: 12, team: #green], [id: #mage, hp: 8, team: #gold]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let hpById be units[:map unit by unit.id => unit.hp]\n  let iteratorById be units[:filter unit where true][:map unit by unit.id]\n  emit Done(byIdLen: byId[:count], rookHp: byId[#rook].hp, rookTeam: byId[#rook].team, mageHp: byId[#mage].hp, mageTeam: byId[#mage].team, hpByIdLen: hpById[:count], hpRook: hpById[#rook], hpMage: hpById[#mage], iteratorRookHp: iteratorById[#rook].hp, iteratorMageTeam: iteratorById[#mage].team)\n}",
       "steps": [
         {
           "input": {
@@ -1550,11 +1550,11 @@
                   "type": ":tag",
                   "value": "green"
                 },
-                "streamMageTeam": {
+                "iteratorMageTeam": {
                   "type": ":tag",
                   "value": "gold"
                 },
-                "streamRookHp": {
+                "iteratorRookHp": {
                   "type": ":integer",
                   "value": "12"
                 }
@@ -1566,7 +1566,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream collect map skips empty keys and keeps projected nothing values",
+      "name": "iterator collect map skips empty keys and keeps projected nothing values",
       "script": "module AtomicMapSelectorInvalidKeysAndValues\non Start {\n  let units be [[id: #rook, hp: 10], [id: '', hp: 99], [id: nothing, hp: 42], [id: #mage, hp: 6]]\n  let byId be units[:filter unit where true][:map unit by unit.id]\n  let missingById be units[:map unit by unit.id => unit.missing]\n  let textKeyMap be ['a', '', 'b'][:map value by value => value]\n  emit Done(byIdLen: byId[:count], rookHp: byId[#rook].hp, mageHp: byId[#mage].hp, emptyKey: byId[''], missingKey: byId['nothing'], missingByIdLen: missingById[:count], missingRook: missingById[#rook], missingMage: missingById[#mage], textKeyLen: textKeyMap[:count], textA: textKeyMap['a'], textB: textKeyMap['b'], textEmpty: textKeyMap[''])\n}",
       "steps": [
         {
@@ -1629,7 +1629,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "first last single direct and streams",
+      "name": "first last single direct and iterators",
       "script": "module AtomicFirstLastSingle\non Start {\n  let values be [1, 2, 3, 4]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 3\n  let text be 'ab'\n  let map be [a: 1, b: 2]\n  emit Done(first: values[:first], firstFiltered: values[:first value where value > 2], firstEmpty: emptyList[:first], last: values[:last], lastFiltered: values[:last value where value < 4], lastEmpty: emptyList[:last], single: values[:single value where value = 3], singleNone: values[:single value where value > 9], singleMany: values[:single value where value > 1], diceFirst: dice[:first], diceLast: dice[:last], rangeFirst: range[:first], rangeLast: range[:last], textFirst: text[:first], textLast: text[:last], textSingle: 'x'[:single], mapFirst: map[:first], mapLast: map[:last], listSingle: [9][:single])\n}",
       "steps": [
         {

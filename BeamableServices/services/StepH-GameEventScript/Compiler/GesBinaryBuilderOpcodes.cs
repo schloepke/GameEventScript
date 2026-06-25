@@ -522,17 +522,17 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder Single(GesRegisterRef destination, GesRegisterRef operand)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Single, destination, operand);
 
-    public GesBinaryBuilder StreamCreate(GesRegisterRef destination, GesRegisterRef collection)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamCreate, destination, collection);
+    public GesBinaryBuilder IteratorCreate(GesRegisterRef destination, GesRegisterRef collection)
+        => UnaryOpcode(GameEventScriptBytecodeOpCode.IteratorCreate, destination, collection);
 
-    public GesBinaryBuilder StreamCreateOrJump(GesRegisterRef destination, GesRegisterRef collection, GesLabelRef failureTarget)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamCreateOrJump, dst: GesOperand.Register(destination), x: GesOperand.Register(collection), y: GesOperand.Label(failureTarget));
+    public GesBinaryBuilder IteratorCreateOrJump(GesRegisterRef destination, GesRegisterRef collection, GesLabelRef failureTarget)
+        => AddOpcode(GameEventScriptBytecodeOpCode.IteratorCreateOrJump, dst: GesOperand.Register(destination), x: GesOperand.Register(collection), y: GesOperand.Label(failureTarget));
 
-    public GesBinaryBuilder StreamNext(GesRegisterRef destination, GesRegisterRef iterator, GesLabelRef exhaustedTarget)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamNext, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Label(exhaustedTarget));
+    public GesBinaryBuilder IteratorNext(GesRegisterRef destination, GesRegisterRef iterator, GesLabelRef exhaustedTarget)
+        => AddOpcode(GameEventScriptBytecodeOpCode.IteratorNext, dst: GesOperand.Register(destination), x: GesOperand.Register(iterator), y: GesOperand.Label(exhaustedTarget));
 
-    public GesBinaryBuilder StreamClose(GesRegisterRef iterator)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamClose, x: GesOperand.Register(iterator));
+    public GesBinaryBuilder IteratorClose(GesRegisterRef iterator)
+        => AddOpcode(GameEventScriptBytecodeOpCode.IteratorClose, x: GesOperand.Register(iterator));
 
     public GesBinaryBuilder Distinct(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Distinct, destination, source);

@@ -27,8 +27,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 TakeFirstRange(vmState, ref dst, range, count);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                TakeFirstStream(vmState, ref dst, stream, count);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                TakeFirstIterator(vmState, ref dst, iterator, count);
                 break;
             default:
                 dst.SetNothing();
@@ -56,8 +56,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 OneRandomRange(vmState, ref dst, range, randomGenerator);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                OneRandomStream(vmState, ref dst, stream, randomGenerator);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                OneRandomIterator(vmState, ref dst, iterator, randomGenerator);
                 break;
             default:
                 dst.SetNothing();
@@ -83,8 +83,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 TakeRandomRange(vmState, ref dst, range, count, randomGenerator);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                TakeRandomStream(vmState, ref dst, stream, count, randomGenerator);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                TakeRandomIterator(vmState, ref dst, iterator, count, randomGenerator);
                 break;
             default:
                 dst.SetNothing();
@@ -232,8 +232,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 DropFirstRange(vmState, ref dst, in source, range, count);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                DropFirstStream(vmState, ref dst, stream, count);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                DropFirstIterator(vmState, ref dst, iterator, count);
                 break;
             default:
                 dst.SetNothing();
@@ -259,8 +259,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 TakeLastRange(vmState, ref dst, range, count);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                TakeLastStream(vmState, ref dst, stream, count);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                TakeLastIterator(vmState, ref dst, iterator, count);
                 break;
             default:
                 dst.SetNothing();
@@ -286,8 +286,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 DropLastRange(vmState, ref dst, in source, range, count);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                DropLastStream(vmState, ref dst, stream, count);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                DropLastIterator(vmState, ref dst, iterator, count);
                 break;
             default:
                 dst.SetNothing();
@@ -313,8 +313,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 TakeExtremeRange(vmState, ref dst, range, count, true);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                TakeExtremeStream(vmState, ref dst, stream, count, true);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                TakeExtremeIterator(vmState, ref dst, iterator, count, true);
                 break;
             default:
                 dst.SetNothing();
@@ -340,8 +340,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 TakeExtremeRange(vmState, ref dst, range, count, false);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                TakeExtremeStream(vmState, ref dst, stream, count, false);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                TakeExtremeIterator(vmState, ref dst, iterator, count, false);
                 break;
             default:
                 dst.SetNothing();
@@ -367,8 +367,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 DropExtremeRange(vmState, ref dst, in source, range, count, true);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                DropExtremeStream(vmState, ref dst, stream, count, true);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                DropExtremeIterator(vmState, ref dst, iterator, count, true);
                 break;
             default:
                 dst.SetNothing();
@@ -394,8 +394,8 @@ internal static class GesVmRegisterTakeDrop
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 DropExtremeRange(vmState, ref dst, in source, range, count, false);
                 break;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                DropExtremeStream(vmState, ref dst, stream, count, false);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                DropExtremeIterator(vmState, ref dst, iterator, count, false);
                 break;
             default:
                 dst.SetNothing();
@@ -605,11 +605,11 @@ internal static class GesVmRegisterTakeDrop
             selected[best] = true;
         }
     }
-    private static void TakeFirstStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
+    private static void TakeFirstIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count)
     {
         if (count <= 0)
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
             return;
         }
@@ -619,7 +619,7 @@ internal static class GesVmRegisterTakeDrop
         var itemCount = 0;
         try
         {
-            while (itemCount < count && stream.TryNext(ref item))
+            while (itemCount < count && iterator.TryNext(ref item))
             {
                 if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
                 buffer[itemCount++] = item;
@@ -629,10 +629,10 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void DropFirstStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
+    private static void DropFirstIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count)
     {
         var item = new GesVmValue();
         var skipped = 0;
@@ -640,8 +640,8 @@ internal static class GesVmRegisterTakeDrop
         var itemCount = 0;
         try
         {
-            while (count > 0 && skipped < count && stream.TryNext(ref item)) skipped++;
-            while (stream.TryNext(ref item))
+            while (count > 0 && skipped < count && iterator.TryNext(ref item)) skipped++;
+            while (iterator.TryNext(ref item))
             {
                 if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
                 buffer[itemCount++] = item;
@@ -651,14 +651,14 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeLastStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
+    private static void TakeLastIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count)
     {
         if (count <= 0)
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
             return;
         }
@@ -668,7 +668,7 @@ internal static class GesVmRegisterTakeDrop
         var itemCount = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
                 buffer[itemCount++] = item;
@@ -688,17 +688,17 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void DropLastStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count)
+    private static void DropLastIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count)
     {
         var item = new GesVmValue();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
                 buffer[itemCount++] = item;
@@ -709,14 +709,14 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeExtremeStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count, bool highest)
+    private static void TakeExtremeIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count, bool highest)
     {
         if (count <= 0)
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
             return;
         }
@@ -726,7 +726,7 @@ internal static class GesVmRegisterTakeDrop
         var itemCount = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (itemCount < count)
                 {
@@ -746,17 +746,17 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void DropExtremeStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count, bool highest)
+    private static void DropExtremeIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count, bool highest)
     {
         var item = new GesVmValue();
         var buffer = new GesVmValue[16];
         var itemCount = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
                 buffer[itemCount++] = item;
@@ -789,7 +789,7 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
     private static void OneRandomRange(GesVmState vmState, ref GesVmValue dst, GesVmValueRangeInteger valueRangeInteger, GesVmXoshiroRandom randomGenerator)
@@ -818,14 +818,14 @@ internal static class GesVmRegisterTakeDrop
         if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, index + 1L, out var value)) dst.SetFloat(value);
         else dst.SetNothing();
     }
-    private static void OneRandomStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
+    private static void OneRandomIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, GesVmXoshiroRandom randomGenerator)
     {
         var item = new GesVmValue();
         var chosen = new GesVmValue();
         var count = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 count++;
                 if (randomGenerator.NextInclusiveInteger(1, count) == 1) chosen = item;
@@ -836,7 +836,7 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
     private static void TakeRandomList(GesVmState vmState, ref GesVmValue dst, GesVmValue[] source, short count, GesVmXoshiroRandom randomGenerator)
@@ -967,11 +967,11 @@ internal static class GesVmRegisterTakeDrop
 
         dst.SetList(list);
     }
-    private static void TakeRandomStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, short count, GesVmXoshiroRandom randomGenerator)
+    private static void TakeRandomIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, short count, GesVmXoshiroRandom randomGenerator)
     {
         if (count <= 0)
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
             return;
         }
@@ -981,7 +981,7 @@ internal static class GesVmRegisterTakeDrop
         var itemCount = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
                 buffer[itemCount++] = item;
@@ -1001,7 +1001,7 @@ internal static class GesVmRegisterTakeDrop
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
     private static int[] CreateShuffledPrefix(int sourceLength, int prefixLength, GesVmXoshiroRandom randomGenerator)

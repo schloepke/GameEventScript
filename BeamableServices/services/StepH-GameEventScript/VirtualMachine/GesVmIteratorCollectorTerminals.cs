@@ -5,7 +5,7 @@ using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
-internal static class GesVmStreamCollectorTerminals
+internal static class GesVmIteratorCollectorTerminals
 {
     internal static void GesVmFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
@@ -37,8 +37,8 @@ internal static class GesVmStreamCollectorTerminals
             case Text or Tag:
                 FirstFromText(vmState, destinationRegister, in source);
                 return;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                FirstFromStream(vmState, destinationRegister, stream);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                FirstFromIterator(vmState, destinationRegister, iterator);
                 return;
             default:
                 vmState.SetNothing(destinationRegister);
@@ -75,8 +75,8 @@ internal static class GesVmStreamCollectorTerminals
             case Text or Tag:
                 LastFromText(vmState, destinationRegister, in source);
                 return;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                LastFromStream(vmState, destinationRegister, stream);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                LastFromIterator(vmState, destinationRegister, iterator);
                 return;
             default:
                 vmState.SetNothing(destinationRegister);
@@ -110,35 +110,35 @@ internal static class GesVmStreamCollectorTerminals
             case Text or Tag:
                 SingleFromText(vmState, destinationRegister, in source);
                 return;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                SingleFromStream(vmState, destinationRegister, stream);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                SingleFromIterator(vmState, destinationRegister, iterator);
                 return;
             default:
                 vmState.SetNothing(destinationRegister);
                 return;
         }
     }
-    private static void FirstFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
+    private static void FirstFromIterator(GesVmState vmState, ushort destinationRegister, IGesVmIterator iterator)
     {
         var item = new GesVmValue();
         try
         {
-            if (stream.TryNext(ref item)) vmState.SetValue(destinationRegister, in item);
+            if (iterator.TryNext(ref item)) vmState.SetValue(destinationRegister, in item);
             else vmState.SetNothing(destinationRegister);
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void LastFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
+    private static void LastFromIterator(GesVmState vmState, ushort destinationRegister, IGesVmIterator iterator)
     {
         var item = new GesVmValue();
         var last = new GesVmValue();
         var found = false;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 last = item;
                 found = true;
@@ -149,27 +149,27 @@ internal static class GesVmStreamCollectorTerminals
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void SingleFromStream(GesVmState vmState, ushort destinationRegister, IGesVmStream stream)
+    private static void SingleFromIterator(GesVmState vmState, ushort destinationRegister, IGesVmIterator iterator)
     {
         var item = new GesVmValue();
         try
         {
-            if (!stream.TryNext(ref item))
+            if (!iterator.TryNext(ref item))
             {
                 vmState.SetNothing(destinationRegister);
                 return;
             }
 
             var second = new GesVmValue();
-            if (stream.TryNext(ref second)) vmState.SetNothing(destinationRegister);
+            if (iterator.TryNext(ref second)) vmState.SetNothing(destinationRegister);
             else vmState.SetValue(destinationRegister, in item);
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
     private static void FirstFromText(GesVmState vmState, ushort destinationRegister, in GesVmValue source)

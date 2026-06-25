@@ -81,14 +81,14 @@ internal static class GesVmRegisterSortGroupDistinct
                 vmState.SetDice(destinationRegister, compact);
                 return;
             }
-            case Stream when source.ObjectValue is IGesVmStream stream:
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
             {
                 var item = new GesVmValue();
                 var values = new GesVmValue[16];
                 var count = 0;
                 try
                 {
-                    while (stream.TryNext(ref item))
+                    while (iterator.TryNext(ref item))
                     {
                         var found = false;
                         for (var i = 0; i < count; i++)
@@ -111,7 +111,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
                 finally
                 {
-                    if (stream is IDisposable disposable) disposable.Dispose();
+                    if (iterator is IDisposable disposable) disposable.Dispose();
                 }
 
                 var result = new GesVmValue[count];
@@ -225,14 +225,14 @@ internal static class GesVmRegisterSortGroupDistinct
                 dst.SetNothing();
                 return;
             }
-            case Stream when source.ObjectValue is IGesVmStream stream:
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
             {
                 var item = new GesVmValue();
                 var values = new GesVmValue[16];
                 var count = 0;
                 try
                 {
-                    while (stream.TryNext(ref item))
+                    while (iterator.TryNext(ref item))
                     {
                         if (count == values.Length)
                         {
@@ -246,7 +246,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 }
                 finally
                 {
-                    if (stream is IDisposable disposable) disposable.Dispose();
+                    if (iterator is IDisposable disposable) disposable.Dispose();
                 }
 
                 if (!SortValues(values, count, descending))

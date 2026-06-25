@@ -52,8 +52,8 @@ internal static class GesVmRegisterShuffleReverse
                 else dst.SetNothing();
                 break;
             }
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                ReverseStream(vmState, ref dst, stream);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                ReverseIterator(vmState, ref dst, iterator);
                 break;
             default:
                 dst.SetNothing();
@@ -135,8 +135,8 @@ internal static class GesVmRegisterShuffleReverse
                 dst.SetList(result);
                 break;
             }
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                ShuffleStream(vmState, ref dst, stream, randomGenerator);
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                ShuffleIterator(vmState, ref dst, iterator, randomGenerator);
                 break;
             default:
                 dst.SetNothing();
@@ -145,14 +145,14 @@ internal static class GesVmRegisterShuffleReverse
 
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void ReverseStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream)
+    private static void ReverseIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator)
     {
         var item = new GesVmValue();
         var values = new GesVmValue[16];
         var count = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (count == values.Length)
                 {
@@ -166,21 +166,21 @@ internal static class GesVmRegisterShuffleReverse
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
 
         var result = new GesVmValue[count];
         for (var i = 0; i < count; i++) result[i] = values[count - i - 1];
         dst.SetList(result);
     }
-    private static void ShuffleStream(GesVmState vmState, ref GesVmValue dst, IGesVmStream stream, GesVmXoshiroRandom randomGenerator)
+    private static void ShuffleIterator(GesVmState vmState, ref GesVmValue dst, IGesVmIterator iterator, GesVmXoshiroRandom randomGenerator)
     {
         var item = new GesVmValue();
         var values = new GesVmValue[16];
         var count = 0;
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (count == values.Length)
                 {
@@ -194,7 +194,7 @@ internal static class GesVmRegisterShuffleReverse
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
 
         var result = new GesVmValue[count];

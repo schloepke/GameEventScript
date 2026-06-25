@@ -106,13 +106,13 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
-    [DynamicData(nameof(RuntimeAtomicStreamCoreCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
-    public void RuntimeAtomicStreamCore(GameEventScriptConformanceCase testCase)
+    [DynamicData(nameof(RuntimeAtomicIteratorCoreCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicIteratorCore(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
-    [DynamicData(nameof(RuntimeAtomicStreamTerminalsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
-    public void RuntimeAtomicStreamTerminals(GameEventScriptConformanceCase testCase)
+    [DynamicData(nameof(RuntimeAtomicIteratorTerminalsCases), DynamicDataDisplayName = nameof(GetConformanceCaseDisplayName))]
+    public void RuntimeAtomicIteratorTerminals(GameEventScriptConformanceCase testCase)
         => RunJsonConformanceCase(testCase);
 
     [TestMethod]
@@ -860,11 +860,11 @@ public abstract class GameEventScriptJsonConformanceTestBase
     public static IEnumerable<object[]> RuntimeAtomicSeriesCases()
         => Cases("runtime/atomic/series.json");
 
-    public static IEnumerable<object[]> RuntimeAtomicStreamCoreCases()
-        => Cases("runtime/atomic/stream-core.json");
+    public static IEnumerable<object[]> RuntimeAtomicIteratorCoreCases()
+        => Cases("runtime/atomic/iterator-core.json");
 
-    public static IEnumerable<object[]> RuntimeAtomicStreamTerminalsCases()
-        => Cases("runtime/atomic/stream-terminals.json");
+    public static IEnumerable<object[]> RuntimeAtomicIteratorTerminalsCases()
+        => Cases("runtime/atomic/iterator-terminals.json");
 
     public static IEnumerable<object[]> RuntimeAtomicSortGroupDistinctCases()
         => Cases("runtime/atomic/sort-group-distinct.json");

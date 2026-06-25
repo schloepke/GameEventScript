@@ -199,8 +199,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "distinct and distinct by transformed streams",
-      "script": "module AtomicDistinctStreams\non Start {\n  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]\n  let dice as :dice be [6, 5, 5, 3]\n  let streamDistinct be [1, 2, 1, 3, 2][:select value => value][:distinct]\n  let streamDistinctBy be units[:filter unit where unit.hp > 0][:distinct by unit => unit.faction]\n  let streamDistinctByBool be units[:filter unit where true][:distinct by unit => unit.hp > 7]\n  let diceStreamDistinctBy be dice[:filter value where true][:distinct by value => value]\n  let emptyStreamDistinct be [1, 2][:filter value where false][:distinct]\n  let emptyStreamDistinctBy be units[:filter unit where false][:distinct by unit => unit.faction]\n  emit Done(streamLen: streamDistinct[:count], streamFirst: streamDistinct[1], streamSecond: streamDistinct[2], streamThird: streamDistinct[3], byLen: streamDistinctBy[:count], byFirst: streamDistinctBy[1].name, bySecond: streamDistinctBy[2].name, boolLen: streamDistinctByBool[:count], boolFirst: streamDistinctByBool[1].name, boolSecond: streamDistinctByBool[2].name, diceLen: diceStreamDistinctBy[:count], diceFirst: diceStreamDistinctBy[1], diceSecond: diceStreamDistinctBy[2], diceThird: diceStreamDistinctBy[3], emptyLen: emptyStreamDistinct[:count], emptyByLen: emptyStreamDistinctBy[:count])\n}",
+      "name": "distinct and distinct by transformed iterators",
+      "script": "module AtomicDistinctIterators\non Start {\n  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]\n  let dice as :dice be [6, 5, 5, 3]\n  let iteratorDistinct be [1, 2, 1, 3, 2][:select value => value][:distinct]\n  let iteratorDistinctBy be units[:filter unit where unit.hp > 0][:distinct by unit => unit.faction]\n  let iteratorDistinctByBool be units[:filter unit where true][:distinct by unit => unit.hp > 7]\n  let diceIteratorDistinctBy be dice[:filter value where true][:distinct by value => value]\n  let emptyIteratorDistinct be [1, 2][:filter value where false][:distinct]\n  let emptyIteratorDistinctBy be units[:filter unit where false][:distinct by unit => unit.faction]\n  emit Done(iteratorLen: iteratorDistinct[:count], iteratorFirst: iteratorDistinct[1], iteratorSecond: iteratorDistinct[2], iteratorThird: iteratorDistinct[3], byLen: iteratorDistinctBy[:count], byFirst: iteratorDistinctBy[1].name, bySecond: iteratorDistinctBy[2].name, boolLen: iteratorDistinctByBool[:count], boolFirst: iteratorDistinctByBool[1].name, boolSecond: iteratorDistinctByBool[2].name, diceLen: diceIteratorDistinctBy[:count], diceFirst: diceIteratorDistinctBy[1], diceSecond: diceIteratorDistinctBy[2], diceThird: diceIteratorDistinctBy[3], emptyLen: emptyIteratorDistinct[:count], emptyByLen: emptyIteratorDistinctBy[:count])\n}",
       "steps": [
         {
           "input": {
@@ -259,19 +259,19 @@
                   "type": ":integer",
                   "value": "0"
                 },
-                "streamFirst": {
+                "iteratorFirst": {
                   "type": ":integer",
                   "value": "1"
                 },
-                "streamLen": {
+                "iteratorLen": {
                   "type": ":integer",
                   "value": "3"
                 },
-                "streamSecond": {
+                "iteratorSecond": {
                   "type": ":integer",
                   "value": "2"
                 },
-                "streamThird": {
+                "iteratorThird": {
                   "type": ":integer",
                   "value": "3"
                 }
@@ -283,8 +283,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "sort direct and stream source kinds",
-      "script": "module AtomicSortKinds\non Start {\n  let values be [3, 1, 2, 2]\n  let textValues be ['beta', 'alpha', 'alpha']\n  let tagValues be [#beta, #alpha, #gamma]\n  let unitValues be [1m, 3m, 2m]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 3 to 1 step -1\n  let floatRange as :range be from 3.5 to 2.5 step -0.5\n  let map be [b: 2, a: 1]\n  let streamSorted be [1, 2, 3][:select value => 0 - value][:sort ascending]\n  let streamDescending be [1, 2, 3][:filter value where true][:sort descending]\n  let emptyStreamSorted be [1, 2][:filter value where false][:sort ascending]\n  let ascending be values[:sort ascending]\n  let descending be values[:sort descending]\n  let textAscending be textValues[:sort ascending]\n  let tagDescending be tagValues[:sort descending]\n  let unitAscending be unitValues[:sort ascending]\n  let diceAscending be dice[:sort ascending]\n  let diceDescending be dice[:sort descending]\n  let rangeAscending be range[:sort ascending]\n  let rangeDescending be range[:sort descending]\n  let floatRangeAscending be floatRange[:sort ascending]\n  emit Done(asc_1: ascending[1], asc_2: ascending[2], asc_3: ascending[3], asc_4: ascending[4], desc_1: descending[1], desc_2: descending[2], desc_3: descending[3], desc_4: descending[4], text_1: textAscending[1], text_2: textAscending[2], text_3: textAscending[3], tag_1: tagDescending[1], tag_2: tagDescending[2], tag_3: tagDescending[3], unit_1: unitAscending[1], unit_2: unitAscending[2], unit_3: unitAscending[3], emptyListLen: emptyList[:count], dice_1: diceAscending[1], dice_2: diceAscending[2], dice_3: diceAscending[3], diceAscIsList: diceAscending is :list, diceDesc_1: diceDescending[1], diceDesc_2: diceDescending[2], diceDesc_3: diceDescending[3], diceDescIsList: diceDescending is :list, emptyDiceLen: emptyDice[:count], range_1: rangeAscending[1], range_2: rangeAscending[2], range_3: rangeAscending[3], rangeAscIsRange: rangeAscending is :range, rangeDesc_1: rangeDescending[1], rangeDesc_2: rangeDescending[2], rangeDesc_3: rangeDescending[3], rangeDescIsRange: rangeDescending is :range, floatRange_1: floatRangeAscending[1], floatRange_2: floatRangeAscending[2], floatRange_3: floatRangeAscending[3], stream_1: streamSorted[1], stream_2: streamSorted[2], stream_3: streamSorted[3], streamDesc_1: streamDescending[1], streamDesc_2: streamDescending[2], streamDesc_3: streamDescending[3], emptyStreamLen: emptyStreamSorted[:count], nothingValue: nothing[:sort ascending], integerValue: 10[:sort ascending], textValue: 'ba'[:sort ascending], tagValue: #ba[:sort ascending], mapValue: map[:sort ascending])\n}",
+      "name": "sort direct and iterator source kinds",
+      "script": "module AtomicSortKinds\non Start {\n  let values be [3, 1, 2, 2]\n  let textValues be ['beta', 'alpha', 'alpha']\n  let tagValues be [#beta, #alpha, #gamma]\n  let unitValues be [1m, 3m, 2m]\n  let emptyList be []\n  let dice as :dice be [6, 4, 2]\n  let emptyDice as :dice be []\n  let range as :range be from 3 to 1 step -1\n  let floatRange as :range be from 3.5 to 2.5 step -0.5\n  let map be [b: 2, a: 1]\n  let iteratorSorted be [1, 2, 3][:select value => 0 - value][:sort ascending]\n  let iteratorDescending be [1, 2, 3][:filter value where true][:sort descending]\n  let emptyIteratorSorted be [1, 2][:filter value where false][:sort ascending]\n  let ascending be values[:sort ascending]\n  let descending be values[:sort descending]\n  let textAscending be textValues[:sort ascending]\n  let tagDescending be tagValues[:sort descending]\n  let unitAscending be unitValues[:sort ascending]\n  let diceAscending be dice[:sort ascending]\n  let diceDescending be dice[:sort descending]\n  let rangeAscending be range[:sort ascending]\n  let rangeDescending be range[:sort descending]\n  let floatRangeAscending be floatRange[:sort ascending]\n  emit Done(asc_1: ascending[1], asc_2: ascending[2], asc_3: ascending[3], asc_4: ascending[4], desc_1: descending[1], desc_2: descending[2], desc_3: descending[3], desc_4: descending[4], text_1: textAscending[1], text_2: textAscending[2], text_3: textAscending[3], tag_1: tagDescending[1], tag_2: tagDescending[2], tag_3: tagDescending[3], unit_1: unitAscending[1], unit_2: unitAscending[2], unit_3: unitAscending[3], emptyListLen: emptyList[:count], dice_1: diceAscending[1], dice_2: diceAscending[2], dice_3: diceAscending[3], diceAscIsList: diceAscending is :list, diceDesc_1: diceDescending[1], diceDesc_2: diceDescending[2], diceDesc_3: diceDescending[3], diceDescIsList: diceDescending is :list, emptyDiceLen: emptyDice[:count], range_1: rangeAscending[1], range_2: rangeAscending[2], range_3: rangeAscending[3], rangeAscIsRange: rangeAscending is :range, rangeDesc_1: rangeDescending[1], rangeDesc_2: rangeDescending[2], rangeDesc_3: rangeDescending[3], rangeDescIsRange: rangeDescending is :range, floatRange_1: floatRangeAscending[1], floatRange_2: floatRangeAscending[2], floatRange_3: floatRangeAscending[3], iterator_1: iteratorSorted[1], iterator_2: iteratorSorted[2], iterator_3: iteratorSorted[3], iteratorDesc_1: iteratorDescending[1], iteratorDesc_2: iteratorDescending[2], iteratorDesc_3: iteratorDescending[3], emptyIteratorLen: emptyIteratorSorted[:count], nothingValue: nothing[:sort ascending], integerValue: 10[:sort ascending], textValue: 'ba'[:sort ascending], tagValue: #ba[:sort ascending], mapValue: map[:sort ascending])\n}",
       "steps": [
         {
           "input": {
@@ -367,7 +367,7 @@
                   "type": ":integer",
                   "value": "0"
                 },
-                "emptyStreamLen": {
+                "emptyIteratorLen": {
                   "type": ":integer",
                   "value": "0"
                 },
@@ -424,27 +424,27 @@
                   "type": ":boolean",
                   "value": true
                 },
-                "stream_1": {
+                "iterator_1": {
                   "type": ":integer",
                   "value": "-3"
                 },
-                "stream_2": {
+                "iterator_2": {
                   "type": ":integer",
                   "value": "-2"
                 },
-                "stream_3": {
+                "iterator_3": {
                   "type": ":integer",
                   "value": "-1"
                 },
-                "streamDesc_1": {
+                "iteratorDesc_1": {
                   "type": ":integer",
                   "value": "3"
                 },
-                "streamDesc_2": {
+                "iteratorDesc_2": {
                   "type": ":integer",
                   "value": "2"
                 },
-                "streamDesc_3": {
+                "iteratorDesc_3": {
                   "type": ":integer",
                   "value": "1"
                 },
@@ -502,7 +502,7 @@
     {
       "kind": "scriptApi",
       "name": "order by source kinds",
-      "script": "module AtomicOrderByKinds\non Start {\n  let units be [[name: 'Knight', hp: 10, faction: #melee], [name: 'Rook', hp: 8, faction: #melee], [name: 'Archer', hp: 6, faction: #ranged], [name: 'Scout', hp: 8, faction: #ranged]]\n  let values be [1, 3, 2]\n  let textValues be ['bb', 'a', 'ccc']\n  let emptyList be []\n  let dice as :dice be [6, 5, 3]\n  let range as :range be from 1 to 3\n  let map be [b: 2, a: 1]\n  let byHpAscending be units[:order by unit => unit.hp ascending]\n  let byHpDescending be units[:order by unit => unit.hp descending]\n  let byFactionAscending be units[:order by unit => unit.faction ascending]\n  let valuesDescending be values[:order by value => value descending]\n  let textByLength be textValues[:order by text => text[:count] ascending]\n  let emptyOrdered be emptyList[:order by item => item ascending]\n  let diceAscending be dice[:order by value => value ascending]\n  let rangeDescending be range[:order by value => value descending]\n  let streamOrdered be units[:filter unit where unit.hp > 0][:order by unit => unit.name ascending]\n  let streamByHpDescending be units[:filter unit where true][:order by unit => unit.hp descending]\n  let emptyStreamOrdered be units[:filter unit where false][:order by unit => unit.hp ascending]\n  emit Done(hpAsc_1: byHpAscending[1].name, hpAsc_2: byHpAscending[2].name, hpAsc_3: byHpAscending[3].name, hpAsc_4: byHpAscending[4].name, hpDesc_1: byHpDescending[1].name, hpDesc_2: byHpDescending[2].name, hpDesc_3: byHpDescending[3].name, hpDesc_4: byHpDescending[4].name, faction_1: byFactionAscending[1].name, faction_2: byFactionAscending[2].name, faction_3: byFactionAscending[3].name, faction_4: byFactionAscending[4].name, values_1: valuesDescending[1], values_2: valuesDescending[2], values_3: valuesDescending[3], text_1: textByLength[1], text_2: textByLength[2], text_3: textByLength[3], emptyLen: emptyOrdered[:count], dice_1: diceAscending[1], dice_2: diceAscending[2], dice_3: diceAscending[3], range_1: rangeDescending[1], range_2: rangeDescending[2], range_3: rangeDescending[3], stream_1: streamOrdered[1].name, stream_2: streamOrdered[2].name, stream_3: streamOrdered[3].name, stream_4: streamOrdered[4].name, streamHp_1: streamByHpDescending[1].name, streamHp_2: streamByHpDescending[2].name, streamHp_3: streamByHpDescending[3].name, streamHp_4: streamByHpDescending[4].name, emptyStreamLen: emptyStreamOrdered[:count], nothingValue: nothing[:order by value => value ascending], integerValue: 10[:order by value => value ascending], textValue: 'ba'[:order by value => value ascending], mapValue: map[:order by value => value ascending])\n}",
+      "script": "module AtomicOrderByKinds\non Start {\n  let units be [[name: 'Knight', hp: 10, faction: #melee], [name: 'Rook', hp: 8, faction: #melee], [name: 'Archer', hp: 6, faction: #ranged], [name: 'Scout', hp: 8, faction: #ranged]]\n  let values be [1, 3, 2]\n  let textValues be ['bb', 'a', 'ccc']\n  let emptyList be []\n  let dice as :dice be [6, 5, 3]\n  let range as :range be from 1 to 3\n  let map be [b: 2, a: 1]\n  let byHpAscending be units[:order by unit => unit.hp ascending]\n  let byHpDescending be units[:order by unit => unit.hp descending]\n  let byFactionAscending be units[:order by unit => unit.faction ascending]\n  let valuesDescending be values[:order by value => value descending]\n  let textByLength be textValues[:order by text => text[:count] ascending]\n  let emptyOrdered be emptyList[:order by item => item ascending]\n  let diceAscending be dice[:order by value => value ascending]\n  let rangeDescending be range[:order by value => value descending]\n  let iteratorOrdered be units[:filter unit where unit.hp > 0][:order by unit => unit.name ascending]\n  let iteratorByHpDescending be units[:filter unit where true][:order by unit => unit.hp descending]\n  let emptyIteratorOrdered be units[:filter unit where false][:order by unit => unit.hp ascending]\n  emit Done(hpAsc_1: byHpAscending[1].name, hpAsc_2: byHpAscending[2].name, hpAsc_3: byHpAscending[3].name, hpAsc_4: byHpAscending[4].name, hpDesc_1: byHpDescending[1].name, hpDesc_2: byHpDescending[2].name, hpDesc_3: byHpDescending[3].name, hpDesc_4: byHpDescending[4].name, faction_1: byFactionAscending[1].name, faction_2: byFactionAscending[2].name, faction_3: byFactionAscending[3].name, faction_4: byFactionAscending[4].name, values_1: valuesDescending[1], values_2: valuesDescending[2], values_3: valuesDescending[3], text_1: textByLength[1], text_2: textByLength[2], text_3: textByLength[3], emptyLen: emptyOrdered[:count], dice_1: diceAscending[1], dice_2: diceAscending[2], dice_3: diceAscending[3], range_1: rangeDescending[1], range_2: rangeDescending[2], range_3: rangeDescending[3], iterator_1: iteratorOrdered[1].name, iterator_2: iteratorOrdered[2].name, iterator_3: iteratorOrdered[3].name, iterator_4: iteratorOrdered[4].name, iteratorHp_1: iteratorByHpDescending[1].name, iteratorHp_2: iteratorByHpDescending[2].name, iteratorHp_3: iteratorByHpDescending[3].name, iteratorHp_4: iteratorByHpDescending[4].name, emptyIteratorLen: emptyIteratorOrdered[:count], nothingValue: nothing[:order by value => value ascending], integerValue: 10[:order by value => value ascending], textValue: 'ba'[:order by value => value ascending], mapValue: map[:order by value => value ascending])\n}",
       "steps": [
         {
           "input": {
@@ -526,7 +526,7 @@
                   "type": ":integer",
                   "value": "0"
                 },
-                "emptyStreamLen": {
+                "emptyIteratorLen": {
                   "type": ":integer",
                   "value": "0"
                 },
@@ -596,35 +596,35 @@
                 "range_3": {
                   "type": ":nothing"
                 },
-                "stream_1": {
+                "iterator_1": {
                   "type": ":text",
                   "value": "Archer"
                 },
-                "stream_2": {
+                "iterator_2": {
                   "type": ":text",
                   "value": "Knight"
                 },
-                "stream_3": {
+                "iterator_3": {
                   "type": ":text",
                   "value": "Rook"
                 },
-                "stream_4": {
+                "iterator_4": {
                   "type": ":text",
                   "value": "Scout"
                 },
-                "streamHp_1": {
+                "iteratorHp_1": {
                   "type": ":text",
                   "value": "Knight"
                 },
-                "streamHp_2": {
+                "iteratorHp_2": {
                   "type": ":text",
                   "value": "Rook"
                 },
-                "streamHp_3": {
+                "iteratorHp_3": {
                   "type": ":text",
                   "value": "Scout"
                 },
-                "streamHp_4": {
+                "iteratorHp_4": {
                   "type": ":text",
                   "value": "Archer"
                 },
@@ -664,7 +664,7 @@
     {
       "kind": "scriptApi",
       "name": "group by source kinds",
-      "script": "module AtomicGroupByKinds\non Start {\n  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]\n  let values be [1, 2, 3, 4]\n  let emptyList be []\n  let dice as :dice be [6, 5, 5, 3]\n  let range as :range be from 1 to 4\n  let map be [b: 'aa', a: 'z', c: 'bb']\n  let emptyMap be [:]\n  let unitGroups be units[:group by unit => unit.faction]\n  let parityGroups be values[:group by value => value mod 2]\n  let boolGroups be units[:group by unit => unit.hp > 7]\n  let emptyListGroups be emptyList[:group by value => value]\n  let mapGroups be map[:group by value => value[:count]]\n  let emptyMapGroups be emptyMap[:group by value => value]\n  let streamGroups be units[:filter unit where unit.hp > 0][:group by unit => unit.faction]\n  let emptyStreamGroups be units[:filter unit where false][:group by unit => unit.faction]\n  let diceGroups be dice[:group by value => value]\n  let rangeGroups be range[:group by value => value mod 2]\n  let textGroups be 'aba'[:group by value => value]\n  let emptyGroups be 10[:group by value => value]\n  emit Done(meleeLen: unitGroups[#melee][:count], meleeFirst: unitGroups[#melee][1].name, meleeSecond: unitGroups[#melee][2].name, rangedLen: unitGroups[#ranged][:count], rangedFirst: unitGroups[#ranged][1].name, rangedSecond: unitGroups[#ranged][2].name, oddLen: parityGroups['1'][:count], oddFirst: parityGroups['1'][1], evenLen: parityGroups['0'][:count], evenFirst: parityGroups['0'][1], trueLen: boolGroups['True'][:count], trueFirst: boolGroups['True'][1].name, falseLen: boolGroups['False'][:count], falseFirst: boolGroups['False'][1].name, emptyListLen: emptyList[:count], mapOneLen: mapGroups['1'][:count], mapOneFirst: mapGroups['1'][1], mapTwoLen: mapGroups['2'][:count], mapTwoFirst: mapGroups['2'][1], mapTwoSecond: mapGroups['2'][2], emptyMapLen: emptyMap[:count], streamMeleeLen: streamGroups[#melee][:count], streamRangedSecond: streamGroups[#ranged][2].name, emptyStreamLen: emptyStreamGroups[:count], diceFiveLen: diceGroups['5'][:count], diceSixFirst: diceGroups['6'][1], rangeEvenLen: rangeGroups['0'][:count], textALen: textGroups['a'][:count], emptyLen: emptyGroups[:count])\n}",
+      "script": "module AtomicGroupByKinds\non Start {\n  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]\n  let values be [1, 2, 3, 4]\n  let emptyList be []\n  let dice as :dice be [6, 5, 5, 3]\n  let range as :range be from 1 to 4\n  let map be [b: 'aa', a: 'z', c: 'bb']\n  let emptyMap be [:]\n  let unitGroups be units[:group by unit => unit.faction]\n  let parityGroups be values[:group by value => value mod 2]\n  let boolGroups be units[:group by unit => unit.hp > 7]\n  let emptyListGroups be emptyList[:group by value => value]\n  let mapGroups be map[:group by value => value[:count]]\n  let emptyMapGroups be emptyMap[:group by value => value]\n  let iteratorGroups be units[:filter unit where unit.hp > 0][:group by unit => unit.faction]\n  let emptyIteratorGroups be units[:filter unit where false][:group by unit => unit.faction]\n  let diceGroups be dice[:group by value => value]\n  let rangeGroups be range[:group by value => value mod 2]\n  let textGroups be 'aba'[:group by value => value]\n  let emptyGroups be 10[:group by value => value]\n  emit Done(meleeLen: unitGroups[#melee][:count], meleeFirst: unitGroups[#melee][1].name, meleeSecond: unitGroups[#melee][2].name, rangedLen: unitGroups[#ranged][:count], rangedFirst: unitGroups[#ranged][1].name, rangedSecond: unitGroups[#ranged][2].name, oddLen: parityGroups['1'][:count], oddFirst: parityGroups['1'][1], evenLen: parityGroups['0'][:count], evenFirst: parityGroups['0'][1], trueLen: boolGroups['True'][:count], trueFirst: boolGroups['True'][1].name, falseLen: boolGroups['False'][:count], falseFirst: boolGroups['False'][1].name, emptyListLen: emptyList[:count], mapOneLen: mapGroups['1'][:count], mapOneFirst: mapGroups['1'][1], mapTwoLen: mapGroups['2'][:count], mapTwoFirst: mapGroups['2'][1], mapTwoSecond: mapGroups['2'][2], emptyMapLen: emptyMap[:count], iteratorMeleeLen: iteratorGroups[#melee][:count], iteratorRangedSecond: iteratorGroups[#ranged][2].name, emptyIteratorLen: emptyIteratorGroups[:count], diceFiveLen: diceGroups['5'][:count], diceSixFirst: diceGroups['6'][1], rangeEvenLen: rangeGroups['0'][:count], textALen: textGroups['a'][:count], emptyLen: emptyGroups[:count])\n}",
       "steps": [
         {
           "input": {
@@ -695,7 +695,7 @@
                   "type": ":integer",
                   "value": "0"
                 },
-                "emptyStreamLen": {
+                "emptyIteratorLen": {
                   "type": ":integer",
                   "value": "0"
                 },
@@ -771,11 +771,11 @@
                   "type": ":text",
                   "value": "Scout"
                 },
-                "streamMeleeLen": {
+                "iteratorMeleeLen": {
                   "type": ":integer",
                   "value": "2"
                 },
-                "streamRangedSecond": {
+                "iteratorRangedSecond": {
                   "type": ":text",
                   "value": "Scout"
                 },

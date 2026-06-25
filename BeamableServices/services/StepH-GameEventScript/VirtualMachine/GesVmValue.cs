@@ -308,9 +308,9 @@ internal struct GesVmValue
         ObjectValue = series;
     }
 
-    internal void SetStream(IGesVmStream value)
+    internal void SetIterator(IGesVmIterator value)
     {
-        Kind = Stream;
+        Kind = Iterator;
         Flags = StorageObjectFlag;
         Unit = UnitNone;
         IntegerValue = 0;
@@ -514,37 +514,37 @@ internal struct GesVmValue
         return hash.ToHashCode();
     }
     
-    internal bool TryCreateStream(out IGesVmStream stream)
+    internal bool TryCreateIterator(out IGesVmIterator iterator)
     {
         switch (Kind)
         {
             case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range:
-                stream = new GesVmIntegerRangeStream(range.From, range.To, range.Step);
+                iterator = new GesVmIntegerRangeIterator(range.From, range.To, range.Step);
                 return true;
             case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range:
-                stream = new GesVmFloatRangeStream(range.From, range.To, range.Step);
+                iterator = new GesVmFloatRangeIterator(range.From, range.To, range.Step);
                 return true;
             case List when ObjectValue is GesVmValue[] list:
-                stream = new GesVmListStream(list);
+                iterator = new GesVmListIterator(list);
                 return true;
             case Dice when ObjectValue is int[] dices:
-                stream = new GesVmIntStream(dices);
+                iterator = new GesVmIntIterator(dices);
                 return true;
             case Map when ObjectValue is GesVmValueMap map:
-                stream = new GesVmListStream(map.ValueList);
+                iterator = new GesVmListIterator(map.ValueList);
                 return true;
             case Custom when ObjectValue is GesVmValueMap custom:
-                stream = new GesVmListStream(custom.ValueList);
+                iterator = new GesVmListIterator(custom.ValueList);
                 return true;
             case Vector or Point when ObjectValue is GesVmValueVectorPoint vp:
-                stream = new GesVmTripletStream(vp);
+                iterator = new GesVmTripletIterator(vp);
                 return true;
             case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
-                stream = new GesVmStringStream(text);
+                iterator = new GesVmStringIterator(text);
                 return true;
             case Series:
             default:
-                stream = default;
+                iterator = default;
                 return false;
         }
     }

@@ -158,8 +158,8 @@
       "expectedOpcodes": {
         "contains": [
           "CreateRangeIteratorShort",
-          "StreamNext",
-          "StreamClose",
+          "IteratorNext",
+          "IteratorClose",
           "RandomPushConstant",
           "RandomTake",
           "RandomPop"
@@ -174,11 +174,11 @@
         "contains": [
           "CreateRangeIterator",
           "CreateRangeIteratorWithStep",
-          "StreamCreate"
+          "IteratorCreate"
         ],
         "minCounts": {
-          "StreamNext": 3,
-          "StreamClose": 3
+          "IteratorNext": 3,
+          "IteratorClose": 3
         }
       }
     },
@@ -198,12 +198,12 @@
     },
     {
       "kind": "bytecode",
-      "name": "pipeline selector lowers to explicit stream loop and list builder",
+      "name": "pipeline selector lowers to explicit iterator loop and list builder",
       "script": "module SideTables\n\non Start(values) {\n  let selected be values[:select item => item + 1]\n  emit Done(count: selected[:count])\n}\n",
       "expectedOpcodes": {
         "contains": [
-          "StreamCreateOrJump",
-          "StreamNext",
+          "IteratorCreateOrJump",
+          "IteratorNext",
           "ListBuilderCreate",
           "ListBuilderAdd",
           "ListBuilderFinish"
@@ -212,19 +212,19 @@
     },
     {
       "kind": "bytecode",
-      "name": "sum and average lower to explicit stream loops",
+      "name": "sum and average lower to explicit iterator loops",
       "script": "module AggregateLoops\n\non Start(values) {\n  let total be values[:sum]\n  let average be values[:average]\n  let projectedTotal be values[:sum value => value * 2]\n  let projectedAverage be values[:average value => value * 2]\n  emit Done(total: total, average: average, projectedTotal: projectedTotal, projectedAverage: projectedAverage)\n}\n",
       "expectedOpcodes": {
         "contains": [
-          "StreamCreateOrJump",
-          "StreamNext",
-          "StreamClose"
+          "IteratorCreateOrJump",
+          "IteratorNext",
+          "IteratorClose"
         ]
       }
     },
     {
       "kind": "bytecode",
-      "name": "series term take drop lower without stream collection opcodes",
+      "name": "series term take drop lower without iterator collection opcodes",
       "script": "module SeriesAtomicShape\n\non Start {\n  let naturals be :series.natural()\n  let term be naturals[:term 3]\n  let firstValues be naturals[:take first 4]\n  let dropped be naturals[:drop first 2]\n  let lastValues be naturals[:take last 2]\n  let droppedLast be naturals[:drop last 1]\n  let highestValues be naturals[:take highest 2]\n  let lowestValues be naturals[:take lowest 2]\n  let droppedHighest be naturals[:drop highest 1]\n  let droppedLowest be naturals[:drop lowest 1]\n  emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)\n}\n",
       "expectedOpcodes": {
         "contains": [

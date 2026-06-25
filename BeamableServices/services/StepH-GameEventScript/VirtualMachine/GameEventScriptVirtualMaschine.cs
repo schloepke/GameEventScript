@@ -285,19 +285,19 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             vmState.GesVmCreateRange(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIterator:
-                            vmState.GesVmCreateRangeStream(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), session);
+                            vmState.GesVmCreateRangeIterator(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), session);
                             break;
                         case CreateRangeIteratorWithStep:
-                            vmState.GesVmCreateRangeStream(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), session);
+                            vmState.GesVmCreateRangeIterator(instruction.DestinationSlot, vmState.Register(instruction.XSlot), vmState.Register(instruction.YSlot), vmState.Register(instruction.AU), session);
                             break;
                         case CreateRangeIteratorShort:
                             if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                             {
-                                vmState.Register(instruction.DestinationSlot).SetStream(new GesVmIntegerRangeStream(0, 0, 0));
+                                vmState.Register(instruction.DestinationSlot).SetIterator(new GesVmIntegerRangeIterator(0, 0, 0));
                                 break;
                             }
 
-                            vmState.Register(instruction.DestinationSlot).SetStream(new GesVmIntegerRangeStream(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                            vmState.Register(instruction.DestinationSlot).SetIterator(new GesVmIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                             break;
                         case CreateRecord:
                             vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationSlot);
@@ -542,7 +542,7 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
 
                         #endregion
 
-                        #region Group 3 - text, collection, streams
+                        #region Group 3 - text, collection, iterators
 
                         case TakeFirst:
                             vmState.GesVmTakeFirst(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.ImmediateY);
@@ -628,24 +628,24 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case GameEventScriptBytecodeOpCode.Single:
                             vmState.GesVmSingle(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        case StreamCreate:
-                            vmState.GesVmStreamCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                        case IteratorCreate:
+                            vmState.GesVmIteratorCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        case StreamCreateOrJump:
-                            vmState.GesVmStreamCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
+                        case IteratorCreateOrJump:
+                            vmState.GesVmIteratorCreate(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             if (vmState.IsRegisterNothing(instruction.DestinationSlot)) vmState.JumpAddress(instruction.TargetAddress);
                             break;
-                        case StreamNext:
+                        case IteratorNext:
                         {
-                            vmState.GesVmStreamNext(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TargetAddress);
+                            vmState.GesVmIteratorNext(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.TargetAddress);
                             if (vmState.Register(instruction.DestinationSlot).Kind is not Nothing)
                             {
                                 session.RuntimeBudget.TryConsumeLoopIteration("For loop iteration exceeds the configured limit.");
                             }
                             break;
                         }
-                        case StreamClose:
-                            vmState.GesVmStreamClose(instruction.XSlot);
+                        case IteratorClose:
+                            vmState.GesVmIteratorClose(instruction.XSlot);
                             break;
                         case HasAny:
                             vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), false);

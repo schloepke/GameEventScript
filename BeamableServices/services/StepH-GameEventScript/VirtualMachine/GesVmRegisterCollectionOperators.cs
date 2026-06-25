@@ -263,11 +263,11 @@ internal static class GesVmRegisterCollectionOperators
 
                 vmState.SetBoolean(dst, false);
                 return;
-            case Stream when b.ObjectValue is IGesVmStream stream:
+            case Iterator when b.ObjectValue is IGesVmIterator iterator:
                 var item = new GesVmValue();
                 try
                 {
-                    while (stream.TryNext(ref item))
+                    while (iterator.TryNext(ref item))
                     {
                         if (!item.EqualsValue(a)) continue;
                         vmState.SetBoolean(dst, true);
@@ -279,7 +279,7 @@ internal static class GesVmRegisterCollectionOperators
                 }
                 finally
                 {
-                    if (stream is IDisposable disposable) disposable.Dispose();
+                    if (iterator is IDisposable disposable) disposable.Dispose();
                 }
             case Dice when b.ObjectValue is int[] dice:
                 if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone)
@@ -383,12 +383,12 @@ internal static class GesVmRegisterCollectionOperators
             case Nothing:
                 vmState.SetNothing(dst);
                 return;
-            case Stream when source.ObjectValue is IGesVmStream stream:
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
             {
                 var item = new GesVmValue();
                 try
                 {
-                    while (stream.TryNext(ref item))
+                    while (iterator.TryNext(ref item))
                     {
                         if (item.IsTrue)
                         {
@@ -410,7 +410,7 @@ internal static class GesVmRegisterCollectionOperators
                 }
                 finally
                 {
-                    if (stream is IDisposable disposable) disposable.Dispose();
+                    if (iterator is IDisposable disposable) disposable.Dispose();
                 }
             }
             case List when source.ObjectValue is GesVmValue[] list:
@@ -621,9 +621,9 @@ internal static class GesVmRegisterCollectionOperators
             return;
         }
 
-        if (b.Kind is Stream && b.ObjectValue is IGesVmStream stream)
+        if (b.Kind is Iterator && b.ObjectValue is IGesVmIterator iterator)
         {
-            vmState.GesVmContainsAnyAllStream(dst, a, stream, requireAll);
+            vmState.GesVmContainsAnyAllIterator(dst, a, iterator, requireAll);
             return;
         }
 
@@ -754,7 +754,7 @@ internal static class GesVmRegisterCollectionOperators
         }
     }
 
-    private static void GesVmContainsAnyAllStream(this GesVmState vmState, ushort dst, in GesVmValue a, IGesVmStream stream, bool requireAll)
+    private static void GesVmContainsAnyAllIterator(this GesVmState vmState, ushort dst, in GesVmValue a, IGesVmIterator iterator, bool requireAll)
     {
         var candidates = new GesVmValue[8];
         var candidateCount = 0;
@@ -829,7 +829,7 @@ internal static class GesVmRegisterCollectionOperators
             var item = new GesVmValue();
             if (!requireAll)
             {
-                while (stream.TryNext(ref item))
+                while (iterator.TryNext(ref item))
                 {
                     for (var i = 0; i < candidateCount; i++)
                     {
@@ -845,7 +845,7 @@ internal static class GesVmRegisterCollectionOperators
 
             var found = new bool[candidateCount];
             var foundCount = 0;
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 for (var i = 0; i < candidateCount; i++)
                 {
@@ -863,7 +863,7 @@ internal static class GesVmRegisterCollectionOperators
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
 
@@ -1343,11 +1343,11 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 return false;
-            case Stream when b.ObjectValue is IGesVmStream stream:
+            case Iterator when b.ObjectValue is IGesVmIterator iterator:
                 var item = new GesVmValue();
                 try
                 {
-                    while (stream.TryNext(ref item))
+                    while (iterator.TryNext(ref item))
                     {
                         if (!item.EqualsValue(a)) continue;
                         return true;
@@ -1357,7 +1357,7 @@ internal static class GesVmRegisterCollectionOperators
                 }
                 finally
                 {
-                    if (stream is IDisposable disposable) disposable.Dispose();
+                    if (iterator is IDisposable disposable) disposable.Dispose();
                 }
             case Dice when b.ObjectValue is int[] dice:
                 if (a.Kind is not Integer || a.Unit is not GameEventScriptBytecodeInstructionUnit.UnitNone) return false;

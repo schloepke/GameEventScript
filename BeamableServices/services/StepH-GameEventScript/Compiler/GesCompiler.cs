@@ -242,11 +242,11 @@ internal static class GesCompiler
             var endLabel = _builder.AddLabel("for_end");
 
             _builder.MarkLabel(loopLabel);
-            _builder.StreamNext(item, iterator, endLabel);
+            _builder.IteratorNext(item, iterator, endLabel);
             EmitStatements(forStatement.Body.Statements, forStatement.Body.IsBlock ? loopContext.CreateChild() : loopContext);
             _builder.Jump(loopLabel);
             _builder.MarkLabel(endLabel);
-            _builder.StreamClose(iterator);
+            _builder.IteratorClose(iterator);
         }
 
         private void EmitPublish(PublishStatementNode publish, LoweringContext context)
@@ -671,7 +671,7 @@ internal static class GesCompiler
                     else _builder.First(destination, target);
                     return;
                 case EdgeSelectorNode { Predicate: not null, Identifier: not null } edge:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { edge }, 0, edge, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { edge }, 0, edge, context, state);
                     return;
                 case DrawSelectorNode draw:
                     if (draw.Count == 1) _builder.First(destination, target);
@@ -684,13 +684,13 @@ internal static class GesCompiler
                     EmitContains(destination, target, contains, context, state);
                     return;
                 case FilterSelectorNode filter:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
                     return;
                 case SelectSelectorNode select:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { select }, 0, select, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { select }, 0, select, context, state);
                     return;
                 case PredicateSelectorNode predicate:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { predicate }, 0, predicate, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { predicate }, 0, predicate, context, state);
                     return;
                 case CountSelectorNode count:
                     if (IsAlwaysTrue(count.Predicate))
@@ -699,19 +699,19 @@ internal static class GesCompiler
                         return;
                     }
 
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { count }, 0, count, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { count }, 0, count, context, state);
                     return;
                 case SumSelectorNode sum:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { sum }, 0, sum, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { sum }, 0, sum, context, state);
                     return;
                 case AverageSelectorNode average:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { average }, 0, average, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { average }, 0, average, context, state);
                     return;
                 case MinSelectorNode min:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { min }, 0, min, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { min }, 0, min, context, state);
                     return;
                 case MaxSelectorNode max:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { max }, 0, max, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { max }, 0, max, context, state);
                     return;
                 case MapSelectorNode map:
                     EmitMapSelectorLoop(destination, target, map, context, state);
@@ -730,13 +730,13 @@ internal static class GesCompiler
                     _builder.Distinct(destination, target);
                     return;
                 case DistinctSelectorNode { Identifier: not null, Projection: not null } distinct:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { distinct }, 0, distinct, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { distinct }, 0, distinct, context, state);
                     return;
                 case GroupBySelectorNode groupBy:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { groupBy }, 0, groupBy, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { groupBy }, 0, groupBy, context, state);
                     return;
                 case OrderBySelectorNode orderBy:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { orderBy }, 0, orderBy, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { orderBy }, 0, orderBy, context, state);
                     return;
                 case PatternSelectorNode pattern:
                     EmitPattern(destination, target, pattern.Pattern, take: false, context, state);
@@ -745,7 +745,7 @@ internal static class GesCompiler
                     EmitPattern(destination, target, pattern.Pattern, take: true, context, state);
                     return;
                 case ObjectMatchSelectorNode objectMatch:
-                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { objectMatch }, 0, objectMatch, context, state);
+                    EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { objectMatch }, 0, objectMatch, context, state);
                     return;
                 default:
                     throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
@@ -787,17 +787,17 @@ internal static class GesCompiler
                 return true;
             }
 
-            if (!CanEmitInlineStreamPipelineTerminal(terminal, prefixCount > 0))
+            if (!CanEmitInlineIteratorPipelineTerminal(terminal, prefixCount > 0))
             {
                 return false;
             }
 
             var sourceRegister = EmitExpressionForRead(source, context, state);
-            EmitInlineStreamPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
+            EmitInlineIteratorPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
             return true;
         }
 
-        private static bool CanEmitInlineStreamPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
+        private static bool CanEmitInlineIteratorPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
             => terminal switch
             {
                 FilterSelectorNode or
@@ -828,7 +828,7 @@ internal static class GesCompiler
                    _ => false
                });
 
-        private void EmitInlineStreamPipeline(
+        private void EmitInlineIteratorPipeline(
             GesRegisterRef destination,
             GesRegisterRef source,
             IReadOnlyList<CollectionSelectorNode> selectors,
@@ -839,7 +839,7 @@ internal static class GesCompiler
         {
             if (CanEmitFirstValueAggregatePipeline(terminal, prefixCount))
             {
-                EmitInlineStreamAggregatePipeline(destination, source, selectors, prefixCount, terminal, context, state);
+                EmitInlineIteratorAggregatePipeline(destination, source, selectors, prefixCount, terminal, context, state);
                 return;
             }
 
@@ -849,11 +849,11 @@ internal static class GesCompiler
             var endLabel = _builder.AddLabel("pipeline_end");
             var nextLabel = _builder.AddLabel("pipeline_skip");
             var closeLabel = _builder.AddLabel("pipeline_close");
-            var invalidStreamLabel = _builder.AddLabel("pipeline_invalid_stream");
+            var invalidIteratorLabel = _builder.AddLabel("pipeline_invalid_iterator");
             var doneLabel = _builder.AddLabel("pipeline_done");
 
-            EmitInlinePipelineSourceGuard(source, terminal, prefixCount, invalidStreamLabel, context, state);
-            _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
+            EmitInlinePipelineSourceGuard(source, terminal, prefixCount, invalidIteratorLabel, context, state);
+            _builder.IteratorCreateOrJump(iterator, source, invalidIteratorLabel);
 
             GesRegisterRef? listBuilder = null;
             GesRegisterRef? mapBuilder = null;
@@ -939,7 +939,7 @@ internal static class GesCompiler
             }
 
             _builder.MarkLabel(loopLabel);
-            _builder.StreamNext(item, iterator, endLabel);
+            _builder.IteratorNext(item, iterator, endLabel);
 
             var current = item;
             for (var index = 0; index < prefixCount; index++)
@@ -952,7 +952,7 @@ internal static class GesCompiler
             _builder.Jump(loopLabel);
 
             _builder.MarkLabel(endLabel);
-            _builder.StreamClose(iterator);
+            _builder.IteratorClose(iterator);
 
             switch (terminal)
             {
@@ -1005,7 +1005,7 @@ internal static class GesCompiler
 
             _builder.MarkLabel(closeLabel);
             _builder.Jump(doneLabel);
-            _builder.MarkLabel(invalidStreamLabel);
+            _builder.MarkLabel(invalidIteratorLabel);
             _builder.LoadNothing(destination);
             _builder.MarkLabel(doneLabel);
         }
@@ -1014,7 +1014,7 @@ internal static class GesCompiler
             GesRegisterRef source,
             CollectionSelectorNode terminal,
             int prefixCount,
-            GesLabelRef invalidStreamLabel,
+            GesLabelRef invalidIteratorLabel,
             LoweringContext context,
             ExpressionState state)
         {
@@ -1027,17 +1027,17 @@ internal static class GesCompiler
             {
                 case DistinctSelectorNode { Identifier: not null, Projection: not null }:
                 case OrderBySelectorNode:
-                    EmitSourceTypeGuard(source, invalidStreamLabel, context, state, GameEventScriptBytecodeTypeKind.List);
+                    EmitSourceTypeGuard(source, invalidIteratorLabel, context, state, GameEventScriptBytecodeTypeKind.List);
                     return;
                 case GroupBySelectorNode:
-                    EmitSourceTypeGuard(source, invalidStreamLabel, context, state, GameEventScriptBytecodeTypeKind.List, GameEventScriptBytecodeTypeKind.Map, GameEventScriptBytecodeTypeKind.Custom);
+                    EmitSourceTypeGuard(source, invalidIteratorLabel, context, state, GameEventScriptBytecodeTypeKind.List, GameEventScriptBytecodeTypeKind.Map, GameEventScriptBytecodeTypeKind.Custom);
                     return;
             }
         }
 
         private void EmitSourceTypeGuard(
             GesRegisterRef source,
-            GesLabelRef invalidStreamLabel,
+            GesLabelRef invalidIteratorLabel,
             LoweringContext context,
             ExpressionState state,
             params GameEventScriptBytecodeTypeKind[] allowedKinds)
@@ -1050,11 +1050,11 @@ internal static class GesCompiler
                 _builder.JumpIfTrue(check, validLabel);
             }
 
-            _builder.Jump(invalidStreamLabel);
+            _builder.Jump(invalidIteratorLabel);
             _builder.MarkLabel(validLabel);
         }
 
-        private void EmitInlineStreamAggregatePipeline(
+        private void EmitInlineIteratorAggregatePipeline(
             GesRegisterRef destination,
             GesRegisterRef source,
             IReadOnlyList<CollectionSelectorNode> selectors,
@@ -1069,7 +1069,7 @@ internal static class GesCompiler
             var loopLabel = _builder.AddLabel("pipeline_aggregate_next");
             var emptyLabel = _builder.AddLabel("pipeline_aggregate_empty");
             var endLabel = _builder.AddLabel("pipeline_aggregate_end");
-            var invalidStreamLabel = _builder.AddLabel("pipeline_aggregate_invalid_stream");
+            var invalidIteratorLabel = _builder.AddLabel("pipeline_aggregate_invalid_iterator");
             var doneLabel = _builder.AddLabel("pipeline_aggregate_done");
 
             var isAverage = terminal is AverageSelectorNode;
@@ -1083,10 +1083,10 @@ internal static class GesCompiler
                 one = state.AllocateTemporary(_builder, context);
             }
 
-            _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
+            _builder.IteratorCreateOrJump(iterator, source, invalidIteratorLabel);
 
             _builder.MarkLabel(firstLabel);
-            _builder.StreamNext(item, iterator, emptyLabel);
+            _builder.IteratorNext(item, iterator, emptyLabel);
             var current = item;
             for (var index = 0; index < prefixCount; index++)
             {
@@ -1104,7 +1104,7 @@ internal static class GesCompiler
             _builder.Jump(loopLabel);
 
             _builder.MarkLabel(loopLabel);
-            _builder.StreamNext(item, iterator, endLabel);
+            _builder.IteratorNext(item, iterator, endLabel);
             current = item;
             for (var index = 0; index < prefixCount; index++)
             {
@@ -1117,17 +1117,17 @@ internal static class GesCompiler
             _builder.Jump(loopLabel);
 
             _builder.MarkLabel(emptyLabel);
-            _builder.StreamClose(iterator);
+            _builder.IteratorClose(iterator);
             if (isAverage) _builder.LoadNothing(destination);
             else _builder.LoadInteger(destination, 0);
             _builder.Jump(doneLabel);
 
             _builder.MarkLabel(endLabel);
-            _builder.StreamClose(iterator);
+            _builder.IteratorClose(iterator);
             if (isAverage) _builder.Divide(destination, accumulator, count!.Value);
             _builder.Jump(doneLabel);
 
-            _builder.MarkLabel(invalidStreamLabel);
+            _builder.MarkLabel(invalidIteratorLabel);
             _builder.LoadNothing(destination);
             _builder.MarkLabel(doneLabel);
         }
@@ -1487,7 +1487,7 @@ internal static class GesCompiler
             {
                 var filter = new FilterSelectorNode(choose.Identifier!, choose.Predicate);
                 source = state.AllocateTemporary(_builder, context);
-                EmitInlineStreamPipeline(source, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
+                EmitInlineIteratorPipeline(source, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
             }
 
             if (choose.AtRandom)
@@ -1517,15 +1517,15 @@ internal static class GesCompiler
             var loopLabel = _builder.AddLabel("weighted_next");
             var skipLabel = _builder.AddLabel("weighted_skip");
             var endLabel = _builder.AddLabel("weighted_end");
-            var invalidStreamLabel = _builder.AddLabel("weighted_invalid_stream");
+            var invalidIteratorLabel = _builder.AddLabel("weighted_invalid_iterator");
             var doneLabel = _builder.AddLabel("weighted_done");
 
-            _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
+            _builder.IteratorCreateOrJump(iterator, source, invalidIteratorLabel);
             _builder.ListBuilderCreate(itemsBuilder);
             _builder.ListBuilderCreate(weightsBuilder);
 
             _builder.MarkLabel(loopLabel);
-            _builder.StreamNext(item, iterator, endLabel);
+            _builder.IteratorNext(item, iterator, endLabel);
 
             if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
             {
@@ -1548,21 +1548,21 @@ internal static class GesCompiler
             _builder.Jump(loopLabel);
 
             _builder.MarkLabel(endLabel);
-            _builder.StreamClose(iterator);
+            _builder.IteratorClose(iterator);
             _builder.ListBuilderFinish(items, itemsBuilder);
             _builder.ListBuilderFinish(weights, weightsBuilder);
             if (choose.Count == 1) _builder.OneWeighted(destination, items, weights);
             else _builder.TakeWeighted(destination, items, weights, ToShort(choose.Count, "choose count"));
             _builder.Jump(doneLabel);
 
-            _builder.MarkLabel(invalidStreamLabel);
+            _builder.MarkLabel(invalidIteratorLabel);
             _builder.LoadNothing(destination);
             _builder.MarkLabel(doneLabel);
         }
 
         private void EmitMapSelectorLoop(GesRegisterRef destination, GesRegisterRef target, MapSelectorNode map, LoweringContext context, ExpressionState state)
         {
-            EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { map }, 0, map, context, state);
+            EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { map }, 0, map, context, state);
         }
 
         private GesRegisterRef EmitObjectPatternPredicate(GesRegisterRef target, ObjectMatchPatternNode pattern, LoweringContext context, ExpressionState state)
@@ -1666,7 +1666,7 @@ internal static class GesCompiler
             var endLabel = _builder.AddLabel("generated_end");
 
             _builder.MarkLabel(loopLabel);
-            _builder.StreamNext(item, iterator, endLabel);
+            _builder.IteratorNext(item, iterator, endLabel);
             if (generatedCollection.Predicate is not null)
             {
                 var predicate = EmitExpressionForRead(generatedCollection.Predicate, collectionContext, state);
@@ -1682,7 +1682,7 @@ internal static class GesCompiler
 
             _builder.Jump(loopLabel);
             _builder.MarkLabel(endLabel);
-            _builder.StreamClose(iterator);
+            _builder.IteratorClose(iterator);
             _builder.ListBuilderFinish(destination, builderRegister);
         }
 
@@ -1737,7 +1737,7 @@ internal static class GesCompiler
                 {
                     var collectionRegister = EmitExpressionForRead(collection.Expression, context, state);
                     var iterator = state.AllocateTemporary(_builder, context);
-                    _builder.StreamCreate(iterator, collectionRegister);
+                    _builder.IteratorCreate(iterator, collectionRegister);
                     return iterator;
                 }
 

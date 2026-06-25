@@ -219,7 +219,7 @@ internal class GesVmState
     internal void SetMessageHandler(ushort index, GameEventScriptMessageSignature handler) => Register(index).SetMessageHandler(handler);
     internal void SetMessage(ushort index, GameEventScriptMessage message) => Register(index).SetMessage(message);
     internal void SetSeries(ushort index, GesVmSeries series) => Register(index).SetSeries(series);
-    internal void SetStream(ushort index, IGesVmStream value) => Register(index).SetStream(value);
+    internal void SetIterator(ushort index, IGesVmIterator value) => Register(index).SetIterator(value);
     internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder());
     internal void CreateMapBuilder(ushort index) => Register(index).SetMapBuilder(new GesVmValueMapBuilder());
     internal void CreateDistinctBuilder(ushort index) => Register(index).SetDistinctBuilder(new GesVmValueDistinctBuilder());

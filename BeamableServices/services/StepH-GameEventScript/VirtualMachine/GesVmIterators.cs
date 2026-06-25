@@ -2,13 +2,13 @@ using System;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
-internal interface IGesVmStream
+internal interface IGesVmIterator
 {
     public bool TryNext(ref GesVmValue value);
     public bool IsPatternSequence => false;
 }
 
-internal class GesVmIntegerRangeStream(long from, long to, long step) : IGesVmStream, IDisposable
+internal class GesVmIntegerRangeIterator(long from, long to, long step) : IGesVmIterator, IDisposable
 {
     private long _current = from;
     private bool _disposed = false;
@@ -38,7 +38,7 @@ internal class GesVmIntegerRangeStream(long from, long to, long step) : IGesVmSt
     }
 }
 
-internal class GesVmFloatRangeStream(double from, double to, double step) : IGesVmStream, IDisposable
+internal class GesVmFloatRangeIterator(double from, double to, double step) : IGesVmIterator, IDisposable
 {
     private double _current = from;
     private bool _disposed;
@@ -68,7 +68,7 @@ internal class GesVmFloatRangeStream(double from, double to, double step) : IGes
     }
 }
 
-internal class GesVmListStream(GesVmValue[] list) : IGesVmStream, IDisposable
+internal class GesVmListIterator(GesVmValue[] list) : IGesVmIterator, IDisposable
 {
     private int _current;
     private GesVmValue[]? _list = list;
@@ -93,7 +93,7 @@ internal class GesVmListStream(GesVmValue[] list) : IGesVmStream, IDisposable
     }
 }
 
-internal class GesVmIntStream(int[] values) : IGesVmStream, IDisposable
+internal class GesVmIntIterator(int[] values) : IGesVmIterator, IDisposable
 {
     private int _current;
     private int[]? _values = values;
@@ -118,7 +118,7 @@ internal class GesVmIntStream(int[] values) : IGesVmStream, IDisposable
     }
 }
 
-internal class GesVmStringStream(string stringValue) : IGesVmStream, IDisposable
+internal class GesVmStringIterator(string stringValue) : IGesVmIterator, IDisposable
 {
     private int _current;
     private string? _stringValue = stringValue;
@@ -142,7 +142,7 @@ internal class GesVmStringStream(string stringValue) : IGesVmStream, IDisposable
     }
 }
 
-internal class GesVmTripletStream(GesVmValueVectorPoint triplet) : IGesVmStream, IDisposable
+internal class GesVmTripletIterator(GesVmValueVectorPoint triplet) : IGesVmIterator, IDisposable
 {
     private int _current;
     private GesVmValueVectorPoint? _triplet = triplet;

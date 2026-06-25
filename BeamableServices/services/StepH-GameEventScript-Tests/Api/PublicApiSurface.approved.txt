@@ -266,10 +266,10 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field First = 187
   enum-field Last = 188
   enum-field Single = 189
-  enum-field StreamCreate = 190
-  enum-field StreamCreateOrJump = 191
-  enum-field StreamNext = 192
-  enum-field StreamClose = 193
+  enum-field IteratorCreate = 190
+  enum-field IteratorCreateOrJump = 191
+  enum-field IteratorNext = 192
+  enum-field IteratorClose = 193
   enum-field Distinct = 194
   enum-field SortAscending = 195
   enum-field SortDescending = 196
@@ -319,7 +319,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field DistinctBuilder = 37
   enum-field GroupBuilder = 38
   enum-field OrderBuilder = 39
-  enum-field Stream = 48
+  enum-field Iterator = 48
   enum-field Series = 49
   enum-field Custom = 255
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileError

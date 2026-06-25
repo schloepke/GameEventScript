@@ -22,13 +22,13 @@ internal static class GesVmRegisterPatterns
                     HasPatternListFace(ref result, list, in face, count);
                     vmState.SetValue(destinationRegister, in result);
                     return;
-                case Stream when source.ObjectValue is IGesVmStream stream:
-                    if (!stream.IsPatternSequence)
+                case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                    if (!iterator.IsPatternSequence)
                     {
                         vmState.SetBoolean(destinationRegister, false);
                         return;
                     }
-                    if (!ReadStream(vmState, stream, out var items, out var length)) return;
+                    if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
                     HasPatternBufferFace(ref result, items, length, in face, count);
                     vmState.SetValue(destinationRegister, in result);
                     return;
@@ -51,13 +51,13 @@ internal static class GesVmRegisterPatterns
                 HasPatternList(ref result, list, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                if (!stream.IsPatternSequence)
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                if (!iterator.IsPatternSequence)
                 {
                     vmState.SetBoolean(destinationRegister, false);
                     return;
                 }
-                if (!ReadStream(vmState, stream, out var items, out var length)) return;
+                if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
                 HasPatternBuffer(ref result, items, length, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
@@ -93,16 +93,16 @@ internal static class GesVmRegisterPatterns
                     else SetTakenByFace(ref result, list, list.Length, in face, count, diceResult: false);
                     vmState.SetValue(destinationRegister, in result);
                     return;
-                case Stream when source.ObjectValue is IGesVmStream stream:
-                    if (!stream.IsPatternSequence)
+                case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                    if (!iterator.IsPatternSequence)
                     {
                         vmState.SetNothing(destinationRegister);
                         return;
                     }
-                    if (!ReadStream(vmState, stream, out var items, out var length)) return;
-                    var streamMatches = 0;
-                    for (var i = 0; i < length; i++) if (items[i].EqualsValue(in face)) streamMatches++;
-                    if (streamMatches < count) result.SetNothing();
+                    if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
+                    var iteratorMatches = 0;
+                    for (var i = 0; i < length; i++) if (items[i].EqualsValue(in face)) iteratorMatches++;
+                    if (iteratorMatches < count) result.SetNothing();
                     else SetTakenByFace(ref result, items, length, in face, count, diceResult: false);
                     vmState.SetValue(destinationRegister, in result);
                     return;
@@ -122,13 +122,13 @@ internal static class GesVmRegisterPatterns
                 TakePatternList(ref result, list, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
-            case Stream when source.ObjectValue is IGesVmStream stream:
-                if (!stream.IsPatternSequence)
+            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                if (!iterator.IsPatternSequence)
                 {
                     vmState.SetNothing(destinationRegister);
                     return;
                 }
-                if (!ReadStream(vmState, stream, out var items, out var length)) return;
+                if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
                 TakePatternBuffer(ref result, items, length, pattern, count, diceResult: false);
                 vmState.SetValue(destinationRegister, in result);
                 return;
@@ -494,14 +494,14 @@ internal static class GesVmRegisterPatterns
         return true;
     }
 
-    private static bool ReadStream(GesVmState vmState, IGesVmStream stream, out GesVmValue[] items, out int length)
+    private static bool ReadIterator(GesVmState vmState, IGesVmIterator iterator, out GesVmValue[] items, out int length)
     {
         var buffer = Array.Empty<GesVmValue>();
         length = 0;
         var item = new GesVmValue();
         try
         {
-            while (stream.TryNext(ref item))
+            while (iterator.TryNext(ref item))
             {
                 if (length == buffer.Length) Array.Resize(ref buffer, buffer.Length == 0 ? 8 : buffer.Length * 2);
                 buffer[length++] = item;
@@ -511,7 +511,7 @@ internal static class GesVmRegisterPatterns
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
 
         items = buffer;

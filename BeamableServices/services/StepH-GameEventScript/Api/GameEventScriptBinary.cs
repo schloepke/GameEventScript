@@ -173,7 +173,7 @@ public enum GameEventScriptBytecodeTypeKind : byte
     GroupBuilder = 0x26,
     OrderBuilder = 0x27,
 
-    Stream = 0x30,
+    Iterator = 0x30,
     Series = 0x31,
     
     Custom = 0xFF,
@@ -445,7 +445,7 @@ public enum GameEventScriptBytecodeOpCode : byte
 
     #endregion
 
-    #region Group 3 - text, collection, streams
+    #region Group 3 - text, collection, iterators
 
     TakeFirst = 0xA0,
     DropFirst = 0xA1,
@@ -477,10 +477,10 @@ public enum GameEventScriptBytecodeOpCode : byte
     First = 0xBB,
     Last = 0xBC,
     Single = 0xBD,
-    StreamCreate = 0xBE,
-    StreamCreateOrJump = 0xBF,
-    StreamNext = 0xC0,
-    StreamClose = 0xC1,
+    IteratorCreate = 0xBE,
+    IteratorCreateOrJump = 0xBF,
+    IteratorNext = 0xC0,
+    IteratorClose = 0xC1,
     Distinct = 0xC2,
     SortAscending = 0xC3,
     SortDescending = 0xC4,

@@ -5,41 +5,41 @@ using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.VirtualMachine;
 
-internal static class GesVmRegisterStreamTerminals
+internal static class GesVmRegisterIteratorTerminals
 {
-    internal static void GesVmCount(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
+    internal static void GesVmCount(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
-        switch (iterator.Kind)
+        switch (source.Kind)
         {
-            case List when iterator.ObjectValue is GesVmValue[] list:
+            case List when source.ObjectValue is GesVmValue[] list:
                 vmState.SetInteger(destinationRegister, list.Length);
                 return;
-            case Map when iterator.ObjectValue is GesVmValueMap map:
+            case Map when source.ObjectValue is GesVmValueMap map:
                 vmState.SetInteger(destinationRegister, map.Length);
                 return;
-            case Dice when iterator.ObjectValue is int[] dice:
+            case Dice when source.ObjectValue is int[] dice:
                 vmState.SetInteger(destinationRegister, dice.Length);
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeInteger range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
                 vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when iterator.ObjectValue is GesVmValueRangeFloat range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
                 vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case Vector or Point when iterator.ObjectValue is GesVmValueVectorPoint:
+            case Vector or Point when source.ObjectValue is GesVmValueVectorPoint:
                 vmState.SetInteger(destinationRegister, 3);
                 return;
             case Text or Tag:
-                vmState.SetInteger(destinationRegister, iterator.TextValue.Length);
+                vmState.SetInteger(destinationRegister, source.TextValue.Length);
                 return;
             case Nothing:
                 vmState.SetInteger(destinationRegister, 0);
                 return;
         }
 
-        IGesVmStream stream;
-        if (iterator is { Kind: Stream, ObjectValue: IGesVmStream sourceStream }) stream = sourceStream;
-        else if (!iterator.TryCreateStream(out stream))
+        IGesVmIterator iterator;
+        if (source is { Kind: Iterator, ObjectValue: IGesVmIterator sourceIterator }) iterator = sourceIterator;
+        else if (!source.TryCreateIterator(out iterator))
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -49,12 +49,12 @@ internal static class GesVmRegisterStreamTerminals
         var item = new GesVmValue();
         try
         {
-            while (stream.TryNext(ref item)) count++;
+            while (iterator.TryNext(ref item)) count++;
             vmState.SetInteger(destinationRegister, count);
         }
         finally
         {
-            if (stream is IDisposable disposable) disposable.Dispose();
+            if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
 

@@ -140,24 +140,24 @@ Start:				 // handler Start()
 					SlotLocals #8
 					ListBuilderCreate r4
 					CreateRangeIteratorShort r5, #1, #100, #1
-Start_3:			StreamNext r1, r5, Start_8
+Start_3:			IteratorNext r1, r5, Start_8
 					LoadInteger r6, #2
 					Multiply r7, r1, r6
 					ListBuilderAdd r4, r7
 					Jump Start_3
-Start_8:			StreamClose r5
+Start_8:			IteratorClose r5
 					ListBuilderFinish r0, r4
-					StreamCreateOrJump r4, r0, Start_22
-					StreamNext r5, r4, Start_17
+					IteratorCreateOrJump r4, r0, Start_22
+					IteratorNext r5, r4, Start_17
 					Move r6, r5
 					Jump Start_14
-Start_14:			StreamNext r5, r4, Start_20
+Start_14:			IteratorNext r5, r4, Start_20
 					Add r6, r6, r5
 					Jump Start_14
-Start_17:			StreamClose r4
+Start_17:			IteratorClose r4
 					LoadInteger r6, #0
 					Jump Start_23
-Start_20:			StreamClose r4
+Start_20:			IteratorClose r4
 					Jump Start_23
 Start_22:			LoadNothing r6
 Start_23:			Move r2, r6
@@ -337,24 +337,24 @@ Start:				 // handler Start()
 					StageInteger #20
 					CreateList r0
 					TakeFirst r1, r0, #10
-					StreamCreateOrJump r5, r1, Start_35
-					StreamNext r6, r5, Start_30
+					IteratorCreateOrJump r5, r1, Start_35
+					IteratorNext r6, r5, Start_30
 					Move r7, r6
 					Jump Start_27
-Start_27:			StreamNext r6, r5, Start_33
+Start_27:			IteratorNext r6, r5, Start_33
 					Add r7, r7, r6
 					Jump Start_27
-Start_30:			StreamClose r5
+Start_30:			IteratorClose r5
 					LoadInteger r7, #0
 					Jump Start_36
-Start_33:			StreamClose r5
+Start_33:			IteratorClose r5
 					Jump Start_36
 Start_35:			LoadNothing r7
 Start_36:			Move r2, r7
-					StreamCreateOrJump r5, r0, Start_58
+					IteratorCreateOrJump r5, r0, Start_58
 					LoadFalse r6
 					LoadNothing r7
-Start_40:			StreamNext r8, r5, Start_54
+Start_40:			IteratorNext r8, r5, Start_54
 					LoadInteger r9, #2
 					Modulo r10, r8, r9
 					LoadInteger r9, #0
@@ -368,22 +368,22 @@ Start_40:			StreamNext r8, r5, Start_54
 					Jump Start_53
 Start_52:			Add r7, r7, r9
 Start_53:			Jump Start_40
-Start_54:			StreamClose r5
+Start_54:			IteratorClose r5
 					JumpIfTrue r6, Start_57
 					LoadInteger r7, #0
 Start_57:			Jump Start_59
 Start_58:			LoadNothing r7
 Start_59:			Move r3, r7
-					StreamCreateOrJump r5, r0, Start_71
+					IteratorCreateOrJump r5, r0, Start_71
 					LoadInteger r6, #0
 					LoadInteger r7, #1
-Start_63:			StreamNext r8, r5, Start_69
+Start_63:			IteratorNext r8, r5, Start_69
 					LoadInteger r10, #10
 					Greater r9, r8, r10
 					JumpIfNotTrue r9, Start_68
 					Add r6, r6, r7
 Start_68:			Jump Start_63
-Start_69:			StreamClose r5
+Start_69:			IteratorClose r5
 					Jump Start_72
 Start_71:			LoadNothing r6
 Start_72:			Move r4, r6
@@ -478,10 +478,10 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 
 Start:				 // handler Start(values)
 					SlotLocals #23
-					StreamCreateOrJump r16, r0, Start_21
+					IteratorCreateOrJump r16, r0, Start_21
 					LoadFalse r17
 					LoadNothing r18
-Start_4:			StreamNext r19, r16, Start_17
+Start_4:			IteratorNext r19, r16, Start_17
 					StageRegister r19
 					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
 					JumpIfNotTrue r20, Start_16
@@ -494,18 +494,18 @@ Start_4:			StreamNext r19, r16, Start_17
 					Jump Start_16
 Start_15:			Add r18, r18, r19
 Start_16:			Jump Start_4
-Start_17:			StreamClose r16
+Start_17:			IteratorClose r16
 					JumpIfTrue r17, Start_20
 					LoadInteger r18, #0
 Start_20:			Jump Start_22
 Start_21:			LoadNothing r18
 Start_22:			Move r1, r18
-					StreamCreateOrJump r16, r0, Start_48
+					IteratorCreateOrJump r16, r0, Start_48
 					LoadInteger r17, #0
 					LoadInteger r18, #1
 					LoadFalse r21
 					LoadNothing r19
-Start_28:			StreamNext r20, r16, Start_42
+Start_28:			IteratorNext r20, r16, Start_42
 					StageRegister r20
 					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
 					JumpIfNotTrue r22, Start_41
@@ -519,7 +519,7 @@ Start_28:			StreamNext r20, r16, Start_42
 					Jump Start_41
 Start_40:			Add r19, r19, r20
 Start_41:			Jump Start_28
-Start_42:			StreamClose r16
+Start_42:			IteratorClose r16
 					JumpIfNotTrue r17, Start_46
 					Divide r17, r19, r17
 					Jump Start_47
@@ -527,10 +527,10 @@ Start_46:			LoadNothing r17
 Start_47:			Jump Start_49
 Start_48:			LoadNothing r17
 Start_49:			Move r2, r17
-					StreamCreateOrJump r16, r0, Start_63
+					IteratorCreateOrJump r16, r0, Start_63
 					LoadInteger r17, #0
 					LoadInteger r18, #1
-Start_53:			StreamNext r21, r16, Start_61
+Start_53:			IteratorNext r21, r16, Start_61
 					LoadInteger r19, #2
 					Modulo r23, r21, r19
 					LoadInteger r21, #1
@@ -538,13 +538,13 @@ Start_53:			StreamNext r21, r16, Start_61
 					JumpIfNotTrue r19, Start_60
 					Add r17, r17, r18
 Start_60:			Jump Start_53
-Start_61:			StreamClose r16
+Start_61:			IteratorClose r16
 					Jump Start_64
 Start_63:			LoadNothing r17
 Start_64:			Move r3, r17
-					StreamCreateOrJump r16, r0, Start_77
+					IteratorCreateOrJump r16, r0, Start_77
 					LoadNothing r17
-Start_67:			StreamNext r18, r16, Start_75
+Start_67:			IteratorNext r18, r16, Start_75
 					StageRegister r18
 					Call r23, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
 					JumpIfNotTrue r23, Start_74
@@ -552,17 +552,17 @@ Start_67:			StreamNext r18, r16, Start_75
 					Add r17, r18, r23
 					Jump Start_75
 Start_74:			Jump Start_67
-Start_75:			StreamClose r16
+Start_75:			IteratorClose r16
 					Jump Start_78
 Start_77:			LoadNothing r17
 Start_78:			Move r4, r17
 					LoadInteger r5, #105, unit:meter
 					CastUnit r5, r5, unit:meter
 					LoadFloat r6, #0.6
-					StreamCreateOrJump r16, r0, Start_100
+					IteratorCreateOrJump r16, r0, Start_100
 					LoadInteger r17, #0
 					LoadInteger r18, #1
-Start_85:			StreamNext r23, r16, Start_98
+Start_85:			IteratorNext r23, r16, Start_98
 					LoadInteger r21, #2
 					Modulo r19, r23, r21
 					LoadInteger r21, #1
@@ -575,7 +575,7 @@ Start_85:			StreamNext r23, r16, Start_98
 					JumpIfNotTrue r19, Start_97
 					Add r17, r17, r18
 Start_97:			Jump Start_85
-Start_98:			StreamClose r16
+Start_98:			IteratorClose r16
 					Jump Start_101
 Start_100:			LoadNothing r17
 Start_101:			Move r7, r17
@@ -591,11 +591,11 @@ Start_101:			Move r7, r17
 					LoadMessage r12, Shape_0, Args_2 // "Success", "message", "value"
 					Jump Start_113
 Start_113:			CreateRangeIteratorShort r16, #1, #16, #1
-Start_114:			StreamNext r13, r16, Start_141
-					StreamCreateOrJump r17, r0, Start_138
+Start_114:			IteratorNext r13, r16, Start_141
+					IteratorCreateOrJump r17, r0, Start_138
 					LoadFalse r18
 					LoadNothing r21
-Start_118:			StreamNext r23, r17, Start_134
+Start_118:			IteratorNext r23, r17, Start_134
 					Add r19, r23, r13
 					LoadInteger r20, #7
 					Modulo r22, r19, r20
@@ -611,18 +611,18 @@ Start_118:			StreamNext r23, r17, Start_134
 					Jump Start_133
 Start_132:			Add r21, r21, r19
 Start_133:			Jump Start_118
-Start_134:			StreamClose r17
+Start_134:			IteratorClose r17
 					JumpIfTrue r18, Start_137
 					LoadInteger r21, #0
 Start_137:			Jump Start_139
 Start_138:			LoadNothing r21
 Start_139:			Move r14, r21
 					Jump Start_114
-Start_141:			StreamClose r16
-					StreamCreateOrJump r16, r0, Start_163
+Start_141:			IteratorClose r16
+					IteratorCreateOrJump r16, r0, Start_163
 					LoadFalse r17
 					LoadNothing r18
-Start_145:			StreamNext r21, r16, Start_159
+Start_145:			IteratorNext r21, r16, Start_159
 					LoadInteger r22, #10
 					GreaterOrEqual r23, r21, r22
 					JumpIfNotTrue r23, Start_158
@@ -636,7 +636,7 @@ Start_145:			StreamNext r21, r16, Start_159
 					Jump Start_158
 Start_157:			Add r18, r18, r22
 Start_158:			Jump Start_145
-Start_159:			StreamClose r16
+Start_159:			IteratorClose r16
 					JumpIfTrue r17, Start_162
 					LoadInteger r18, #0
 Start_162:			Jump Start_164

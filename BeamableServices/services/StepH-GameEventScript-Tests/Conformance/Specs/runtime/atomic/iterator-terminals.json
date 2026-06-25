@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "name": "RuntimeAtomicStreamTerminals",
+  "name": "RuntimeAtomicIteratorTerminals",
   "level": "atomic",
   "tests": [
     {
       "kind": "scriptApi",
-      "name": "stream count over source kinds",
+      "name": "iterator count over source kinds",
       "script": "module AtomicCountTerminals\non Start {\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let map be [b: 2, a: 1, c: 3]\n  let text be 'abba'\n  let emptyList be []\n  emit Done(allValues: values[:count value where true], allValuesBare: values[:count], filteredValues: values[:count value where value > 2], diceHigh: dice[:count value where value >= 4], diceBare: dice[:count], rangeAll: range[:count value where true], rangeBare: range[:count], mapOverOne: map[:count value where value > 1], mapBare: map[:count], textB: text[:count value where value = 'b'], textBare: text[:count], emptyCount: emptyList[:count value where true], emptyBare: emptyList[:count])\n}",
       "steps": [
         {
@@ -77,7 +77,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream sum and average over source kinds",
+      "name": "iterator sum and average over source kinds",
       "script": "module AtomicSumAverageTerminals\non Start {\n  let values be [1, 2, 3, 4]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let map be [b: 2, a: 1, c: 3]\n  let emptyList be []\n  emit Done(sumValues: values[:sum value => value], sumValuesBare: values[:sum], sumFiltered: values[:filter value where value > 2][:sum value => value], sumDice: dice[:sum value => value], sumDiceBare: dice[:sum], sumRange: range[:sum value => value], sumRangeBare: range[:sum], sumMap: map[:sum value => value], sumMapBare: map[:sum], sumEmpty: emptyList[:sum value => value], sumEmptyBare: emptyList[:sum], averageValues: values[:average value => value], averageValuesBare: values[:average], averageFiltered: values[:filter value where value > 2][:average value => value], averageDice: dice[:average value => value], averageDiceBare: dice[:average], averageRange: range[:average value => value], averageRangeBare: range[:average], averageMap: map[:average value => value], averageMapBare: map[:average], averageEmpty: emptyList[:average value => value], averageEmptyBare: emptyList[:average])\n}",
       "steps": [
         {
@@ -183,8 +183,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream min and max over numeric source kinds",
-      "script": "module AtomicStreamMinMaxTerminals\non Start {\n  let values be [3, 1, 4, 2]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let percentages be [10%, 25%, 5%]\n  let quantities be [3m, 1m, 2m]\n  let booleans be [true, false, true]\n  let emptyList be []\n  emit Done(minValue: values[:min value => value], maxValue: values[:max value => value], minDice: dice[:min value => value], maxDice: dice[:max value => value], minRange: range[:min value => value], maxRange: range[:max value => value], minPercentage: percentages[:min value => value], maxPercentage: percentages[:max value => value], minQuantity: quantities[:min value => value], maxQuantity: quantities[:max value => value], minBoolean: booleans[:min value => value], maxBoolean: booleans[:max value => value], emptyMin: emptyList[:min value => value], emptyMax: emptyList[:max value => value])\n}",
+      "name": "iterator min and max over numeric source kinds",
+      "script": "module AtomicIteratorMinMaxTerminals\non Start {\n  let values be [3, 1, 4, 2]\n  let dice as :dice be [6, 4, 2]\n  let range as :range be from 1 to 4\n  let percentages be [10%, 25%, 5%]\n  let quantities be [3m, 1m, 2m]\n  let booleans be [true, false, true]\n  let emptyList be []\n  emit Done(minValue: values[:min value => value], maxValue: values[:max value => value], minDice: dice[:min value => value], maxDice: dice[:max value => value], minRange: range[:min value => value], maxRange: range[:max value => value], minPercentage: percentages[:min value => value], maxPercentage: percentages[:max value => value], minQuantity: quantities[:min value => value], maxQuantity: quantities[:max value => value], minBoolean: booleans[:min value => value], maxBoolean: booleans[:max value => value], emptyMin: emptyList[:min value => value], emptyMax: emptyList[:max value => value])\n}",
       "steps": [
         {
           "input": {
@@ -259,8 +259,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream min and max return winning source item",
-      "script": "module AtomicStreamMinMaxReturnsItem\non Start {\n  let units be [[id: #rook, hp: 10], [id: #mage, hp: 6], [id: #guard, hp: 8]]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp]\n  let transformedMax be [1, 2, 3, 4][:filter value where value < 4][:select value => value * 10][:max value => value]\n  emit Done(weakestId: weakest.id, weakestHp: weakest.hp, strongestId: strongest.id, strongestHp: strongest.hp, transformedMax: transformedMax)\n}",
+      "name": "iterator min and max return winning source item",
+      "script": "module AtomicIteratorMinMaxReturnsItem\non Start {\n  let units be [[id: #rook, hp: 10], [id: #mage, hp: 6], [id: #guard, hp: 8]]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp]\n  let transformedMax be [1, 2, 3, 4][:filter value where value < 4][:select value => value * 10][:max value => value]\n  emit Done(weakestId: weakest.id, weakestHp: weakest.hp, strongestId: strongest.id, strongestHp: strongest.hp, transformedMax: transformedMax)\n}",
       "steps": [
         {
           "input": {

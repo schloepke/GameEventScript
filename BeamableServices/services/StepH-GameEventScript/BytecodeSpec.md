@@ -39,7 +39,7 @@ expressions are layout-free direct instructions.
   functions into jumps and calls.
 - Keep domain-heavy collection operations high-level when that is faster or
   simpler than expanding them into many tiny instructions.
-- Preserve streaming and short-circuit behavior where the language requires it.
+- Preserve iterating and short-circuit behavior where the language requires it.
 - Keep the public artifact portable: no VM session state, no C# delegates, no
   bound extension functions, no AST nodes, and no runtime `GameEventScriptValue`
   constants.
@@ -328,7 +328,7 @@ groups are:
 0x90 Group 2 navigation/vector math continuation, reserved tail 0x98..0x9F
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
-0xC0 Group 3 streams, aggregations, weighted terminals, collect terminals
+0xC0 Group 3 iterators, aggregations, weighted terminals, collect terminals
 0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, reserved tail 0xDC..0xFF
 ```
 
@@ -613,8 +613,8 @@ membership rules as `Contains`, but interpret `left` as a list-like sequence of
 needles. Lists, dice, text/tags, and ranges expand to their items; unsupported
 needle shapes behave as an empty needle sequence. `ContainsAny` over an empty
 needle sequence writes `false`; `ContainsAll` over an empty needle sequence
-writes `true`. If `right` is a stream, it is consumed until `ContainsAny` finds
-a match, until `ContainsAll` has matched every needle, or until the stream is
+writes `true`. If `right` is an iterator, it is consumed until `ContainsAny` finds
+a match, until `ContainsAll` has matched every needle, or until the iterator is
 exhausted. `right` `Nothing` writes `Nothing`.
 
 `ContainsValue left, right` writes value membership of map-like `right`.
@@ -626,10 +626,10 @@ points compare their `x`, `y`, and `z` components. `right` `Nothing` writes
 
 `HasAny source` and `HasAll source` evaluate boolean truthiness over sequence
 items. They are defined for list, dice, range, map/custom values, text/tag
-characters, vector/point components, and streams. `HasAny` writes `true` on the
+characters, vector/point components, and iterators. `HasAny` writes `true` on the
 first truthy item and `false` for an empty sequence. `HasAll` writes `false` on
 the first non-truthy item and `true` for an empty sequence. Source `Nothing`
-writes `Nothing`; unsupported scalar sources write boolean `false`. Stream
+writes `Nothing`; unsupported scalar sources write boolean `false`. Iterator
 sources are consumed until the terminal result is known or until exhaustion.
 
 `StartsWith left, right` and `EndsWith left, right` write boundary checks.
@@ -827,10 +827,10 @@ sequence.
 - `CreateRangeIterator dst from to`
 - `CreateRangeIteratorWithStep dst from to step`
 - `CreateRangeIteratorShort dst fromI16 toI16 stepI16`
-- `StreamCreate dst collection`
-- `StreamCreateOrJump dst collection notStreamableTarget`
-- `StreamNext dst iterator noMoreTarget`
-- `StreamClose iterator`
+- `IteratorCreate dst collection`
+- `IteratorCreateOrJump dst collection notIterableTarget`
+- `IteratorNext dst iterator noMoreTarget`
+- `IteratorClose iterator`
 - `Call dst entryAddress`
 - `ReturnValue src`
 - `ReturnVoid`
@@ -858,7 +858,7 @@ only the first true branch value is evaluated, and otherwise code runs when no
 condition is true. The public bytecode has no `GuardedChoice` layout.
 
 `for` statements lower to normal linear iterator control flow. The source is
-evaluated once, an iterator is stored in a temporary register, `StreamNext` writes
+evaluated once, an iterator is stored in a temporary register, `IteratorNext` writes
 each item into an item register and jumps to the close block when exhausted, and the
 body runs inside an iteration scope. Literal I16 ranges should use
 `CreateRangeIteratorShort`; dynamic ranges and collection sources use the register-based
@@ -920,13 +920,13 @@ Range loop shape:
 ```text
 @0200 SlotLocals locals+=loopLocalCount
 @0201 CreateRangeIteratorShort dst=rIterator from=1 to=20 step=1
-@0202 StreamNext dst=rItem iterator=rIterator noMore=@0210
+@0202 IteratorNext dst=rItem iterator=rIterator noMore=@0210
 @0203 SlotLocals locals+=iterationLocalCount
 @0204 Move dst=rIdentifier src=rItem
 @0205 ...
 @0208 SlotLocals locals-=iterationLocalCount
 @0209 Jump @0202
-@0210 StreamClose iterator=rIterator
+@0210 IteratorClose iterator=rIterator
 @0211 SlotLocals locals-=loopLocalCount
 ```
 
@@ -934,13 +934,13 @@ Collection loop shape:
 
 ```text
 @0300 SlotLocals locals+=loopLocalCount
-@0301 StreamCreate dst=rIterator source=rValues
-@0302 StreamNext dst=rItem iterator=rIterator noMore=@0310
+@0301 IteratorCreate dst=rIterator source=rValues
+@0302 IteratorNext dst=rItem iterator=rIterator noMore=@0310
 @0303 SlotLocals locals+=iterationLocalCount
 @0304 ...
 @0308 SlotLocals locals-=iterationLocalCount
 @0309 Jump @0302
-@0310 StreamClose iterator=rIterator
+@0310 IteratorClose iterator=rIterator
 @0311 SlotLocals locals-=loopLocalCount
 ```
 
@@ -1021,10 +1021,10 @@ zero-based term and is valid only for series; all non-series sources evaluate to
 `[:take last n]` and `[:drop last n]` evaluate to `nothing`.
 
 Finite sequence values support direct slicing without pipeline materialization:
-lists, dice, ranges, and streams support `:take first`, `:drop first`,
+lists, dice, ranges, and iterators support `:take first`, `:drop first`,
 `:take last`, `:drop last`, `:take highest`, `:take lowest`,
 `:drop highest`, and `:drop lowest`. List slices return lists, dice slices
-return dice, range slices return ranges, and stream slices consume the stream
+return dice, range slices return ranges, and iterator slices consume the iterator
 and return materialized lists.
 
 Message values are map-backed runtime values. The bytecode model exposes the
@@ -1100,7 +1100,7 @@ host when loading the compiled artifact. Runtime extension binding is not
 serialized into portable bytecode.
 
 Core language intrinsics are non-overridable and do not appear in
-`ExternalReferences`. Math, navigation, collection, and stream terminals lower
+`ExternalReferences`. Math, navigation, collection, and iterator terminals lower
 to direct opcodes. Remaining built-in namespace calls that have not yet been
 promoted to direct opcodes, currently series helpers, use `CallStandard` with an
 extension shape stored in `UShortListPool` as
@@ -1121,10 +1121,10 @@ metadata pools. Prefix selectors and selector expressions are lowered into
 ordinary bytecode loops so every expression participates in normal slice
 execution and opcode budgeting.
 
-Core streaming shape:
+Core iterating shape:
 
 ```text
-StreamCreate source -> iterator
+IteratorCreate source -> iterator
 Count dst source
 OneWeighted dst items weights
 TakeWeighted dst items count weights
@@ -1155,34 +1155,34 @@ OrderBuilderFinishAscending dst builder
 OrderBuilderFinishDescending dst builder
 ```
 
-`SortAscending` and `SortDescending` accept lists, dice, ranges, and streams.
-Lists and streams materialize sorted lists. Dice materialize lists even when
+`SortAscending` and `SortDescending` accept lists, dice, ranges, and iterators.
+Lists and iterators materialize sorted lists. Dice materialize lists even when
 descending order matches dice's natural order. Ranges stay ranges by preserving
 or reversing their bounds and step. Direct maps, scalars, and `nothing` produce
 `nothing`.
 
-`order by` selectors accept streamable sources and lower to ordinary
-`StreamCreateOrJump` loops with `OrderBuilder*` opcodes. They materialize the
-original items ordered by the projected key. Direct non-streamable sources
+`order by` selectors accept iterable sources and lower to ordinary
+`IteratorCreateOrJump` loops with `OrderBuilder*` opcodes. They materialize the
+original items ordered by the projected key. Direct non-iterable sources
 produce `nothing`.
 
-`Reverse` accepts lists, dice, ranges, and streams. Lists materialize reversed
+`Reverse` accepts lists, dice, ranges, and iterators. Lists materialize reversed
 lists, dice materialize lists so dice ordering is not normalized, ranges stay
-ranges by swapping bounds and negating the step, and streams materialize lists.
+ranges by swapping bounds and negating the step, and iterators materialize lists.
 Maps, scalars, and `nothing` sources produce `nothing`.
 
-`Shuffle` accepts lists, dice, ranges, and streams. It always materializes a
+`Shuffle` accepts lists, dice, ranges, and iterators. It always materializes a
 list. Direct maps, scalars, and `nothing` sources produce `nothing`.
 
-`Distinct` accepts lists, dice, and streams. `distinct by` selectors lower to
-ordinary `StreamCreateOrJump` loops with `DistinctBuilder*` opcodes, so every
-streamable source follows normal stream semantics; non-streamable sources
+`Distinct` accepts lists, dice, and iterators. `distinct by` selectors lower to
+ordinary `IteratorCreateOrJump` loops with `DistinctBuilder*` opcodes, so every
+iterable source follows normal iterator semantics; non-iterable sources
 produce `nothing`.
 
-`group by` selectors lower to ordinary `StreamCreateOrJump` loops with
+`group by` selectors lower to ordinary `IteratorCreateOrJump` loops with
 `GroupBuilder*` opcodes. The result is a map from projected key text to lists
-of matching source items. Every streamable source follows normal stream
-semantics; non-streamable sources produce `nothing`.
+of matching source items. Every iterable source follows normal iterator
+semantics; non-iterable sources produce `nothing`.
 
 `KeysOfMap`, `ValuesOfMap`, and `EntriesOfMap` are strict map/custom-type
 projection opcodes. They are not general enumerable materializers. Map-backed
@@ -1190,9 +1190,9 @@ custom type values follow the same rules as maps. Successful projections use
 stable ordinal key order. If the operand is `nothing`, the result is
 `nothing`; any other non-map operand also yields `nothing`.
 
-`First`, `Last`, and `Single` are direct collection/stream element terminals.
+`First`, `Last`, and `Single` are direct collection/iterator element terminals.
 They accept lists, dice, ranges, maps, custom map-backed values, text, tags, and
-VM streams. Maps and custom values use stable ordinal value order. Empty,
+VM iterators. Maps and custom values use stable ordinal value order. Empty,
 invalid, or unsupported sources yield `nothing`; `Single` also yields `nothing`
 when the source has more than one element. The DSL `:draw 1` selector lowers to
 `First`; `:draw n` with `n > 1` lowers to `TakeFirst`. Deterministic
@@ -1200,9 +1200,9 @@ when the source has more than one element. The DSL `:draw 1` selector lowers to
 `n > 1` lowers to `TakeFirst`. Random choice uses `OneRandom` for
 `:choose 1 at random` and `TakeRandom` for `:choose n at random`.
 `TakeRandom` chooses without replacement. Lists stay lists, dice stay dice,
-and ranges or streams materialize as lists. Predicated choices lower to explicit
+and ranges or iterators materialize as lists. Predicated choices lower to explicit
 filter loops before applying the deterministic or random terminal. Weighted
-choice uses stream loops so the predicate and weight expression execute as
+choice uses iterator loops so the predicate and weight expression execute as
 normal bytecode for every candidate. The generated loop materializes two lists: candidate items and
 their positive finite weights. `:choose 1 weighted by ...` then lowers to
 `OneWeighted` and returns one item or `nothing`; `:choose n weighted by ...`
@@ -1210,17 +1210,17 @@ lowers to `TakeWeighted` and returns a list with up to `n` items. Only positive
 finite weights participate.
 
 `Count` is a fixed finite aggregation terminal over finite collection-like
-sources or already-created streams. It returns `0` for an empty finite source
+sources or already-created iterators. It returns `0` for an empty finite source
 and `nothing` for series sources because they would otherwise require unbounded
 consumption. DSL `:sum` and `:average` selectors are lowered to explicit
 bytecode loops so they can account for normal step budgets and avoid hidden
-stream consumption inside a single opcode.
+iterator consumption inside a single opcode.
 
 DSL `:min` and `:max` selectors are lowered to explicit bytecode loops. The
 generated loop keeps the first source item as the initial winner, evaluates the
 projection inline for each item, compares projected values with normal
 less/greater semantics, and returns the winning source item. Ties keep the
-earlier source item. Empty finite streams and series sources return `nothing`.
+earlier source item. Empty finite iterators and series sources return `nothing`.
 
 Fixed terminal opcodes cover materializers and operations that need full
 collection semantics: map, distinct, group/order/sort/reverse, weighted
@@ -1232,18 +1232,18 @@ uses `BU` as the already-evaluated face register. These opcodes reference only
 source or iterator registers, immediate counts, pattern ids, face registers, and
 binding registers; there are no pipeline selector, pattern, or object-pattern pools.
 
-Streaming/materialization contract:
+Iterator/materialization contract:
 
 - `:range` and `:series` sources must not be blindly materialized
-  before streamable terminal selectors.
-- Streamable/short-circuit terminal selectors include `:any`, `:all`, and
+  before iterable terminal selectors.
+- Iterable/short-circuit terminal selectors include `:any`, `:all`, and
   `:first`. `:any` and `:all` lower to the normal `HasAny` and `HasAll`
   opcodes over projected predicate values; when their source operand is a
-  stream, they consume the stream only as far as needed. Direct `:contains x`,
+  iterator, they consume the iterator only as far as needed. Direct `:contains x`,
   `:contains any xs`, and `:contains all xs` lower to the normal `Contains`,
   `ContainsAny`, and `ContainsAll` opcodes; when their container operand is a
-  stream, they consume the stream only as far as needed.
-- Prefix selectors are applied lazily on the streaming path.
+  iterator, they consume the iterator only as far as needed.
+- Prefix selectors are applied lazily on the iterating path.
 - Selectors that require full collection semantics may materialize after runtime
   budgets such as `MaxRangeItems` are checked.
 - Non-range list-like sources should keep an indexed hot path for selectors such
@@ -1256,9 +1256,9 @@ Generated collection expressions lower to normal linear iterator control flow:
 ```text
 ListBuilderCreate builder
 SlotLocals locals+=collectionLocalCount
-CreateRangeIterator* / StreamCreate iterator
+CreateRangeIterator* / IteratorCreate iterator
 loop:
-  StreamNext item iterator noMore
+  IteratorNext item iterator noMore
   SlotLocals locals+=iterationLocalCount
   Move identifier item
   optional predicate + JumpIfNotTrue skipProjection
@@ -1267,7 +1267,7 @@ loop:
   SlotLocals locals-=iterationLocalCount
   Jump loop
 noMore:
-StreamClose iterator
+IteratorClose iterator
 SlotLocals locals-=collectionLocalCount
 ListBuilderFinish dst builder
 ```
@@ -1317,10 +1317,10 @@ code[26]
 @0000 L_handler_Start:
 @0000 SlotLocals locals+=5
 @0001 SlotLocals locals+=1
-@0003 StreamCreate dst=r2 source=r0
-@0004 StreamNext dst=r3 iterator=r2 noMore=@0010
+@0003 IteratorCreate dst=r2 source=r0
+@0004 IteratorNext dst=r3 iterator=r2 noMore=@0010
 @0005 ...
-@0010 StreamClose iterator=r2
+@0010 IteratorClose iterator=r2
 @0011 SlotLocals locals-=1
 @0012 ReturnVoid
 ```

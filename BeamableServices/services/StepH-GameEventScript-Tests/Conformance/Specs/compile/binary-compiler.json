@@ -784,8 +784,8 @@
     },
     {
       "kind": "scriptApi",
-      "name": "stream terminal selectors compile to runnable binary",
-      "script": "module BinaryCompilerStreamTerminals\n\non Start {\n  let values be [1, 2, 3, 4]\n  let threshold be 2\n  let offset be 10\n  let units be [[name: 'Knight', hp: 10], [name: 'Mage', hp: 6], [name: 'Guard', hp: 8]]\n  let counted be values[:count value where value > threshold]\n  let summed be values[:sum value => value + offset]\n  let averaged be values[:average value => value]\n  let chainedSum be values[:filter value where value > 1][:sum value => value]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp + offset]\n  emit Done(counted: counted, summed: summed, averaged: averaged, chainedSum: chainedSum, weakest: weakest.name, strongest: strongest.name)\n}\n",
+      "name": "iterator terminal selectors compile to runnable binary",
+      "script": "module BinaryCompilerIteratorTerminals\n\non Start {\n  let values be [1, 2, 3, 4]\n  let threshold be 2\n  let offset be 10\n  let units be [[name: 'Knight', hp: 10], [name: 'Mage', hp: 6], [name: 'Guard', hp: 8]]\n  let counted be values[:count value where value > threshold]\n  let summed be values[:sum value => value + offset]\n  let averaged be values[:average value => value]\n  let chainedSum be values[:filter value where value > 1][:sum value => value]\n  let weakest be units[:min unit => unit.hp]\n  let strongest be units[:max unit => unit.hp + offset]\n  emit Done(counted: counted, summed: summed, averaged: averaged, chainedSum: chainedSum, weakest: weakest.name, strongest: strongest.name)\n}\n",
       "steps": [
         {
           "input": {

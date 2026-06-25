@@ -253,14 +253,20 @@
           "StreamCollectList",
           "Count",
           "Distinct",
-          "DistinctBy",
-          "GroupBy",
           "SortAscending",
           "SortDescending",
-          "OrderByAscending",
-          "OrderByDescending",
           "Reverse",
-          "Shuffle"
+          "Shuffle",
+          "DistinctBuilderCreate",
+          "DistinctBuilderAdd",
+          "DistinctBuilderFinish",
+          "GroupBuilderCreate",
+          "GroupBuilderAdd",
+          "GroupBuilderFinish",
+          "OrderBuilderCreate",
+          "OrderBuilderAdd",
+          "OrderBuilderFinishAscending",
+          "OrderBuilderFinishDescending"
         ]
       }
     }

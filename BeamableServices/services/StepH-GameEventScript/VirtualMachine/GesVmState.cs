@@ -222,6 +222,9 @@ internal class GesVmState
     internal void SetStream(ushort index, IGesVmStream value) => Register(index).SetStream(value);
     internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder());
     internal void CreateMapBuilder(ushort index) => Register(index).SetMapBuilder(new GesVmValueMapBuilder());
+    internal void CreateDistinctBuilder(ushort index) => Register(index).SetDistinctBuilder(new GesVmValueDistinctBuilder());
+    internal void CreateGroupBuilder(ushort index) => Register(index).SetGroupBuilder(new GesVmValueGroupBuilder(this));
+    internal void CreateOrderBuilder(ushort index) => Register(index).SetOrderBuilder(new GesVmValueOrderBuilder());
     
     internal bool PushRandom(GesVmXoshiroRandom randomGenerator)
     {

@@ -719,23 +719,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case Distinct:
                             vmState.GesVmDistinct(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
-                        case DistinctBy:
-                            vmState.GesVmDistinctBy(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            break;
-                        case GroupBy:
-                            vmState.GesVmGroupBy(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            break;
                         case SortAscending:
                             vmState.GesVmSortAscending(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case SortDescending:
                             vmState.GesVmSortDescending(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
-                            break;
-                        case OrderByAscending:
-                            vmState.GesVmOrderByAscending(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
-                            break;
-                        case OrderByDescending:
-                            vmState.GesVmOrderByDescending(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.YSlot, instruction.AU, this);
                             break;
                         case Reverse:
                             vmState.GesVmReverse(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
@@ -760,6 +748,36 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                             break;
                         case MapBuilderFinish:
                             vmState.GesVmMapBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            break;
+                        case DistinctBuilderCreate:
+                            vmState.GesVmCreateDistinctBuilder(instruction.DestinationSlot);
+                            break;
+                        case DistinctBuilderAdd:
+                            vmState.GesVmDistinctBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            break;
+                        case DistinctBuilderFinish:
+                            vmState.GesVmDistinctBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            break;
+                        case GroupBuilderCreate:
+                            vmState.GesVmCreateGroupBuilder(instruction.DestinationSlot);
+                            break;
+                        case GroupBuilderAdd:
+                            vmState.GesVmGroupBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            break;
+                        case GroupBuilderFinish:
+                            vmState.GesVmGroupBuilderFinish(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            break;
+                        case OrderBuilderCreate:
+                            vmState.GesVmCreateOrderBuilder(instruction.DestinationSlot);
+                            break;
+                        case OrderBuilderAdd:
+                            vmState.GesVmOrderBuilderAdd(vmState.Register(instruction.XSlot), in vmState.Register(instruction.YSlot), in vmState.Register(instruction.AU));
+                            break;
+                        case OrderBuilderFinishAscending:
+                            vmState.GesVmOrderBuilderFinishAscending(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
+                            break;
+                        case OrderBuilderFinishDescending:
+                            vmState.GesVmOrderBuilderFinishDescending(instruction.DestinationSlot, in vmState.Register(instruction.XSlot));
                             break;
                         case HasPattern:
                             vmState.GesVmHasPattern(instruction.DestinationSlot, vmState.Register(instruction.XSlot), (GameEventScriptBytecodePatternKind)instruction.AU, instruction.ImmediateY, vmState.Register(instruction.BU));

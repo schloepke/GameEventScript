@@ -125,193 +125,6 @@ internal static class GesVmRegisterSortGroupDistinct
                 return;
         }
     }
-    internal static void GesVmDistinctBy(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
-    {
-        switch (source.Kind)
-        {
-            case List when source.ObjectValue is GesVmValue[] list:
-            {
-                if (list.Length == 0)
-                {
-                    vmState.SetList(destinationRegister, vmState.EmptyList);
-                    return;
-                }
-
-                var values = new GesVmValue[list.Length];
-                var keys = new GesVmValue[list.Length];
-                var key = new GesVmValue();
-                var count = 0;
-                for (var i = 0; i < list.Length; i++)
-                {
-                    var item = list[i];
-                    if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                    {
-                        vmState.SetNothing(destinationRegister);
-                        return;
-                    }
-
-                    var found = false;
-                    for (var j = 0; j < count; j++)
-                    {
-                        if (!keys[j].EqualsValue(ref key)) continue;
-                        found = true;
-                        break;
-                    }
-
-                    if (found) continue;
-                    values[count] = item;
-                    keys[count] = key;
-                    count++;
-                }
-
-                if (count == list.Length)
-                {
-                    vmState.SetList(destinationRegister, values);
-                    return;
-                }
-
-                var compact = new GesVmValue[count];
-                for (var i = 0; i < count; i++) compact[i] = values[i];
-                vmState.SetList(destinationRegister, compact);
-                return;
-            }
-            case Stream when source.ObjectValue is IGesVmStream stream:
-            {
-                var item = new GesVmValue();
-                var key = new GesVmValue();
-                var values = new GesVmValue[16];
-                var keys = new GesVmValue[16];
-                var count = 0;
-                try
-                {
-                    while (stream.TryNext(ref item))
-                    {
-                        if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                        {
-                            vmState.SetNothing(destinationRegister);
-                            return;
-                        }
-
-                        var found = false;
-                        for (var i = 0; i < count; i++)
-                        {
-                            if (!keys[i].EqualsValue(ref key)) continue;
-                            found = true;
-                            break;
-                        }
-
-                        if (found) continue;
-                        if (count == values.Length)
-                        {
-                            var resizedValues = new GesVmValue[values.Length << 1];
-                            var resizedKeys = new GesVmValue[keys.Length << 1];
-                            Array.Copy(values, resizedValues, values.Length);
-                            Array.Copy(keys, resizedKeys, keys.Length);
-                            values = resizedValues;
-                            keys = resizedKeys;
-                        }
-
-                        values[count] = item;
-                        keys[count] = key;
-                        count++;
-                    }
-                }
-                finally
-                {
-                    if (stream is IDisposable disposable) disposable.Dispose();
-                }
-
-                var result = new GesVmValue[count];
-                for (var i = 0; i < count; i++) result[i] = values[i];
-                vmState.SetList(destinationRegister, result);
-                return;
-            }
-            default:
-                vmState.SetNothing(destinationRegister);
-                return;
-        }
-    }
-    internal static void GesVmGroupBy(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
-    {
-        var result = new GesVmValue();
-        switch (source.Kind)
-        {
-            case List when source.ObjectValue is GesVmValue[] list:
-            {
-                var groups = new GesVmValueGroupBuilder(vmState, list.Length);
-                var key = new GesVmValue();
-                for (var i = 0; i < list.Length; i++)
-                {
-                    var item = list[i];
-                    if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                    {
-                        vmState.SetNothing(destinationRegister);
-                        return;
-                    }
-
-                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ToText;
-                    groups.Add(keyText, item);
-                }
-
-                groups.WriteTo(ref result);
-                vmState.SetValue(destinationRegister, in result);
-                return;
-            }
-            case Map or Custom when source.ObjectValue is GesVmValueMap mapSource:
-            {
-                var values = mapSource.ValueList;
-                var groups = new GesVmValueGroupBuilder(vmState, values.Length);
-                var key = new GesVmValue();
-                for (var i = 0; i < values.Length; i++)
-                {
-                    var item = values[i];
-                    if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                    {
-                        vmState.SetNothing(destinationRegister);
-                        return;
-                    }
-
-                    var keyText = key.Kind is Text or Tag ? key.TextValue : key.ToText;
-                    groups.Add(keyText, item);
-                }
-
-                groups.WriteTo(ref result);
-                vmState.SetValue(destinationRegister, in result);
-                return;
-            }
-            case Stream when source.ObjectValue is IGesVmStream stream:
-            {
-                var groups = new GesVmValueGroupBuilder(vmState);
-                var item = new GesVmValue();
-                var key = new GesVmValue();
-                try
-                {
-                    while (stream.TryNext(ref item))
-                    {
-                        if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                        {
-                            vmState.SetNothing(destinationRegister);
-                            return;
-                        }
-
-                        var keyText = key.Kind is Text or Tag ? key.TextValue : key.ToText;
-                        groups.Add(keyText, item);
-                    }
-                }
-                finally
-                {
-                    if (stream is IDisposable disposable) disposable.Dispose();
-                }
-
-                groups.WriteTo(ref result);
-                vmState.SetValue(destinationRegister, in result);
-                return;
-            }
-            default:
-                vmState.SetNothing(destinationRegister);
-                return;
-        }
-    }
     internal static void GesVmSortAscending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
         var result = new GesVmValue();
@@ -324,15 +137,6 @@ internal static class GesVmRegisterSortGroupDistinct
         GesVmSort(vmState, ref result, in source, descending: true);
         vmState.SetValue(destinationRegister, in result);
     }
-    internal static void GesVmOrderByAscending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
-    {
-        GesVmOrderBy(vmState, destinationRegister, in source, itemSlot, keyEntryAddress, evaluator, descending: false);
-    }
-    internal static void GesVmOrderByDescending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator)
-    {
-        GesVmOrderBy(vmState, destinationRegister, in source, itemSlot, keyEntryAddress, evaluator, descending: true);
-    }
-
     private static void GesVmSort(GesVmState vmState, ref GesVmValue dst, in GesVmValue source, bool descending)
     {
         switch (source.Kind)
@@ -462,99 +266,6 @@ internal static class GesVmRegisterSortGroupDistinct
         }
     }
 
-    private static void GesVmOrderBy(GesVmState vmState, ushort destinationRegister, in GesVmValue source, ushort itemSlot, ushort keyEntryAddress, IGesVmStreamEntryEvaluator evaluator, bool descending)
-    {
-        switch (source.Kind)
-        {
-            case List when source.ObjectValue is GesVmValue[] list:
-            {
-                if (list.Length == 0)
-                {
-                    vmState.SetList(destinationRegister, vmState.EmptyList);
-                    return;
-                }
-
-                var values = new GesVmValue[list.Length];
-                var keys = new GesVmValue[list.Length];
-                var key = new GesVmValue();
-                for (var i = 0; i < list.Length; i++)
-                {
-                    var item = list[i];
-                    if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                    {
-                        vmState.SetNothing(destinationRegister);
-                        return;
-                    }
-
-                    values[i] = item;
-                    keys[i] = key;
-                }
-
-                if (!SortValuesByKeys(values, keys, list.Length, descending))
-                {
-                    vmState.SetNothing(destinationRegister);
-                    return;
-                }
-
-                var result = new GesVmValue[list.Length];
-                for (var i = 0; i < list.Length; i++) result[i] = values[i];
-                vmState.SetList(destinationRegister, result);
-                return;
-            }
-            case Stream when source.ObjectValue is IGesVmStream stream:
-            {
-                var item = new GesVmValue();
-                var key = new GesVmValue();
-                var values = new GesVmValue[16];
-                var keys = new GesVmValue[16];
-                var count = 0;
-                try
-                {
-                    while (stream.TryNext(ref item))
-                    {
-                        if (count == values.Length)
-                        {
-                            var resizedValues = new GesVmValue[values.Length << 1];
-                            var resizedKeys = new GesVmValue[keys.Length << 1];
-                            Array.Copy(values, resizedValues, values.Length);
-                            Array.Copy(keys, resizedKeys, keys.Length);
-                            values = resizedValues;
-                            keys = resizedKeys;
-                        }
-
-                        if (!evaluator.TryEvaluateStreamEntry(keyEntryAddress, itemSlot, ref item, null, ref key))
-                        {
-                            vmState.SetNothing(destinationRegister);
-                            return;
-                        }
-
-                        values[count] = item;
-                        keys[count] = key;
-                        count++;
-                    }
-                }
-                finally
-                {
-                    if (stream is IDisposable disposable) disposable.Dispose();
-                }
-
-                if (!SortValuesByKeys(values, keys, count, descending))
-                {
-                    vmState.SetNothing(destinationRegister);
-                    return;
-                }
-
-                var result = new GesVmValue[count];
-                for (var i = 0; i < count; i++) result[i] = values[i];
-                vmState.SetList(destinationRegister, result);
-                return;
-            }
-            default:
-                vmState.SetNothing(destinationRegister);
-                return;
-        }
-    }
-
     private static bool SortValues(GesVmValue[] values, int count, bool descending)
     {
         for (var i = 1; i < count; i++)
@@ -575,7 +286,7 @@ internal static class GesVmRegisterSortGroupDistinct
         return true;
     }
 
-    private static bool SortValuesByKeys(GesVmValue[] values, GesVmValue[] keys, int count, bool descending)
+    internal static bool SortValuesByKeys(GesVmValue[] values, GesVmValue[] keys, int count, bool descending)
     {
         for (var i = 1; i < count; i++)
         {
@@ -771,5 +482,110 @@ internal sealed class GesVmValueGroupBuilder
         }
 
         destination.SetMap(map.ToMap());
+    }
+}
+
+internal sealed class GesVmValueDistinctBuilder
+{
+    private GesVmValue[] _keys;
+    private GesVmValue[] _values;
+    private int _count;
+
+    internal GesVmValueDistinctBuilder(int capacity = 0)
+    {
+        var size = capacity <= 0 ? 4 : capacity;
+        _keys = new GesVmValue[size];
+        _values = new GesVmValue[size];
+    }
+
+    internal void Add(in GesVmValue key, in GesVmValue value)
+    {
+        for (var i = 0; i < _count; i++)
+        {
+            var existing = _keys[i];
+            var candidate = key;
+            if (existing.EqualsValue(ref candidate)) return;
+        }
+
+        if (_count == _keys.Length)
+        {
+            var nextSize = _keys.Length << 1;
+            var nextKeys = new GesVmValue[nextSize];
+            var nextValues = new GesVmValue[nextSize];
+            Array.Copy(_keys, nextKeys, _keys.Length);
+            Array.Copy(_values, nextValues, _values.Length);
+            _keys = nextKeys;
+            _values = nextValues;
+        }
+
+        _keys[_count] = key;
+        _values[_count] = value;
+        _count++;
+    }
+
+    internal GesVmValue[] ToList()
+    {
+        if (_count == 0) return [];
+        var result = new GesVmValue[_count];
+        for (var i = 0; i < _count; i++) result[i] = _values[i];
+        return result;
+    }
+}
+
+internal sealed class GesVmValueOrderBuilder
+{
+    private GesVmValue[] _keys;
+    private GesVmValue[] _values;
+    private int _count;
+
+    internal GesVmValueOrderBuilder(int capacity = 0)
+    {
+        var size = capacity <= 0 ? 4 : capacity;
+        _keys = new GesVmValue[size];
+        _values = new GesVmValue[size];
+    }
+
+    internal void Add(in GesVmValue key, in GesVmValue value)
+    {
+        if (_count == _keys.Length)
+        {
+            var nextSize = _keys.Length << 1;
+            var nextKeys = new GesVmValue[nextSize];
+            var nextValues = new GesVmValue[nextSize];
+            Array.Copy(_keys, nextKeys, _keys.Length);
+            Array.Copy(_values, nextValues, _values.Length);
+            _keys = nextKeys;
+            _values = nextValues;
+        }
+
+        _keys[_count] = key;
+        _values[_count] = value;
+        _count++;
+    }
+
+    internal bool TryToList(bool descending, out GesVmValue[] result)
+    {
+        if (_count == 0)
+        {
+            result = [];
+            return true;
+        }
+
+        var keys = new GesVmValue[_count];
+        var values = new GesVmValue[_count];
+        for (var i = 0; i < _count; i++)
+        {
+            keys[i] = _keys[i];
+            values[i] = _values[i];
+        }
+
+        if (!GesVmRegisterSortGroupDistinct.SortValuesByKeys(values, keys, _count, descending))
+        {
+            result = [];
+            return false;
+        }
+
+        result = values;
+        return true;
     }
 }

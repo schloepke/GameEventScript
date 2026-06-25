@@ -78,4 +78,82 @@ internal static class GesVmRegisterCollections
 
         vmState.SetNothing(destinationRegister);
     }
+
+    internal static void GesVmCreateDistinctBuilder(this GesVmState vmState, ushort destinationRegister)
+    {
+        vmState.CreateDistinctBuilder(destinationRegister);
+    }
+
+    internal static void GesVmDistinctBuilderAdd(this GesVmState vmState, in GesVmValue distinctBuilder, in GesVmValue keyValue, in GesVmValue value)
+    {
+        if (distinctBuilder.Kind is DistinctBuilder && distinctBuilder.ObjectValue is GesVmValueDistinctBuilder builder) builder.Add(in keyValue, in value);
+    }
+
+    internal static void GesVmDistinctBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue distinctBuilder)
+    {
+        if (distinctBuilder.Kind is DistinctBuilder && distinctBuilder.ObjectValue is GesVmValueDistinctBuilder builder)
+        {
+            vmState.SetList(destinationRegister, builder.ToList());
+            return;
+        }
+
+        vmState.SetNothing(destinationRegister);
+    }
+
+    internal static void GesVmCreateGroupBuilder(this GesVmState vmState, ushort destinationRegister)
+    {
+        vmState.CreateGroupBuilder(destinationRegister);
+    }
+
+    internal static void GesVmGroupBuilderAdd(this GesVmState vmState, in GesVmValue groupBuilder, in GesVmValue keyValue, in GesVmValue value)
+    {
+        if (groupBuilder.Kind is not GroupBuilder || groupBuilder.ObjectValue is not GesVmValueGroupBuilder builder) return;
+        var key = keyValue.Kind is Text or Tag ? keyValue.TextValue : keyValue.ToText;
+        builder.Add(key, value);
+    }
+
+    internal static void GesVmGroupBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue groupBuilder)
+    {
+        if (groupBuilder.Kind is GroupBuilder && groupBuilder.ObjectValue is GesVmValueGroupBuilder builder)
+        {
+            var result = new GesVmValue();
+            builder.WriteTo(ref result);
+            vmState.SetValue(destinationRegister, in result);
+            return;
+        }
+
+        vmState.SetNothing(destinationRegister);
+    }
+
+    internal static void GesVmCreateOrderBuilder(this GesVmState vmState, ushort destinationRegister)
+    {
+        vmState.CreateOrderBuilder(destinationRegister);
+    }
+
+    internal static void GesVmOrderBuilderAdd(this GesVmState vmState, in GesVmValue orderBuilder, in GesVmValue keyValue, in GesVmValue value)
+    {
+        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmValueOrderBuilder builder) builder.Add(in keyValue, in value);
+    }
+
+    internal static void GesVmOrderBuilderFinishAscending(this GesVmState vmState, ushort destinationRegister, in GesVmValue orderBuilder)
+    {
+        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmValueOrderBuilder builder && builder.TryToList(descending: false, out var list))
+        {
+            vmState.SetList(destinationRegister, list);
+            return;
+        }
+
+        vmState.SetNothing(destinationRegister);
+    }
+
+    internal static void GesVmOrderBuilderFinishDescending(this GesVmState vmState, ushort destinationRegister, in GesVmValue orderBuilder)
+    {
+        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmValueOrderBuilder builder && builder.TryToList(descending: true, out var list))
+        {
+            vmState.SetList(destinationRegister, list);
+            return;
+        }
+
+        vmState.SetNothing(destinationRegister);
+    }
 }

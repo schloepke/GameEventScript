@@ -546,23 +546,11 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder Distinct(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Distinct, destination, source);
 
-    public GesBinaryBuilder DistinctBy(GesRegisterRef destination, GesRegisterRef source, GesRegisterRef itemBinding, GesLabelRef keyEntry)
-        => SelectorOpcode(GameEventScriptBytecodeOpCode.DistinctBy, destination, source, itemBinding, keyEntry);
-
-    public GesBinaryBuilder GroupBy(GesRegisterRef destination, GesRegisterRef source, GesRegisterRef itemBinding, GesLabelRef keyEntry)
-        => SelectorOpcode(GameEventScriptBytecodeOpCode.GroupBy, destination, source, itemBinding, keyEntry);
-
     public GesBinaryBuilder SortAscending(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.SortAscending, destination, source);
 
     public GesBinaryBuilder SortDescending(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.SortDescending, destination, source);
-
-    public GesBinaryBuilder OrderByAscending(GesRegisterRef destination, GesRegisterRef source, GesRegisterRef itemBinding, GesLabelRef keyEntry)
-        => SelectorOpcode(GameEventScriptBytecodeOpCode.OrderByAscending, destination, source, itemBinding, keyEntry);
-
-    public GesBinaryBuilder OrderByDescending(GesRegisterRef destination, GesRegisterRef source, GesRegisterRef itemBinding, GesLabelRef keyEntry)
-        => SelectorOpcode(GameEventScriptBytecodeOpCode.OrderByDescending, destination, source, itemBinding, keyEntry);
 
     public GesBinaryBuilder Reverse(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Reverse, destination, source);
@@ -587,6 +575,36 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder MapBuilderFinish(GesRegisterRef destination, GesRegisterRef builder)
         => AddOpcode(GameEventScriptBytecodeOpCode.MapBuilderFinish, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
+
+    public GesBinaryBuilder DistinctBuilderCreate(GesRegisterRef destination)
+        => AddOpcode(GameEventScriptBytecodeOpCode.DistinctBuilderCreate, dst: GesOperand.Register(destination));
+
+    public GesBinaryBuilder DistinctBuilderAdd(GesRegisterRef builder, GesRegisterRef key, GesRegisterRef value)
+        => AddOpcode(GameEventScriptBytecodeOpCode.DistinctBuilderAdd, x: GesOperand.Register(builder), y: GesOperand.Register(key), a: GesOperand.Register(value));
+
+    public GesBinaryBuilder DistinctBuilderFinish(GesRegisterRef destination, GesRegisterRef builder)
+        => AddOpcode(GameEventScriptBytecodeOpCode.DistinctBuilderFinish, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
+
+    public GesBinaryBuilder GroupBuilderCreate(GesRegisterRef destination)
+        => AddOpcode(GameEventScriptBytecodeOpCode.GroupBuilderCreate, dst: GesOperand.Register(destination));
+
+    public GesBinaryBuilder GroupBuilderAdd(GesRegisterRef builder, GesRegisterRef key, GesRegisterRef value)
+        => AddOpcode(GameEventScriptBytecodeOpCode.GroupBuilderAdd, x: GesOperand.Register(builder), y: GesOperand.Register(key), a: GesOperand.Register(value));
+
+    public GesBinaryBuilder GroupBuilderFinish(GesRegisterRef destination, GesRegisterRef builder)
+        => AddOpcode(GameEventScriptBytecodeOpCode.GroupBuilderFinish, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
+
+    public GesBinaryBuilder OrderBuilderCreate(GesRegisterRef destination)
+        => AddOpcode(GameEventScriptBytecodeOpCode.OrderBuilderCreate, dst: GesOperand.Register(destination));
+
+    public GesBinaryBuilder OrderBuilderAdd(GesRegisterRef builder, GesRegisterRef key, GesRegisterRef value)
+        => AddOpcode(GameEventScriptBytecodeOpCode.OrderBuilderAdd, x: GesOperand.Register(builder), y: GesOperand.Register(key), a: GesOperand.Register(value));
+
+    public GesBinaryBuilder OrderBuilderFinishAscending(GesRegisterRef destination, GesRegisterRef builder)
+        => AddOpcode(GameEventScriptBytecodeOpCode.OrderBuilderFinishAscending, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
+
+    public GesBinaryBuilder OrderBuilderFinishDescending(GesRegisterRef destination, GesRegisterRef builder)
+        => AddOpcode(GameEventScriptBytecodeOpCode.OrderBuilderFinishDescending, dst: GesOperand.Register(destination), x: GesOperand.Register(builder));
 
     public GesBinaryBuilder HasPattern(GesRegisterRef destination, GesRegisterRef source, GameEventScriptBytecodePatternKind pattern, short count = 0, GesRegisterRef? face = null)
         => PatternOpcode(GameEventScriptBytecodeOpCode.HasPattern, destination, source, pattern, count, face);

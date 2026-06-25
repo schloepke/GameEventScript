@@ -329,7 +329,7 @@ groups are:
 0xA0 Group 3: collection slicing, text/collection operators, map projections
 0xB0 Group 3 membership, collection algebra, map projections, element terminals
 0xC0 Group 3 streams, aggregations, weighted terminals, collect terminals
-0xD0 Group 3 order/reverse/shuffle, generated collection builders, pattern operators, reserved tail 0xD6..0xFF
+0xD0 Group 3 generated collection/order/group/distinct builders, pattern operators, reserved tail 0xDC..0xFF
 ```
 
 The exhaustive opcode field map lives in `BytecodeOpcodeShape.md`. That table
@@ -1131,12 +1131,8 @@ OneWeighted dst items weights
 TakeWeighted dst items count weights
 StreamCollectList dst iterator
 Distinct dst source
-DistinctBy dst source itemBindingRegister keyEntry
-GroupBy dst source itemBindingRegister keyEntry
 SortAscending dst source
 SortDescending dst source
-OrderByAscending dst source itemBindingRegister keyEntry
-OrderByDescending dst source itemBindingRegister keyEntry
 Reverse dst source
 Shuffle dst source
 OneRandom dst source
@@ -1149,6 +1145,16 @@ ListBuilderFinish dst builder
 MapBuilderCreate builder
 MapBuilderAdd builder key value
 MapBuilderFinish dst builder
+DistinctBuilderCreate builder
+DistinctBuilderAdd builder key value
+DistinctBuilderFinish dst builder
+GroupBuilderCreate builder
+GroupBuilderAdd builder key value
+GroupBuilderFinish dst builder
+OrderBuilderCreate builder
+OrderBuilderAdd builder key value
+OrderBuilderFinishAscending dst builder
+OrderBuilderFinishDescending dst builder
 ```
 
 `SortAscending` and `SortDescending` accept lists, dice, ranges, and streams.
@@ -1157,9 +1163,10 @@ descending order matches dice's natural order. Ranges stay ranges by preserving
 or reversing their bounds and step. Direct maps, scalars, and `nothing` produce
 `nothing`.
 
-`OrderByAscending` and `OrderByDescending` accept lists and streams only. They
-materialize the original items ordered by the projected key. Direct dice,
-ranges, maps, scalars, and `nothing` sources produce `nothing`.
+`order by` selectors accept streamable sources and lower to ordinary
+`StreamCreateOrJump` loops with `OrderBuilder*` opcodes. They materialize the
+original items ordered by the projected key. Direct non-streamable sources
+produce `nothing`.
 
 `Reverse` accepts lists, dice, ranges, and streams. Lists materialize reversed
 lists, dice materialize lists so dice ordering is not normalized, ranges stay
@@ -1169,15 +1176,15 @@ Maps, scalars, and `nothing` sources produce `nothing`.
 `Shuffle` accepts lists, dice, ranges, and streams. It always materializes a
 list. Direct maps, scalars, and `nothing` sources produce `nothing`.
 
-`Distinct` accepts lists, dice, and streams. `DistinctBy` accepts lists and
-streams only; direct dice, range, map, scalar, and `nothing` sources produce
-`nothing`.
+`Distinct` accepts lists, dice, and streams. `distinct by` selectors lower to
+ordinary `StreamCreateOrJump` loops with `DistinctBuilder*` opcodes, so every
+streamable source follows normal stream semantics; non-streamable sources
+produce `nothing`.
 
-`GroupBy` accepts lists, maps/custom map-backed values, and streams. It returns
-a map from projected key text to lists of matching source items. Direct maps
-group visible values in stable key order. Direct dice, ranges, text, tags,
-scalars, and `nothing` sources produce `nothing`; dice and ranges may only be
-grouped after being explicitly transformed into streams.
+`group by` selectors lower to ordinary `StreamCreateOrJump` loops with
+`GroupBuilder*` opcodes. The result is a map from projected key text to lists
+of matching source items. Every streamable source follows normal stream
+semantics; non-streamable sources produce `nothing`.
 
 `KeysOfMap`, `ValuesOfMap`, and `EntriesOfMap` are strict map/custom-type
 projection opcodes. They are not general enumerable materializers. Map-backed

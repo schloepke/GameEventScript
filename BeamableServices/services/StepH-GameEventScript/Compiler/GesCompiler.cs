@@ -730,24 +730,14 @@ internal static class GesCompiler
                     _builder.Distinct(destination, target);
                     return;
                 case DistinctSelectorNode { Identifier: not null, Projection: not null } distinct:
-                {
-                    var keyEntry = EmitSelectorHelperExpression("distinct_by", distinct.Identifier, distinct.Projection, context, state, out var itemBinding);
-                    _builder.DistinctBy(destination, target, itemBinding, keyEntry);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { distinct }, 0, distinct, context, state);
                     return;
-                }
                 case GroupBySelectorNode groupBy:
-                {
-                    var keyEntry = EmitSelectorHelperExpression("group_by", groupBy.Identifier, groupBy.Projection, context, state, out var itemBinding);
-                    _builder.GroupBy(destination, target, itemBinding, keyEntry);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { groupBy }, 0, groupBy, context, state);
                     return;
-                }
                 case OrderBySelectorNode orderBy:
-                {
-                    var keyEntry = EmitSelectorHelperExpression("order_by", orderBy.Identifier, orderBy.Projection, context, state, out var itemBinding);
-                    if (orderBy.Direction == "descending") _builder.OrderByDescending(destination, target, itemBinding, keyEntry);
-                    else _builder.OrderByAscending(destination, target, itemBinding, keyEntry);
+                    EmitInlineStreamPipeline(destination, target, new CollectionSelectorNode[] { orderBy }, 0, orderBy, context, state);
                     return;
-                }
                 case PatternSelectorNode pattern:
                     EmitPattern(destination, target, pattern.Pattern, take: false, context, state);
                     return;
@@ -831,6 +821,9 @@ internal static class GesCompiler
                     MinSelectorNode or
                     MaxSelectorNode or
                     MapSelectorNode => true,
+                DistinctSelectorNode { Identifier: not null, Projection: not null } => true,
+                GroupBySelectorNode => true,
+                OrderBySelectorNode => true,
                 ObjectMatchSelectorNode => true,
                 EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
                 SequenceSliceSelectorNode => hasPrefix,
@@ -850,6 +843,9 @@ internal static class GesCompiler
                     MinSelectorNode or
                     MaxSelectorNode or
                     MapSelectorNode or
+                    DistinctSelectorNode { Identifier: not null, Projection: not null } or
+                    GroupBySelectorNode or
+                    OrderBySelectorNode or
                     ObjectMatchSelectorNode => true,
                 EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
                 _ => false
@@ -888,10 +884,14 @@ internal static class GesCompiler
             var invalidStreamLabel = _builder.AddLabel("pipeline_invalid_stream");
             var doneLabel = _builder.AddLabel("pipeline_done");
 
+            EmitInlinePipelineSourceGuard(source, terminal, prefixCount, invalidStreamLabel, context, state);
             _builder.StreamCreateOrJump(iterator, source, invalidStreamLabel);
 
             GesRegisterRef? listBuilder = null;
             GesRegisterRef? mapBuilder = null;
+            GesRegisterRef? distinctBuilder = null;
+            GesRegisterRef? groupBuilder = null;
+            GesRegisterRef? orderBuilder = null;
             GesRegisterRef? count = null;
             GesRegisterRef? one = null;
             GesRegisterRef? hasSum = null;
@@ -908,6 +908,18 @@ internal static class GesCompiler
                 case MapSelectorNode:
                     mapBuilder = state.AllocateTemporary(_builder, context);
                     _builder.MapBuilderCreate(mapBuilder.Value);
+                    break;
+                case DistinctSelectorNode { Identifier: not null, Projection: not null }:
+                    distinctBuilder = state.AllocateTemporary(_builder, context);
+                    _builder.DistinctBuilderCreate(distinctBuilder.Value);
+                    break;
+                case GroupBySelectorNode:
+                    groupBuilder = state.AllocateTemporary(_builder, context);
+                    _builder.GroupBuilderCreate(groupBuilder.Value);
+                    break;
+                case OrderBySelectorNode:
+                    orderBuilder = state.AllocateTemporary(_builder, context);
+                    _builder.OrderBuilderCreate(orderBuilder.Value);
                     break;
                 case CountSelectorNode or AverageSelectorNode:
                     count = destination;
@@ -963,7 +975,7 @@ internal static class GesCompiler
                 current = EmitInlinePipelineStep(selectors[index], current, nextLabel, context, state);
             }
 
-            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, mapBuilder, count, one, hasSum, sum, extremaKey, extremaCompare, context, state);
+            EmitInlinePipelineTerminal(destination, current, terminal, nextLabel, endLabel, listBuilder, mapBuilder, distinctBuilder, groupBuilder, orderBuilder, count, one, hasSum, sum, extremaKey, extremaCompare, context, state);
             _builder.MarkLabel(nextLabel);
             _builder.Jump(loopLabel);
 
@@ -977,6 +989,16 @@ internal static class GesCompiler
                     break;
                 case MapSelectorNode:
                     _builder.MapBuilderFinish(destination, mapBuilder!.Value);
+                    break;
+                case DistinctSelectorNode { Identifier: not null, Projection: not null }:
+                    _builder.DistinctBuilderFinish(destination, distinctBuilder!.Value);
+                    break;
+                case GroupBySelectorNode:
+                    _builder.GroupBuilderFinish(destination, groupBuilder!.Value);
+                    break;
+                case OrderBySelectorNode orderBy:
+                    if (orderBy.Direction == "descending") _builder.OrderBuilderFinishDescending(destination, orderBuilder!.Value);
+                    else _builder.OrderBuilderFinishAscending(destination, orderBuilder!.Value);
                     break;
                 case SumSelectorNode:
                     _builder.JumpIfTrue(hasSum!.Value, closeLabel);
@@ -999,6 +1021,50 @@ internal static class GesCompiler
             _builder.MarkLabel(invalidStreamLabel);
             _builder.LoadNothing(destination);
             _builder.MarkLabel(doneLabel);
+        }
+
+        private void EmitInlinePipelineSourceGuard(
+            GesRegisterRef source,
+            CollectionSelectorNode terminal,
+            int prefixCount,
+            GesLabelRef invalidStreamLabel,
+            LoweringContext context,
+            ExpressionState state)
+        {
+            if (prefixCount != 0)
+            {
+                return;
+            }
+
+            switch (terminal)
+            {
+                case DistinctSelectorNode { Identifier: not null, Projection: not null }:
+                case OrderBySelectorNode:
+                    EmitSourceTypeGuard(source, invalidStreamLabel, context, state, GameEventScriptBytecodeTypeKind.List);
+                    return;
+                case GroupBySelectorNode:
+                    EmitSourceTypeGuard(source, invalidStreamLabel, context, state, GameEventScriptBytecodeTypeKind.List, GameEventScriptBytecodeTypeKind.Map, GameEventScriptBytecodeTypeKind.Custom);
+                    return;
+            }
+        }
+
+        private void EmitSourceTypeGuard(
+            GesRegisterRef source,
+            GesLabelRef invalidStreamLabel,
+            LoweringContext context,
+            ExpressionState state,
+            params GameEventScriptBytecodeTypeKind[] allowedKinds)
+        {
+            var validLabel = _builder.AddLabel("pipeline_source_valid");
+            var check = state.AllocateTemporary(_builder, context);
+            for (var i = 0; i < allowedKinds.Length; i++)
+            {
+                _builder.CheckType(check, source, allowedKinds[i]);
+                _builder.JumpIfTrue(check, validLabel);
+            }
+
+            _builder.Jump(invalidStreamLabel);
+            _builder.MarkLabel(validLabel);
         }
 
         private void EmitInlineStreamAggregatePipeline(
@@ -1130,6 +1196,9 @@ internal static class GesCompiler
             GesLabelRef endLabel,
             GesRegisterRef? listBuilder,
             GesRegisterRef? mapBuilder,
+            GesRegisterRef? distinctBuilder,
+            GesRegisterRef? groupBuilder,
+            GesRegisterRef? orderBuilder,
             GesRegisterRef? count,
             GesRegisterRef? one,
             GesRegisterRef? hasSum,
@@ -1164,6 +1233,24 @@ internal static class GesCompiler
                         ? current
                         : EmitSelectorExpressionForRead(map.Identifier, current, map.ValueProjection, context, state);
                     _builder.MapBuilderAdd(mapBuilder!.Value, key, value);
+                    return;
+                }
+                case DistinctSelectorNode { Identifier: not null, Projection: not null } distinct:
+                {
+                    var key = EmitSelectorExpressionForRead(distinct.Identifier, current, distinct.Projection, context, state);
+                    _builder.DistinctBuilderAdd(distinctBuilder!.Value, key, current);
+                    return;
+                }
+                case GroupBySelectorNode groupBy:
+                {
+                    var key = EmitSelectorExpressionForRead(groupBy.Identifier, current, groupBy.Projection, context, state);
+                    _builder.GroupBuilderAdd(groupBuilder!.Value, key, current);
+                    return;
+                }
+                case OrderBySelectorNode orderBy:
+                {
+                    var key = EmitSelectorExpressionForRead(orderBy.Identifier, current, orderBy.Projection, context, state);
+                    _builder.OrderBuilderAdd(orderBuilder!.Value, key, current);
                     return;
                 }
                 case CountSelectorNode countSelector:

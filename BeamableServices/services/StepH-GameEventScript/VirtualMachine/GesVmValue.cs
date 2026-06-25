@@ -335,6 +335,33 @@ internal struct GesVmValue
         ObjectValue = mapBuilder;
     }
 
+    internal void SetDistinctBuilder(GesVmValueDistinctBuilder distinctBuilder)
+    {
+        Kind = DistinctBuilder;
+        Flags = StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = distinctBuilder;
+    }
+
+    internal void SetGroupBuilder(GesVmValueGroupBuilder groupBuilder)
+    {
+        Kind = GroupBuilder;
+        Flags = StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = groupBuilder;
+    }
+
+    internal void SetOrderBuilder(GesVmValueOrderBuilder orderBuilder)
+    {
+        Kind = OrderBuilder;
+        Flags = StorageObjectFlag;
+        Unit = UnitNone;
+        IntegerValue = 0;
+        ObjectValue = orderBuilder;
+    }
+
     public double AsNumeric => Kind switch
     {
         Integer => IntegerValue,
@@ -505,6 +532,9 @@ internal struct GesVmValue
                 return true;
             case Map when ObjectValue is GesVmValueMap map:
                 stream = new GesVmListStream(map.ValueList);
+                return true;
+            case Custom when ObjectValue is GesVmValueMap custom:
+                stream = new GesVmListStream(custom.ValueList);
                 return true;
             case Vector or Point when ObjectValue is GesVmValueVectorPoint vp:
                 stream = new GesVmTripletStream(vp);

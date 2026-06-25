@@ -8,11 +8,6 @@ internal interface IGesVmStream
     public bool IsPatternSequence => false;
 }
 
-internal interface IGesVmStreamEntryEvaluator
-{
-    bool TryEvaluateStreamEntry(ushort entryAddress, ushort itemSlot, ref GesVmValue item, GesVmValue[]? captures, ref GesVmValue result);
-}
-
 internal class GesVmIntegerRangeStream(long from, long to, long step) : IGesVmStream, IDisposable
 {
     private long _current = from;
@@ -173,59 +168,5 @@ internal class GesVmTripletStream(GesVmValueVectorPoint triplet) : IGesVmStream,
     public void Dispose()
     {
         _triplet = null;
-    }
-}
-
-internal sealed class GesVmTransformStream(
-    IGesVmStream source,
-    IGesVmStreamEntryEvaluator evaluator,
-    ushort entryAddress,
-    ushort itemSlot,
-    GesVmValue[] captures,
-    bool filter) : IGesVmStream, IDisposable
-{
-    private IGesVmStream? _source = source;
-    private GesVmValue _item = new GesVmValue();
-    private GesVmValue _result = new GesVmValue();
-    public bool IsPatternSequence { get; } = source.IsPatternSequence;
-
-    public bool TryNext(ref GesVmValue value)
-    {
-        var stream = _source;
-        if (stream is null)
-        {
-            value.SetNothing();
-            return false;
-        }
-
-        while (stream.TryNext(ref _item))
-        {
-            if (!evaluator.TryEvaluateStreamEntry(entryAddress, itemSlot, ref _item, captures, ref _result))
-            {
-                value.SetNothing();
-                return false;
-            }
-
-            if (filter)
-            {
-                if (!_result.IsTrue) continue;
-                value = _item;
-                return true;
-            }
-
-            value = _result;
-            return true;
-        }
-
-        value.SetNothing();
-        return false;
-    }
-
-    public void Dispose()
-    {
-        if (_source is IDisposable disposable) disposable.Dispose();
-        _source = null;
-        _item.SetNothing();
-        _result.SetNothing();
     }
 }

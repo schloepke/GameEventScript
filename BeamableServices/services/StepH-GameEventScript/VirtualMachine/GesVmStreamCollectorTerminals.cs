@@ -7,40 +7,6 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmStreamCollectorTerminals
 {
-    internal static void GesVmStreamCollectList(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator)
-    {
-        if (iterator is not { Kind: Stream, ObjectValue: IGesVmStream stream })
-        {
-            vmState.SetNothing(destinationRegister);
-            return;
-        }
-
-        var item = new GesVmValue();
-        var count = 0;
-        var buffer = new GesVmValue[16];
-        try
-        {
-            while (stream.TryNext(ref item))
-            {
-                if (count == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[count++] = item;
-            }
-
-            if (count == 0)
-            {
-                vmState.SetList(destinationRegister, vmState.EmptyList);
-                return;
-            }
-
-            var list = new GesVmValue[count];
-            Array.Copy(buffer, list, count);
-            vmState.SetList(destinationRegister, list);
-        }
-        finally
-        {
-            if (stream is IDisposable disposable) disposable.Dispose();
-        }
-    }
     internal static void GesVmFirst(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
     {
         switch (source.Kind)

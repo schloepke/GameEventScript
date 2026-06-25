@@ -534,15 +534,6 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder StreamClose(GesRegisterRef iterator)
         => AddOpcode(GameEventScriptBytecodeOpCode.StreamClose, x: GesOperand.Register(iterator));
 
-    public GesBinaryBuilder StreamMap(GesRegisterRef destination, GesRegisterRef sourceIterator, GesLabelRef nextEntry, GesRegisterRef itemBinding, IReadOnlyList<GesRegisterRef> captures)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamMap, dst: GesOperand.Register(destination), x: GesOperand.Register(sourceIterator), y: GesOperand.Label(nextEntry), a: GesOperand.Register(itemBinding), b: GesOperand.RegisterList(captures));
-
-    public GesBinaryBuilder StreamFilter(GesRegisterRef destination, GesRegisterRef sourceIterator, GesLabelRef predicateEntry, GesRegisterRef itemBinding, IReadOnlyList<GesRegisterRef> captures)
-        => AddOpcode(GameEventScriptBytecodeOpCode.StreamFilter, dst: GesOperand.Register(destination), x: GesOperand.Register(sourceIterator), y: GesOperand.Label(predicateEntry), a: GesOperand.Register(itemBinding), b: GesOperand.RegisterList(captures));
-
-    public GesBinaryBuilder StreamCollectList(GesRegisterRef destination, GesRegisterRef iterator)
-        => UnaryOpcode(GameEventScriptBytecodeOpCode.StreamCollectList, destination, iterator);
-
     public GesBinaryBuilder Distinct(GesRegisterRef destination, GesRegisterRef source)
         => UnaryOpcode(GameEventScriptBytecodeOpCode.Distinct, destination, source);
 

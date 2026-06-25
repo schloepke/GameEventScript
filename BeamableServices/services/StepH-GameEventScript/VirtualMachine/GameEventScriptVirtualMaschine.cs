@@ -69,63 +69,9 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
         return true;
     }
 
-    private class Runner(GesVmState vmState, GameEventScriptSession session) : IGameEventScriptMessageInvocation, IGesVmStreamEntryEvaluator
+    private class Runner(GesVmState vmState, GameEventScriptSession session) : IGameEventScriptMessageInvocation
     {
         public bool IsCompleted { get; private set; } = false;
-
-        public bool TryEvaluateStreamEntry(ushort entryAddress, ushort itemSlot, ref GesVmValue item, GesVmValue[]? captures, ref GesVmValue result)
-        {
-            if (entryAddress >= vmState.CodeSegmentSize) return vmState.RaiseError($"Invalid stream helper entry address {entryAddress}.");
-            var parentFrameLength = vmState.RegisterFrameLength;
-            var resultSlot = parentFrameLength;
-            vmState.ModifyLocalSlots(1);
-            if (vmState.State != Processing) return false;
-
-            vmState.ClearStage();
-            if (captures is null)
-            {
-                var helperFrameLength = Math.Max(parentFrameLength, itemSlot + 1);
-                var nothing = new GesVmValue();
-                for (ushort i = 0; i < helperFrameLength; i++)
-                {
-                    if (i == itemSlot) vmState.StageValue(ref item);
-                    else if (i < parentFrameLength) vmState.StageValue(ref vmState.Register(i));
-                    else vmState.StageValue(ref nothing);
-                }
-            }
-            else
-            {
-                var helperFrameLength = Math.Max(itemSlot + 1, captures.Length + 1);
-                var nothing = new GesVmValue();
-                for (ushort i = 0; i < helperFrameLength; i++)
-                {
-                    if (i == itemSlot)
-                    {
-                        vmState.StageValue(ref item);
-                    }
-                    else if (i > 0 && i <= captures.Length)
-                    {
-                        vmState.StageValue(ref captures[i - 1]);
-                    }
-                    else
-                    {
-                        vmState.StageValue(ref nothing);
-                    }
-                }
-            }
-
-            var baseCallStackPointer = vmState.CallStackPointer;
-            if (!vmState.CallAddress(entryAddress, resultSlot)) return false;
-            while (vmState.State == Processing && vmState.CallStackPointer > baseCallStackPointer)
-            {
-                RunSlice(1);
-            }
-
-            if (vmState.State != Processing || vmState.CallStackPointer != baseCallStackPointer) return false;
-            result = vmState.Register(resultSlot);
-            vmState.ModifyLocalSlots(-1);
-            return vmState.State == Processing;
-        }
 
         public int RunSlice(int maxSteps)
         {
@@ -700,15 +646,6 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         }
                         case StreamClose:
                             vmState.GesVmStreamClose(instruction.XSlot);
-                            break;
-                        case StreamMap:
-                            vmState.GesVmStreamMap(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            break;
-                        case StreamFilter:
-                            vmState.GesVmStreamFilter(instruction.DestinationSlot, vmState.Register(instruction.XSlot), instruction.EntryAddress, instruction.AU, instruction.BU, this);
-                            break;
-                        case StreamCollectList:
-                            vmState.GesVmStreamCollectList(instruction.DestinationSlot, vmState.Register(instruction.XSlot));
                             break;
                         case HasAny:
                             vmState.GesVmHasAnyAll(instruction.DestinationSlot, vmState.Register(instruction.XSlot), false);

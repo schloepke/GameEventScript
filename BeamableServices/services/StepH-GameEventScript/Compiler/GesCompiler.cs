@@ -778,58 +778,24 @@ internal static class GesCompiler
                 }
             }
 
-            if (!CanEmitStreamPipelineTerminal(terminal, prefixCount > 0))
+            if (prefixCount == 0 &&
+                terminal is CountSelectorNode count &&
+                IsAlwaysTrue(count.Predicate))
+            {
+                var countSource = EmitExpressionForRead(source, context, state);
+                _builder.Count(destination, countSource);
+                return true;
+            }
+
+            if (!CanEmitInlineStreamPipelineTerminal(terminal, prefixCount > 0))
             {
                 return false;
             }
 
             var sourceRegister = EmitExpressionForRead(source, context, state);
-            if (prefixCount == 0 &&
-                terminal is CountSelectorNode count &&
-                IsAlwaysTrue(count.Predicate))
-            {
-                _builder.Count(destination, sourceRegister);
-                return true;
-            }
-
-            if (CanEmitInlineStreamPipelineTerminal(terminal, prefixCount > 0))
-            {
-                EmitInlineStreamPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
-                return true;
-            }
-
-            var iterator = state.AllocateTemporary(_builder, context);
-            _builder.StreamCreate(iterator, sourceRegister);
-            for (var index = 0; index < prefixCount; index++)
-            {
-                iterator = EmitStreamTransformIterator(iterator, selectors[index], context, state);
-            }
-
-            EmitStreamPipelineTerminal(destination, iterator, terminal, context, state);
+            EmitInlineStreamPipeline(destination, sourceRegister, selectors, prefixCount, terminal, context, state);
             return true;
         }
-
-        private static bool CanEmitStreamPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
-            => terminal switch
-            {
-                FilterSelectorNode or
-                    SelectSelectorNode or
-                    PredicateSelectorNode or
-                    CountSelectorNode or
-                    SumSelectorNode or
-                    AverageSelectorNode or
-                    MinSelectorNode or
-                    MaxSelectorNode or
-                    MapSelectorNode => true,
-                DistinctSelectorNode { Identifier: not null, Projection: not null } => true,
-                GroupBySelectorNode => true,
-                OrderBySelectorNode => true,
-                ObjectMatchSelectorNode => true,
-                EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
-                SequenceSliceSelectorNode => hasPrefix,
-                DrawSelectorNode => hasPrefix,
-                _ => false
-            };
 
         private static bool CanEmitInlineStreamPipelineTerminal(CollectionSelectorNode terminal, bool hasPrefix)
             => terminal switch
@@ -848,6 +814,8 @@ internal static class GesCompiler
                     OrderBySelectorNode or
                     ObjectMatchSelectorNode => true,
                 EdgeSelectorNode edge => hasPrefix || edge.Predicate is not null,
+                SequenceSliceSelectorNode => hasPrefix,
+                DrawSelectorNode => hasPrefix,
                 _ => false
             };
 
@@ -902,6 +870,10 @@ internal static class GesCompiler
             switch (terminal)
             {
                 case FilterSelectorNode or SelectSelectorNode:
+                    listBuilder = state.AllocateTemporary(_builder, context);
+                    _builder.ListBuilderCreate(listBuilder.Value);
+                    break;
+                case SequenceSliceSelectorNode or DrawSelectorNode:
                     listBuilder = state.AllocateTemporary(_builder, context);
                     _builder.ListBuilderCreate(listBuilder.Value);
                     break;
@@ -987,6 +959,21 @@ internal static class GesCompiler
                 case FilterSelectorNode or SelectSelectorNode:
                     _builder.ListBuilderFinish(destination, listBuilder!.Value);
                     break;
+                case SequenceSliceSelectorNode slice:
+                {
+                    var collected = state.AllocateTemporary(_builder, context);
+                    _builder.ListBuilderFinish(collected, listBuilder!.Value);
+                    EmitSlice(destination, collected, slice);
+                    break;
+                }
+                case DrawSelectorNode draw:
+                {
+                    var collected = state.AllocateTemporary(_builder, context);
+                    _builder.ListBuilderFinish(collected, listBuilder!.Value);
+                    if (draw.Count == 1) _builder.First(destination, collected);
+                    else _builder.TakeFirst(destination, collected, ToShort(draw.Count, "draw count"));
+                    break;
+                }
                 case MapSelectorNode:
                     _builder.MapBuilderFinish(destination, mapBuilder!.Value);
                     break;
@@ -1226,6 +1213,9 @@ internal static class GesCompiler
                     _builder.ListBuilderAdd(listBuilder!.Value, projected);
                     return;
                 }
+                case SequenceSliceSelectorNode or DrawSelectorNode:
+                    _builder.ListBuilderAdd(listBuilder!.Value, current);
+                    return;
                 case MapSelectorNode map:
                 {
                     var key = EmitSelectorExpressionForRead(map.Identifier, current, map.KeyProjection, context, state);
@@ -1405,98 +1395,6 @@ internal static class GesCompiler
             return EmitExpressionForRead(expression, selectorContext, state);
         }
 
-        private GesRegisterRef EmitStreamTransformIterator(
-            GesRegisterRef iterator,
-            CollectionSelectorNode selector,
-            LoweringContext context,
-            ExpressionState state)
-        {
-            switch (selector)
-            {
-                case FilterSelectorNode filter:
-                    if (IsAlwaysTrue(filter.Predicate))
-                    {
-                        return iterator;
-                    }
-
-                    var filteredIterator = state.AllocateTemporary(_builder, context);
-                    var filterEntry = EmitStreamSelectorHelperExpression("filter", filter.Identifier, filter.Predicate, context, out var filterItemBinding, out var filterCaptures);
-                    _builder.StreamFilter(filteredIterator, iterator, filterEntry, filterItemBinding, filterCaptures);
-                    return filteredIterator;
-                case SelectSelectorNode select:
-                    if (IsIdentityProjection(select.Identifier, select.Projection))
-                    {
-                        return iterator;
-                    }
-
-                    var mappedIterator = state.AllocateTemporary(_builder, context);
-                    var mapEntry = EmitStreamSelectorHelperExpression("select", select.Identifier, select.Projection, context, out var mapItemBinding, out var mapCaptures);
-                    _builder.StreamMap(mappedIterator, iterator, mapEntry, mapItemBinding, mapCaptures);
-                    return mappedIterator;
-                default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support non-terminal selector node '{selector.GetType().Name}'.");
-            }
-        }
-
-        private void EmitStreamPipelineTerminal(
-            GesRegisterRef destination,
-            GesRegisterRef iterator,
-            CollectionSelectorNode terminal,
-            LoweringContext context,
-            ExpressionState state)
-        {
-            switch (terminal)
-            {
-                case FilterSelectorNode filter:
-                    _builder.StreamCollectList(destination, EmitStreamTransformIterator(iterator, filter, context, state));
-                    return;
-                case SelectSelectorNode select:
-                    _builder.StreamCollectList(destination, EmitStreamTransformIterator(iterator, select, context, state));
-                    return;
-                case PredicateSelectorNode predicate:
-                {
-                    var predicateIterator = IsIdentityProjection(predicate.Identifier, predicate.Predicate)
-                        ? iterator
-                        : EmitStreamTransformIterator(iterator, new SelectSelectorNode(predicate.Identifier, predicate.Predicate), context, state);
-                    if (predicate.Operator == "all") _builder.HasAll(destination, predicateIterator);
-                    else _builder.HasAny(destination, predicateIterator);
-                    return;
-                }
-                case CountSelectorNode count:
-                {
-                    var countIterator = IsAlwaysTrue(count.Predicate)
-                        ? iterator
-                        : EmitStreamTransformIterator(iterator, new FilterSelectorNode(count.Identifier, count.Predicate), context, state);
-                    _builder.Count(destination, countIterator);
-                    return;
-                }
-                case SumSelectorNode or AverageSelectorNode or MapSelectorNode:
-                    throw new GameEventScriptCompileException("GameEventScript binary compiler expects sum, average, and map terminals to be lowered as explicit loops.");
-                case EdgeSelectorNode { Predicate: null } edge:
-                    if (edge.Mode == "last") _builder.Last(destination, iterator);
-                    else if (edge.Mode == "single") _builder.Single(destination, iterator);
-                    else _builder.First(destination, iterator);
-                    return;
-                case EdgeSelectorNode { Predicate: not null, Identifier: not null } edge:
-                {
-                    var filteredIterator = EmitStreamTransformIterator(iterator, new FilterSelectorNode(edge.Identifier, edge.Predicate), context, state);
-                    if (edge.Mode == "last") _builder.Last(destination, filteredIterator);
-                    else if (edge.Mode == "single") _builder.Single(destination, filteredIterator);
-                    else _builder.First(destination, filteredIterator);
-                    return;
-                }
-                case SequenceSliceSelectorNode slice:
-                    EmitSlice(destination, iterator, slice);
-                    return;
-                case DrawSelectorNode draw:
-                    if (draw.Count == 1) _builder.First(destination, iterator);
-                    else _builder.TakeFirst(destination, iterator, ToShort(draw.Count, "draw count"));
-                    return;
-                default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support stream terminal selector node '{terminal.GetType().Name}'.");
-            }
-        }
-
         private static bool IsIdentityProjection(string identifier, ExpressionNode expression)
             => expression is IdentifierExpressionNode projection && string.Equals(projection.Name, identifier, StringComparison.Ordinal);
 
@@ -1576,48 +1474,20 @@ internal static class GesCompiler
             return helper.EntryLabel;
         }
 
-        private GesLabelRef EmitStreamSelectorHelperExpression(
-            string name,
-            string identifier,
-            ExpressionNode expression,
-            LoweringContext parentContext,
-            out GesRegisterRef itemBinding,
-            out IReadOnlyList<GesRegisterRef> captureRegisters)
-        {
-            var captures = ResolveStreamCaptures(expression, identifier, parentContext);
-            captureRegisters = captures.Select(capture => capture.SourceRegister).ToArray();
-            using var sourceRange = _builder.SourceRange(expression.SourceRange);
-            using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}", new[] { identifier }.Concat(captures.Select(capture => capture.Name)).ToArray());
-            itemBinding = helper.Arguments[0];
-            var helperContext = LoweringContext.ForRoutine(helper);
-            helperContext.DeclareExisting(identifier, itemBinding);
-            for (var index = 0; index < captures.Count; index++)
-            {
-                helperContext.DeclareExisting(captures[index].Name, helper.Arguments[index + 1]);
-            }
-
-            var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(helperContext.RegisterCount));
-            _builder.ReturnValue(result);
-            return helper.EntryLabel;
-        }
-
         private void EmitChoose(GesRegisterRef destination, GesRegisterRef target, ChooseSelectorNode choose, LoweringContext context, ExpressionState state)
         {
             var source = target;
-            if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
-            {
-                var iterator = state.AllocateTemporary(_builder, context);
-                var filteredIterator = state.AllocateTemporary(_builder, context);
-                var predicateEntry = EmitStreamSelectorHelperExpression("choose_filter", choose.Identifier!, choose.Predicate, context, out var predicateItemBinding, out var predicateCaptures);
-                _builder.StreamCreate(iterator, target);
-                _builder.StreamFilter(filteredIterator, iterator, predicateEntry, predicateItemBinding, predicateCaptures);
-                source = filteredIterator;
-            }
-
             if (choose.WeightExpression is not null && !string.IsNullOrEmpty(choose.WeightIdentifier))
             {
                 EmitInlineWeightedChoose(destination, target, choose, context, state);
                 return;
+            }
+
+            if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
+            {
+                var filter = new FilterSelectorNode(choose.Identifier!, choose.Predicate);
+                source = state.AllocateTemporary(_builder, context);
+                EmitInlineStreamPipeline(source, target, new CollectionSelectorNode[] { filter }, 0, filter, context, state);
             }
 
             if (choose.AtRandom)
@@ -2552,251 +2422,6 @@ internal static class GesCompiler
             return typeName == "nothing" || typeKind != 0;
         }
 
-        private IReadOnlyList<StreamCapture> ResolveStreamCaptures(ExpressionNode expression, string itemIdentifier, LoweringContext context)
-        {
-            var identifiers = new List<string>();
-            CollectReferencedIdentifiers(expression, identifiers, WithBound(new HashSet<string>(StringComparer.Ordinal), itemIdentifier));
-            return ResolveStreamCaptures(identifiers, context);
-        }
-
-        private IReadOnlyList<StreamCapture> ResolveStreamCaptures(ObjectMatchPatternNode pattern, LoweringContext context)
-        {
-            var identifiers = new List<string>();
-            CollectReferencedIdentifiers(pattern, identifiers, new HashSet<string>(StringComparer.Ordinal));
-            return ResolveStreamCaptures(identifiers, context);
-        }
-
-        private IReadOnlyList<StreamCapture> ResolveStreamCaptures(IReadOnlyList<string> identifiers, LoweringContext context)
-        {
-            var captures = new List<StreamCapture>();
-            var seen = new HashSet<string>(StringComparer.Ordinal);
-            foreach (var identifier in identifiers)
-            {
-                if (!seen.Add(identifier)) continue;
-                captures.Add(new StreamCapture(identifier, context.Require(identifier)));
-            }
-
-            return captures;
-        }
-
-        private static void CollectReferencedIdentifiers(ExpressionNode expression, List<string> identifiers, ISet<string> bound)
-        {
-            switch (expression)
-            {
-                case NothingLiteralExpressionNode:
-                    break;
-                case IdentifierExpressionNode identifier:
-                    if (!bound.Contains(identifier.Name)) identifiers.Add(identifier.Name);
-                    break;
-                case MessageLiteralExpressionNode message:
-                    foreach (var argument in message.Arguments) CollectReferencedIdentifiers(argument.Expression, identifiers, bound);
-                    break;
-                case ListLiteralExpressionNode list:
-                    foreach (var item in list.Items) CollectReferencedIdentifiers(item, identifiers, bound);
-                    break;
-                case MapLiteralExpressionNode map:
-                    foreach (var entry in map.Entries) CollectReferencedIdentifiers(entry.Value, identifiers, bound);
-                    break;
-                case UnaryExpressionNode unary:
-                    CollectReferencedIdentifiers(unary.Operand, identifiers, bound);
-                    break;
-                case VariadicTaggedExpressionNode variadic:
-                    foreach (var argument in variadic.Arguments) CollectReferencedIdentifiers(argument, identifiers, bound);
-                    break;
-                case IntrinsicCallExpressionNode intrinsic:
-                    foreach (var argument in intrinsic.Arguments) CollectReferencedIdentifiers(argument, identifiers, bound);
-                    break;
-                case ClampExpressionNode clamp:
-                    CollectReferencedIdentifiers(clamp.Value, identifiers, bound);
-                    CollectReferencedIdentifiers(clamp.Minimum, identifiers, bound);
-                    CollectReferencedIdentifiers(clamp.Maximum, identifiers, bound);
-                    break;
-                case RandomExpressionNode random:
-                    CollectReferencedIdentifiers(random.FromExpression, identifiers, bound);
-                    CollectReferencedIdentifiers(random.ToExpression, identifiers, bound);
-                    break;
-                case RangeExpressionNode range:
-                    CollectReferencedIdentifiers(range.FromExpression, identifiers, bound);
-                    CollectReferencedIdentifiers(range.ToExpression, identifiers, bound);
-                    if (range.StepExpression is not null) CollectReferencedIdentifiers(range.StepExpression, identifiers, bound);
-                    break;
-                case SeededRandomExpressionNode seededRandom:
-                    CollectReferencedIdentifiers(seededRandom.SeedExpression, identifiers, bound);
-                    CollectReferencedIdentifiers(seededRandom.BodyExpression, identifiers, bound);
-                    break;
-                case GeneratedCollectionExpressionNode generatedCollection:
-                {
-                    CollectReferencedIdentifiers(generatedCollection.Source, identifiers, bound);
-                    var collectionBound = WithBound(bound, generatedCollection.Identifier);
-                    if (generatedCollection.Predicate is not null) CollectReferencedIdentifiers(generatedCollection.Predicate, identifiers, collectionBound);
-                    CollectReferencedIdentifiers(generatedCollection.Projection, identifiers, collectionBound);
-                    break;
-                }
-                case GuardedChoiceExpressionNode guardedChoice:
-                    foreach (var branch in guardedChoice.Branches)
-                    {
-                        CollectReferencedIdentifiers(branch.ConditionExpression, identifiers, bound);
-                        CollectReferencedIdentifiers(branch.ValueExpression, identifiers, bound);
-                    }
-
-                    CollectReferencedIdentifiers(guardedChoice.OtherwiseExpression, identifiers, bound);
-                    break;
-                case BinaryExpressionNode binary:
-                    CollectReferencedIdentifiers(binary.Left, identifiers, bound);
-                    CollectReferencedIdentifiers(binary.Right, identifiers, bound);
-                    break;
-                case PredicateCallExpressionNode predicateCall:
-                    CollectReferencedIdentifiers(predicateCall.Value, identifiers, bound);
-                    break;
-                case ExtensionPredicateExpressionNode extensionPredicate:
-                    CollectReferencedIdentifiers(extensionPredicate.Value, identifiers, bound);
-                    break;
-                case CallExpressionNode call:
-                    foreach (var argument in call.Arguments) CollectReferencedIdentifiers(argument, identifiers, bound);
-                    break;
-                case TypeCastExpressionNode typeCast:
-                    CollectReferencedIdentifiers(typeCast.Value, identifiers, bound);
-                    break;
-                case TypeConstructorExpressionNode typeConstructor:
-                    foreach (var argument in typeConstructor.Arguments) CollectReferencedIdentifiers(argument.Expression, identifiers, bound);
-                    break;
-                case TypeCheckExpressionNode typeCheck:
-                    CollectReferencedIdentifiers(typeCheck.Value, identifiers, bound);
-                    break;
-                case MemberAccessExpressionNode memberAccess:
-                    CollectReferencedIdentifiers(memberAccess.Target, identifiers, bound);
-                    break;
-                case CollectionAccessExpressionNode collectionAccess:
-                    CollectReferencedIdentifiers(collectionAccess.Target, identifiers, bound);
-                    CollectReferencedIdentifiers(collectionAccess.Selector, identifiers, bound);
-                    break;
-                case ExtensionCallExpressionNode extensionCall:
-                    foreach (var argument in extensionCall.Arguments) CollectReferencedIdentifiers(argument.Expression, identifiers, bound);
-                    break;
-            }
-        }
-
-        private static void CollectReferencedIdentifiers(CollectionSelectorNode selector, List<string> identifiers, ISet<string> bound)
-        {
-            switch (selector)
-            {
-                case ExpressionSelectorNode expression:
-                    CollectReferencedIdentifiers(expression.Expression, identifiers, bound);
-                    break;
-                case FilterSelectorNode filter:
-                    CollectReferencedIdentifiers(filter.Predicate, identifiers, WithBound(bound, filter.Identifier));
-                    break;
-                case SelectSelectorNode select:
-                    CollectReferencedIdentifiers(select.Projection, identifiers, WithBound(bound, select.Identifier));
-                    break;
-                case SumSelectorNode sum:
-                    CollectReferencedIdentifiers(sum.Projection, identifiers, WithBound(bound, sum.Identifier));
-                    break;
-                case AverageSelectorNode average:
-                    CollectReferencedIdentifiers(average.Projection, identifiers, WithBound(bound, average.Identifier));
-                    break;
-                case CountSelectorNode count:
-                    CollectReferencedIdentifiers(count.Predicate, identifiers, WithBound(bound, count.Identifier));
-                    break;
-                case PredicateSelectorNode predicate:
-                    CollectReferencedIdentifiers(predicate.Predicate, identifiers, WithBound(bound, predicate.Identifier));
-                    break;
-                case EdgeSelectorNode { Predicate: not null } edge when !string.IsNullOrEmpty(edge.Identifier):
-                    CollectReferencedIdentifiers(edge.Predicate, identifiers, WithBound(bound, edge.Identifier!));
-                    break;
-                case MinSelectorNode min:
-                    CollectReferencedIdentifiers(min.Projection, identifiers, WithBound(bound, min.Identifier));
-                    break;
-                case MaxSelectorNode max:
-                    CollectReferencedIdentifiers(max.Projection, identifiers, WithBound(bound, max.Identifier));
-                    break;
-                case MapSelectorNode map:
-                {
-                    var mapBound = WithBound(bound, map.Identifier);
-                    CollectReferencedIdentifiers(map.KeyProjection, identifiers, mapBound);
-                    if (map.ValueProjection is not null) CollectReferencedIdentifiers(map.ValueProjection, identifiers, mapBound);
-                    break;
-                }
-                case ContainsSelectorNode contains:
-                    CollectReferencedIdentifiers(contains.ValueExpression, identifiers, bound);
-                    break;
-                case ChooseSelectorNode choose:
-                    if (choose.Predicate is not null && !string.IsNullOrEmpty(choose.Identifier))
-                    {
-                        CollectReferencedIdentifiers(choose.Predicate, identifiers, WithBound(bound, choose.Identifier!));
-                    }
-
-                    if (choose.WeightExpression is not null && !string.IsNullOrEmpty(choose.WeightIdentifier))
-                    {
-                        CollectReferencedIdentifiers(choose.WeightExpression, identifiers, WithBound(bound, choose.WeightIdentifier!));
-                    }
-
-                    break;
-                case DistinctSelectorNode { Projection: not null } distinct when !string.IsNullOrEmpty(distinct.Identifier):
-                    CollectReferencedIdentifiers(distinct.Projection, identifiers, WithBound(bound, distinct.Identifier!));
-                    break;
-                case GroupBySelectorNode groupBy:
-                    CollectReferencedIdentifiers(groupBy.Projection, identifiers, WithBound(bound, groupBy.Identifier));
-                    break;
-                case OrderBySelectorNode orderBy:
-                    CollectReferencedIdentifiers(orderBy.Projection, identifiers, WithBound(bound, orderBy.Identifier));
-                    break;
-                case PatternSelectorNode pattern:
-                    CollectReferencedIdentifiers(pattern.Pattern, identifiers, bound);
-                    break;
-                case TakePatternSelectorNode takePattern:
-                    CollectReferencedIdentifiers(takePattern.Pattern, identifiers, bound);
-                    break;
-                case ObjectMatchSelectorNode objectMatch:
-                    CollectReferencedIdentifiers(objectMatch.Pattern, identifiers, bound);
-                    break;
-            }
-        }
-
-        private static void CollectReferencedIdentifiers(IterationSourceNode source, List<string> identifiers, ISet<string> bound)
-        {
-            switch (source)
-            {
-                case CollectionIterationSourceNode collection:
-                    CollectReferencedIdentifiers(collection.Expression, identifiers, bound);
-                    break;
-                case RangeIterationSourceNode range:
-                    CollectReferencedIdentifiers(range.RangeExpression, identifiers, bound);
-                    break;
-            }
-        }
-
-        private static void CollectReferencedIdentifiers(DicePatternNode pattern, List<string> identifiers, ISet<string> bound)
-        {
-            if (pattern is DiceCountPatternNode { Face: { } face }) CollectReferencedIdentifiers(face, identifiers, bound);
-        }
-
-        private static void CollectReferencedIdentifiers(ObjectMatchPatternNode pattern, List<string> identifiers, ISet<string> bound)
-        {
-            foreach (var entry in pattern.Entries)
-            {
-                switch (entry.Value)
-                {
-                    case ObjectMatchExpressionValueNode expression:
-                        CollectReferencedIdentifiers(expression.Expression, identifiers, bound);
-                        break;
-                    case ObjectMatchNestedValueNode nested:
-                        CollectReferencedIdentifiers(nested.Pattern, identifiers, bound);
-                        break;
-                }
-            }
-        }
-
-        private static HashSet<string> WithBound(ISet<string> bound, string identifier)
-        {
-            var copy = new HashSet<string>(bound, StringComparer.Ordinal)
-            {
-                identifier
-            };
-            return copy;
-        }
-
-        private readonly record struct StreamCapture(string Name, GesRegisterRef SourceRegister);
     }
 
     private sealed class LoweringContext

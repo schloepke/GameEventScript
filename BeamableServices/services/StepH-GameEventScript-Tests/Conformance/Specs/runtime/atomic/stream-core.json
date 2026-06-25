@@ -220,7 +220,7 @@
     {
       "kind": "scriptApi",
       "name": "stream map filter collect list chains",
-      "script": "module AtomicStreamMapFilterCollectList\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let mapped be values[:select value => value * 10]\n  let filtered be values[:filter value where value mod 2 = 1]\n  let chained be values[:filter value where value >= 2][:select value => value * 2][:filter value where value > 5]\n  let capturedBase be 100\n  let captured be values[:select value => value + capturedBase]\n  emit Done(mapped: mapped, filtered: filtered, chained: chained, captured: captured)\n}",
+      "script": "module AtomicStreamSelectFilterCollectList\non Start {\n  let values be [1, 2, 3, 4, 5]\n  let mapped be values[:select value => value * 10]\n  let filtered be values[:filter value where value mod 2 = 1]\n  let chained be values[:filter value where value >= 2][:select value => value * 2][:filter value where value > 5]\n  let capturedBase be 100\n  let captured be values[:select value => value + capturedBase]\n  emit Done(mapped: mapped, filtered: filtered, chained: chained, captured: captured)\n}",
       "steps": [
         {
           "input": {

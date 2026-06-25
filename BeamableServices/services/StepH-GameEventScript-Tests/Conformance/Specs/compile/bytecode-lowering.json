@@ -207,11 +207,6 @@
           "ListBuilderCreate",
           "ListBuilderAdd",
           "ListBuilderFinish"
-        ],
-        "notContains": [
-          "StreamMap",
-          "StreamFilter",
-          "StreamCollectList"
         ]
       }
     },
@@ -224,10 +219,6 @@
           "StreamCreateOrJump",
           "StreamNext",
           "StreamClose"
-        ],
-        "notContains": [
-          "StreamMap",
-          "StreamFilter"
         ]
       }
     },
@@ -248,9 +239,6 @@
           "DropLowest"
         ],
         "notContains": [
-          "StreamMap",
-          "StreamFilter",
-          "StreamCollectList",
           "Count",
           "Distinct",
           "SortAscending",

@@ -277,9 +277,6 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.StreamCreateOrJump => [TargetRegister, CollectionRegister, JumpTarget],
             GameEventScriptBytecodeOpCode.StreamNext => [TargetRegister, IteratorRegister, JumpTarget],
             GameEventScriptBytecodeOpCode.StreamClose => [IteratorRegister],
-            GameEventScriptBytecodeOpCode.StreamMap => [TargetRegister, SourceIteratorRegister, NextEntry, AuxItemBindingRegister, CaptureRegisterList],
-            GameEventScriptBytecodeOpCode.StreamFilter => [TargetRegister, SourceIteratorRegister, PredicateEntry, AuxItemBindingRegister, CaptureRegisterList],
-            GameEventScriptBytecodeOpCode.StreamCollectList => [TargetRegister, IteratorRegister],
 
             GameEventScriptBytecodeOpCode.HasAny => [TargetRegister, SourceRegister],
             GameEventScriptBytecodeOpCode.HasAll => [TargetRegister, SourceRegister],

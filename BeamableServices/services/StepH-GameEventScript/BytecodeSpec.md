@@ -1117,19 +1117,17 @@ same source syntax but must remain distinguishable in portable metadata.
 
 Collection operations should stay high-level enough to avoid exploding code size
 and losing optimized paths, but pipeline selectors no longer live in public
-metadata pools. Prefix selectors and selector helper expressions are lowered to
-normal entry addresses in the global code segment.
+metadata pools. Prefix selectors and selector expressions are lowered into
+ordinary bytecode loops so every expression participates in normal slice
+execution and opcode budgeting.
 
 Core streaming shape:
 
 ```text
 StreamCreate source -> iterator
-StreamMap transformedIterator sourceIterator mapEntry itemBindingRegister captureRegisterList
-StreamFilter filteredIterator sourceIterator predicateEntry itemBindingRegister captureRegisterList
 Count dst source
 OneWeighted dst items weights
 TakeWeighted dst items count weights
-StreamCollectList dst iterator
 Distinct dst source
 SortAscending dst source
 SortDescending dst source
@@ -1202,22 +1200,14 @@ when the source has more than one element. The DSL `:draw 1` selector lowers to
 `n > 1` lowers to `TakeFirst`. Random choice uses `OneRandom` for
 `:choose 1 at random` and `TakeRandom` for `:choose n at random`.
 `TakeRandom` chooses without replacement. Lists stay lists, dice stay dice,
-and ranges or streams materialize as lists. Weighted choice uses stream
-loops so the predicate and weight expression execute as normal bytecode for
-every candidate. The generated loop materializes two lists: candidate items and
+and ranges or streams materialize as lists. Predicated choices lower to explicit
+filter loops before applying the deterministic or random terminal. Weighted
+choice uses stream loops so the predicate and weight expression execute as
+normal bytecode for every candidate. The generated loop materializes two lists: candidate items and
 their positive finite weights. `:choose 1 weighted by ...` then lowers to
 `OneWeighted` and returns one item or `nothing`; `:choose n weighted by ...`
 lowers to `TakeWeighted` and returns a list with up to `n` items. Only positive
 finite weights participate.
-
-`StreamMap` and `StreamFilter` are lazy one-time adapters over another VM
-iterator. Their helper entries run as isolated helper frames: the current source
-item is bound to helper-local register `AU` (normally register `0`), and `BU` references
-a `UShortListPool` entry containing caller-frame capture registers copied when the
-iterator is created. Captures are exposed to the helper in order starting at
-register `1`. `StreamMap` yields the helper `ReturnValue`. `StreamFilter` treats the
-helper `ReturnValue` as a predicate and yields the original source item only when
-that predicate is true.
 
 `Count` is a fixed finite aggregation terminal over finite collection-like
 sources or already-created streams. It returns `0` for an empty finite source

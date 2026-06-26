@@ -1,5 +1,4 @@
 using System;
-using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
@@ -17,6 +16,7 @@ public sealed class GameEventScriptHostBuilder
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
     private GameEventScriptDispatchMode _dispatchMode = GameEventScriptDispatchMode.Manual;
+    private IGameEventScriptDispatcher? _dispatcher;
     private Func<GameEventScriptMessage, bool>? _publishHook;
 
     /// <summary>
@@ -116,11 +116,16 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
-    /// Configures the host to drain queued messages on a background dispatch pump.
+    /// Configures the host to drain queued messages through the supplied automatic dispatch pump.
     /// </summary>
+    /// <param name="dispatcher">The dispatcher used to schedule automatic host dispatch work.</param>
     /// <returns>The current builder instance.</returns>
-    public GameEventScriptHostBuilder WithAutomaticDispatch()
+    /// <exception cref="ArgumentNullException">
+    /// Thrown if the <paramref name="dispatcher"/> parameter is null.
+    /// </exception>
+    public GameEventScriptHostBuilder WithAutomaticDispatch(IGameEventScriptDispatcher dispatcher)
     {
+        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
         _dispatchMode = GameEventScriptDispatchMode.Automatic;
         return this;
     }
@@ -140,6 +145,6 @@ public sealed class GameEventScriptHostBuilder
         _externalTypeRegistry,
         _runtimeLimits,
         _dispatchMode,
-        dispatcher: _dispatchMode == GameEventScriptDispatchMode.Automatic ? GameEventScriptCSharpDispatcher.Shared : null,
+        dispatcher: _dispatcher,
         _publishHook);
 }

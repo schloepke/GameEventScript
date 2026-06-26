@@ -3,7 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.CSharpBridge;
 

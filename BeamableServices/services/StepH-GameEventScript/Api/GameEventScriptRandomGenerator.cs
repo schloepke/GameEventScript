@@ -1,5 +1,4 @@
 using System;
-using StepH.GameEventScript.Runtime.VM;
 
 namespace StepH.GameEventScript.Api;
 
@@ -11,6 +10,27 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptRandomGenerator
 {
+    private struct SplitMix
+    {
+        private ulong _state;
+
+        internal SplitMix(ulong seed)
+        {
+            _state = seed;
+        }
+
+        internal ulong NextUInt64()
+        {
+            unchecked
+            {
+                var value = _state += 0x9E3779B97F4A7C15UL;
+                value = (value ^ (value >> 30)) * 0xBF58476D1CE4E5B9UL;
+                value = (value ^ (value >> 27)) * 0x94D049BB133111EBUL;
+                return value ^ (value >> 31);
+            }
+        }
+    }
+
     /// <summary>
     /// Creates and returns a new instance of <c>GameEventScriptRandomGenerator</c> using
     /// a default portable random generator for generating random values.
@@ -80,7 +100,15 @@ public sealed class GameEventScriptRandomGenerator
     public long NextInclusiveInteger(long minInclusive, long maxInclusive)
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        return TryDequeueSequenceValue(out var queuedValue) ? Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive) : _xoshiro.NextInclusiveInteger(minInclusive, maxInclusive);
+        if (TryDequeueSequenceValue(out var queuedValue))
+        {
+            return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
+        }
+
+        if (minInclusive == maxInclusive) return minInclusive;
+        var span = unchecked((ulong)(maxInclusive - minInclusive) + 1UL);
+        var offset = NextUInt64Below(span);
+        return unchecked(minInclusive + (long)offset);
     }
 
     /// <summary>
@@ -100,23 +128,32 @@ public sealed class GameEventScriptRandomGenerator
     {
         if (double.IsNaN(minInclusive) || double.IsNaN(maxInclusive)) return double.NaN;
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        return TryDequeueSequenceValue(out var queuedValue) ? Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive) : _xoshiro.NextInclusiveFloat(minInclusive, maxInclusive);
+        if (TryDequeueSequenceValue(out var queuedValue))
+        {
+            return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
+        }
+
+        if (minInclusive == maxInclusive) return minInclusive;
+        return minInclusive + (maxInclusive - minInclusive) * NextUnitDouble();
     }
 
     private GameEventScriptRandomGenerator(long seed)
     {
-        _xoshiro = new GesVmXoshiroRandom(seed);
+        Seed(seed);
     }
 
     private GameEventScriptRandomGenerator(double[] sequence)
     {
         _sequence = sequence;
-        _xoshiro = new GesVmXoshiroRandom(CreateDefaultSeed());
+        Seed(CreateDefaultSeed());
     }
 
-    private readonly GesVmXoshiroRandom _xoshiro;
     private readonly double[]? _sequence;
     private int _sequenceIndex;
+    private ulong _s0;
+    private ulong _s1;
+    private ulong _s2;
+    private ulong _s3;
 
     private bool TryDequeueSequenceValue(out double value)
     {
@@ -137,6 +174,47 @@ public sealed class GameEventScriptRandomGenerator
         >= long.MaxValue => long.MaxValue,
         _ => (long)Math.Truncate(value)
     };
+
+    private void Seed(long seed)
+    {
+        var splitMix = new SplitMix(unchecked((ulong)seed));
+        _s0 = splitMix.NextUInt64();
+        _s1 = splitMix.NextUInt64();
+        _s2 = splitMix.NextUInt64();
+        _s3 = splitMix.NextUInt64();
+        if ((_s0 | _s1 | _s2 | _s3) == 0UL) _s0 = 0x9E3779B97F4A7C15UL;
+    }
+
+    private ulong NextUInt64()
+    {
+        unchecked
+        {
+            var result = RotateLeft(_s1 * 5UL, 7) * 9UL;
+            var t = _s1 << 17;
+            _s2 ^= _s0;
+            _s3 ^= _s1;
+            _s1 ^= _s2;
+            _s0 ^= _s3;
+            _s2 ^= t;
+            _s3 = RotateLeft(_s3, 45);
+            return result;
+        }
+    }
+
+    private ulong NextUInt64Below(ulong exclusiveUpperBound)
+    {
+        if (exclusiveUpperBound == 0UL) return NextUInt64();
+        var threshold = unchecked(0UL - exclusiveUpperBound) % exclusiveUpperBound;
+        while (true)
+        {
+            var value = NextUInt64();
+            if (value >= threshold) return value % exclusiveUpperBound;
+        }
+    }
+
+    private double NextUnitDouble() => (NextUInt64() >> 11) * (1.0 / (1UL << 53));
+
+    private static ulong RotateLeft(ulong value, int offset) => (value << offset) | (value >> (64 - offset));
 
     private static long CreateDefaultSeed()
     {

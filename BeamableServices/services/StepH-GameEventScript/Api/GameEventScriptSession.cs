@@ -10,7 +10,7 @@ public sealed class GameEventScriptSession
 {
     private readonly GameEventScriptHost? _host;
     private readonly GameEventScriptDispatchMode _dispatchMode;
-    private readonly GameEventScriptDispatcher? _dispatcher;
+    private readonly IGameEventScriptDispatcher? _dispatcher;
     private readonly Func<GameEventScriptMessage, bool> _emit;
     private readonly Func<GameEventScriptMessage, bool> _publish;
     private readonly IGameEventScriptRuntimeObserver? _runtimeObserver;
@@ -29,14 +29,14 @@ public sealed class GameEventScriptSession
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
-    internal GameEventScriptSession(GameEventScriptHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, GameEventScriptDispatcher dispatcher, GameEventScriptRandomGenerator random,
+    internal GameEventScriptSession(GameEventScriptHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, IGameEventScriptDispatcher? dispatcher, GameEventScriptRandomGenerator random,
         Func<GameEventScriptMessage, bool> emit, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
         Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver) : this(random, emit, runtimeLimits, extensionRegistry, publish, runtimeObserver)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         State = state ?? throw new ArgumentNullException(nameof(state));
         _dispatchMode = dispatchMode;
-        _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
+        _dispatcher = dispatcher;
     }
 
     public GameEventScriptRandomGenerator Random { get; }

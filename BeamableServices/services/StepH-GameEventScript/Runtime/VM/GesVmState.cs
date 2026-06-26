@@ -47,8 +47,8 @@ internal class GesVmState
     private GesValue _overflowRegister;
 
     internal ushort RandomGeneratorsPointer { get; private set; } = 0;
-    internal GesVmXoshiroRandom[] RandomGenerators { get; init; }
-    internal GesVmXoshiroRandom RandomGenerator { get; private set; }
+    internal GameEventScriptRandomGenerator[] RandomGenerators { get; init; }
+    internal GameEventScriptRandomGenerator RandomGenerator { get; private set; }
 
     internal ushort RegisterFrameStart = 0;
     internal ushort RegisterFrameLength = 0;
@@ -77,9 +77,9 @@ internal class GesVmState
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
         RegisterValues = new GesValue[InitialRegisterCapacity];
-        RandomGenerators = new GesVmXoshiroRandom[16];
+        RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
-        RandomGenerator = new GesVmXoshiroRandom(0);
+        RandomGenerator = GameEventScriptRandomGenerator.FromSeed(0L);
         OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
         RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
         ExtensionCallBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExtensionCall);
@@ -155,7 +155,7 @@ internal class GesVmState
         InstructionPointer = entryAddress;
         RegisterFrameStart = 0;
         StageLength = 0;
-        RandomGenerator = new GesVmXoshiroRandom(session.Random);
+        RandomGenerator = session.Random;
         RandomGeneratorsPointer = 0;
         if (callAsArguments)
         {
@@ -227,7 +227,7 @@ internal class GesVmState
     internal void CreateGroupBuilder(ushort index) => Register(index).SetGroupBuilder(new GesVmGroupBuilder(this));
     internal void CreateOrderBuilder(ushort index) => Register(index).SetOrderBuilder(new GesVmOrderBuilder());
     
-    internal bool PushRandom(GesVmXoshiroRandom randomGenerator)
+    internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
     {
         if (RandomGeneratorsPointer >= RandomGenerators.Length) return RaiseError("Random generator stack overflow");
         RandomGenerators[RandomGeneratorsPointer++] = RandomGenerator;

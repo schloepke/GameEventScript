@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime.Values;
 

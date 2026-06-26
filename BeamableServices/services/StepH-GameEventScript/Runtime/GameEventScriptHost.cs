@@ -18,7 +18,7 @@ public sealed class GameEventScriptHost
     private readonly IGameEventScriptExternalTypeRegistry _externalTypeRegistry;
     private readonly GameEventScriptRuntimeLimits _runtimeLimits;
     private readonly GameEventScriptDispatchMode _dispatchMode;
-    private readonly GameEventScriptDispatcher _dispatcher;
+    private readonly IGameEventScriptDispatcher? _dispatcher;
     private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly Dictionary<string, MessageSubscription[]> _dispatchIndex = new(StringComparer.Ordinal);
     private readonly Dictionary<string, MessageSubscription[]> _messageNameDispatchIndex = new(StringComparer.Ordinal);
@@ -35,7 +35,7 @@ public sealed class GameEventScriptHost
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? runtimeLimits,
         GameEventScriptDispatchMode dispatchMode = GameEventScriptDispatchMode.Manual,
-        GameEventScriptDispatcher? dispatcher = null,
+        IGameEventScriptDispatcher? dispatcher = null,
         Func<GameEventScriptMessage, bool>? publishHook = null)
     {
         _random = random;
@@ -44,7 +44,7 @@ public sealed class GameEventScriptHost
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
         _dispatchMode = dispatchMode;
-        _dispatcher = dispatcher ?? GameEventScriptDispatcher.Shared;
+        _dispatcher = dispatcher;
         _publishHook = publishHook;
         _liveState = CreateLiveState(dispatchMode);
     }
@@ -161,7 +161,7 @@ public sealed class GameEventScriptHost
         {
             try
             {
-                _dispatcher.Enqueue(RunAutomaticDispatchSlice);
+                _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
             }
             catch
             {
@@ -298,7 +298,7 @@ public sealed class GameEventScriptHost
             {
                 try
                 {
-                    _dispatcher.Enqueue(RunAutomaticDispatchSlice);
+                    _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
                 }
                 catch
                 {
@@ -773,7 +773,7 @@ internal sealed class GameEventScriptHostRunState
     public GameEventScriptHostRunState(
         GameEventScriptHost host,
         GameEventScriptDispatchMode dispatchMode,
-        GameEventScriptDispatcher dispatcher,
+        IGameEventScriptDispatcher? dispatcher,
         GameEventScriptRandomGenerator random,
         IGameEventScriptRuntimeObserver? runtimeObserver,
         IGameEventScriptExtensionRegistry extensionRegistry,

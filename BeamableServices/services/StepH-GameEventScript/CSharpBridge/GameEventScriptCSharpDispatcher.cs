@@ -3,17 +3,18 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using StepH.GameEventScript.Runtime;
 
-namespace StepH.GameEventScript.Runtime;
+namespace StepH.GameEventScript.CSharpBridge;
 
-internal sealed class GameEventScriptDispatcher : IDisposable
+internal sealed class GameEventScriptCSharpDispatcher : IGameEventScriptDispatcher, IDisposable
 {
     private readonly Queue<Action> _workItems = new();
     private readonly object _gate = new();
     private readonly Thread[] _workers;
     private bool _disposed;
 
-    private GameEventScriptDispatcher(int workerCount, string workerName)
+    private GameEventScriptCSharpDispatcher(int workerCount, string workerName)
     {
         if (workerCount <= 0) throw new ArgumentOutOfRangeException(nameof(workerCount), "GameEventScript dispatcher worker count must be greater than zero.");
         _workers = new Thread[workerCount];
@@ -25,16 +26,16 @@ internal sealed class GameEventScriptDispatcher : IDisposable
         }
     }
 
-    public static GameEventScriptDispatcher Shared { get; } = new(1, "GameEventScript shared dispatch pump");
+    public static GameEventScriptCSharpDispatcher Shared { get; } = new(1, "GameEventScript shared dispatch pump");
 
-    public static GameEventScriptDispatcher Create(int workerCount = 1) => new(workerCount, "GameEventScript dispatch pump");
+    public static GameEventScriptCSharpDispatcher Create(int workerCount = 1) => new(workerCount, "GameEventScript dispatch pump");
 
-    internal void Enqueue(Action workItem)
+    public void Enqueue(Action workItem)
     {
         _ = workItem ?? throw new ArgumentNullException(nameof(workItem));
         lock (_gate)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(GameEventScriptDispatcher));
+            if (_disposed) throw new ObjectDisposedException(nameof(GameEventScriptCSharpDispatcher));
             _workItems.Enqueue(workItem);
             Monitor.Pulse(_gate);
         }

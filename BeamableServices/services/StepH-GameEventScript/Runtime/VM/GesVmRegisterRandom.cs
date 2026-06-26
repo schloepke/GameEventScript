@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterRandom
 {
-    internal static void GesVmRandom(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, GesVmXoshiroRandom randomGenerator)
+    internal static void GesVmRandom(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptRandomGenerator randomGenerator)
     {
         switch (from.Kind)
         {
@@ -88,7 +88,7 @@ internal static class GesVmRegisterRandom
                 return;
         }
     }
-    internal static void GesVmRandomFloat(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, GesVmXoshiroRandom randomGenerator)
+    internal static void GesVmRandomFloat(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptRandomGenerator randomGenerator)
     {
         if (from.Kind is Nothing || to.Kind is Nothing)
         {

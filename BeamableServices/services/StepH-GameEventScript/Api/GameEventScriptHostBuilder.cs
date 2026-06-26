@@ -1,4 +1,5 @@
 using System;
+using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
@@ -139,6 +140,6 @@ public sealed class GameEventScriptHostBuilder
         _externalTypeRegistry,
         _runtimeLimits,
         _dispatchMode,
-        dispatcher: null,
+        dispatcher: _dispatchMode == GameEventScriptDispatchMode.Automatic ? GameEventScriptCSharpDispatcher.Shared : null,
         _publishHook);
 }

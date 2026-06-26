@@ -130,7 +130,11 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
     {
         if (_value.ObjectValue is not GesVmValueMap map)
         {
-            if (_value.ObjectValue is GesVmExternalObject externalObject)
+            if (_value.ObjectValue is GesVmCustomObject customObject)
+            {
+                map = customObject.Map;
+            }
+            else if (_value.ObjectValue is GesVmExternalObject externalObject)
             {
                 map = externalObject.ToMap();
             }
@@ -177,6 +181,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
         var map = _value.ObjectValue switch
         {
             GesVmValueMap vmMap => vmMap,
+            GesVmCustomObject customObject => customObject.Map,
             GesVmExternalObject externalObject => externalObject.ToMap(),
             _ => null
         };
@@ -199,12 +204,9 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
             return true;
         }
 
-        if (_value.Kind is Custom &&
-            _value.ObjectValue is GesVmValueMap map &&
-            map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) &&
-            marker.Kind is Tag)
+        if (_value.ObjectValue is GesVmCustomObject customObject)
         {
-            typeName = marker.TextValue;
+            typeName = customObject.TypeName;
             return true;
         }
 

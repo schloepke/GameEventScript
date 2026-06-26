@@ -463,9 +463,33 @@ internal static class GesVmRegisterCollectionOperators
 
                 vmState.SetBoolean(dst, true);
                 return;
-            case Map or Custom when source.ObjectValue is GesVmValueMap map:
+            case Map when source.ObjectValue is GesVmValueMap map:
             {
                 var list = map.ValueList;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var item = list[i];
+                    if (item.IsTrue)
+                    {
+                        if (!requireAll)
+                        {
+                            vmState.SetBoolean(dst, true);
+                            return;
+                        }
+                    }
+                    else if (requireAll)
+                    {
+                        vmState.SetBoolean(dst, false);
+                        return;
+                    }
+                }
+
+                vmState.SetBoolean(dst, requireAll);
+                return;
+            }
+            case Custom when source.ObjectValue is GesVmCustomObject customObject:
+            {
+                var list = customObject.Map.ValueList;
                 for (var i = 0; i < list.Length; i++)
                 {
                     var item = list[i];
@@ -871,11 +895,24 @@ internal static class GesVmRegisterCollectionOperators
     {
         switch (b.Kind)
         {
-            case Map or Custom when b.ObjectValue is GesVmValueMap map:
+            case Map when b.ObjectValue is GesVmValueMap map:
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     if (!map.IsVisibleAt(i)) continue;
                     var mapValue = map.ValueAt(i);
+                    if (!mapValue.EqualsValue(a)) continue;
+                    vmState.SetBoolean(dst, true);
+                    return;
+                }
+
+                vmState.SetBoolean(dst, false);
+                return;
+            case Custom when b.ObjectValue is GesVmCustomObject customObject:
+                var customMap = customObject.Map;
+                for (var i = 0; i < customMap.StorageLength; i++)
+                {
+                    if (!customMap.IsVisibleAt(i)) continue;
+                    var mapValue = customMap.ValueAt(i);
                     if (!mapValue.EqualsValue(a)) continue;
                     vmState.SetBoolean(dst, true);
                     return;
@@ -1283,8 +1320,11 @@ internal static class GesVmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Map or Custom when a.ObjectValue is GesVmValueMap map:
+            case Map when a.ObjectValue is GesVmValueMap map:
                 vmState.SetList(dst, map.ValueList);
+                break;
+            case Custom when a.ObjectValue is GesVmCustomObject customObject:
+                vmState.SetList(dst, customObject.Map.ValueList);
                 break;
             case Custom when a.ObjectValue is GesVmExternalObject externalObject:
                 vmState.SetList(dst, externalObject.ToMap().ValueList);
@@ -1299,8 +1339,11 @@ internal static class GesVmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Map or Custom when a.ObjectValue is GesVmValueMap map:
+            case Map when a.ObjectValue is GesVmValueMap map:
                 vmState.SetList(dst, map.KeyList);
+                break;
+            case Custom when a.ObjectValue is GesVmCustomObject customObject:
+                vmState.SetList(dst, customObject.Map.KeyList);
                 break;
             case Custom when a.ObjectValue is GesVmExternalObject externalObject:
                 vmState.SetList(dst, externalObject.ToMap().KeyList);
@@ -1315,8 +1358,11 @@ internal static class GesVmRegisterCollectionOperators
     {
         switch (a.Kind)
         {
-            case Map or Custom when a.ObjectValue is GesVmValueMap map:
+            case Map when a.ObjectValue is GesVmValueMap map:
                 vmState.SetList(dst, map.EntryList);
+                break;
+            case Custom when a.ObjectValue is GesVmCustomObject customObject:
+                vmState.SetList(dst, customObject.Map.EntryList);
                 break;
             case Custom when a.ObjectValue is GesVmExternalObject externalObject:
                 vmState.SetList(dst, externalObject.ToMap().EntryList);

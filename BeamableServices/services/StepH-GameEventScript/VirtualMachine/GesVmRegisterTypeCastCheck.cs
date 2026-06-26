@@ -175,13 +175,6 @@ internal static class GesVmRegisterTypeCastCheck
         var typeName = vmState.FetchStringByPointer(typeTextPointer);
         if (IsCustomType(in xValue, typeName))
         {
-            if (xValue.ObjectValue is GesVmValueMap typedMap)
-            {
-                dst.SetRecord(typedMap);
-                vmState.SetValue(destinationRegister, in dst);
-                return;
-            }
-
             if (xValue.Kind is Custom)
             {
                 dst = xValue;
@@ -368,11 +361,29 @@ internal static class GesVmRegisterTypeCastCheck
     {
         switch (xValue.Kind)
         {
-            case Map or Custom when xValue.ObjectValue is GesVmValueMap map:
+            case Map when xValue.ObjectValue is GesVmValueMap map:
             {
                 if (!map.HasHiddenEntries)
                 {
                     dst = xValue;
+                    return;
+                }
+
+                var visibleEntries = new GesVmValueMapBuilder(map.Length);
+                for (var i = 0; i < map.StorageLength; i++)
+                {
+                    if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
+                }
+
+                dst.SetMap(visibleEntries.ToMap());
+                return;
+            }
+            case Custom when xValue.ObjectValue is GesVmCustomObject customObject:
+            {
+                var map = customObject.Map;
+                if (!map.HasHiddenEntries)
+                {
+                    dst.SetMap(map);
                     return;
                 }
 
@@ -484,7 +495,7 @@ internal static class GesVmRegisterTypeCastCheck
                 }
 
                 break;
-            case Map or Custom when xValue.ObjectValue is GesVmValueMap map:
+            case Map when xValue.ObjectValue is GesVmValueMap map:
             {
                 if (map.TryGet("x", out var mapXValue))
                 {
@@ -523,6 +534,44 @@ internal static class GesVmRegisterTypeCastCheck
                 {
                     dst.SetNothing();
                     return;
+                }
+
+                break;
+            }
+            case Custom when xValue.ObjectValue is GesVmCustomObject customObject:
+            {
+                var map = customObject.Map;
+                if (map.TryGet("x", out var mapXValue))
+                {
+                    if (!mapXValue.IsNumeric && mapXValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    x = mapXValue.AsNumeric;
+                }
+
+                if (map.TryGet("y", out var yValue))
+                {
+                    if (!yValue.IsNumeric && yValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    y = yValue.AsNumeric;
+                }
+
+                if (map.TryGet("z", out var zValue))
+                {
+                    if (!zValue.IsNumeric && zValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
+                    {
+                        dst.SetNothing();
+                        return;
+                    }
+
+                    z = zValue.AsNumeric;
                 }
 
                 break;
@@ -586,12 +635,7 @@ internal static class GesVmRegisterTypeCastCheck
         if (value.ObjectValue is GesVmExternalObject externalObject) return string.Equals(externalObject.CustomTypeName, typeName, StringComparison.Ordinal);
         return value.Kind switch
         {
-            Custom when value.ObjectValue is string customTypeName => string.Equals(customTypeName, typeName, StringComparison.Ordinal),
-            Map or Custom when value.ObjectValue is GesVmValueMap map && map.TryGet(GesVmValueMap.HiddenRecordTypeField, out var marker) => marker.Kind switch
-            {
-                Tag when marker.ObjectValue is string markerTypeName => string.Equals(markerTypeName, typeName, StringComparison.Ordinal),
-                _ => false
-            },
+            Custom when value.ObjectValue is GesVmCustomObject customObject => string.Equals(customObject.TypeName, typeName, StringComparison.Ordinal),
             _ => false
         };
     }

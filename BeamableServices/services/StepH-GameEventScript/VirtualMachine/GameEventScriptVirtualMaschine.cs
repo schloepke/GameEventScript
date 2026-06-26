@@ -302,6 +302,9 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case CreateRecord:
                             vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationRegister);
                             break;
+                        case CreateRecordValue:
+                            vmState.GesVmCreateRecordValue(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.SecondaryStringIndex);
+                            break;
                         case CreateExternalType:
                             vmState.GesVmCreateExternalType(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex);
                             vmState.ClearStage();

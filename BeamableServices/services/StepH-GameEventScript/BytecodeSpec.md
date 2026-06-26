@@ -320,7 +320,7 @@ groups are:
 0x10 Group 1 continuation: emit/publish operations, casts, checks, move, access, handler binding
 0x20 Group 1 type checks, loads, argument staging, value creation
 0x30 Group 1 argument staging and value creation continuation
-0x40 Group 1 record/external type construction, presence helpers, reserved tail 0x44..0x4F
+0x40 Group 1 record/external type construction, presence helpers, reserved tail 0x46..0x4F
 0x50 Group 2: boolean algebra, comparison, math
 0x60 Group 2 math/random/series continuation and numeric intrinsics
 0x70 Group 2 numeric/degree intrinsics and trigonometry
@@ -974,7 +974,12 @@ selector semantics.
   immediately before the opcode as constructor values. The bind entry supplies
   the record type name, constructor parameter labels, and constructor entry
   address. Computed record fields are not constructor parameters; the
-  constructor routine derives them.
+  constructor routine derives them. The constructor returns a custom record value
+  directly.
+- `CreateRecordValue dst mapRegister recordTypeNameIndex` creates the concrete
+  custom record value from a constructor-produced field map. This opcode is
+  intended for record-constructor routines; normal record construction uses
+  `CreateRecord`.
 - `CreateExternalType dst externalTypeConstructorReferenceIndex argumentNameListIndex`
   consumes the contiguous staged value sequence immediately before the opcode
   as constructor values.
@@ -982,7 +987,8 @@ selector semantics.
 Dice, vector, point, list, map, and range creation opcodes live in Group 1 with
 other value-loading and construction instructions. `CreateRecord` and
 `CreateExternalType` are kept at the end of the value-creation block because they construct
-script records and host-bound external values.
+script records and host-bound external values. `CreateRecordValue` is the internal
+record-constructor value materialization step.
 These remain high-level because they map directly to public value semantics.
 List indexes reference `UShortListPool`; name lists and message shapes contain
 `StringPool` indexes, while register lists contain frame register indexes. Record

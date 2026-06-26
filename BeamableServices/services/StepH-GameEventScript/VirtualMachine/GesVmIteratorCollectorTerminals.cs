@@ -27,8 +27,13 @@ internal static class GesVmIteratorCollectorTerminals
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) > 0) vmState.SetFloat(destinationRegister, range.From);
                 else vmState.SetNothing(destinationRegister);
                 return;
-            case Map or Custom when source.ObjectValue is GesVmValueMap map:
+            case Map when source.ObjectValue is GesVmValueMap map:
                 if (map.ValueList.Length > 0) vmState.SetValue(destinationRegister, in map.ValueList[0]);
+                else vmState.SetNothing(destinationRegister);
+                return;
+            case Custom when source.ObjectValue is GesVmCustomObject customObject:
+                var customMap = customObject.Map;
+                if (customMap.ValueList.Length > 0) vmState.SetValue(destinationRegister, in customMap.ValueList[0]);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Vector or Point when source.ObjectValue is GesVmValueVectorPoint triplet:
@@ -65,8 +70,13 @@ internal static class GesVmIteratorCollectorTerminals
                 if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastFloat)) vmState.SetFloat(destinationRegister, lastFloat);
                 else vmState.SetNothing(destinationRegister);
                 return;
-            case Map or Custom when source.ObjectValue is GesVmValueMap map:
+            case Map when source.ObjectValue is GesVmValueMap map:
                 if (map.ValueList.Length > 0) vmState.SetValue(destinationRegister, in map.ValueList[map.ValueList.Length - 1]);
+                else vmState.SetNothing(destinationRegister);
+                return;
+            case Custom when source.ObjectValue is GesVmCustomObject customObject:
+                var customMap = customObject.Map;
+                if (customMap.ValueList.Length > 0) vmState.SetValue(destinationRegister, in customMap.ValueList[customMap.ValueList.Length - 1]);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Vector or Point when source.ObjectValue is GesVmValueVectorPoint triplet:
@@ -103,8 +113,13 @@ internal static class GesVmIteratorCollectorTerminals
                 if (GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step) == 1) vmState.SetFloat(destinationRegister, range.From);
                 else vmState.SetNothing(destinationRegister);
                 return;
-            case Map or Custom when source.ObjectValue is GesVmValueMap map:
+            case Map when source.ObjectValue is GesVmValueMap map:
                 if (map.ValueList.Length == 1) vmState.SetValue(destinationRegister, in map.ValueList[0]);
+                else vmState.SetNothing(destinationRegister);
+                return;
+            case Custom when source.ObjectValue is GesVmCustomObject customObject:
+                var customMap = customObject.Map;
+                if (customMap.ValueList.Length == 1) vmState.SetValue(destinationRegister, in customMap.ValueList[0]);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Text or Tag:

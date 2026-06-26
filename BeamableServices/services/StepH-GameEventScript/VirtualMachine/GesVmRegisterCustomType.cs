@@ -7,6 +7,17 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GesVmRegisterCustomType
 {
+    internal static void GesVmCreateRecordValue(this GesVmState vmState, ushort destinationRegister, in GesVmValue mapValue, ushort typeTextPointer)
+    {
+        if (mapValue.Kind is Map && mapValue.ObjectValue is GesVmValueMap map)
+        {
+            vmState.SetRecord(destinationRegister, vmState.FetchStringByPointer(typeTextPointer), map);
+            return;
+        }
+
+        vmState.SetNothing(destinationRegister);
+    }
+
     internal static void GesVmCreateExternalType(this GesVmState vmState, ushort destinationRegister, ushort externalTypeConstructorBindId, ushort argumentNamesIndex)
     {
         if (externalTypeConstructorBindId >= vmState.ExternalTypeBinds.Length || vmState.ExternalTypeBinds[externalTypeConstructorBindId].Kind != GameEventScriptBinaryBindKind.ExternalType)

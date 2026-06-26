@@ -9,7 +9,10 @@ internal static class GesVmRegisterMemberIndexAccess
     {
         switch (obj.Kind)
         {
-            case Map or Custom when obj.ObjectValue is GesVmValueMap map && map.TryGet(key, out var value):
+            case Map when obj.ObjectValue is GesVmValueMap map && map.TryGet(key, out var value):
+                vmState.SetValue(destinationRegister, in value);
+                return;
+            case Custom when obj.ObjectValue is GesVmCustomObject customObject && customObject.Map.TryGet(key, out var value):
                 vmState.SetValue(destinationRegister, in value);
                 return;
             case Custom when obj.ObjectValue is GesVmExternalObject externalObject && externalObject.ToMap().TryGet(key, out var value):

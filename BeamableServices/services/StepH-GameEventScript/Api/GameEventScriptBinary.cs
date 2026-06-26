@@ -360,11 +360,12 @@ public enum GameEventScriptBytecodeOpCode : byte
     CreateRangeIteratorWithStep = 0x3E,
     CreateRangeIteratorShort = 0x3F,
     CreateRecord = 0x40,
-    CreateExternalType = 0x41,
+    CreateRecordValue = 0x41,
+    CreateExternalType = 0x42,
 
-    HasValue = 0x42,
-    IsEmpty = 0x43,
-    Default = 0x44,
+    HasValue = 0x43,
+    IsEmpty = 0x44,
+    Default = 0x45,
 
     #endregion
 

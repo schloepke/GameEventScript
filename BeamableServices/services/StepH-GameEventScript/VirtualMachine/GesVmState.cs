@@ -212,7 +212,7 @@ internal class GesVmState
     internal void SetDice(ushort index, int[] values) => Register(index).SetDice(values);
     internal void SetList(ushort index, GesVmValue[] list) => Register(index).SetList(list);
     internal void SetMap(ushort index, GesVmValueMap valueMap) => Register(index).SetMap(valueMap);
-    internal void SetRecord(ushort index, GesVmValueMap record) => Register(index).SetRecord(record);
+    internal void SetRecord(ushort index, string typeName, GesVmValueMap record) => Register(index).SetRecord(typeName, record);
     internal void SetExternalCustomType(ushort index, GesVmExternalObject value) => Register(index).SetExternalCustomType(value);
     internal void SetRange(ushort index, long from, long to, long step) => Register(index).SetRange(from, to, step);
     internal void SetRange(ushort index, double from, double to, double step) => Register(index).SetRange(from, to, step);

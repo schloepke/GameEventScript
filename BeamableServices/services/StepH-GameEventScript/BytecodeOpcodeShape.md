@@ -255,11 +255,12 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x3E | `CreateRangeIteratorWithStep` | - | iterator register | `XRegister`=from | `YRegister`=to | `AU`=step register | Creates a VM-internal range iterator with an explicit step. |
 | 0x3F | `CreateRangeIteratorShort` | - | iterator register | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
 | 0x40 | `CreateRecord` | - | result register | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside the constructor. |
-| 0x41 | `CreateExternalType` | - | result register | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
-| 0x42 | `HasValue` | - | result register | `XRegister`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
-| 0x43 | `IsEmpty` | - | result register | `XRegister`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
-| 0x44 | `Default` | - | result register | `XRegister`=left | `YRegister`=right | - | Presence/default operator. |
-| 0x45..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
+| 0x41 | `CreateRecordValue` | - | result register | `XRegister`=map | `TypeOperand`=record type string | - | Creates the concrete custom record value from the constructor-produced field map. |
+| 0x42 | `CreateExternalType` | - | result register | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
+| 0x43 | `HasValue` | - | result register | `XRegister`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
+| 0x44 | `IsEmpty` | - | result register | `XRegister`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
+| 0x45 | `Default` | - | result register | `XRegister`=left | `YRegister`=right | - | Presence/default operator. |
+| 0x46..0x4F | reserved | - | - | - | - | - | Reserved tail of Group 1. |
 
 ### Group 2 - Boolean Algebra, Comparison, Math And Random
 

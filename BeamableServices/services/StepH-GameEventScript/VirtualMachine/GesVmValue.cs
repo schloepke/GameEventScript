@@ -218,13 +218,13 @@ internal struct GesVmValue
         ObjectValue = valueMap;
     }
 
-    internal void SetRecord(GesVmValueMap record)
+    internal void SetRecord(string typeName, GesVmValueMap record)
     {
         Kind = Custom;
         Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
         IntegerValue = record.Length;
-        ObjectValue = record;
+        ObjectValue = new GesVmCustomObject(typeName, record);
     }
 
     internal void SetExternalCustomType(GesVmExternalObject value)
@@ -419,13 +419,27 @@ internal struct GesVmValue
                 }
 
                 return true;
-            case Map or Custom when ObjectValue is GesVmValueMap left && other.ObjectValue is GesVmValueMap right:
+            case Map when ObjectValue is GesVmValueMap left && other.ObjectValue is GesVmValueMap right:
                 if (left.StorageLength != right.StorageLength || left.Length != right.Length) return false;
                 for (var i = 0; i < left.StorageLength; i++)
                 {
                     if (!string.Equals(left.KeyAt(i), right.KeyAt(i), StringComparison.Ordinal)) return false;
                     var leftValue = left.ValueAt(i);
                     var rightValue = right.ValueAt(i);
+                    if (!leftValue.EqualsValue(in rightValue)) return false;
+                }
+
+                return true;
+            case Custom when ObjectValue is GesVmCustomObject leftCustom && other.ObjectValue is GesVmCustomObject rightCustom:
+                if (!string.Equals(leftCustom.TypeName, rightCustom.TypeName, StringComparison.Ordinal)) return false;
+                var customLeftMap = leftCustom.Map;
+                var customRightMap = rightCustom.Map;
+                if (customLeftMap.StorageLength != customRightMap.StorageLength || customLeftMap.Length != customRightMap.Length) return false;
+                for (var i = 0; i < customLeftMap.StorageLength; i++)
+                {
+                    if (!string.Equals(customLeftMap.KeyAt(i), customRightMap.KeyAt(i), StringComparison.Ordinal)) return false;
+                    var leftValue = customLeftMap.ValueAt(i);
+                    var rightValue = customRightMap.ValueAt(i);
                     if (!leftValue.EqualsValue(in rightValue)) return false;
                 }
 
@@ -477,11 +491,22 @@ internal struct GesVmValue
             case List when ObjectValue is GesVmValue[] list:
                 for (var i = 0; i < list.Length; i++) hash.Add(list[i].GetValueHashCode());
                 break;
-            case Map or Custom when ObjectValue is GesVmValueMap map:
+            case Map when ObjectValue is GesVmValueMap map:
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     hash.Add(map.KeyAt(i), StringComparer.Ordinal);
                     var value = map.ValueAt(i);
+                    hash.Add(value.GetValueHashCode());
+                }
+
+                break;
+            case Custom when ObjectValue is GesVmCustomObject custom:
+                hash.Add(custom.TypeName, StringComparer.Ordinal);
+                var customMap = custom.Map;
+                for (var i = 0; i < customMap.StorageLength; i++)
+                {
+                    hash.Add(customMap.KeyAt(i), StringComparer.Ordinal);
+                    var value = customMap.ValueAt(i);
                     hash.Add(value.GetValueHashCode());
                 }
 
@@ -533,8 +558,8 @@ internal struct GesVmValue
             case Map when ObjectValue is GesVmValueMap map:
                 iterator = new GesVmListIterator(map.ValueList);
                 return true;
-            case Custom when ObjectValue is GesVmValueMap custom:
-                iterator = new GesVmListIterator(custom.ValueList);
+            case Custom when ObjectValue is GesVmCustomObject custom:
+                iterator = new GesVmListIterator(custom.Map.ValueList);
                 return true;
             case Vector or Point when ObjectValue is GesVmValueVectorPoint vp:
                 iterator = new GesVmTripletIterator(vp);
@@ -563,6 +588,7 @@ internal struct GesVmValue
         Dice when ObjectValue is int[] dice => FormatDice(dice),
         List when ObjectValue is GesVmValue[] list => FormatList(list),
         Map when ObjectValue is GesVmValueMap map => FormatMap(map),
+        Custom when ObjectValue is GesVmCustomObject custom => FormatMap(custom.Map),
         GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
         GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
         Series when ObjectValue is GesVmSeries series => $"series[{series.SignatureId} offset {series.Offset}]",

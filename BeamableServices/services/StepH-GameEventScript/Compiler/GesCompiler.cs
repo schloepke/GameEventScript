@@ -92,11 +92,10 @@ internal static class GesCompiler
                     _builder.StageRegister(fieldRegister);
                 }
 
-                _builder.StageTag(type.Name);
                 var map = state.AllocateTemporary(_builder, context);
-                _builder.CreateMap(map, type.Fields.Select(field => field.Name).Concat([GesVmValueMap.HiddenRecordTypeField]).ToArray());
+                _builder.CreateMap(map, type.Fields.Select(field => field.Name).ToArray());
                 var record = state.AllocateTemporary(_builder, context);
-                _builder.CastCustom(record, map, type.Name);
+                _builder.CreateRecordValue(record, map, type.Name);
                 _builder.ReturnValue(record);
             }
         }

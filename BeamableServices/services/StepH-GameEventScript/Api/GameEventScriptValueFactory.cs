@@ -106,24 +106,16 @@ public static class GameEventScriptValueFactory
     public static GameEventScriptValue GesRecord(string typeName, IEnumerable<KeyValuePair<string, GameEventScriptValue>>? fields)
     {
         var builder = new GesVmValueMapBuilder();
-        var marker = new GesVmValue();
-        marker.SetTag(typeName ?? string.Empty);
-        builder.Set(GesVmValueMap.HiddenRecordTypeField, marker);
         if (fields is not null)
         {
             foreach (var field in fields)
             {
-                if (string.Equals(field.Key, GesVmValueMap.HiddenRecordTypeField, StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
                 builder.Set(field.Key, field.Value.GetVmValue());
             }
         }
 
         var value = new GesVmValue();
-        value.SetRecord(builder.ToMap());
+        value.SetRecord(typeName ?? string.Empty, builder.ToMap());
         return new GameEventScriptValue(in value);
     }
 

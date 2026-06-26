@@ -55,7 +55,22 @@ internal static class GesVmRegisterCompare
                 return DoubleEqualsUlp(ar.From, br.From) && DoubleEqualsUlp(ar.To, br.To) && DoubleEqualsUlp(ar.Step, br.Step);
             case Series when b.Kind is Series && a.ObjectValue is GesVmSeries aseries && b.ObjectValue is GesVmSeries bseries:
                 return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
-            case Map or Custom when b.Kind is Map or Custom && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmValueMap bm:
+            case Map when b.Kind is Map && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmValueMap bm:
+                return EqualMaps(am, bm);
+            case Custom when b.Kind is Custom && a.ObjectValue is GesVmCustomObject ac && b.ObjectValue is GesVmCustomObject bc:
+                return string.Equals(ac.TypeName, bc.TypeName, StringComparison.Ordinal) && EqualMaps(ac.Map, bc.Map);
+            case Map when b.Kind is Custom && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmCustomObject bc:
+                return EqualMaps(am, bc.Map);
+            case Custom when b.Kind is Map && a.ObjectValue is GesVmCustomObject ac && b.ObjectValue is GesVmValueMap bm:
+                return EqualMaps(ac.Map, bm);
+            default:
+                if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
+                return false;
+        }
+    }
+
+    private static bool EqualMaps(GesVmValueMap am, GesVmValueMap bm)
+    {
                 if (am.Length != bm.Length) return false;
                 var aKeys = am.KeyList;
                 var bKeys = bm.KeyList;
@@ -74,10 +89,6 @@ internal static class GesVmRegisterCompare
                 }
 
                 return true;
-            default:
-                if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
-                return false;
-        }
     }
     private static long Sum(int[] arr)
     {

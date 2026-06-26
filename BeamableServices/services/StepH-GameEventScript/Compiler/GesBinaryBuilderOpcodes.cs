@@ -204,6 +204,9 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder CreateRecord(GesRegisterRef destination, GesBindRef record)
         => AddOpcode(GameEventScriptBytecodeOpCode.CreateRecord, dst: GesOperand.Register(destination), x: GesOperand.Bind(record));
 
+    public GesBinaryBuilder CreateRecordValue(GesRegisterRef destination, GesRegisterRef map, string typeName)
+        => AddOpcode(GameEventScriptBytecodeOpCode.CreateRecordValue, dst: GesOperand.Register(destination), x: GesOperand.Register(map), y: GesOperand.Text(typeName));
+
     public GesBinaryBuilder CreateExternalType(GesRegisterRef destination, GesBindRef externalType, IReadOnlyList<string> argumentNames)
         => AddOpcode(GameEventScriptBytecodeOpCode.CreateExternalType, dst: GesOperand.Register(destination), x: GesOperand.Bind(externalType), y: GesOperand.TextList(argumentNames));
 

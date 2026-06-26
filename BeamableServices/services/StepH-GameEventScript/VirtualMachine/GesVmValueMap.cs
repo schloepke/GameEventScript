@@ -4,8 +4,6 @@ namespace StepH.GameEventScript.VirtualMachine;
 
 internal sealed class GesVmValueMap
 {
-    internal const string HiddenRecordTypeField = "__type";
-
     private readonly string[] _keys;
     private readonly GesVmValue[] _values;
     private readonly int _length;

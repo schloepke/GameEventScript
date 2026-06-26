@@ -167,6 +167,7 @@ internal static class GameEventScriptOpcodePrinter
             GameEventScriptBytecodeOpCode.CreateRangeIteratorWithStep => [TargetRegister, FromRegister, ToRegister, StepRegister],
             GameEventScriptBytecodeOpCode.CreateRangeIteratorShort => [TargetRegister, FromImmediate, ToImmediate, StepImmediate],
             GameEventScriptBytecodeOpCode.CreateRecord => [TargetRegister, RecordReference],
+            GameEventScriptBytecodeOpCode.CreateRecordValue => [TargetRegister, SourceRegister, CustomTypeName],
             GameEventScriptBytecodeOpCode.CreateExternalType => [TargetRegister, ExternalReference, ArgumentNameList],
             GameEventScriptBytecodeOpCode.HasValue => [TargetRegister, OperandRegister],
             GameEventScriptBytecodeOpCode.IsEmpty => [TargetRegister, OperandRegister],

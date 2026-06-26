@@ -160,10 +160,11 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field CreateRangeIteratorWithStep = 62
   enum-field CreateRangeIteratorShort = 63
   enum-field CreateRecord = 64
-  enum-field CreateExternalType = 65
-  enum-field HasValue = 66
-  enum-field IsEmpty = 67
-  enum-field Default = 68
+  enum-field CreateRecordValue = 65
+  enum-field CreateExternalType = 66
+  enum-field HasValue = 67
+  enum-field IsEmpty = 68
+  enum-field Default = 69
   enum-field Or = 80
   enum-field And = 81
   enum-field Xor = 82

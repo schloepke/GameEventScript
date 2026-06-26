@@ -4,6 +4,7 @@ using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime;
 

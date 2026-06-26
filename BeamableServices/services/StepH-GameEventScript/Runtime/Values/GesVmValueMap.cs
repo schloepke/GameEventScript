@@ -1,9 +1,11 @@
 using System;
 
-namespace StepH.GameEventScript.Runtime.VM;
+namespace StepH.GameEventScript.Runtime.Values;
 
 internal sealed class GesVmValueMap
 {
+    private static readonly string[] EntryKeys = ["key", "value"];
+
     private readonly string[] _keys;
     private readonly GesVmValue[] _values;
     private readonly int _length;
@@ -105,67 +107,13 @@ internal sealed class GesVmValueMap
         {
             var key = _keys[index];
             if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-            var entry = new GesVmValueMapBuilder(2);
-            var keyValue = new GesVmValue();
-            keyValue.SetTag(key);
-            entry.Set("key", keyValue);
-            entry.Set("value", _values[index]);
-            list[i++].SetMap(entry.ToMap());
+            var entryValues = new GesVmValue[2];
+            entryValues[0].SetTag(key);
+            entryValues[1] = _values[index];
+            list[i++].SetMap(new GesVmValueMap(EntryKeys, entryValues, 2));
         }
 
         return list;
     }
 
-}
-
-internal sealed class GesVmValueMapBuilder
-{
-    private string[] _keys;
-    private GesVmValue[] _values;
-    private int _count;
-
-    internal GesVmValueMapBuilder(int capacity = 0)
-    {
-        var size = capacity <= 0 ? 4 : capacity;
-        _keys = new string[size];
-        _values = new GesVmValue[size];
-    }
-
-    internal int Count => _count;
-
-    internal bool ContainsKey(string key)
-    {
-        for (var i = 0; i < _count; i++)
-        {
-            if (string.Equals(_keys[i], key, StringComparison.Ordinal)) return true;
-        }
-
-        return false;
-    }
-
-    internal void Set(string key, GesVmValue value)
-    {
-        for (var i = 0; i < _count; i++)
-        {
-            if (!string.Equals(_keys[i], key, StringComparison.Ordinal)) continue;
-            _values[i] = value;
-            return;
-        }
-
-        if (_count == _keys.Length)
-        {
-            var nextKeys = new string[_keys.Length << 1];
-            var nextValues = new GesVmValue[_values.Length << 1];
-            Array.Copy(_keys, nextKeys, _keys.Length);
-            Array.Copy(_values, nextValues, _values.Length);
-            _keys = nextKeys;
-            _values = nextValues;
-        }
-
-        _keys[_count] = key;
-        _values[_count] = value;
-        _count++;
-    }
-
-    internal GesVmValueMap ToMap() => new(_keys, _values, _count);
 }

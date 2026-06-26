@@ -6,9 +6,9 @@ using System.Text;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.Runtime.VM.GesVmValue.GesVmValueFlags;
+using static StepH.GameEventScript.Runtime.Values.GesVmValue.GesVmValueFlags;
 
-namespace StepH.GameEventScript.Runtime.VM;
+namespace StepH.GameEventScript.Runtime.Values;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
@@ -317,7 +317,7 @@ internal struct GesVmValue
         ObjectValue = value;
     }
     
-    internal void SetListBuilder(GesVmValueListBuilder listBuilder)
+    internal void SetListBuilder(object listBuilder)
     {
         Kind = ListBuilder;
         Flags = StorageObjectFlag;
@@ -326,7 +326,7 @@ internal struct GesVmValue
         ObjectValue = listBuilder;
     }
 
-    internal void SetMapBuilder(GesVmValueMapBuilder mapBuilder)
+    internal void SetMapBuilder(object mapBuilder)
     {
         Kind = MapBuilder;
         Flags = StorageObjectFlag;
@@ -335,7 +335,7 @@ internal struct GesVmValue
         ObjectValue = mapBuilder;
     }
 
-    internal void SetDistinctBuilder(GesVmValueDistinctBuilder distinctBuilder)
+    internal void SetDistinctBuilder(object distinctBuilder)
     {
         Kind = DistinctBuilder;
         Flags = StorageObjectFlag;
@@ -344,7 +344,7 @@ internal struct GesVmValue
         ObjectValue = distinctBuilder;
     }
 
-    internal void SetGroupBuilder(GesVmValueGroupBuilder groupBuilder)
+    internal void SetGroupBuilder(object groupBuilder)
     {
         Kind = GroupBuilder;
         Flags = StorageObjectFlag;
@@ -353,7 +353,7 @@ internal struct GesVmValue
         ObjectValue = groupBuilder;
     }
 
-    internal void SetOrderBuilder(GesVmValueOrderBuilder orderBuilder)
+    internal void SetOrderBuilder(object orderBuilder)
     {
         Kind = OrderBuilder;
         Flags = StorageObjectFlag;

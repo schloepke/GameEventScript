@@ -1,4 +1,4 @@
-namespace StepH.GameEventScript.Runtime.VM;
+namespace StepH.GameEventScript.Runtime.Values;
 
 internal sealed class GesVmCustomObject(string typeName, GesVmValueMap map)
 {

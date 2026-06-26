@@ -9,6 +9,7 @@ using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Runtime.VM.GesVmState.StateValue;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 

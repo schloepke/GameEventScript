@@ -3,6 +3,7 @@
 using System.Globalization;
 using System.Text;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 

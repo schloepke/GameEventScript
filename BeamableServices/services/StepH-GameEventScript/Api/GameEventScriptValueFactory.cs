@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
@@ -89,33 +90,15 @@ public static class GameEventScriptValueFactory
 
     public static GameEventScriptValue GesMap(IEnumerable<KeyValuePair<string, GameEventScriptValue>>? entries)
     {
-        var builder = new GesVmValueMapBuilder();
-        if (entries is not null)
-        {
-            foreach (var entry in entries)
-            {
-                builder.Set(entry.Key, entry.Value.GetVmValue());
-            }
-        }
-
         var value = new GesVmValue();
-        value.SetMap(builder.ToMap());
+        value.SetMap(CreateMap(entries));
         return new GameEventScriptValue(in value);
     }
 
     public static GameEventScriptValue GesRecord(string typeName, IEnumerable<KeyValuePair<string, GameEventScriptValue>>? fields)
     {
-        var builder = new GesVmValueMapBuilder();
-        if (fields is not null)
-        {
-            foreach (var field in fields)
-            {
-                builder.Set(field.Key, field.Value.GetVmValue());
-            }
-        }
-
         var value = new GesVmValue();
-        value.SetRecord(typeName ?? string.Empty, builder.ToMap());
+        value.SetRecord(typeName ?? string.Empty, CreateMap(fields));
         return new GameEventScriptValue(in value);
     }
 
@@ -211,5 +194,46 @@ public static class GameEventScriptValueFactory
         var list = new List<int>();
         foreach (var value in values) list.Add(value);
         return list.ToArray();
+    }
+
+    private static GesVmValueMap CreateMap(IEnumerable<KeyValuePair<string, GameEventScriptValue>>? entries)
+    {
+        if (entries is null) return new GesVmValueMap([], [], 0);
+
+        var keys = new string[4];
+        var values = new GesVmValue[4];
+        var count = 0;
+        foreach (var entry in entries)
+        {
+            var existingIndex = -1;
+            for (var i = 0; i < count; i++)
+            {
+                if (!string.Equals(keys[i], entry.Key, StringComparison.Ordinal)) continue;
+                existingIndex = i;
+                break;
+            }
+
+            if (existingIndex >= 0)
+            {
+                values[existingIndex] = entry.Value.GetVmValue();
+                continue;
+            }
+
+            if (count == keys.Length)
+            {
+                var nextKeys = new string[keys.Length << 1];
+                var nextValues = new GesVmValue[values.Length << 1];
+                Array.Copy(keys, nextKeys, keys.Length);
+                Array.Copy(values, nextValues, values.Length);
+                keys = nextKeys;
+                values = nextValues;
+            }
+
+            keys[count] = entry.Key;
+            values[count] = entry.Value.GetVmValue();
+            count++;
+        }
+
+        return new GesVmValueMap(keys, values, count);
     }
 }

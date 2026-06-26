@@ -1,6 +1,6 @@
 using System;
 
-namespace StepH.GameEventScript.Runtime.VM;
+namespace StepH.GameEventScript.Runtime.Values;
 
 internal interface IGesVmIterator
 {

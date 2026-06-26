@@ -1,6 +1,6 @@
 using StepH.GameEventScript.Api;
 
-namespace StepH.GameEventScript.Runtime.VM;
+namespace StepH.GameEventScript.Runtime.Values;
 
 internal sealed class GesVmExternalObject(object instance, GameEventScriptExternalTypeDefinition definition)
 {
@@ -19,7 +19,9 @@ internal sealed class GesVmExternalObject(object instance, GameEventScriptExtern
             return _map;
         }
 
-        var builder = new GesVmValueMapBuilder(Definition.Fields.Count);
+        var keys = new string[Definition.Fields.Count];
+        var values = new GesVmValue[Definition.Fields.Count];
+        var count = 0;
         foreach (var field in Definition.Fields)
         {
             if (!Definition.TryGetField(field.Name, Instance, out var sourceValue))
@@ -27,10 +29,12 @@ internal sealed class GesVmExternalObject(object instance, GameEventScriptExtern
                 continue;
             }
 
-            builder.Set(field.Name, sourceValue.GetVmValue());
+            keys[count] = field.Name;
+            values[count] = sourceValue.GetVmValue();
+            count++;
         }
 
-        _map = builder.ToMap();
+        _map = new GesVmValueMap(keys, values, count);
         return _map;
     }
 }

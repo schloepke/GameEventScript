@@ -92,13 +92,13 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     public override string ToString()
     {
         var message = Arguments.Count == 0 ? Name : $"{Name}({Arguments})";
-        return Tags.Count == 0 ? message : $"{message} with {string.Join(", ", Tags.Select(tag => $":{tag}"))}";
+        return Tags.Count == 0 ? message : $"{message} with {string.Join(", ", Tags.Select(tag => $"#{tag}"))}";
     }
 
     /// <summary>
     /// Determines whether the message has the specified normalized delivery tag.
     /// </summary>
-    /// <param name="tag">The tag to check. A leading colon is accepted.</param>
+    /// <param name="tag">The normalized tag name or a tag literal using a leading '#'.</param>
     /// <returns><c>true</c> when the tag is present; otherwise <c>false</c>.</returns>
     public bool HasTag(string tag)
     {
@@ -151,14 +151,14 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// <summary>
     /// Creates a copy of this message with the provided delivery tags merged into the existing tag set.
     /// </summary>
-    /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
+    /// <param name="tags">The normalized tag names or tag literals using a leading '#'.</param>
     /// <returns>A message copy with the merged tags.</returns>
     public GameEventScriptMessage WithTags(IEnumerable<string>? tags) => new(Name, Arguments, SignatureId, NormalizeTags(Tags.Concat(tags ?? [])));
 
     /// <summary>
     /// Creates a copy of this message with the provided delivery tags merged into the existing tag set.
     /// </summary>
-    /// <param name="tags">The tags to merge. Leading colons are accepted.</param>
+    /// <param name="tags">The normalized tag names or tag literals using a leading '#'.</param>
     /// <returns>A message copy with the merged tags.</returns>
     public GameEventScriptMessage WithTags(params string[] tags) => WithTags((IEnumerable<string>?)tags);
 
@@ -195,7 +195,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     {
         if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
         var normalized = tag.Trim();
-        return normalized.Length > 0 && normalized[0] == ':' ? normalized[1..] : normalized;
+        return normalized.Length > 0 && normalized[0] == '#' ? normalized[1..] : normalized;
     }
 
     internal static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)

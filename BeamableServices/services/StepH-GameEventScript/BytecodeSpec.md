@@ -1074,7 +1074,7 @@ Arguments and tags are evaluated by preceding code into registers:
 ```text
 @0400 Move dst=r20 src=rDamage
 @0401 Move dst=r21 src=rTarget
-@0402 LoadTag dst=r22 tag=:radio
+@0402 LoadTag dst=r22 tag=#radio
 @0403 PublishMessageWithTags outbound=#0 args=#1 tags=#2
 ```
 

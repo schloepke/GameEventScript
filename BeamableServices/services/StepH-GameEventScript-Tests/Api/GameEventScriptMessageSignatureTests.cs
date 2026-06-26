@@ -23,7 +23,7 @@ public sealed class GameEventScriptMessageSignatureTests
     public void MessagesCompareBySignatureArgumentsAndTags()
     {
         var left = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GameEventScriptValueFactory.GesInteger(7) }, ["radio"]);
-        var right = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GameEventScriptValueFactory.GesInteger(7) }, [":radio"]);
+        var right = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GameEventScriptValueFactory.GesInteger(7) }, ["#radio"]);
         var differentArgument = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GameEventScriptValueFactory.GesInteger(8) }, ["radio"]);
         var differentTags = GameEventScriptMessage.Create("Ping", new Dictionary<string, GameEventScriptValue> { ["amount"] = GameEventScriptValueFactory.GesInteger(7) }, ["silent"]);
 

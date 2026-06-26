@@ -28,7 +28,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
     public GameEventScriptBytecodeInstructionUnit Unit => _value.Unit;
 
     /// <summary>
-    /// Gets whether this value can be interpreted as numeric without boxing through the old value hierarchy.
+    /// Gets whether this value can be interpreted as numeric.
     /// </summary>
     public bool IsNumeric => _value.IsNumeric;
 

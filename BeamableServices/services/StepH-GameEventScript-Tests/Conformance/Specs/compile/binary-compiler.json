@@ -259,8 +259,8 @@
                 }
               },
               "tags": [
-                ":radio",
-                ":urgent"
+                "radio",
+                "urgent"
               ]
             },
             {
@@ -324,8 +324,8 @@
                 }
               },
               "tags": [
-                ":radio",
-                ":relay"
+                "radio",
+                "relay"
               ]
             },
             {
@@ -337,7 +337,7 @@
                 }
               },
               "tags": [
-                ":network"
+                "network"
               ]
             },
             {
@@ -349,7 +349,7 @@
                 }
               },
               "tags": [
-                ":copy"
+                "copy"
               ]
             }
           ],
@@ -363,7 +363,7 @@
                 }
               },
               "tags": [
-                ":network"
+                "network"
               ]
             },
             {
@@ -375,7 +375,7 @@
                 }
               },
               "tags": [
-                ":copy"
+                "copy"
               ]
             }
           ]

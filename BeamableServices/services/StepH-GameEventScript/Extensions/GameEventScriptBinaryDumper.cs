@@ -488,13 +488,13 @@ public static class GameEventScriptBinaryDumper
         if (entry.RequiredTags.Count > 0)
         {
             builder.Append(" matching ")
-                .Append(string.Join(", ", entry.RequiredTags.Select(tag => ":" + Escape(context.ResolveText(tag)))));
+                .Append(string.Join(", ", entry.RequiredTags.Select(tag => "#" + Escape(context.ResolveText(tag)))));
         }
 
         if (entry.ExcludedTags.Count > 0)
         {
             builder.Append(" without ")
-                .Append(string.Join(", ", entry.ExcludedTags.Select(tag => ":" + Escape(context.ResolveText(tag)))));
+                .Append(string.Join(", ", entry.ExcludedTags.Select(tag => "#" + Escape(context.ResolveText(tag)))));
         }
 
         return builder.Append('"').ToString();

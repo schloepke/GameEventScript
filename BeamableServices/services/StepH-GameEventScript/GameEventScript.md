@@ -566,8 +566,7 @@ let b be 90 as :quantity(°)
 ```
 
 `:percentage` is not a quantity unit; it is a separate value kind. The names
-`meter`, `second`, `degree`, and `seconds` are not quantity type aliases, and
-the old `:meter`/`:degree` style is not a tag literal. Use
+`meter`, `second`, `degree`, and `seconds` are not quantity type aliases. Use
 `:quantity(m)`, `:quantity(s)`, or `:quantity(°)`/`:quantity(degree)` for casts
 and checks; use `#meter` or `#degree` only when an ordinary tag value is meant.
 

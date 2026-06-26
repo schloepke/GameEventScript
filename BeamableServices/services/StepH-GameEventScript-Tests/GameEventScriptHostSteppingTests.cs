@@ -207,7 +207,7 @@ public sealed class GameEventScriptHostSteppingTests
         host.Subscribe("Start", [], (_, context) =>
         {
             Assert.IsTrue(context.Emit("Local"));
-            Assert.IsTrue(context.Publish(Create("Remote").WithTags(":radio")));
+            Assert.IsTrue(context.Publish(Create("Remote").WithTags("#radio")));
         });
         host.Subscribe("Local", [], (_, _) => calls.Add("local"));
         host.Subscribe("Remote", [], (_, _) => calls.Add("remote"));
@@ -229,8 +229,8 @@ public sealed class GameEventScriptHostSteppingTests
         host.Subscribe(signal, (_, _) => calls.Add("radio"), matchingTags: ["radio"]);
         host.Subscribe(signal, (_, _) => calls.Add("clear"), matchingTags: null, withoutTags: ["blocked"]);
 
-        Assert.IsTrue(host.PublishToCompletion(Create("Signal").WithTags(":radio")));
-        Assert.IsFalse(host.PublishToCompletion(Create("Signal").WithTags(":blocked")));
+        Assert.IsTrue(host.PublishToCompletion(Create("Signal").WithTags("#radio")));
+        Assert.IsFalse(host.PublishToCompletion(Create("Signal").WithTags("#blocked")));
 
         CollectionAssert.AreEqual(new[] { "radio", "clear" }, calls);
     }

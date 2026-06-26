@@ -213,13 +213,12 @@ T_isSample:			.text "isSample"
 T_Done:				.text "Done"
 T_ok:				.text "ok"
 T_value:			.text "value"
-T___type:			.text "__type"
 
 
 .segment lists
 
 Args_0:				.registers [r2, r3, r1, r4]
-Keys_1:				.texts [T_value, T_label, T_doubled, T___type] // "value", "label", "doubled", "__type"
+Keys_1:				.texts [T_value, T_label, T_doubled] // "value", "label", "doubled"
 
 
 .segment bind
@@ -253,9 +252,8 @@ record_sample:		 // record sample(_, label)
 					StageRegister r0
 					StageRegister r1
 					StageRegister r2
-					StageTag T_sample // "sample"
-					CreateMap r3, Keys_1 // "value", "label", "doubled", "__type"
-					CastCustom r4, r3, T_sample // "sample"
+					CreateMap r3, Keys_1 // "value", "label", "doubled"
+					CreateRecordValue r4, r3, T_sample // "sample"
 					ReturnValue r4
 
 

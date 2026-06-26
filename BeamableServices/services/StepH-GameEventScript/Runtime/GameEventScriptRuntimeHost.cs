@@ -8,7 +8,7 @@ using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 
 namespace StepH.GameEventScript.Runtime;
 
-public sealed class GameEventScriptHost
+internal sealed class GameEventScriptRuntimeHost
 {
     private const int NormalPriority = 0;
 
@@ -30,7 +30,7 @@ public sealed class GameEventScriptHost
     private bool _automaticDispatchScheduled;
     private long _nextRegistrationOrder;
 
-    internal GameEventScriptHost(GameEventScriptRandomGenerator random, IGameEventScriptRuntimeObserver? runtimeObserver,
+    internal GameEventScriptRuntimeHost(GameEventScriptRandomGenerator random, IGameEventScriptRuntimeObserver? runtimeObserver,
         IGameEventScriptExtensionRegistry? extensionRegistry,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? runtimeLimits,
@@ -49,11 +49,9 @@ public sealed class GameEventScriptHost
         _liveState = CreateLiveState(dispatchMode);
     }
 
-    public static GameEventScriptHostBuilder CreateBuilder() => new();
-
     #region Public interface
 
-    public GameEventScriptHost Load(IGameEventScriptModule module, int priority = NormalPriority)
+    public GameEventScriptRuntimeHost Load(IGameEventScriptModule module, int priority = NormalPriority)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         module.Bind(_extensionRegistry, _externalTypeRegistry);
@@ -69,11 +67,11 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
+    public GameEventScriptRuntimeHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
         => Subscribe(Create(!string.IsNullOrWhiteSpace(message) ? message : throw new ArgumentException("Message must not be null or whitespace", nameof(message)),
             parameterNames ?? throw new ArgumentNullException(nameof(parameterNames))), handler, priority);
 
-    public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
+    public GameEventScriptRuntimeHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
     {
         Register(
             signature ?? throw new ArgumentNullException(nameof(signature)),
@@ -82,7 +80,7 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(GameEventScriptMessageHandlerDescriptor handler, int priority = NormalPriority)
+    public GameEventScriptRuntimeHost Subscribe(GameEventScriptMessageHandlerDescriptor handler, int priority = NormalPriority)
     {
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
         lock (_dispatchGate)
@@ -93,7 +91,7 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(
+    public GameEventScriptRuntimeHost Subscribe(
         GameEventScriptMessageSignature signature,
         Action<GameEventScriptMessage, GameEventScriptSession> handler,
         IReadOnlyCollection<string>? matchingTags,
@@ -109,7 +107,7 @@ public sealed class GameEventScriptHost
         return this;
     }
 
-    public GameEventScriptHost Subscribe(IGameEventScriptModule module, int priority = NormalPriority)
+    public GameEventScriptRuntimeHost Subscribe(IGameEventScriptModule module, int priority = NormalPriority)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         module.Bind(_extensionRegistry, _externalTypeRegistry);
@@ -760,7 +758,7 @@ public sealed class GameEventScriptHost
 
 internal sealed class GameEventScriptHostRunState
 {
-    private readonly Queue<GameEventScriptHost.QueuedInvocation> _queue = new();
+    private readonly Queue<GameEventScriptRuntimeHost.QueuedInvocation> _queue = new();
     private readonly object _queueGate = new();
     private readonly Func<GameEventScriptHostRunState, GameEventScriptMessage, bool> _queuePublisher;
     private readonly Func<GameEventScriptMessage, bool>? _publishHook;
@@ -771,7 +769,7 @@ internal sealed class GameEventScriptHostRunState
     private long _totalExecutedOpcodes;
 
     public GameEventScriptHostRunState(
-        GameEventScriptHost host,
+        GameEventScriptRuntimeHost host,
         GameEventScriptDispatchMode dispatchMode,
         IGameEventScriptDispatcher? dispatcher,
         GameEventScriptRandomGenerator random,
@@ -795,7 +793,7 @@ internal sealed class GameEventScriptHostRunState
 
     public GameEventScriptMessage? ActiveMessage { get; private set; }
 
-    public GameEventScriptHost.MessageSubscription? ActiveSubscription { get; private set; }
+    public GameEventScriptRuntimeHost.MessageSubscription? ActiveSubscription { get; private set; }
 
     public IGameEventScriptMessageInvocation? ActiveInvocation { get; private set; }
 
@@ -855,7 +853,7 @@ internal sealed class GameEventScriptHostRunState
             StepPublishedMessages);
     }
 
-    public bool Enqueue(GameEventScriptHost.QueuedInvocation queuedInvocation)
+    public bool Enqueue(GameEventScriptRuntimeHost.QueuedInvocation queuedInvocation)
     {
         var message = queuedInvocation.Message;
         if (string.IsNullOrWhiteSpace(message.Name))
@@ -879,7 +877,7 @@ internal sealed class GameEventScriptHostRunState
         return true;
     }
 
-    public bool TryDequeue(out GameEventScriptHost.QueuedInvocation? queuedInvocation)
+    public bool TryDequeue(out GameEventScriptRuntimeHost.QueuedInvocation? queuedInvocation)
     {
         lock (_queueGate)
         {
@@ -906,7 +904,7 @@ internal sealed class GameEventScriptHostRunState
         return true;
     }
 
-    public void StartDispatch(GameEventScriptHost.QueuedInvocation queuedInvocation)
+    public void StartDispatch(GameEventScriptRuntimeHost.QueuedInvocation queuedInvocation)
     {
         ActiveMessage = queuedInvocation.Message;
         ActiveSubscription = queuedInvocation.Subscription;

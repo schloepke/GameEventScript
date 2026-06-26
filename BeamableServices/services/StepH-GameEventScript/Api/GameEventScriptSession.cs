@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.Api;
 
 public sealed class GameEventScriptSession
 {
-    private readonly GameEventScriptHost? _host;
+    private readonly GameEventScriptRuntimeHost? _host;
     private readonly GameEventScriptDispatchMode _dispatchMode;
     private readonly IGameEventScriptDispatcher? _dispatcher;
     private readonly Func<GameEventScriptMessage, bool> _emit;
@@ -29,7 +29,7 @@ public sealed class GameEventScriptSession
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
-    internal GameEventScriptSession(GameEventScriptHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, IGameEventScriptDispatcher? dispatcher, GameEventScriptRandomGenerator random,
+    internal GameEventScriptSession(GameEventScriptRuntimeHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, IGameEventScriptDispatcher? dispatcher, GameEventScriptRandomGenerator random,
         Func<GameEventScriptMessage, bool> emit, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
         Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver) : this(random, emit, runtimeLimits, extensionRegistry, publish, runtimeObserver)
     {

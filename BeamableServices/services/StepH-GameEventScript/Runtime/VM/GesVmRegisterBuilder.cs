@@ -3,11 +3,11 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
-internal sealed class GesVmValueListBuilder
+internal sealed class GesVmListBuilder
 {
     private GesValue[] _items;
 
-    internal GesVmValueListBuilder(int capacity = 0)
+    internal GesVmListBuilder(int capacity = 0)
     {
         _items = new GesValue[capacity <= 0 ? 4 : capacity];
     }
@@ -36,13 +36,13 @@ internal sealed class GesVmValueListBuilder
     }
 }
 
-internal sealed class GesVmValueMapBuilder
+internal sealed class GesVmMapBuilder
 {
     private string[] _keys;
     private GesValue[] _values;
     private int _count;
 
-    internal GesVmValueMapBuilder(int capacity = 0)
+    internal GesVmMapBuilder(int capacity = 0)
     {
         var size = capacity <= 0 ? 4 : capacity;
         _keys = new string[size];
@@ -215,7 +215,7 @@ internal sealed class GesVmTableBuilder
     }
 }
 
-internal sealed class GesVmValueGroupBuilder
+internal sealed class GesVmGroupBuilder
 {
     private readonly GesVmState _state;
     private string[] _keys;
@@ -223,7 +223,7 @@ internal sealed class GesVmValueGroupBuilder
     private int[] _counts;
     private int _count;
 
-    internal GesVmValueGroupBuilder(GesVmState state, int capacity = 0)
+    internal GesVmGroupBuilder(GesVmState state, int capacity = 0)
     {
         _state = state;
         var size = capacity <= 0 ? 4 : capacity;
@@ -279,7 +279,7 @@ internal sealed class GesVmValueGroupBuilder
 
     internal void WriteTo(ref GesValue destination)
     {
-        var map = new GesVmValueMapBuilder(_count);
+        var map = new GesVmMapBuilder(_count);
         for (var groupIndex = 0; groupIndex < _count; groupIndex++)
         {
             var itemCount = _counts[groupIndex];
@@ -294,13 +294,13 @@ internal sealed class GesVmValueGroupBuilder
     }
 }
 
-internal sealed class GesVmValueDistinctBuilder
+internal sealed class GesVmDistinctBuilder
 {
     private GesValue[] _keys;
     private GesValue[] _values;
     private int _count;
 
-    internal GesVmValueDistinctBuilder(int capacity = 0)
+    internal GesVmDistinctBuilder(int capacity = 0)
     {
         var size = capacity <= 0 ? 4 : capacity;
         _keys = new GesValue[size];
@@ -341,13 +341,13 @@ internal sealed class GesVmValueDistinctBuilder
     }
 }
 
-internal sealed class GesVmValueOrderBuilder
+internal sealed class GesVmOrderBuilder
 {
     private GesValue[] _keys;
     private GesValue[] _values;
     private int _count;
 
-    internal GesVmValueOrderBuilder(int capacity = 0)
+    internal GesVmOrderBuilder(int capacity = 0)
     {
         var size = capacity <= 0 ? 4 : capacity;
         _keys = new GesValue[size];

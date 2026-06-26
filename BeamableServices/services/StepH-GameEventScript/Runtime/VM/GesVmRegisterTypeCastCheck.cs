@@ -370,7 +370,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var visibleEntries = new GesVmValueMapBuilder(map.Length);
+                var visibleEntries = new GesVmMapBuilder(map.Length);
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
@@ -388,7 +388,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return;
                 }
 
-                var visibleEntries = new GesVmValueMapBuilder(map.Length);
+                var visibleEntries = new GesVmMapBuilder(map.Length);
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
@@ -400,7 +400,7 @@ internal static class GesVmRegisterTypeCastCheck
             case Custom when xValue.ObjectValue is GesExternalObject externalObject:
             {
                 var sourceEntries = externalObject.ToMap();
-                var entries = new GesVmValueMapBuilder(sourceEntries.Length);
+                var entries = new GesVmMapBuilder(sourceEntries.Length);
                 for (var i = 0; i < sourceEntries.StorageLength; i++)
                 {
                     var key = sourceEntries.KeyAt(i);
@@ -419,7 +419,7 @@ internal static class GesVmRegisterTypeCastCheck
                 y.SetFloat(triplet.Y, xValue.Unit);
                 var z = new GesValue();
                 z.SetFloat(triplet.Z, xValue.Unit);
-                var entries = new GesVmValueMapBuilder(3);
+                var entries = new GesVmMapBuilder(3);
                 entries.Set("x", x);
                 entries.Set("y", y);
                 entries.Set("z", z);
@@ -427,7 +427,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return;
             }
             default:
-                dst.SetMap(new GesVmValueMapBuilder(0).ToMap());
+                dst.SetMap(new GesVmMapBuilder(0).ToMap());
                 return;
         }
     }

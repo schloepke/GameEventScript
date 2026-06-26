@@ -386,7 +386,7 @@ internal static class GesVmRegisterMath
                     return;
                 }
 
-                var map = new GesVmValueMapBuilder(aMap.StorageLength);
+                var map = new GesVmMapBuilder(aMap.StorageLength);
                 if (bMap is not null)
                 {
                     var bi = 0;

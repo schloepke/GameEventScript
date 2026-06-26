@@ -221,11 +221,11 @@ internal class GesVmState
     internal void SetMessage(ushort index, GameEventScriptMessage message) => Register(index).SetMessage(message);
     internal void SetSeries(ushort index, GesSeries series) => Register(index).SetSeries(series);
     internal void SetIterator(ushort index, IGesIterator value) => Register(index).SetIterator(value);
-    internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder());
-    internal void CreateMapBuilder(ushort index) => Register(index).SetMapBuilder(new GesVmValueMapBuilder());
-    internal void CreateDistinctBuilder(ushort index) => Register(index).SetDistinctBuilder(new GesVmValueDistinctBuilder());
-    internal void CreateGroupBuilder(ushort index) => Register(index).SetGroupBuilder(new GesVmValueGroupBuilder(this));
-    internal void CreateOrderBuilder(ushort index) => Register(index).SetOrderBuilder(new GesVmValueOrderBuilder());
+    internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmListBuilder());
+    internal void CreateMapBuilder(ushort index) => Register(index).SetMapBuilder(new GesVmMapBuilder());
+    internal void CreateDistinctBuilder(ushort index) => Register(index).SetDistinctBuilder(new GesVmDistinctBuilder());
+    internal void CreateGroupBuilder(ushort index) => Register(index).SetGroupBuilder(new GesVmGroupBuilder(this));
+    internal void CreateOrderBuilder(ushort index) => Register(index).SetOrderBuilder(new GesVmOrderBuilder());
     
     internal bool PushRandom(GesVmXoshiroRandom randomGenerator)
     {

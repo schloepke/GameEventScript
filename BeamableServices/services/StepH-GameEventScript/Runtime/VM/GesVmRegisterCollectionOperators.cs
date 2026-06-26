@@ -971,7 +971,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     case Map when b.ObjectValue is GesValueMap bMap:
                     {
-                        var map = new GesVmValueMapBuilder(aMap.StorageLength + bMap.StorageLength);
+                        var map = new GesVmMapBuilder(aMap.StorageLength + bMap.StorageLength);
                         for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < bMap.StorageLength; i++) map.Set(bMap.KeyAt(i), bMap.ValueAt(i));
                         vmState.SetMap(dst, map.ToMap());
@@ -979,7 +979,7 @@ internal static class GesVmRegisterCollectionOperators
                     }
                     case List when b.ObjectValue is GesValue[] keys:
                     {
-                        var map = new GesVmValueMapBuilder(aMap.StorageLength + keys.Length);
+                        var map = new GesVmMapBuilder(aMap.StorageLength + keys.Length);
                         for (var i = 0; i < aMap.StorageLength; i++) map.Set(aMap.KeyAt(i), aMap.ValueAt(i));
                         for (var i = 0; i < keys.Length; i++)
                         {
@@ -1069,7 +1069,7 @@ internal static class GesVmRegisterCollectionOperators
         {
             case Map when a.ObjectValue is GesValueMap aMap:
             {
-                var map = new GesVmValueMapBuilder(aMap.StorageLength);
+                var map = new GesVmMapBuilder(aMap.StorageLength);
                 switch (b.Kind)
                 {
                     case Map when b.ObjectValue is GesValueMap bMap:
@@ -1308,7 +1308,7 @@ internal static class GesVmRegisterCollectionOperators
         var list = new GesValue[length];
         for (var i = 0; i < length; i++)
         {
-            var pair = new GesVmValueMapBuilder(2);
+            var pair = new GesVmMapBuilder(2);
             pair.Set("left", aList[i]);
             pair.Set("right", bList[i]);
             list[i].SetMap(pair.ToMap());

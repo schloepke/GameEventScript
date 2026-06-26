@@ -18,7 +18,6 @@ public sealed class GameEventScriptHost
         IGameEventScriptExtensionRegistry? extensionRegistry,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? runtimeLimits,
-        GameEventScriptDispatchMode dispatchMode = GameEventScriptDispatchMode.Manual,
         IGameEventScriptDispatcher? dispatcher = null,
         Func<GameEventScriptMessage, bool>? publishHook = null)
     {
@@ -28,7 +27,6 @@ public sealed class GameEventScriptHost
             extensionRegistry,
             externalTypeRegistry,
             runtimeLimits,
-            dispatchMode,
             dispatcher,
             publishHook);
     }

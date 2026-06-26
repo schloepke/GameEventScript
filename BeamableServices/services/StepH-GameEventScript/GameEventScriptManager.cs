@@ -2,7 +2,6 @@
 
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.VM;
-using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript;
 

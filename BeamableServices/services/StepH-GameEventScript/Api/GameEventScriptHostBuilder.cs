@@ -1,6 +1,4 @@
 using System;
-using StepH.GameEventScript.Runtime;
-
 namespace StepH.GameEventScript.Api;
 
 /// <summary>
@@ -15,7 +13,6 @@ public sealed class GameEventScriptHostBuilder
     private IGameEventScriptExtensionRegistry _extensionRegistry = GameEventScriptEmptyExtensionRegistry.Instance;
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
-    private GameEventScriptDispatchMode _dispatchMode = GameEventScriptDispatchMode.Manual;
     private IGameEventScriptDispatcher? _dispatcher;
     private Func<GameEventScriptMessage, bool>? _publishHook;
 
@@ -126,7 +123,6 @@ public sealed class GameEventScriptHostBuilder
     public GameEventScriptHostBuilder WithAutomaticDispatch(IGameEventScriptDispatcher dispatcher)
     {
         _dispatcher = dispatcher ?? throw new ArgumentNullException(nameof(dispatcher));
-        _dispatchMode = GameEventScriptDispatchMode.Automatic;
         return this;
     }
 
@@ -144,7 +140,6 @@ public sealed class GameEventScriptHostBuilder
         _extensionRegistry,
         _externalTypeRegistry,
         _runtimeLimits,
-        _dispatchMode,
         dispatcher: _dispatcher,
         _publishHook);
 }

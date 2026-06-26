@@ -16,6 +16,21 @@ public interface IGameEventScriptExtensionFunction
     GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments);
 }
 
+internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry
+{
+    public static readonly GameEventScriptEmptyExtensionRegistry Instance = new();
+
+    private GameEventScriptEmptyExtensionRegistry()
+    {
+    }
+
+    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
+    {
+        function = default!;
+        return false;
+    }
+}
+
 public sealed class GameEventScriptExtensionReference
 {
     public GameEventScriptExtensionReference(string? extensionName, string? functionName, IEnumerable<string?>? argumentLabels)

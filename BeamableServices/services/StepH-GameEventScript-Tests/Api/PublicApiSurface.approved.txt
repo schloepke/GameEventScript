@@ -421,9 +421,9 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Int32 priority)
   method StepH.GameEventScript.Api.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
   method StepH.GameEventScript.Api.GameEventScriptHost Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method StepH.GameEventScript.Api.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
   method StepH.GameEventScript.Api.GameEventScriptSession StartSession()
-  method StepH.GameEventScript.Runtime.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
   method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean PublishToCompletion(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateBuilder()
@@ -501,6 +501,31 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int32 seed)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int64 seed)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSequence(System.Double[] values)
+sealed class StepH.GameEventScript.Api.GameEventScriptRun
+  method StepH.GameEventScript.Api.GameEventScriptRunStepResult Step(System.Int32 maxOpcodes)
+  method System.Void Cancel()
+  method System.Void Dispose()
+  property System.Boolean IsCompleted { get }
+  property System.Int32 PendingMessageCount { get }
+  property System.Int64 ExecutedOpcodes { get }
+enum StepH.GameEventScript.Api.GameEventScriptRunState
+  enum-field Running = 0
+  enum-field Paused = 1
+  enum-field Completed = 2
+  enum-field RuntimeLimitReached = 3
+sealed class StepH.GameEventScript.Api.GameEventScriptRunStepResult
+  ctor GameEventScriptRunStepResult(StepH.GameEventScript.Api.GameEventScriptRunState State, System.Int32 ExecutedOpcodes, System.Int32 PublishedMessages)
+  method StepH.GameEventScript.Api.GameEventScriptRunStepResult <Clone>$()
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptRunStepResult other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptRunState& State, System.Int32& ExecutedOpcodes, System.Int32& PublishedMessages)
+  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptRunStepResult left, StepH.GameEventScript.Api.GameEventScriptRunStepResult right)
+  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptRunStepResult left, StepH.GameEventScript.Api.GameEventScriptRunStepResult right)
+  property StepH.GameEventScript.Api.GameEventScriptRunState State { get set }
+  property System.Int32 ExecutedOpcodes { get set }
+  property System.Int32 PublishedMessages { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
   ctor GameEventScriptRuntimeLimits()
   property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits Default { get }
@@ -514,8 +539,8 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
   property System.Int32 MaxQueuedMessagesPerRun { get set }
   property System.Int32 MaxRangeItems { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptSession
-  method StepH.GameEventScript.Runtime.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
+  method StepH.GameEventScript.Api.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method StepH.GameEventScript.Api.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
   method System.Boolean Dispatch(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean DispatchToCompletion(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptMessage message)
@@ -708,38 +733,3 @@ static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
   method static StepH.GameEventScript.Api.IGameEventScriptModule CompileModule(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.IGameEventScriptModule CreateModule(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
-sealed class StepH.GameEventScript.Runtime.GameEventScriptRun
-  method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult Step(System.Int32 maxOpcodes)
-  method System.Void Cancel()
-  method System.Void Dispose()
-  property System.Boolean IsCompleted { get }
-  property System.Int32 PendingMessageCount { get }
-  property System.Int64 ExecutedOpcodes { get }
-enum StepH.GameEventScript.Runtime.GameEventScriptRunState
-  enum-field Running = 0
-  enum-field Paused = 1
-  enum-field Completed = 2
-  enum-field RuntimeLimitReached = 3
-sealed class StepH.GameEventScript.Runtime.GameEventScriptRunStepResult
-  ctor GameEventScriptRunStepResult(StepH.GameEventScript.Runtime.GameEventScriptRunState State, System.Int32 ExecutedOpcodes, System.Int32 PublishedMessages)
-  method StepH.GameEventScript.Runtime.GameEventScriptRunStepResult <Clone>$()
-  method System.Boolean Equals(StepH.GameEventScript.Runtime.GameEventScriptRunStepResult other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(StepH.GameEventScript.Runtime.GameEventScriptRunState& State, System.Int32& ExecutedOpcodes, System.Int32& PublishedMessages)
-  method static System.Boolean op_Equality(StepH.GameEventScript.Runtime.GameEventScriptRunStepResult left, StepH.GameEventScript.Runtime.GameEventScriptRunStepResult right)
-  method static System.Boolean op_Inequality(StepH.GameEventScript.Runtime.GameEventScriptRunStepResult left, StepH.GameEventScript.Runtime.GameEventScriptRunStepResult right)
-  property StepH.GameEventScript.Runtime.GameEventScriptRunState State { get set }
-  property System.Int32 ExecutedOpcodes { get set }
-  property System.Int32 PublishedMessages { get set }
-class StepH.GameEventScript.Runtime.VM.GameEventScriptVirtualMaschine
-  method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
-  method System.String DumpState(System.String scriptSource, System.Boolean includeInstructionAddresses)
-  method System.Void Bind(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry typeRegistry)
-  method static StepH.GameEventScript.Runtime.VM.GameEventScriptVirtualMaschine Create(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
-  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
-  property System.String DebugScriptSource { get set }
-  property System.String ModuleName { get }
-class StepH.GameEventScript.Runtime.VM.GameEventScriptVmException
-  ctor GameEventScriptVmException(System.String message)

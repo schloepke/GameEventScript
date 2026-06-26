@@ -17,7 +17,6 @@ internal sealed class GameEventScriptRuntimeHost
     private readonly IGameEventScriptExtensionRegistry _extensionRegistry;
     private readonly IGameEventScriptExternalTypeRegistry _externalTypeRegistry;
     private readonly GameEventScriptRuntimeLimits _runtimeLimits;
-    private readonly GameEventScriptDispatchMode _dispatchMode;
     private readonly IGameEventScriptDispatcher? _dispatcher;
     private readonly Func<GameEventScriptMessage, bool>? _publishHook;
     private readonly Dictionary<string, MessageSubscription[]> _dispatchIndex = new(StringComparer.Ordinal);
@@ -34,7 +33,6 @@ internal sealed class GameEventScriptRuntimeHost
         IGameEventScriptExtensionRegistry? extensionRegistry,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? runtimeLimits,
-        GameEventScriptDispatchMode dispatchMode = GameEventScriptDispatchMode.Manual,
         IGameEventScriptDispatcher? dispatcher = null,
         Func<GameEventScriptMessage, bool>? publishHook = null)
     {
@@ -43,10 +41,9 @@ internal sealed class GameEventScriptRuntimeHost
         _extensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
         _externalTypeRegistry = externalTypeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance;
         _runtimeLimits = runtimeLimits ?? GameEventScriptRuntimeLimits.Default;
-        _dispatchMode = dispatchMode;
         _dispatcher = dispatcher;
         _publishHook = publishHook;
-        _liveState = CreateLiveState(dispatchMode);
+        _liveState = CreateLiveState();
     }
 
     #region Public interface
@@ -125,7 +122,7 @@ internal sealed class GameEventScriptRuntimeHost
 
     public GameEventScriptSession StartSession()
     {
-        var state = CreateLiveState(_dispatchMode);
+        var state = CreateLiveState();
         EnqueueInitializationInvocations(state);
         state.Session.ScheduleAutomaticDispatchIfNeeded();
         return state.Session;
@@ -148,7 +145,7 @@ internal sealed class GameEventScriptRuntimeHost
                 return false;
             }
 
-            if (_dispatchMode == GameEventScriptDispatchMode.Automatic && !_automaticDispatchScheduled)
+            if (_dispatcher is not null && !_automaticDispatchScheduled)
             {
                 _automaticDispatchScheduled = true;
                 shouldScheduleAutomaticDispatch = true;
@@ -182,7 +179,7 @@ internal sealed class GameEventScriptRuntimeHost
             return false;
         }
 
-        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatcher, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         EnqueueInitializationInvocations(state);
         if (!TryEnqueueInvocations(state, message))
         {
@@ -195,7 +192,7 @@ internal sealed class GameEventScriptRuntimeHost
 
     public GameEventScriptRunStepResult Update(int maxOpcodes)
     {
-        if (_dispatchMode == GameEventScriptDispatchMode.Automatic)
+        if (_dispatcher is not null)
         {
             throw new InvalidOperationException("GameEventScript automatic dispatch hosts cannot be stepped manually.");
         }
@@ -216,7 +213,7 @@ internal sealed class GameEventScriptRuntimeHost
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
-        var state = new GameEventScriptHostRunState(this, _dispatchMode, _dispatcher, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatcher, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
         EnqueueInitializationInvocations(state);
         var accepted = TryEnqueueInvocations(state, message);
         return new GameEventScriptRun(DrainSlice, state, accepted);
@@ -226,8 +223,8 @@ internal sealed class GameEventScriptRuntimeHost
 
     #region Internals
 
-    private GameEventScriptHostRunState CreateLiveState(GameEventScriptDispatchMode dispatchMode)
-        => new(this, dispatchMode, _dispatcher, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+    private GameEventScriptHostRunState CreateLiveState()
+        => new(this, _dispatcher, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, enforceProcessedEventsLimit: false, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
 
     internal bool TryEnqueueSessionInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
         => TryEnqueueInvocations(state, message);
@@ -243,13 +240,13 @@ internal sealed class GameEventScriptRuntimeHost
 
     private void ResetManualStateIfCompletedAndIdle()
     {
-        if (_dispatchMode != GameEventScriptDispatchMode.Manual ||
+        if (_dispatcher is not null ||
             !_liveState.IsCompletedAndIdle)
         {
             return;
         }
 
-        _liveState = CreateLiveState(GameEventScriptDispatchMode.Manual);
+        _liveState = CreateLiveState();
         _liveStateInitializationQueued = false;
     }
 
@@ -275,7 +272,7 @@ internal sealed class GameEventScriptRuntimeHost
             var shouldRestart = false;
             lock (_pumpGate)
             {
-                shouldRestart = _dispatchMode == GameEventScriptDispatchMode.Automatic &&
+                shouldRestart = _dispatcher is not null &&
                                 !_liveState.IsCompletedAndIdle;
                 if (shouldRestart)
                 {
@@ -284,9 +281,9 @@ internal sealed class GameEventScriptRuntimeHost
                 else
                 {
                     _automaticDispatchScheduled = false;
-                    if (_dispatchMode == GameEventScriptDispatchMode.Automatic)
+                    if (_dispatcher is not null)
                     {
-                        _liveState = CreateLiveState(GameEventScriptDispatchMode.Automatic);
+                        _liveState = CreateLiveState();
                         _liveStateInitializationQueued = false;
                     }
                 }
@@ -770,7 +767,6 @@ internal sealed class GameEventScriptHostRunState
 
     public GameEventScriptHostRunState(
         GameEventScriptRuntimeHost host,
-        GameEventScriptDispatchMode dispatchMode,
         IGameEventScriptDispatcher? dispatcher,
         GameEventScriptRandomGenerator random,
         IGameEventScriptRuntimeObserver? runtimeObserver,
@@ -786,7 +782,7 @@ internal sealed class GameEventScriptHostRunState
         _queuePublisher = queuePublisher ?? ((_, _) => false);
         _publishHook = publishHook;
         RuntimeObserver = runtimeObserver;
-        Session = new GameEventScriptSession(host, this, dispatchMode, dispatcher, random, EmitInternal, runtimeLimits, extensionRegistry, PublishInternal, runtimeObserver);
+        Session = new GameEventScriptSession(host, this, dispatcher, random, EmitInternal, runtimeLimits, extensionRegistry, PublishInternal, runtimeObserver);
     }
 
     public GameEventScriptSession Session { get; }

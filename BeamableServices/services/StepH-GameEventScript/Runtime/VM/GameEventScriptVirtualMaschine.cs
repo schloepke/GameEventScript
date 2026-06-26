@@ -13,9 +13,9 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
-public class GameEventScriptVmException(string message) : GameEventScriptFatalRuntimeException(message);
+internal class GameEventScriptVmException(string message) : GameEventScriptFatalRuntimeException(message);
 
-public class GameEventScriptVirtualMaschine : IGameEventScriptModule
+internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEventScriptDebugDumpModule
 {
     private readonly GesVmState _vmState;
 

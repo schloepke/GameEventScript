@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
 
@@ -22,4 +21,11 @@ public interface IGameEventScriptModule
     /// Binds external runtime dependencies required by this module.
     /// </summary>
     void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry);
+}
+
+internal interface IGameEventScriptDebugDumpModule
+{
+    string? DebugScriptSource { get; set; }
+
+    string DumpState(string? scriptSource = null, bool includeInstructionAddresses = true);
 }

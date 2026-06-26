@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
 using static StepH.GameEventScript.Api.GameEventScriptSymbolKind;
 using static StepH.GameEventScript.Compiler.GameEventScriptCallableKind;

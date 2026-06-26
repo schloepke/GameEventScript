@@ -9,7 +9,6 @@ namespace StepH.GameEventScript.Api;
 public sealed class GameEventScriptSession
 {
     private readonly GameEventScriptRuntimeHost? _host;
-    private readonly GameEventScriptDispatchMode _dispatchMode;
     private readonly IGameEventScriptDispatcher? _dispatcher;
     private readonly Func<GameEventScriptMessage, bool> _emit;
     private readonly Func<GameEventScriptMessage, bool> _publish;
@@ -29,13 +28,12 @@ public sealed class GameEventScriptSession
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
-    internal GameEventScriptSession(GameEventScriptRuntimeHost host, GameEventScriptHostRunState state, GameEventScriptDispatchMode dispatchMode, IGameEventScriptDispatcher? dispatcher, GameEventScriptRandomGenerator random,
+    internal GameEventScriptSession(GameEventScriptRuntimeHost host, GameEventScriptHostRunState state, IGameEventScriptDispatcher? dispatcher, GameEventScriptRandomGenerator random,
         Func<GameEventScriptMessage, bool> emit, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
         Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver) : this(random, emit, runtimeLimits, extensionRegistry, publish, runtimeObserver)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         State = state ?? throw new ArgumentNullException(nameof(state));
-        _dispatchMode = dispatchMode;
         _dispatcher = dispatcher;
     }
 
@@ -81,7 +79,7 @@ public sealed class GameEventScriptSession
         lock (_pumpGate)
         {
             if (!_host!.TryEnqueueSessionInvocations(State!, message)) return false;
-            if (_dispatchMode == GameEventScriptDispatchMode.Automatic && !_automaticDispatchScheduled)
+            if (_dispatcher is not null && !_automaticDispatchScheduled)
             {
                 _automaticDispatchScheduled = true;
                 shouldScheduleAutomaticDispatch = true;
@@ -125,7 +123,7 @@ public sealed class GameEventScriptSession
     public GameEventScriptRunStepResult Update(int maxOpcodes)
     {
         EnsureHostBacked();
-        if (_dispatchMode == GameEventScriptDispatchMode.Automatic) throw new InvalidOperationException("GameEventScript automatic dispatch sessions cannot be stepped manually.");
+        if (_dispatcher is not null) throw new InvalidOperationException("GameEventScript automatic dispatch sessions cannot be stepped manually.");
         return maxOpcodes <= 0 ? throw new ArgumentOutOfRangeException(nameof(maxOpcodes), "Update opcode budget must be greater than zero.") : _host!.DrainSessionSlice(State!, maxOpcodes);
     }
 
@@ -139,7 +137,7 @@ public sealed class GameEventScriptSession
     internal void ScheduleAutomaticDispatchIfNeeded()
     {
         EnsureHostBacked();
-        if (_dispatchMode != GameEventScriptDispatchMode.Automatic || State!.IsCompletedAndIdle) return;
+        if (_dispatcher is null || State!.IsCompletedAndIdle) return;
         var shouldSchedule = false;
         lock (_pumpGate)
         {
@@ -177,7 +175,7 @@ public sealed class GameEventScriptSession
             var shouldRestart = false;
             lock (_pumpGate)
             {
-                shouldRestart = _dispatchMode == GameEventScriptDispatchMode.Automatic && !State!.IsCompletedAndIdle;
+                shouldRestart = _dispatcher is not null && !State!.IsCompletedAndIdle;
                 _automaticDispatchScheduled = shouldRestart;
             }
 

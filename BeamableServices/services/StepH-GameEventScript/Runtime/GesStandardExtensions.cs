@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.VirtualMachine;
+using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
 

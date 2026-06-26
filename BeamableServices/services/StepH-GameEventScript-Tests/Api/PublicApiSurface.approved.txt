@@ -28,6 +28,11 @@ struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptB
   property System.UInt16 EntryAddress { get }
   property System.UInt16 Id { get }
   property System.UInt16 Name { get }
+static class StepH.GameEventScript.Api.GameEventScriptBinaryDumper
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses, System.String scriptSource)
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.String scriptSource)
 struct StepH.GameEventScript.Api.GameEventScriptBinaryHeader
   field static System.UInt32 HeaderSize
   field static System.UInt32 Magic
@@ -680,11 +685,6 @@ sealed class StepH.GameEventScript.CSharpBridge.GesParamAttribute
 sealed class StepH.GameEventScript.CSharpBridge.GesTypeAttribute
   ctor GesTypeAttribute(System.String typeName)
   property System.String TypeName { get }
-static class StepH.GameEventScript.Extensions.GameEventScriptBinaryDumper
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary)
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses)
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.Boolean includeInstructionAddresses, System.String scriptSource)
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.String scriptSource)
 static class StepH.GameEventScript.GameEventScriptManager
   method static StepH.GameEventScript.Api.GameEventScriptBinary Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
   method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()
@@ -729,13 +729,13 @@ sealed class StepH.GameEventScript.Runtime.GameEventScriptRunStepResult
   property StepH.GameEventScript.Runtime.GameEventScriptRunState State { get set }
   property System.Int32 ExecutedOpcodes { get set }
   property System.Int32 PublishedMessages { get set }
-class StepH.GameEventScript.VirtualMachine.GameEventScriptVirtualMaschine
+class StepH.GameEventScript.Runtime.VM.GameEventScriptVirtualMaschine
   method System.Boolean ExecuteMessage(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptSession session)
   method System.String DumpState(System.String scriptSource, System.Boolean includeInstructionAddresses)
   method System.Void Bind(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry typeRegistry)
-  method static StepH.GameEventScript.VirtualMachine.GameEventScriptVirtualMaschine Create(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
+  method static StepH.GameEventScript.Runtime.VM.GameEventScriptVirtualMaschine Create(StepH.GameEventScript.Api.GameEventScriptBinary binary, System.UInt16 registerSize, System.UInt16 stackSize)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
   property System.String DebugScriptSource { get set }
   property System.String ModuleName { get }
-class StepH.GameEventScript.VirtualMachine.GameEventScriptVmException
+class StepH.GameEventScript.Runtime.VM.GameEventScriptVmException
   ctor GameEventScriptVmException(System.String message)

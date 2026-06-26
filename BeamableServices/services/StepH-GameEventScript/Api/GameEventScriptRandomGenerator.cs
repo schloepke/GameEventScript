@@ -1,5 +1,5 @@
 using System;
-using StepH.GameEventScript.VirtualMachine;
+using StepH.GameEventScript.Runtime.VM;
 
 namespace StepH.GameEventScript.Api;
 

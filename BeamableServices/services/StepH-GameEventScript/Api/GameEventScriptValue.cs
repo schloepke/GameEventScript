@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using StepH.GameEventScript.VirtualMachine;
+using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Api;

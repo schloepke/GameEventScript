@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using StepH.GameEventScript.VirtualMachine;
+using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;

@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.VirtualMachine;
+using StepH.GameEventScript.Runtime.VM;
 
 namespace StepH.GameEventScript.Compiler;
 

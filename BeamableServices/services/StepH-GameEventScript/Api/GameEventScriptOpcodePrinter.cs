@@ -1,8 +1,7 @@
 using System;
-using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter.OperandPart;
+using static StepH.GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 
-namespace StepH.GameEventScript.Extensions;
+namespace StepH.GameEventScript.Api;
 
 // ReSharper disable InconsistentNaming
 internal static class GameEventScriptOpcodePrinter

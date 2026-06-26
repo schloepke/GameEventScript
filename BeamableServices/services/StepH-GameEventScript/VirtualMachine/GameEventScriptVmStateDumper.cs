@@ -3,9 +3,8 @@
 using System.Globalization;
 using System.Text;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.VirtualMachine;
 
-namespace StepH.GameEventScript.Extensions;
+namespace StepH.GameEventScript.VirtualMachine;
 
 internal static class GameEventScriptVmStateDumper
 {

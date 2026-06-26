@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
-using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Extensions.GameEventScriptOpcodePrinter.OperandPart;
+using static StepH.GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 
-namespace StepH.GameEventScript.Extensions;
+namespace StepH.GameEventScript.Api;
 
 /// <summary>
 /// Creates an assembler-style disassembly of the portable GameEventScript binary model.

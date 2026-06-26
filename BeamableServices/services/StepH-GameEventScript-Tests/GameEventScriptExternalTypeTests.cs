@@ -1,6 +1,6 @@
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Extensions;
+using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
@@ -12,7 +12,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExternalTypeConstructorIsPortableAndBoundByHost()
     {
-        var registry = GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
+        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
         const string script =
             """
             on Start {
@@ -60,7 +60,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExternalTypeConstructorRequiresMatchingHostRegistry()
     {
-        var registry = GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
+        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
         var bytecode = GameEventScriptBuilder.Create()
             .WithExternalTypes(registry)
             .AddScript(
@@ -81,7 +81,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExternalTypeConstructorShapeMustBeRegistered()
     {
-        var registry = GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
+        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
 
         var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() =>
             GameEventScriptBuilder.Create()
@@ -101,7 +101,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExtensionCanReadExternalClrObjectWithoutDictionaryMaterialization()
     {
-        var registry = GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
+        var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
         const string script =
             """
             on Start {
@@ -122,7 +122,7 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypes(registry)
-            .WithRegistry(IGameEventScriptExtensionRegistry.CreateDefault(typeof(AimExtensionFunctions)))
+            .WithRegistry(GameEventScriptCSharpExtensions.CreateRegistry(typeof(AimExtensionFunctions)))
             .Build()
             .Load(GameEventScriptManager.CreateModule(bytecode))
             .Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
@@ -141,7 +141,7 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void AnnotatedExtensionsAllowValueParameters()
     {
-        var registry = IGameEventScriptExtensionRegistry.CreateDefault(typeof(ValueExtensionFunctions));
+        var registry = GameEventScriptCSharpExtensions.CreateRegistry(typeof(ValueExtensionFunctions));
 
         Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("value", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
     }
@@ -149,11 +149,11 @@ public sealed class GameEventScriptExternalTypeTests
     [TestMethod]
     public void ExtensionRegistryBuilderCreatesImmutableOverlayRegistry()
     {
-        var baseRegistry = IGameEventScriptExtensionRegistry
+        var baseRegistry = GameEventScriptCSharpExtensions
             .CreateBuilder()
             .Add(typeof(BaseOverlayExtensionFunctions))
             .Build();
-        var extendedRegistry = IGameEventScriptExtensionRegistry
+        var extendedRegistry = GameEventScriptCSharpExtensions
             .CreateBuilder(baseRegistry)
             .Add(typeof(LocalOverlayExtensionFunctions))
             .Build();

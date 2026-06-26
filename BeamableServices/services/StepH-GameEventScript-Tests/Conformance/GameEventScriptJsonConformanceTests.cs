@@ -7,7 +7,6 @@ using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.VirtualMachine;
-using StepH.GameEventScript.Extensions;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;

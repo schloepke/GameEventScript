@@ -3,36 +3,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
 
 public interface IGameEventScriptExtensionRegistry
 {
-    static IGameEventScriptExtensionRegistry CreateDefault(params Type[] extensionTypes)
-        => CreateBuilder().AddRange(extensionTypes).Build();
-
-    static IGameEventScriptExtensionRegistry CreateDefault(IEnumerable<Type> extensionTypes)
-        => CreateBuilder().AddRange(extensionTypes).Build();
-
-    static IGameEventScriptExtensionRegistryBuilder CreateBuilder()
-        => GameEventScriptExtensionRegistryBuilder.Create(baseRegistry: null);
-
-    static IGameEventScriptExtensionRegistryBuilder CreateBuilder(IGameEventScriptExtensionRegistry baseRegistry)
-        => GameEventScriptExtensionRegistryBuilder.Create(baseRegistry ?? throw new ArgumentNullException(nameof(baseRegistry)));
-
     bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function);
-}
-
-public interface IGameEventScriptExtensionRegistryBuilder
-{
-    IGameEventScriptExtensionRegistryBuilder Add(Type extensionType);
-
-    IGameEventScriptExtensionRegistryBuilder Add<T>();
-
-    IGameEventScriptExtensionRegistryBuilder AddRange(IEnumerable<Type> extensionTypes);
-
-    IGameEventScriptExtensionRegistry Build();
 }
 
 public interface IGameEventScriptExtensionFunction
@@ -59,37 +35,6 @@ public sealed class GameEventScriptExtensionReference
     public string SignatureId { get; }
 
     private static string NormalizeName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
-}
-
-[AttributeUsage(AttributeTargets.Class | AttributeTargets.Struct)]
-public sealed class GesExtensionAttribute(string name) : Attribute
-{
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
-}
-
-[AttributeUsage(AttributeTargets.Method)]
-public sealed class GesFunctionAttribute(string name) : Attribute
-{
-    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind) : this(name)
-    {
-        ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit: null);
-        ReturnKind = returnKind;
-    }
-
-    public GesFunctionAttribute(string name, GameEventScriptBytecodeTypeKind returnKind, GameEventScriptBytecodeInstructionUnit unit) : this(name)
-    {
-        ReturnTypeName = GameEventScriptExternalTypeNames.ToTypeName(returnKind, unit);
-        ReturnKind = returnKind;
-        ReturnUnit = unit.ToStoredUnit();
-    }
-
-    public string Name { get; } = GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
-
-    public string? ReturnTypeName { get; }
-
-    public GameEventScriptBytecodeTypeKind? ReturnKind { get; }
-
-    public GameEventScriptBytecodeInstructionUnit ReturnUnit { get; }
 }
 
 public sealed class GameEventScriptExtensionContext(GameEventScriptSession runtimeSession)

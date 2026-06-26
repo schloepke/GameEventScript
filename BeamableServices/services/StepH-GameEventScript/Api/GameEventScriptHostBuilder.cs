@@ -95,14 +95,6 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
-    /// Configures external CLR-backed GameEventScript types by scanning annotated CLR types.
-    /// </summary>
-    /// <param name="types">CLR types annotated with <see cref="GesTypeAttribute"/>.</param>
-    /// <returns>The current builder instance.</returns>
-    public GameEventScriptHostBuilder WithExternalTypes(params Type[] types)
-        => WithExternalTypes(GameEventScriptExternalTypeRegistry.Create(types));
-
-    /// <summary>
     /// Configures the <see cref="GameEventScriptHostBuilder"/> to use the specified
     /// <see cref="GameEventScriptRuntimeLimits"/> for controlling runtime constraints during script execution.
     /// </summary>

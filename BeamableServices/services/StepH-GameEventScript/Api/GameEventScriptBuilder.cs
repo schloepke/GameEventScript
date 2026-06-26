@@ -68,14 +68,6 @@ public sealed class GameEventScriptBuilder
     }
 
     /// <summary>
-    /// Configures external CLR-backed GameEventScript types by scanning annotated CLR types.
-    /// </summary>
-    /// <param name="types">CLR types annotated with <see cref="GesTypeAttribute"/>.</param>
-    /// <returns>The current builder instance.</returns>
-    public GameEventScriptBuilder WithExternalTypes(params Type[] types)
-        => WithExternalTypes(GameEventScriptExternalTypeRegistry.Create(types));
-
-    /// <summary>
     /// Adds a GameEventScript source string to the builder.
     /// </summary>
     /// <param name="text">The content of the script to be added.</param>

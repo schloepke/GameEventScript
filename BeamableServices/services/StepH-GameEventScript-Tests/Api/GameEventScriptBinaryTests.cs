@@ -1,6 +1,5 @@
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Extensions;
 
 namespace StepH_GameEventScript_Tests.Api;
 

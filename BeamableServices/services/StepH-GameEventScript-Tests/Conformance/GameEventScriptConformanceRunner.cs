@@ -7,6 +7,7 @@ using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -14,8 +15,8 @@ namespace StepH_GameEventScript_Tests.Conformance;
 internal static class GameEventScriptConformanceRunner
 {
     internal const string VirtualMachineEngine = "virtualmachine";
-    internal static readonly GameEventScriptExternalTypeRegistry ExternalTypeRegistry =
-        GameEventScriptExternalTypeRegistry.Create(typeof(AimValue));
+    internal static readonly IGameEventScriptExternalTypeRegistry ExternalTypeRegistry =
+        GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {

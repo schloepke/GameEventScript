@@ -2,9 +2,9 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal sealed class GesVmExternalObject(object instance, GameEventScriptExternalTypeDefinition definition)
+internal sealed class GesExternalObject(object instance, GameEventScriptExternalTypeDefinition definition)
 {
-    private GesVmValueMap? _map;
+    private GesValueMap? _map;
 
     internal object Instance { get; } = instance;
 
@@ -12,7 +12,7 @@ internal sealed class GesVmExternalObject(object instance, GameEventScriptExtern
 
     internal string CustomTypeName => Definition.Name;
 
-    internal GesVmValueMap ToMap()
+    internal GesValueMap ToMap()
     {
         if (_map is not null)
         {
@@ -20,7 +20,7 @@ internal sealed class GesVmExternalObject(object instance, GameEventScriptExtern
         }
 
         var keys = new string[Definition.Fields.Count];
-        var values = new GesVmValue[Definition.Fields.Count];
+        var values = new GesValue[Definition.Fields.Count];
         var count = 0;
         foreach (var field in Definition.Fields)
         {
@@ -34,7 +34,7 @@ internal sealed class GesVmExternalObject(object instance, GameEventScriptExtern
             count++;
         }
 
-        _map = new GesVmValueMap(keys, values, count);
+        _map = new GesValueMap(keys, values, count);
         return _map;
     }
 }

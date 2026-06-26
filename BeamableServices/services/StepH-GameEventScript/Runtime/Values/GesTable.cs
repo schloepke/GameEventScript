@@ -2,7 +2,7 @@ using System;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal enum GesVmTableColumnKind : byte
+internal enum GesTableColumnKind : byte
 {
     Boolean = 1,
     Integer = 2,
@@ -12,30 +12,30 @@ internal enum GesVmTableColumnKind : byte
 }
 
 [Flags]
-internal enum GesVmTableColumnFlags : byte
+internal enum GesTableColumnFlags : byte
 {
     None = 0,
     Unique = 1,
     Indexed = 2
 }
 
-internal readonly record struct GesVmTableColumnDefinition(ushort NameIndex, GesVmTableColumnKind Kind, GesVmTableColumnFlags Flags = GesVmTableColumnFlags.None)
+internal readonly record struct GesTableColumnDefinition(ushort NameIndex, GesTableColumnKind Kind, GesTableColumnFlags Flags = GesTableColumnFlags.None)
 {
-    public bool IsUnique => (Flags & GesVmTableColumnFlags.Unique) != 0;
-    public bool IsIndexed => (Flags & GesVmTableColumnFlags.Indexed) != 0;
+    public bool IsUnique => (Flags & GesTableColumnFlags.Unique) != 0;
+    public bool IsIndexed => (Flags & GesTableColumnFlags.Indexed) != 0;
     public bool RequiresIndex => IsUnique || IsIndexed;
 }
 
-internal readonly record struct GesVmTableColumnSegment(ushort NameIndex, GesVmTableColumnKind Kind, GesVmTableColumnFlags Flags, uint DataStart, uint RowCount)
+internal readonly record struct GesTableColumnSegment(ushort NameIndex, GesTableColumnKind Kind, GesTableColumnFlags Flags, uint DataStart, uint RowCount)
 {
-    public bool IsUnique => (Flags & GesVmTableColumnFlags.Unique) != 0;
-    public bool IsIndexed => (Flags & GesVmTableColumnFlags.Indexed) != 0;
+    public bool IsUnique => (Flags & GesTableColumnFlags.Unique) != 0;
+    public bool IsIndexed => (Flags & GesTableColumnFlags.Indexed) != 0;
     public bool RequiresIndex => IsUnique || IsIndexed;
 }
 
-internal sealed class GesVmTableData
+internal sealed class GesTableData
 {
-    public GesVmTableData(GesVmTableColumnSegment[] columns, ulong[] data, uint rowCount)
+    public GesTableData(GesTableColumnSegment[] columns, ulong[] data, uint rowCount)
     {
         Columns = columns ?? throw new ArgumentNullException(nameof(columns));
         Data = data ?? throw new ArgumentNullException(nameof(data));
@@ -43,7 +43,7 @@ internal sealed class GesVmTableData
         Validate();
     }
 
-    public GesVmTableColumnSegment[] Columns { get; }
+    public GesTableColumnSegment[] Columns { get; }
     public ulong[] Data { get; }
     public uint RowCount { get; }
     public int ColumnCount => Columns.Length;
@@ -62,27 +62,27 @@ internal sealed class GesVmTableData
             if (requiredEnd > Data.Length) throw new ArgumentException("A VM table column points outside of the data segment.", nameof(Columns));
         }
     }
-    public static uint GetColumnWidth(GesVmTableColumnKind kind) => kind switch
+    public static uint GetColumnWidth(GesTableColumnKind kind) => kind switch
     {
-        GesVmTableColumnKind.Boolean => 1,
-        GesVmTableColumnKind.Integer => 1,
-        GesVmTableColumnKind.Float => 1,
-        GesVmTableColumnKind.Text => 1,
-        GesVmTableColumnKind.Tag => 1,
+        GesTableColumnKind.Boolean => 1,
+        GesTableColumnKind.Integer => 1,
+        GesTableColumnKind.Float => 1,
+        GesTableColumnKind.Text => 1,
+        GesTableColumnKind.Tag => 1,
         _ => throw new ArgumentOutOfRangeException(nameof(kind), kind, null)
     };
 }
 
-internal sealed class GesVmTableShape
+internal sealed class GesTableShape
 {
-    public GesVmTableShape(params GesVmTableColumnDefinition[] columns)
+    public GesTableShape(params GesTableColumnDefinition[] columns)
     {
         if (columns.Length == 0)
         {
             throw new ArgumentException("A VM table shape needs at least one column.", nameof(columns));
         }
 
-        Columns = new GesVmTableColumnDefinition[columns.Length];
+        Columns = new GesTableColumnDefinition[columns.Length];
         Array.Copy(columns, Columns, columns.Length);
 
         for (var i = 0; i < Columns.Length; i++)
@@ -103,19 +103,19 @@ internal sealed class GesVmTableShape
         }
     }
 
-    public GesVmTableColumnDefinition[] Columns { get; }
+    public GesTableColumnDefinition[] Columns { get; }
     public int ColumnCount => Columns.Length;
 
-    public static GesVmTableShape List(GesVmTableColumnKind itemKind, ushort valueNameIndex = 0) =>
-        new(new GesVmTableColumnDefinition(valueNameIndex, itemKind));
+    public static GesTableShape List(GesTableColumnKind itemKind, ushort valueNameIndex = 0) =>
+        new(new GesTableColumnDefinition(valueNameIndex, itemKind));
 
-    public static GesVmTableShape KeyTable(GesVmTableColumnKind keyKind, ushort keyNameIndex = 0) =>
-        new(new GesVmTableColumnDefinition(keyNameIndex, keyKind, GesVmTableColumnFlags.Unique));
+    public static GesTableShape KeyTable(GesTableColumnKind keyKind, ushort keyNameIndex = 0) =>
+        new(new GesTableColumnDefinition(keyNameIndex, keyKind, GesTableColumnFlags.Unique));
 
-    public static GesVmTableShape Map(GesVmTableColumnKind keyKind, GesVmTableColumnKind valueKind, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
+    public static GesTableShape Map(GesTableColumnKind keyKind, GesTableColumnKind valueKind, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
         new(
-            new GesVmTableColumnDefinition(keyNameIndex, keyKind, GesVmTableColumnFlags.Unique),
-            new GesVmTableColumnDefinition(valueNameIndex, valueKind));
+            new GesTableColumnDefinition(keyNameIndex, keyKind, GesTableColumnFlags.Unique),
+            new GesTableColumnDefinition(valueNameIndex, valueKind));
 
     public bool TryGetColumnIndex(ushort nameIndex, out ushort index)
     {
@@ -131,56 +131,56 @@ internal sealed class GesVmTableShape
     }
 }
 
-internal readonly struct GesVmTableCell
+internal readonly struct GesTableCell
 {
-    private GesVmTableCell(GesVmTableColumnKind kind, ulong a, ulong b = 0)
+    private GesTableCell(GesTableColumnKind kind, ulong a, ulong b = 0)
     {
         Kind = kind;
         A = a;
         B = b;
     }
 
-    public GesVmTableColumnKind Kind { get; }
+    public GesTableColumnKind Kind { get; }
     public ulong A { get; }
     public ulong B { get; }
 
-    public static GesVmTableCell FromBoolean(bool value) => new(GesVmTableColumnKind.Boolean, value ? 1UL : 0UL);
-    public static GesVmTableCell FromInteger(long value) => new(GesVmTableColumnKind.Integer, unchecked((ulong)value));
-    public static GesVmTableCell FromFloat(double value) => new(GesVmTableColumnKind.Float, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)));
-    public static GesVmTableCell FromTextIndex(ushort value) => new(GesVmTableColumnKind.Text, value);
-    public static GesVmTableCell FromTagIndex(ushort value) => new(GesVmTableColumnKind.Tag, value);
+    public static GesTableCell FromBoolean(bool value) => new(GesTableColumnKind.Boolean, value ? 1UL : 0UL);
+    public static GesTableCell FromInteger(long value) => new(GesTableColumnKind.Integer, unchecked((ulong)value));
+    public static GesTableCell FromFloat(double value) => new(GesTableColumnKind.Float, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)));
+    public static GesTableCell FromTextIndex(ushort value) => new(GesTableColumnKind.Text, value);
+    public static GesTableCell FromTagIndex(ushort value) => new(GesTableColumnKind.Tag, value);
 }
 
-internal sealed class GesVmTable
+internal sealed class GesTable
 {
-    public GesVmTable(GesVmTableData data)
+    public GesTable(GesTableData data)
     {
         Data = data;
     }
 
-    public GesVmTableData Data { get; }
+    public GesTableData Data { get; }
     public int RowCount => checked((int)Data.RowCount);
     public int ColumnCount => Data.ColumnCount;
 
-    public static GesVmTable CreateList(GesVmTableColumnKind itemKind, int capacity = 0, ushort valueNameIndex = 0) =>
-        CreateEmpty(GesVmTableShape.List(itemKind, valueNameIndex));
+    public static GesTable CreateList(GesTableColumnKind itemKind, int capacity = 0, ushort valueNameIndex = 0) =>
+        CreateEmpty(GesTableShape.List(itemKind, valueNameIndex));
 
-    public static GesVmTable CreateKeyTable(GesVmTableColumnKind keyKind, int capacity = 0, ushort keyNameIndex = 0) =>
-        CreateEmpty(GesVmTableShape.KeyTable(keyKind, keyNameIndex));
+    public static GesTable CreateKeyTable(GesTableColumnKind keyKind, int capacity = 0, ushort keyNameIndex = 0) =>
+        CreateEmpty(GesTableShape.KeyTable(keyKind, keyNameIndex));
 
-    public static GesVmTable CreateMap(GesVmTableColumnKind keyKind, GesVmTableColumnKind valueKind, int capacity = 0, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
-        CreateEmpty(GesVmTableShape.Map(keyKind, valueKind, keyNameIndex, valueNameIndex));
+    public static GesTable CreateMap(GesTableColumnKind keyKind, GesTableColumnKind valueKind, int capacity = 0, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
+        CreateEmpty(GesTableShape.Map(keyKind, valueKind, keyNameIndex, valueNameIndex));
 
-    private static GesVmTable CreateEmpty(GesVmTableShape shape)
+    private static GesTable CreateEmpty(GesTableShape shape)
     {
-        var columns = new GesVmTableColumnSegment[shape.ColumnCount];
+        var columns = new GesTableColumnSegment[shape.ColumnCount];
         for (var i = 0; i < columns.Length; i++)
         {
             var source = shape.Columns[i];
-            columns[i] = new GesVmTableColumnSegment(source.NameIndex, source.Kind, source.Flags, 0, 0);
+            columns[i] = new GesTableColumnSegment(source.NameIndex, source.Kind, source.Flags, 0, 0);
         }
 
-        return new GesVmTable(new GesVmTableData(columns, [], 0));
+        return new GesTable(new GesTableData(columns, [], 0));
     }
 
     public bool GetBoolean(int rowIndex, int columnIndex) => ReadScalar(rowIndex, columnIndex) != 0;
@@ -198,13 +198,13 @@ internal sealed class GesVmTable
     private int GetOffset(int rowIndex, int columnIndex)
     {
         var column = Data.Columns[columnIndex];
-        return checked((int)(column.DataStart + (uint)rowIndex * GesVmTableData.GetColumnWidth(column.Kind)));
+        return checked((int)(column.DataStart + (uint)rowIndex * GesTableData.GetColumnWidth(column.Kind)));
     }
 
     private bool TryFindScalar(int columnIndex, ulong value, out int rowIndex)
     {
         var column = Data.Columns[columnIndex];
-        var width = GesVmTableData.GetColumnWidth(column.Kind);
+        var width = GesTableData.GetColumnWidth(column.Kind);
         var offset = column.DataStart;
         for (var row = 0; row < column.RowCount; row++)
         {

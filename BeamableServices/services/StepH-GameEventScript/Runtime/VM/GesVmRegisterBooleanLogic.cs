@@ -5,40 +5,40 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterBooleanLogic
 {
-    internal static void GesVmOr(this GesVmState vmState, ushort dstRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmOr(this GesVmState vmState, ushort dstRegister, in GesValue a, in GesValue b)
     {
         if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, a.IsTrue || b.IsTrue);
         else if (a.IsTruthIndeterminate && b.IsTrue || a.IsTrue && b.IsTruthIndeterminate) vmState.SetBoolean(dstRegister, true);
         else vmState.SetNothing(dstRegister);
     }
 
-    internal static void GesVmAnd(this GesVmState vmState, ushort dstRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmAnd(this GesVmState vmState, ushort dstRegister, in GesValue a, in GesValue b)
     {
         if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, a.IsTrue && b.IsTrue);
         else if (a.IsTruthIndeterminate && b.IsFalse || a.IsFalse && b.IsTruthIndeterminate) vmState.SetBoolean(dstRegister, false);
         else vmState.SetNothing(dstRegister);
     }
 
-    internal static void GesVmImplies(this GesVmState vmState, ushort dstRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmImplies(this GesVmState vmState, ushort dstRegister, in GesValue a, in GesValue b)
     {
         if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, !a.IsTrue || b.IsTrue);
         else if (a.IsFalse && b.IsTruthIndeterminate || a.IsTruthIndeterminate && b.IsTrue) vmState.SetBoolean(dstRegister, true);
         else vmState.SetNothing(dstRegister);
     }
 
-    internal static void GesVmXor(this GesVmState vmState, ushort dstRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmXor(this GesVmState vmState, ushort dstRegister, in GesValue a, in GesValue b)
     {
         if (a.IsTruthDeterminate && b.IsTruthDeterminate) vmState.SetBoolean(dstRegister, a.IsTrue ^ b.IsTrue);
         else vmState.SetNothing(dstRegister);
     }
 
-    internal static void GesVmNot(this GesVmState vmState, ushort dstRegister, in GesVmValue a)
+    internal static void GesVmNot(this GesVmState vmState, ushort dstRegister, in GesValue a)
     {
         if (a.IsTruthDeterminate) vmState.SetBoolean(dstRegister, !a.IsTrue);
         else vmState.SetNothing(dstRegister);
     }
 
-    internal static void GesVmChance(this GesVmState vmState, ushort dstRegister, in GesVmValue a)
+    internal static void GesVmChance(this GesVmState vmState, ushort dstRegister, in GesValue a)
     {
         if (a.IsNothing || a.HasUnit)
         {

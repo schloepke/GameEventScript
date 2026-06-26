@@ -293,11 +293,11 @@ public class GameEventScriptVirtualMaschine : IGameEventScriptModule
                         case CreateRangeIteratorShort:
                             if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                             {
-                                vmState.Register(instruction.DestinationRegister).SetIterator(new GesVmIntegerRangeIterator(0, 0, 0));
+                                vmState.Register(instruction.DestinationRegister).SetIterator(new GesIntegerRangeIterator(0, 0, 0));
                                 break;
                             }
 
-                            vmState.Register(instruction.DestinationRegister).SetIterator(new GesVmIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                            vmState.Register(instruction.DestinationRegister).SetIterator(new GesIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                             break;
                         case CreateRecord:
                             vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationRegister);

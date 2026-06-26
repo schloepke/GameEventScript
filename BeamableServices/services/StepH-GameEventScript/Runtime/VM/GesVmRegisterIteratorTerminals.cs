@@ -8,26 +8,26 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterIteratorTerminals
 {
-    internal static void GesVmCount(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
+    internal static void GesVmCount(this GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmValue[] list:
+            case List when source.ObjectValue is GesValue[] list:
                 vmState.SetInteger(destinationRegister, list.Length);
                 return;
-            case Map when source.ObjectValue is GesVmValueMap map:
+            case Map when source.ObjectValue is GesValueMap map:
                 vmState.SetInteger(destinationRegister, map.Length);
                 return;
             case Dice when source.ObjectValue is int[] dice:
                 vmState.SetInteger(destinationRegister, dice.Length);
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
                 vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
                 vmState.SetInteger(destinationRegister, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step));
                 return;
-            case Vector or Point when source.ObjectValue is GesVmValueVectorPoint:
+            case Vector or Point when source.ObjectValue is GesValueVectorPoint:
                 vmState.SetInteger(destinationRegister, 3);
                 return;
             case Text or Tag:
@@ -38,8 +38,8 @@ internal static class GesVmRegisterIteratorTerminals
                 return;
         }
 
-        IGesVmIterator iterator;
-        if (source is { Kind: Iterator, ObjectValue: IGesVmIterator sourceIterator }) iterator = sourceIterator;
+        IGesIterator iterator;
+        if (source is { Kind: Iterator, ObjectValue: IGesIterator sourceIterator }) iterator = sourceIterator;
         else if (!source.TryCreateIterator(out iterator))
         {
             vmState.SetNothing(destinationRegister);
@@ -47,7 +47,7 @@ internal static class GesVmRegisterIteratorTerminals
         }
 
         long count = 0;
-        var item = new GesVmValue();
+        var item = new GesValue();
         try
         {
             while (iterator.TryNext(ref item)) count++;

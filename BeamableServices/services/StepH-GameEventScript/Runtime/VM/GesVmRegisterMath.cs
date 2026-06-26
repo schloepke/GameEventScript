@@ -12,13 +12,13 @@ namespace StepH.GameEventScript.Runtime.VM;
 [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
 internal static class GesVmRegisterMath
 {
-    internal static void GesVmAdd(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmAdd(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmAdd(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    internal static void GesVmAdd(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    internal static void GesVmAdd(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -44,11 +44,11 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(a.FloatValue + b.FloatValue);
                 break;
             case Vector when b.Kind is Vector:
-                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) dst.SetVector(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z, vectorUnit);
+                if (a.ObjectValue is GesValueVectorPoint av && b.ObjectValue is GesValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) dst.SetVector(av.X + bv.X, av.Y + bv.Y, av.Z + bv.Z, vectorUnit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Point when b.Kind is Vector:
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bvv && TrySameUnit(in a, in b, out var pointUnit)) dst.SetPoint(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z, pointUnit);
+                if (a.ObjectValue is GesValueVectorPoint ap && b.ObjectValue is GesValueVectorPoint bvv && TrySameUnit(in a, in b, out var pointUnit)) dst.SetPoint(ap.X + bvv.X, ap.Y + bvv.Y, ap.Z + bvv.Z, pointUnit);
                 else dst.SetFloat(double.NaN);
                 break;
             case Integer or Float or Percentage when b.Kind is Vector or Point:
@@ -60,17 +60,17 @@ internal static class GesVmRegisterMath
             case not Nothing when b.Kind is Text:
                 dst.SetText(a.ToText + b.TextValue);
                 break;
-            case List when b.Kind is not Nothing && a.ObjectValue is GesVmValue[] aList:
+            case List when b.Kind is not Nothing && a.ObjectValue is GesValue[] aList:
             {
-                var list = new GesVmValue[aList.Length + 1];
+                var list = new GesValue[aList.Length + 1];
                 for (var i = 0; i < aList.Length; i++) list[i] = aList[i];
                 list[aList.Length] = b;
                 dst.SetList(list);
                 break;
             }
-            case not List and not Nothing when b.Kind is List && b.ObjectValue is GesVmValue[] rightList:
+            case not List and not Nothing when b.Kind is List && b.ObjectValue is GesValue[] rightList:
             {
-                var list = new GesVmValue[rightList.Length + 1];
+                var list = new GesValue[rightList.Length + 1];
                 list[0] = a;
                 for (var i = 0; i < rightList.Length; i++) list[i + 1] = rightList[i];
                 dst.SetList(list);
@@ -127,7 +127,7 @@ internal static class GesVmRegisterMath
                 break;
         }
     }
-    internal static void GesVmSubtract(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmSubtract(this GesVmState vmState, ushort dst, in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {
@@ -154,7 +154,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) vmState.SetVector(dst, av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
+                if (a.ObjectValue is GesValueVectorPoint av && b.ObjectValue is GesValueVectorPoint bv && TrySameUnit(in a, in b, out var vectorUnit)) vmState.SetVector(dst, av.X - bv.X, av.Y - bv.Y, av.Z - bv.Z, vectorUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             }
@@ -164,13 +164,13 @@ internal static class GesVmRegisterMath
                 return;
             case Point when b.Kind is Vector:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bv && TrySameUnit(in a, in b, out var pointUnit)) vmState.SetPoint(dst, ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
+                if (a.ObjectValue is GesValueVectorPoint ap && b.ObjectValue is GesValueVectorPoint bv && TrySameUnit(in a, in b, out var pointUnit)) vmState.SetPoint(dst, ap.X - bv.X, ap.Y - bv.Y, ap.Z - bv.Z, pointUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             }
             case Point when b.Kind is Point:
             {
-                if (a.ObjectValue is GesVmValueVectorPoint ap && b.ObjectValue is GesVmValueVectorPoint bp && TrySameUnit(in a, in b, out var pointUnit)) vmState.SetVector(dst, ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
+                if (a.ObjectValue is GesValueVectorPoint ap && b.ObjectValue is GesValueVectorPoint bp && TrySameUnit(in a, in b, out var pointUnit)) vmState.SetVector(dst, ap.X - bp.X, ap.Y - bp.Y, ap.Z - bp.Z, pointUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             }
@@ -181,9 +181,9 @@ internal static class GesVmRegisterMath
             case Integer or Float or Percentage when b.Kind is Vector or Point:
                 vmState.SetFloat(dst, double.NaN);
                 return;
-            case List when b.Kind is List or Dice and not Nothing or not Map && a.ObjectValue is GesVmValue[] aList:
+            case List when b.Kind is List or Dice and not Nothing or not Map && a.ObjectValue is GesValue[] aList:
             {
-                var removeList = b.Kind is List && b.ObjectValue is GesVmValue[] bList ? bList : null;
+                var removeList = b.Kind is List && b.ObjectValue is GesValue[] bList ? bList : null;
                 var removeDice = b.Kind is Dice && b.ObjectValue is int[] bDice ? bDice : null;
                 var removeCount = removeList?.Length ?? removeDice?.Length ?? 1;
                 var removed = new bool[removeCount];
@@ -197,7 +197,7 @@ internal static class GesVmRegisterMath
                         var candidate = removeList is not null ? removeList[j] : b;
                         if (removeList is null && removeDice is not null)
                         {
-                            candidate = new GesVmValue();
+                            candidate = new GesValue();
                             candidate.SetInteger(removeDice[j]);
                         }
                         if (!candidate.EqualsValue(in aList[i])) continue;
@@ -209,7 +209,7 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = new GesVmValue[resultLength];
+                var list = new GesValue[resultLength];
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aList.Length; i++)
@@ -221,7 +221,7 @@ internal static class GesVmRegisterMath
                         var candidate = removeList is not null ? removeList[j] : b;
                         if (removeList is null && removeDice is not null)
                         {
-                            candidate = new GesVmValue();
+                            candidate = new GesValue();
                             candidate.SetInteger(removeDice[j]);
                         }
                         if (!candidate.EqualsValue(in aList[i])) continue;
@@ -274,13 +274,13 @@ internal static class GesVmRegisterMath
                 vmState.SetDice(dst, dice);
                 return;
             }
-            case Dice when b.Kind is List && a.ObjectValue is int[] aDice && b.ObjectValue is GesVmValue[] removeList:
+            case Dice when b.Kind is List && a.ObjectValue is int[] aDice && b.ObjectValue is GesValue[] removeList:
             {
                 var removed = new bool[removeList.Length];
                 var resultLength = 0;
                 for (var i = 0; i < aDice.Length; i++)
                 {
-                    var item = new GesVmValue();
+                    var item = new GesValue();
                     item.SetInteger(aDice[i]);
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
@@ -294,12 +294,12 @@ internal static class GesVmRegisterMath
                     if (!shouldRemove) resultLength++;
                 }
 
-                var list = new GesVmValue[resultLength];
+                var list = new GesValue[resultLength];
                 var index = 0;
                 Array.Clear(removed, 0, removed.Length);
                 for (var i = 0; i < aDice.Length; i++)
                 {
-                    var item = new GesVmValue();
+                    var item = new GesValue();
                     item.SetInteger(aDice[i]);
                     var shouldRemove = false;
                     for (var j = 0; j < removeList.Length; j++)
@@ -349,21 +349,21 @@ internal static class GesVmRegisterMath
                 vmState.SetDice(dst, dice);
                 return;
             }
-            case Map when b.Kind is not Nothing && a.ObjectValue is GesVmValueMap aMap:
+            case Map when b.Kind is not Nothing && a.ObjectValue is GesValueMap aMap:
             {
                 string? singleKey = null;
                 string[]? keys = null;
-                GesVmValueMap? bMap = null;
-                if (b.Kind is Map && b.ObjectValue is GesVmValueMap rightMap)
+                GesValueMap? bMap = null;
+                if (b.Kind is Map && b.ObjectValue is GesValueMap rightMap)
                 {
                     bMap = rightMap;
-                    // Keys are already sorted in GesVmValueMap.
+                    // Keys are already sorted in GesValueMap.
                 }
                 else if (b.Kind is Text or Tag)
                 {
                     singleKey = b.TextValue;
                 }
-                else if (b.Kind is List && b.ObjectValue is GesVmValue[] keyList)
+                else if (b.Kind is List && b.ObjectValue is GesValue[] keyList)
                 {
                     keys = new string[keyList.Length];
                     for (var i = 0; i < keyList.Length; i++)
@@ -460,7 +460,7 @@ internal static class GesVmRegisterMath
                 break;
         }
     }
-    internal static void GesVmMultiply(this GesVmState vmState, ushort dst, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmMultiply(this GesVmState vmState, ushort dst, in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {
@@ -492,22 +492,22 @@ internal static class GesVmRegisterMath
                 vmState.SetFloat(dst, a.FloatValue * b.FloatValue, b.Unit);
                 return;
             case Percentage when b.Kind is Vector:
-                if (b.ObjectValue is GesVmValueVectorPoint percentageVector) vmState.SetVector(dst, a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
+                if (b.ObjectValue is GesValueVectorPoint percentageVector) vmState.SetVector(dst, a.FloatValue * percentageVector.X, a.FloatValue * percentageVector.Y, a.FloatValue * percentageVector.Z, b.Unit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Percentage when b.Kind is Point:
                 vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && TryProductUnit(in a, in b, out unit)) vmState.SetVector(dst, vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
+                if (a.ObjectValue is GesValueVectorPoint vectorInt && TryProductUnit(in a, in b, out unit)) vmState.SetVector(dst, vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, unit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(in a, in b, out unit)) vmState.SetVector(dst, vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
+                if (a.ObjectValue is GesValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && TryProductUnit(in a, in b, out unit)) vmState.SetVector(dst, vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, unit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorPercent) vmState.SetVector(dst, vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
+                if (a.ObjectValue is GesValueVectorPoint vectorPercent) vmState.SetVector(dst, vectorPercent.X * b.FloatValue, vectorPercent.Y * b.FloatValue, vectorPercent.Z * b.FloatValue, a.Unit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Nothing:
@@ -515,7 +515,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector:
                 var vectorScalar = b.AsNumeric;
-                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(in a, in b, out unit))
+                if (a.ObjectValue is GesValueVectorPoint vector && !double.IsNaN(vectorScalar) && double.IsFinite(vectorScalar) && TryProductUnit(in a, in b, out unit))
                     vmState.SetVector(dst, vector.X * vectorScalar, vector.Y * vectorScalar, vector.Z * vectorScalar, unit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
@@ -527,7 +527,7 @@ internal static class GesVmRegisterMath
                 return;
             case Integer or Float when b.Kind is Vector:
                 var scalar = a.AsNumeric;
-                if (b.ObjectValue is GesVmValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(in a, in b, out unit)) vmState.SetVector(dst, scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
+                if (b.ObjectValue is GesValueVectorPoint rightVector && double.IsFinite(scalar) && TryProductUnit(in a, in b, out unit)) vmState.SetVector(dst, scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, unit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Integer or Float when b.Kind is Point:
@@ -573,7 +573,7 @@ internal static class GesVmRegisterMath
         {
             case Vector:
             {
-                if (b.ObjectValue is GesVmValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(in a, in b, out var vectorUnit)) vmState.SetVector(dst, fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
+                if (b.ObjectValue is GesValueVectorPoint vector && double.IsFinite(fallbackLeft) && TryProductUnit(in a, in b, out var vectorUnit)) vmState.SetVector(dst, fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             }
@@ -593,13 +593,13 @@ internal static class GesVmRegisterMath
 
         vmState.SetFloat(dst, fallbackLeft * bNum, b.Kind is Percentage ? a.Unit : fallbackUnit);
     }
-    internal static void GesVmDivide(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmDivide(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmDivide(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    internal static void GesVmDivide(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    internal static void GesVmDivide(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -632,16 +632,16 @@ internal static class GesVmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorInt && b.IntegerValue != 0 && TryQuotientUnit(in a, in b, out unit)) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, unit);
+                if (a.ObjectValue is GesValueVectorPoint vectorInt && b.IntegerValue != 0 && TryQuotientUnit(in a, in b, out unit)) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(in a, in b, out unit))
+                if (a.ObjectValue is GesValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && b.FloatValue != 0d && TryQuotientUnit(in a, in b, out unit))
                     dst.SetVector(vectorFloat.X / b.FloatValue, vectorFloat.Y / b.FloatValue, vectorFloat.Z / b.FloatValue, unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
-                if (a.ObjectValue is GesVmValueVectorPoint vectorPercent && b.FloatValue != 0d) dst.SetVector(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue, a.Unit);
+                if (a.ObjectValue is GesValueVectorPoint vectorPercent && b.FloatValue != 0d) dst.SetVector(vectorPercent.X / b.FloatValue, vectorPercent.Y / b.FloatValue, vectorPercent.Z / b.FloatValue, a.Unit);
                 else dst.SetFloat(double.NaN);
                 return;
             case Vector when b.Kind is Nothing:
@@ -649,7 +649,7 @@ internal static class GesVmRegisterMath
                 return;
             case Vector:
                 var vectorDivisor = b.AsNumeric;
-                if (a.ObjectValue is GesVmValueVectorPoint vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(in a, in b, out unit))
+                if (a.ObjectValue is GesValueVectorPoint vector && !double.IsNaN(vectorDivisor) && double.IsFinite(vectorDivisor) && vectorDivisor != 0d && TryQuotientUnit(in a, in b, out unit))
                     dst.SetVector(vector.X / vectorDivisor, vector.Y / vectorDivisor, vector.Z / vectorDivisor, unit);
                 else dst.SetFloat(double.NaN);
                 return;
@@ -725,13 +725,13 @@ internal static class GesVmRegisterMath
         if (a.Kind is Percentage) dst.SetPercentage(fallbackResult);
         else dst.SetFloat(fallbackResult, fallbackUnit);
     }
-    internal static void GesVmPower(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmPower(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmPower(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmPower(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    private static void GesVmPower(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -835,13 +835,13 @@ internal static class GesVmRegisterMath
         if (double.IsNaN(left)) dst.SetFloat(double.NaN);
         else dst.SetFloat(Math.Pow(left, right), unit);
     }
-    internal static void GesVmFloorDivide(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmFloorDivide(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmFloorDivide(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmFloorDivide(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    private static void GesVmFloorDivide(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -937,13 +937,13 @@ internal static class GesVmRegisterMath
         if (double.IsFinite(floorResult) && floorResult is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)floorResult, unit);
         else dst.SetFloat(floorResult, unit);
     }
-    internal static void GesVmModulo(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmModulo(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmModulo(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmModulo(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    private static void GesVmModulo(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1062,13 +1062,13 @@ internal static class GesVmRegisterMath
         if (fallbackModuloResult != 0d && (fallbackModuloResult < 0d && right > 0d || fallbackModuloResult > 0d && right < 0d)) fallbackModuloResult += right;
         dst.SetFloat(fallbackModuloResult, unit);
     }
-    internal static void GesVmRemainder(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmRemainder(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmRemainder(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmRemainder(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    private static void GesVmRemainder(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1155,13 +1155,13 @@ internal static class GesVmRegisterMath
 
         dst.SetFloat(double.IsInfinity(right) ? left : left % right, unit);
     }
-    internal static void GesVmMin(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmMin(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmMin(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmMin(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    private static void GesVmMin(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1356,7 +1356,7 @@ internal static class GesVmRegisterMath
                     break;
                 }
 
-                if (a.ObjectValue is GesVmValueVectorPoint leftTriplet && b.ObjectValue is GesVmValueVectorPoint rightTriplet)
+                if (a.ObjectValue is GesValueVectorPoint leftTriplet && b.ObjectValue is GesValueVectorPoint rightTriplet)
                 {
                     comparison = rightTriplet.X.CompareTo(leftTriplet.X);
                     if (comparison == 0) comparison = rightTriplet.Y.CompareTo(leftTriplet.Y);
@@ -1374,13 +1374,13 @@ internal static class GesVmRegisterMath
 
         dst = comparison < 0 ? b : a;
     }
-    internal static void GesVmMax(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmMax(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmMax(ref dst, in a, in b, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmMax(ref GesVmValue dst, in GesVmValue a, in GesVmValue b, GesVmState state)
+    private static void GesVmMax(ref GesValue dst, in GesValue a, in GesValue b, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1575,7 +1575,7 @@ internal static class GesVmRegisterMath
                     break;
                 }
 
-                if (a.ObjectValue is GesVmValueVectorPoint leftTriplet && b.ObjectValue is GesVmValueVectorPoint rightTriplet)
+                if (a.ObjectValue is GesValueVectorPoint leftTriplet && b.ObjectValue is GesValueVectorPoint rightTriplet)
                 {
                     comparison = rightTriplet.X.CompareTo(leftTriplet.X);
                     if (comparison == 0) comparison = rightTriplet.Y.CompareTo(leftTriplet.Y);
@@ -1593,13 +1593,13 @@ internal static class GesVmRegisterMath
 
         dst = comparison > 0 ? b : a;
     }
-    internal static void GesVmNegate(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmNegate(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmNegate(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmNegate(ref GesVmValue dst, in GesVmValue a, GesVmState state)
+    private static void GesVmNegate(ref GesValue dst, in GesValue a, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1614,7 +1614,7 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(-a.FloatValue);
                 return;
             case Vector:
-                if (a.ObjectValue is GesVmValueVectorPoint vector)
+                if (a.ObjectValue is GesValueVectorPoint vector)
                 {
                     dst.SetVector(-vector.X, -vector.Y, -vector.Z, a.Unit);
                 }
@@ -1634,13 +1634,13 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void GesVmAbs(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmAbs(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmAbs(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmAbs(ref GesVmValue dst, in GesVmValue a, GesVmState state)
+    private static void GesVmAbs(ref GesValue dst, in GesValue a, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1655,7 +1655,7 @@ internal static class GesVmRegisterMath
                 dst.SetPercentage(Math.Abs(a.FloatValue));
                 return;
             case Vector:
-                if (a.ObjectValue is not GesVmValueVectorPoint vector)
+                if (a.ObjectValue is not GesValueVectorPoint vector)
                 {
                     dst.SetFloat(double.NaN);
                     return;
@@ -1677,13 +1677,13 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void GesVmClamp(this GesVmState vmState, ushort destinationRegister, in GesVmValue value, in GesVmValue min, in GesVmValue max)
+    internal static void GesVmClamp(this GesVmState vmState, ushort destinationRegister, in GesValue value, in GesValue min, in GesValue max)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmClamp(ref dst, in value, in min, in max, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmClamp(ref GesVmValue dst, in GesVmValue value, in GesVmValue min, in GesVmValue max, GesVmState state)
+    private static void GesVmClamp(ref GesValue dst, in GesValue value, in GesValue min, in GesValue max, GesVmState state)
     {
         switch (value.Kind)
         {
@@ -1779,13 +1779,13 @@ internal static class GesVmRegisterMath
         var fallbackResult = raw < lowerFallback ? lowerFallback : raw > upperFallback ? upperFallback : raw;
         dst.SetFloat(fallbackResult, unit);
     }
-    internal static void GesVmNaturalLog(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmNaturalLog(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmNaturalLog(ref dst, in a, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmNaturalLog(ref GesVmValue dst, in GesVmValue a, GesVmState state)
+    private static void GesVmNaturalLog(ref GesValue dst, in GesValue a, GesVmState state)
     {
         switch (a.Kind)
         {
@@ -1830,7 +1830,7 @@ internal static class GesVmRegisterMath
                 return;
         }
     }
-    internal static void GesVmExp(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmExp(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1846,7 +1846,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetFloat(destinationRegister, Math.Exp(a.AsNumeric));
     }
-    internal static void GesVmFloor(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmFloor(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1862,7 +1862,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Floor(a.AsNumeric)));
     }
-    internal static void GesVmCeil(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmCeil(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1878,7 +1878,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Ceiling(a.AsNumeric)));
     }
-    internal static void GesVmTruncate(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmTruncate(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1894,7 +1894,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Truncate(a.AsNumeric)));
     }
-    internal static void GesVmRoundHalfEven(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmRoundHalfEven(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1910,7 +1910,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Round(a.AsNumeric, 0, MidpointRounding.ToEven)));
     }
-    internal static void GesVmRoundHalfUp(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmRoundHalfUp(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1926,7 +1926,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetInteger(destinationRegister, ToIntegerSaturated(Math.Round(a.AsNumeric, 0, MidpointRounding.AwayFromZero)));
     }
-    internal static void GesVmRoundHalfDown(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmRoundHalfDown(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1948,7 +1948,7 @@ internal static class GesVmRegisterMath
         var roundedAbsolute = fraction > 0.5d ? floor + 1d : floor;
         vmState.SetInteger(destinationRegister, ToIntegerSaturated(sign < 0 ? -roundedAbsolute : roundedAbsolute));
     }
-    internal static void GesVmDegreeToRadians(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmDegreeToRadians(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1971,7 +1971,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetFloat(destinationRegister, number / 180d * GameEventScriptMathConstants.Pi);
     }
-    internal static void GesVmDegreeFromRadians(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmDegreeFromRadians(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -1994,7 +1994,7 @@ internal static class GesVmRegisterMath
 
         vmState.SetFloat(destinationRegister, number / GameEventScriptMathConstants.Pi * 180d, UnitDegree);
     }
-    internal static void GesVmWrapDegree(this GesVmState vmState, ushort destinationRegister, in GesVmValue a)
+    internal static void GesVmWrapDegree(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
         if (a.Kind is Nothing)
         {
@@ -2026,13 +2026,13 @@ internal static class GesVmRegisterMath
         if (double.IsNegativeInfinity(number) || number < long.MinValue) return long.MinValue;
         return (long)Math.Truncate(number);
     }
-    internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, in GesVmValue termValue)
+    internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesValue source, in GesValue termValue)
     {
-        var dst = new GesVmValue();
+        var dst = new GesValue();
         GesVmTerm(ref dst, in source, in termValue, vmState);
         vmState.SetValue(destinationRegister, in dst);
     }
-    private static void GesVmTerm(ref GesVmValue dst, in GesVmValue source, in GesVmValue termValue, GesVmState state)
+    private static void GesVmTerm(ref GesValue dst, in GesValue source, in GesValue termValue, GesVmState state)
     {
         long index;
         bool ret;
@@ -2099,7 +2099,7 @@ internal static class GesVmRegisterMath
                 break;
         }
 
-        if (source.Kind is not Series || source.ObjectValue is not GesVmSeries series || !ret) dst.SetNothing();
+        if (source.Kind is not Series || source.ObjectValue is not GesSeries series || !ret) dst.SetNothing();
         else series.TryGetTerm(index, ref dst);
     }
 }

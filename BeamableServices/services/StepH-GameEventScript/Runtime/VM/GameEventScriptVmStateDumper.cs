@@ -200,7 +200,7 @@ internal static class GameEventScriptVmStateDumper
         }
     }
 
-    private static string FormatRegister(GesVmValue value)
+    private static string FormatRegister(GesValue value)
     {
         var builder = new StringBuilder();
         builder

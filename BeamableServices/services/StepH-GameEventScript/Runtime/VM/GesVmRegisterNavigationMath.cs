@@ -9,7 +9,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterNavigationMath
 {
-    internal static void GesVmSin(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmSin(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -26,7 +26,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Sin(radians));
     }
 
-    internal static void GesVmCos(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmCos(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -43,7 +43,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Cos(radians));
     }
 
-    internal static void GesVmTan(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmTan(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -60,7 +60,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Tan(radians));
     }
 
-    internal static void GesVmAsin(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmAsin(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -77,7 +77,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Asin(number));
     }
 
-    internal static void GesVmAcos(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmAcos(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -94,7 +94,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Acos(number));
     }
 
-    internal static void GesVmAtan(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmAtan(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -111,7 +111,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Atan(number));
     }
 
-    internal static void GesVmAtan2(this GesVmState vmState, ushort destinationRegister, in GesVmValue y, in GesVmValue x)
+    internal static void GesVmAtan2(this GesVmState vmState, ushort destinationRegister, in GesValue y, in GesValue x)
     {
         if (y.Kind is Nothing || x.Kind is Nothing)
         {
@@ -130,7 +130,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, yNumber == 0d && xNumber == 0d ? 0d : Math.Atan2(yNumber, xNumber));
     }
 
-    internal static void GesVmHypot2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x, in GesVmValue y)
+    internal static void GesVmHypot2D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y)
     {
         if (x.Kind is Nothing || y.Kind is Nothing)
         {
@@ -147,7 +147,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Sqrt(xNumber * xNumber + yNumber * yNumber), unit);
     }
 
-    internal static void GesVmHypot3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x, in GesVmValue y, in GesVmValue z)
+    internal static void GesVmHypot3D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y, in GesValue z)
     {
         if (x.Kind is Nothing || y.Kind is Nothing || z.Kind is Nothing)
         {
@@ -164,7 +164,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Sqrt(xNumber * xNumber + yNumber * yNumber + zNumber * zNumber), unit);
     }
 
-    internal static void GesVmDistance(this GesVmState vmState, ushort destinationRegister, in GesVmValue left, in GesVmValue right)
+    internal static void GesVmDistance(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
     {
         if (left.Kind is Nothing || right.Kind is Nothing)
         {
@@ -196,7 +196,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy + dz * dz), left.Unit);
     }
 
-    internal static void GesVmDistance2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue x2, in GesVmValue y2)
+    internal static void GesVmDistance2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing)
         {
@@ -215,7 +215,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy), unit);
     }
 
-    internal static void GesVmDistance3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue z1, in GesVmValue x2, in GesVmValue y2, in GesVmValue z2)
+    internal static void GesVmDistance3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || z1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing || z2.Kind is Nothing)
         {
@@ -235,7 +235,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy + dz * dz), unit);
     }
 
-    internal static void GesVmDistanceSquared(this GesVmState vmState, ushort destinationRegister, in GesVmValue left, in GesVmValue right)
+    internal static void GesVmDistanceSquared(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
     {
         if (left.Kind is Nothing || right.Kind is Nothing)
         {
@@ -268,7 +268,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, dx * dx + dy * dy + dz * dz);
     }
 
-    internal static void GesVmDistanceSquared2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue x2, in GesVmValue y2)
+    internal static void GesVmDistanceSquared2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing)
         {
@@ -287,7 +287,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, dx * dx + dy * dy);
     }
 
-    internal static void GesVmDistanceSquared3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue z1, in GesVmValue x2, in GesVmValue y2, in GesVmValue z2)
+    internal static void GesVmDistanceSquared3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || z1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing || z2.Kind is Nothing)
         {
@@ -307,7 +307,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, dx * dx + dy * dy + dz * dz);
     }
 
-    internal static void GesVmLengthSquared(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmLengthSquared(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -327,7 +327,7 @@ internal static class GesVmRegisterNavigationMath
                 var n = value.AsNumeric;
                 vmState.SetFloat(destinationRegister, n * n);
                 return;
-            case Vector or Point when value.ObjectValue is GesVmValueVectorPoint triplet:
+            case Vector or Point when value.ObjectValue is GesValueVectorPoint triplet:
                 vmState.SetFloat(destinationRegister, triplet.X * triplet.X + triplet.Y * triplet.Y + triplet.Z * triplet.Z);
                 return;
             default:
@@ -336,7 +336,7 @@ internal static class GesVmRegisterNavigationMath
         }
     }
 
-    internal static void GesVmLengthSquared2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x, in GesVmValue y)
+    internal static void GesVmLengthSquared2D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y)
     {
         if (x.Kind is Nothing || y.Kind is Nothing)
         {
@@ -353,7 +353,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, xNumber * xNumber + yNumber * yNumber);
     }
 
-    internal static void GesVmLengthSquared3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x, in GesVmValue y, in GesVmValue z)
+    internal static void GesVmLengthSquared3D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y, in GesValue z)
     {
         if (x.Kind is Nothing || y.Kind is Nothing || z.Kind is Nothing)
         {
@@ -370,7 +370,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, xNumber * xNumber + yNumber * yNumber + zNumber * zNumber);
     }
 
-    internal static void GesVmNormalize(this GesVmState vmState, ushort destinationRegister, in GesVmValue value)
+    internal static void GesVmNormalize(this GesVmState vmState, ushort destinationRegister, in GesValue value)
     {
         if (value.Kind is Nothing)
         {
@@ -378,7 +378,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (value.Kind is not (Vector or Point) || value.ObjectValue is not GesVmValueVectorPoint triplet)
+        if (value.Kind is not (Vector or Point) || value.ObjectValue is not GesValueVectorPoint triplet)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -394,7 +394,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetVector(destinationRegister, triplet.X / length, triplet.Y / length, triplet.Z / length);
     }
 
-    internal static void GesVmNormalize2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x, in GesVmValue y)
+    internal static void GesVmNormalize2D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y)
     {
         if (x.Kind is Nothing || y.Kind is Nothing)
         {
@@ -418,7 +418,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetVector(destinationRegister, xNumber / length, yNumber / length, 0d);
     }
 
-    internal static void GesVmNormalize3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x, in GesVmValue y, in GesVmValue z)
+    internal static void GesVmNormalize3D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y, in GesValue z)
     {
         if (x.Kind is Nothing || y.Kind is Nothing || z.Kind is Nothing)
         {
@@ -442,7 +442,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetVector(destinationRegister, xNumber / length, yNumber / length, zNumber / length);
     }
 
-    internal static void GesVmDot(this GesVmState vmState, ushort destinationRegister, in GesVmValue left, in GesVmValue right)
+    internal static void GesVmDot(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
     {
         if (left.Kind is Nothing || right.Kind is Nothing)
         {
@@ -459,7 +459,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, lx * rx + ly * ry + lz * rz);
     }
 
-    internal static void GesVmDot2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue x2, in GesVmValue y2)
+    internal static void GesVmDot2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing)
         {
@@ -476,7 +476,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, ax * bx + ay * by);
     }
 
-    internal static void GesVmDot3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue z1, in GesVmValue x2, in GesVmValue y2, in GesVmValue z2)
+    internal static void GesVmDot3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || z1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing || z2.Kind is Nothing)
         {
@@ -493,7 +493,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, ax * bx + ay * by + az * bz);
     }
 
-    internal static void GesVmCross(this GesVmState vmState, ushort destinationRegister, in GesVmValue left, in GesVmValue right)
+    internal static void GesVmCross(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
     {
         if (left.Kind is Nothing || right.Kind is Nothing)
         {
@@ -510,7 +510,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetVector(destinationRegister, ly * rz - lz * ry, lz * rx - lx * rz, lx * ry - ly * rx);
     }
 
-    internal static void GesVmCross2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue x2, in GesVmValue y2)
+    internal static void GesVmCross2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing)
         {
@@ -527,7 +527,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetFloat(destinationRegister, ax * by - ay * bx);
     }
 
-    internal static void GesVmCross3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue z1, in GesVmValue x2, in GesVmValue y2, in GesVmValue z2)
+    internal static void GesVmCross3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || z1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing || z2.Kind is Nothing)
         {
@@ -544,7 +544,7 @@ internal static class GesVmRegisterNavigationMath
         vmState.SetVector(destinationRegister, ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx);
     }
 
-    internal static void GesVmAngleBetween(this GesVmState vmState, ushort destinationRegister, in GesVmValue left, in GesVmValue right)
+    internal static void GesVmAngleBetween(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
     {
         if (left.Kind is Nothing || right.Kind is Nothing)
         {
@@ -561,7 +561,7 @@ internal static class GesVmRegisterNavigationMath
         SetAngleBetween(vmState, destinationRegister, lx, ly, lz, rx, ry, rz);
     }
 
-    internal static void GesVmAngleBetween2D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue x2, in GesVmValue y2)
+    internal static void GesVmAngleBetween2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing)
         {
@@ -578,7 +578,7 @@ internal static class GesVmRegisterNavigationMath
         SetAngleBetween(vmState, destinationRegister, ax, ay, 0d, bx, by, 0d);
     }
 
-    internal static void GesVmAngleBetween3D(this GesVmState vmState, ushort destinationRegister, in GesVmValue x1, in GesVmValue y1, in GesVmValue z1, in GesVmValue x2, in GesVmValue y2, in GesVmValue z2)
+    internal static void GesVmAngleBetween3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
     {
         if (x1.Kind is Nothing || y1.Kind is Nothing || z1.Kind is Nothing || x2.Kind is Nothing || y2.Kind is Nothing || z2.Kind is Nothing)
         {
@@ -595,7 +595,7 @@ internal static class GesVmRegisterNavigationMath
         SetAngleBetween(vmState, destinationRegister, ax, ay, az, bx, by, bz);
     }
 
-    private static bool TryReadRadians(in GesVmValue value, out double radians)
+    private static bool TryReadRadians(in GesValue value, out double radians)
     {
         if (!value.IsNumeric || value.Unit.IsNumericUnit() && value.Unit != UnitDegree)
         {
@@ -610,7 +610,7 @@ internal static class GesVmRegisterNavigationMath
         return !double.IsNaN(radians);
     }
 
-    private static bool TryReadUnitlessNumeric(in GesVmValue value, out double number)
+    private static bool TryReadUnitlessNumeric(in GesValue value, out double number)
     {
         if (!value.IsNumeric || value.Unit.IsNumericUnit())
         {
@@ -622,7 +622,7 @@ internal static class GesVmRegisterNavigationMath
         return !double.IsNaN(number);
     }
 
-    private static bool TryReadNumeric(in GesVmValue value, out double number, out GameEventScriptBytecodeInstructionUnit unit)
+    private static bool TryReadNumeric(in GesValue value, out double number, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (!value.IsNumeric)
         {
@@ -637,8 +637,8 @@ internal static class GesVmRegisterNavigationMath
     }
 
     private static bool TryReadSameUnit2(
-        in GesVmValue a,
-        in GesVmValue b,
+        in GesValue a,
+        in GesValue b,
         out double aNumber,
         out double bNumber,
         out GameEventScriptBytecodeInstructionUnit unit)
@@ -658,9 +658,9 @@ internal static class GesVmRegisterNavigationMath
     }
 
     private static bool TryReadSameUnit3(
-        in GesVmValue a,
-        in GesVmValue b,
-        in GesVmValue c,
+        in GesValue a,
+        in GesValue b,
+        in GesValue c,
         out double aNumber,
         out double bNumber,
         out double cNumber,
@@ -684,10 +684,10 @@ internal static class GesVmRegisterNavigationMath
     }
 
     private static bool TryReadSameUnit4(
-        in GesVmValue a,
-        in GesVmValue b,
-        in GesVmValue c,
-        in GesVmValue d,
+        in GesValue a,
+        in GesValue b,
+        in GesValue c,
+        in GesValue d,
         out double aNumber,
         out double bNumber,
         out double cNumber,
@@ -715,12 +715,12 @@ internal static class GesVmRegisterNavigationMath
     }
 
     private static bool TryReadSameUnit6(
-        in GesVmValue a,
-        in GesVmValue b,
-        in GesVmValue c,
-        in GesVmValue d,
-        in GesVmValue e,
-        in GesVmValue f,
+        in GesValue a,
+        in GesValue b,
+        in GesValue c,
+        in GesValue d,
+        in GesValue e,
+        in GesValue f,
         out double aNumber,
         out double bNumber,
         out double cNumber,
@@ -756,8 +756,8 @@ internal static class GesVmRegisterNavigationMath
     }
 
     private static bool TryReadPair3D(
-        in GesVmValue left,
-        in GesVmValue right,
+        in GesValue left,
+        in GesValue right,
         out double lx,
         out double ly,
         out double lz,
@@ -768,8 +768,8 @@ internal static class GesVmRegisterNavigationMath
         if (left.Unit != right.Unit ||
             left.Kind is not (Vector or Point) ||
             right.Kind is not (Vector or Point) ||
-            left.ObjectValue is not GesVmValueVectorPoint leftTriplet ||
-            right.ObjectValue is not GesVmValueVectorPoint rightTriplet)
+            left.ObjectValue is not GesValueVectorPoint leftTriplet ||
+            right.ObjectValue is not GesValueVectorPoint rightTriplet)
         {
             lx = ly = lz = rx = ry = rz = 0d;
             return false;

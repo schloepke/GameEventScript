@@ -7,12 +7,12 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterCompare
 {
-    internal static void GesVmEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmEqual(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing) vmState.SetNothing(destinationRegister);
         else vmState.SetBoolean(destinationRegister, a.Equ(in b));
     }
-    private static bool Equ(this in GesVmValue a, in GesVmValue b)
+    private static bool Equ(this in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {
@@ -27,7 +27,7 @@ internal static class GesVmRegisterCompare
             case Text or Tag when b.Kind is Text or Tag:
                 if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
                 return string.Equals(a.TextValue, b.TextValue, StringComparison.Ordinal);
-            case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesVmValueVectorPoint av && b.ObjectValue is GesVmValueVectorPoint bv:
+            case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesValueVectorPoint av && b.ObjectValue is GesValueVectorPoint bv:
                 return a.Unit == b.Unit && a.Kind == b.Kind && DoubleEqualsUlp(av.X, bv.X) && DoubleEqualsUlp(av.Y, bv.Y) && DoubleEqualsUlp(av.Z, bv.Z);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:
                 return Sum(al) == Sum(bl);
@@ -41,7 +41,7 @@ internal static class GesVmRegisterCompare
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
                 return amsg.Equals(bmsg);
-            case List when b.Kind is List && a.ObjectValue is GesVmValue[] av && b.ObjectValue is GesVmValue[] bv:
+            case List when b.Kind is List && a.ObjectValue is GesValue[] av && b.ObjectValue is GesValue[] bv:
                 if (av.Length != bv.Length) return false;
                 for (var i = 0; i < av.Length; i++)
                 {
@@ -50,19 +50,19 @@ internal static class GesVmRegisterCompare
                 }
 
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmValueRangeInteger ar && b.ObjectValue is GesVmValueRangeInteger br:
+            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeInteger ar && b.ObjectValue is GesValueRangeInteger br:
                 return ar.From == br.From && ar.To == br.To && ar.Step == br.Step;
-            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesVmValueRangeFloat ar && b.ObjectValue is GesVmValueRangeFloat br:
+            case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeFloat ar && b.ObjectValue is GesValueRangeFloat br:
                 return DoubleEqualsUlp(ar.From, br.From) && DoubleEqualsUlp(ar.To, br.To) && DoubleEqualsUlp(ar.Step, br.Step);
-            case Series when b.Kind is Series && a.ObjectValue is GesVmSeries aseries && b.ObjectValue is GesVmSeries bseries:
+            case Series when b.Kind is Series && a.ObjectValue is GesSeries aseries && b.ObjectValue is GesSeries bseries:
                 return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
-            case Map when b.Kind is Map && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmValueMap bm:
+            case Map when b.Kind is Map && a.ObjectValue is GesValueMap am && b.ObjectValue is GesValueMap bm:
                 return EqualMaps(am, bm);
-            case Custom when b.Kind is Custom && a.ObjectValue is GesVmCustomObject ac && b.ObjectValue is GesVmCustomObject bc:
+            case Custom when b.Kind is Custom && a.ObjectValue is GesCustomObject ac && b.ObjectValue is GesCustomObject bc:
                 return string.Equals(ac.TypeName, bc.TypeName, StringComparison.Ordinal) && EqualMaps(ac.Map, bc.Map);
-            case Map when b.Kind is Custom && a.ObjectValue is GesVmValueMap am && b.ObjectValue is GesVmCustomObject bc:
+            case Map when b.Kind is Custom && a.ObjectValue is GesValueMap am && b.ObjectValue is GesCustomObject bc:
                 return EqualMaps(am, bc.Map);
-            case Custom when b.Kind is Map && a.ObjectValue is GesVmCustomObject ac && b.ObjectValue is GesVmValueMap bm:
+            case Custom when b.Kind is Map && a.ObjectValue is GesCustomObject ac && b.ObjectValue is GesValueMap bm:
                 return EqualMaps(ac.Map, bm);
             default:
                 if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
@@ -70,7 +70,7 @@ internal static class GesVmRegisterCompare
         }
     }
 
-    private static bool EqualMaps(GesVmValueMap am, GesVmValueMap bm)
+    private static bool EqualMaps(GesValueMap am, GesValueMap bm)
     {
                 if (am.Length != bm.Length) return false;
                 var aKeys = am.KeyList;
@@ -97,12 +97,12 @@ internal static class GesVmRegisterCompare
         foreach (var v in arr) sum += v;
         return sum;
     }
-    internal static void GesVmNotEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmNotEqual(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         if (a.Kind is Nothing || b.Kind is Nothing) vmState.SetNothing(destinationRegister);
         else vmState.SetBoolean(destinationRegister, !a.Equ(in b));
     }
-    internal static void GesVmLess(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmLess(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {
@@ -132,7 +132,7 @@ internal static class GesVmRegisterCompare
                 return;
         }
     }
-    internal static void GesVmGreater(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmGreater(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {
@@ -162,7 +162,7 @@ internal static class GesVmRegisterCompare
                 return;
         }
     }
-    internal static void GesVmLessOrEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmLessOrEqual(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {
@@ -192,7 +192,7 @@ internal static class GesVmRegisterCompare
                 return;
         }
     }
-    internal static void GesVmGreaterOrEqual(this GesVmState vmState, ushort destinationRegister, in GesVmValue a, in GesVmValue b)
+    internal static void GesVmGreaterOrEqual(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
     {
         switch (a.Kind)
         {

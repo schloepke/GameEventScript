@@ -11,9 +11,9 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 {
-    private readonly GesVmValue _value;
+    private readonly GesValue _value;
 
-    internal GameEventScriptValue(in GesVmValue value)
+    internal GameEventScriptValue(in GesValue value)
     {
         _value = value;
     }
@@ -69,17 +69,17 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
         GameEventScriptBytecodeTypeKind.Boolean => _value.IsTrue,
         GameEventScriptBytecodeTypeKind.Integer => _value.IntegerValue != 0,
         Float or Percentage => _value.FloatValue != 0d,
-        Vector or Point when _value.ObjectValue is GesVmValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+        Vector or Point when _value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
         _ => _value.IsTrue
     };
 
     public string Text => _value.TextValue.Length > 0 || Kind is GameEventScriptBytecodeTypeKind.Text or Tag ? _value.TextValue : _value.ToText;
 
-    public double X => _value.ObjectValue is GesVmValueVectorPoint vector ? vector.X : 0d;
+    public double X => _value.ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
 
-    public double Y => _value.ObjectValue is GesVmValueVectorPoint vector ? vector.Y : 0d;
+    public double Y => _value.ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
 
-    public double Z => _value.ObjectValue is GesVmValueVectorPoint vector ? vector.Z : 0d;
+    public double Z => _value.ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
 
     public bool IsIntegerNumber => Kind is GameEventScriptBytecodeTypeKind.Integer;
 
@@ -89,9 +89,9 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public GameEventScriptMessageSignature? Handler => _value.ObjectValue as GameEventScriptMessageSignature;
 
-    public bool IsIntegerRange => _value.ObjectValue is GesVmValueRangeInteger;
+    public bool IsIntegerRange => _value.ObjectValue is GesValueRangeInteger;
 
-    public bool IsFloatRange => _value.ObjectValue is GesVmValueRangeFloat;
+    public bool IsFloatRange => _value.ObjectValue is GesValueRangeFloat;
 
     /// <summary>
     /// Reads the value as a numeric value or <see cref="double.NaN"/> when it is not numeric.
@@ -113,7 +113,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public IReadOnlyList<GameEventScriptValue> AsList()
     {
-        if (_value.ObjectValue is not GesVmValue[] source)
+        if (_value.ObjectValue is not GesValue[] source)
         {
             return [];
         }
@@ -129,13 +129,13 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public IReadOnlyDictionary<string, GameEventScriptValue> AsMap()
     {
-        if (_value.ObjectValue is not GesVmValueMap map)
+        if (_value.ObjectValue is not GesValueMap map)
         {
-            if (_value.ObjectValue is GesVmCustomObject customObject)
+            if (_value.ObjectValue is GesCustomObject customObject)
             {
                 map = customObject.Map;
             }
-            else if (_value.ObjectValue is GesVmExternalObject externalObject)
+            else if (_value.ObjectValue is GesExternalObject externalObject)
             {
                 map = externalObject.ToMap();
             }
@@ -181,9 +181,9 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
     {
         var map = _value.ObjectValue switch
         {
-            GesVmValueMap vmMap => vmMap,
-            GesVmCustomObject customObject => customObject.Map,
-            GesVmExternalObject externalObject => externalObject.ToMap(),
+            GesValueMap vmMap => vmMap,
+            GesCustomObject customObject => customObject.Map,
+            GesExternalObject externalObject => externalObject.ToMap(),
             _ => null
         };
 
@@ -199,13 +199,13 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public bool TryGetCustomTypeName(out string typeName)
     {
-        if (_value.ObjectValue is GesVmExternalObject externalObject)
+        if (_value.ObjectValue is GesExternalObject externalObject)
         {
             typeName = externalObject.CustomTypeName;
             return true;
         }
 
-        if (_value.ObjectValue is GesVmCustomObject customObject)
+        if (_value.ObjectValue is GesCustomObject customObject)
         {
             typeName = customObject.TypeName;
             return true;
@@ -217,7 +217,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public bool TryGetIntegerRange(out long from, out long to, out long step)
     {
-        if (_value.ObjectValue is GesVmValueRangeInteger range)
+        if (_value.ObjectValue is GesValueRangeInteger range)
         {
             from = range.From;
             to = range.To;
@@ -233,7 +233,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
     public bool TryGetFloatRange(out double from, out double to, out double step)
     {
-        if (_value.ObjectValue is GesVmValueRangeFloat range)
+        if (_value.ObjectValue is GesValueRangeFloat range)
         {
             from = range.From;
             to = range.To;
@@ -263,7 +263,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
     public bool TryGetExternalObject(Type objectType, out object value)
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
-        if (_value.ObjectValue is GesVmExternalObject externalObject &&
+        if (_value.ObjectValue is GesExternalObject externalObject &&
             objectType.IsInstanceOfType(externalObject.Instance))
         {
             value = externalObject.Instance;
@@ -274,7 +274,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
         return false;
     }
 
-    internal ref readonly GesVmValue GetVmValue() => ref _value;
+    internal ref readonly GesValue GetVmValue() => ref _value;
 
     public bool Equals(GameEventScriptValue? other)
         => other is not null && _value.EqualsValue(in other._value);

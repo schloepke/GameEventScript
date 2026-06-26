@@ -8,15 +8,15 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterSortGroupDistinct
 {
-    internal static void GesVmDistinct(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
+    internal static void GesVmDistinct(this GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var resultValue = new GesVmValue();
+        var resultValue = new GesValue();
         switch (source.Kind)
         {
             case Nothing:
                 vmState.SetNothing(destinationRegister);
                 return;
-            case List when source.ObjectValue is GesVmValue[] list:
+            case List when source.ObjectValue is GesValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -24,7 +24,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                var result = new GesVmValue[list.Length];
+                var result = new GesValue[list.Length];
                 var resultLength = 0;
                 for (var i = 0; i < list.Length; i++)
                 {
@@ -47,7 +47,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                var compact = new GesVmValue[resultLength];
+                var compact = new GesValue[resultLength];
                 for (var i = 0; i < resultLength; i++) compact[i] = result[i];
                 vmState.SetList(destinationRegister, compact);
                 return;
@@ -82,10 +82,10 @@ internal static class GesVmRegisterSortGroupDistinct
                 vmState.SetDice(destinationRegister, compact);
                 return;
             }
-            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+            case Iterator when source.ObjectValue is IGesIterator iterator:
             {
-                var item = new GesVmValue();
-                var values = new GesVmValue[16];
+                var item = new GesValue();
+                var values = new GesValue[16];
                 var count = 0;
                 try
                 {
@@ -102,7 +102,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         if (found) continue;
                         if (count == values.Length)
                         {
-                            var resized = new GesVmValue[values.Length << 1];
+                            var resized = new GesValue[values.Length << 1];
                             Array.Copy(values, resized, values.Length);
                             values = resized;
                         }
@@ -115,7 +115,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     if (iterator is IDisposable disposable) disposable.Dispose();
                 }
 
-                var result = new GesVmValue[count];
+                var result = new GesValue[count];
                 for (var i = 0; i < count; i++) result[i] = values[i];
                 vmState.SetList(destinationRegister, result);
                 return;
@@ -126,23 +126,23 @@ internal static class GesVmRegisterSortGroupDistinct
                 return;
         }
     }
-    internal static void GesVmSortAscending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
+    internal static void GesVmSortAscending(this GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var result = new GesVmValue();
+        var result = new GesValue();
         GesVmSort(vmState, ref result, in source, descending: false);
         vmState.SetValue(destinationRegister, in result);
     }
-    internal static void GesVmSortDescending(this GesVmState vmState, ushort destinationRegister, in GesVmValue source)
+    internal static void GesVmSortDescending(this GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var result = new GesVmValue();
+        var result = new GesValue();
         GesVmSort(vmState, ref result, in source, descending: true);
         vmState.SetValue(destinationRegister, in result);
     }
-    private static void GesVmSort(GesVmState vmState, ref GesVmValue dst, in GesVmValue source, bool descending)
+    private static void GesVmSort(GesVmState vmState, ref GesValue dst, in GesValue source, bool descending)
     {
         switch (source.Kind)
         {
-            case List when source.ObjectValue is GesVmValue[] list:
+            case List when source.ObjectValue is GesValue[] list:
             {
                 if (list.Length == 0)
                 {
@@ -150,7 +150,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                var result = new GesVmValue[list.Length];
+                var result = new GesValue[list.Length];
                 for (var i = 0; i < list.Length; i++) result[i] = list[i];
                 if (!SortValues(result, list.Length, descending))
                 {
@@ -163,7 +163,7 @@ internal static class GesVmRegisterSortGroupDistinct
             }
             case Dice when source.ObjectValue is int[] dice:
             {
-                var result = new GesVmValue[dice.Length];
+                var result = new GesValue[dice.Length];
                 if (descending)
                 {
                     for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[i]);
@@ -176,7 +176,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 dst.SetList(result);
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeInteger range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
@@ -201,7 +201,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 dst.SetNothing();
                 return;
             }
-            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesVmValueRangeFloat range:
+            case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
             {
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length == 0)
@@ -226,10 +226,10 @@ internal static class GesVmRegisterSortGroupDistinct
                 dst.SetNothing();
                 return;
             }
-            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+            case Iterator when source.ObjectValue is IGesIterator iterator:
             {
-                var item = new GesVmValue();
-                var values = new GesVmValue[16];
+                var item = new GesValue();
+                var values = new GesValue[16];
                 var count = 0;
                 try
                 {
@@ -237,7 +237,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     {
                         if (count == values.Length)
                         {
-                            var resized = new GesVmValue[values.Length << 1];
+                            var resized = new GesValue[values.Length << 1];
                             Array.Copy(values, resized, values.Length);
                             values = resized;
                         }
@@ -256,7 +256,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                var result = new GesVmValue[count];
+                var result = new GesValue[count];
                 for (var i = 0; i < count; i++) result[i] = values[i];
                 dst.SetList(result);
                 return;
@@ -267,7 +267,7 @@ internal static class GesVmRegisterSortGroupDistinct
         }
     }
 
-    private static bool SortValues(GesVmValue[] values, int count, bool descending)
+    private static bool SortValues(GesValue[] values, int count, bool descending)
     {
         for (var i = 1; i < count; i++)
         {
@@ -287,7 +287,7 @@ internal static class GesVmRegisterSortGroupDistinct
         return true;
     }
 
-    internal static bool SortValuesByKeys(GesVmValue[] values, GesVmValue[] keys, int count, bool descending)
+    internal static bool SortValuesByKeys(GesValue[] values, GesValue[] keys, int count, bool descending)
     {
         for (var i = 1; i < count; i++)
         {
@@ -310,7 +310,7 @@ internal static class GesVmRegisterSortGroupDistinct
         return true;
     }
 
-    private static bool TryCompareAscending(ref GesVmValue a, ref GesVmValue b, out int comparison)
+    private static bool TryCompareAscending(ref GesValue a, ref GesValue b, out int comparison)
     {
         comparison = 0;
         if (a.Kind is Nothing || b.Kind is Nothing)
@@ -353,8 +353,8 @@ internal static class GesVmRegisterSortGroupDistinct
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
                 if (a.Unit != b.Unit ||
-                    a.ObjectValue is not GesVmValueVectorPoint leftTriplet ||
-                    b.ObjectValue is not GesVmValueVectorPoint rightTriplet)
+                    a.ObjectValue is not GesValueVectorPoint leftTriplet ||
+                    b.ObjectValue is not GesValueVectorPoint rightTriplet)
                 {
                     return false;
                 }
@@ -371,7 +371,7 @@ internal static class GesVmRegisterSortGroupDistinct
                 return true;
         }
     }
-    private static int GetStableRank(ref GesVmValue value)
+    private static int GetStableRank(ref GesValue value)
     {
         switch (value.Kind)
         {

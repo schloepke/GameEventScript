@@ -4,7 +4,7 @@ using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 using static StepH.GameEventScript.Api.GameEventScriptValueFactory;
-using StepH.GameEventScript.Runtime.Values;
+using GesSeriesValue = StepH.GameEventScript.Runtime.Values.GesSeries;
 
 namespace StepH.GameEventScript.Runtime;
 
@@ -46,8 +46,8 @@ internal static class GesStandardExtensions
     {
         var series = reference.FunctionName switch
         {
-            "fibonacci" => GesVmSeries.Fibonacci(),
-            "factorial" => GesVmSeries.Factorial(),
+            "fibonacci" => GesSeriesValue.Fibonacci(),
+            "factorial" => GesSeriesValue.Factorial(),
             "natural" => EvaluateNaturalSeries(reference.ArgumentLabels, arguments),
             _ => null
         };
@@ -55,7 +55,7 @@ internal static class GesStandardExtensions
         return series is null ? GesNothing() : GesSeries(series);
     }
 
-    private static GesVmSeries EvaluateNaturalSeries(IReadOnlyList<string> labels, ReadOnlySpan<GameEventScriptValue> arguments)
+    private static GesSeriesValue EvaluateNaturalSeries(IReadOnlyList<string> labels, ReadOnlySpan<GameEventScriptValue> arguments)
     {
         long start = 0;
         long step = 1;
@@ -72,6 +72,6 @@ internal static class GesStandardExtensions
             }
         }
 
-        return GesVmSeries.Natural(start, step);
+        return GesSeriesValue.Natural(start, step);
     }
 }

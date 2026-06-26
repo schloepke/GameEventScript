@@ -6,16 +6,16 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterIterators
 {
-    internal static void GesVmIteratorCreate(this GesVmState vmState, ushort destinationRegister, in GesVmValue x)
+    internal static void GesVmIteratorCreate(this GesVmState vmState, ushort destinationRegister, in GesValue x)
     {
         if (x.TryCreateIterator(out var iterator)) vmState.SetIterator(destinationRegister, iterator);
         else vmState.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesVmValue iterator, ushort noMoreAddress)
+    internal static void GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
     {
-        var result = new GesVmValue();
-        if (iterator is { Kind: Iterator, ObjectValue: IGesVmIterator it } && it.TryNext(ref result))
+        var result = new GesValue();
+        if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it } && it.TryNext(ref result))
         {
             vmState.SetValue(destinationRegister, in result);
             return;

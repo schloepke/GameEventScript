@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal class GesVmUnitCalculation
 {
-    internal static bool TrySameUnit(in GesVmValue a, in GesVmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TrySameUnit(in GesValue a, in GesValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.Unit == b.Unit)
         {
@@ -17,7 +17,7 @@ internal class GesVmUnitCalculation
         unit = UnitNone;
         return false;
     }
-    internal static bool TrySameUnit(in GesVmValue a, in GesVmValue b, in GesVmValue c, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TrySameUnit(in GesValue a, in GesValue b, in GesValue c, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.Unit == b.Unit && b.Unit == c.Unit)
         {
@@ -28,7 +28,7 @@ internal class GesVmUnitCalculation
         unit = UnitNone;
         return false;
     }
-    internal static bool TryProductUnit(in GesVmValue a, in GesVmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TryProductUnit(in GesValue a, in GesValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         if (a.HasUnit && b.HasUnit)
         {
@@ -39,7 +39,7 @@ internal class GesVmUnitCalculation
         unit = a.Unit is UnitNone ? b.Unit : a.Unit;
         return true;
     }
-    internal static bool TryQuotientUnit(in GesVmValue a, in GesVmValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static bool TryQuotientUnit(in GesValue a, in GesValue b, out GameEventScriptBytecodeInstructionUnit unit)
     {
         switch (a.HasUnit)
         {

@@ -3,50 +3,50 @@ using System.Globalization;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal interface IGesVmRandomIntegerSeries
+internal interface IGesRandomIntegerSeries
 {
     string SignatureId { get; }
 
     bool TryCalc(long index, out long value);
 }
 
-internal interface IGesVmRandomDoubleSeries
+internal interface IGesRandomDoubleSeries
 {
     string SignatureId { get; }
 
     bool TryCalc(long index, out double value);
 }
 
-internal interface IGesVmForwardIntegerSeries
+internal interface IGesForwardIntegerSeries
 {
     string SignatureId { get; }
 
-    bool TryCreateCursor(long index, ref GesVmSeriesCursor cursor);
+    bool TryCreateCursor(long index, ref GesSeriesCursor cursor);
 
-    bool TryMoveNext(ref GesVmSeriesCursor cursor);
+    bool TryMoveNext(ref GesSeriesCursor cursor);
 
-    bool TryReadCursor(in GesVmSeriesCursor cursor, out long value);
+    bool TryReadCursor(in GesSeriesCursor cursor, out long value);
 }
 
-internal interface IGesVmForwardDoubleSeries
+internal interface IGesForwardDoubleSeries
 {
     string SignatureId { get; }
 
-    bool TryCreateCursor(long index, ref GesVmSeriesCursor cursor);
+    bool TryCreateCursor(long index, ref GesSeriesCursor cursor);
 
-    bool TryMoveNext(ref GesVmSeriesCursor cursor);
+    bool TryMoveNext(ref GesSeriesCursor cursor);
 
-    bool TryReadCursor(in GesVmSeriesCursor cursor, out double value);
+    bool TryReadCursor(in GesSeriesCursor cursor, out double value);
 }
 
-internal sealed class GesVmSeries
+internal sealed class GesSeries
 {
-    private readonly GesVmSeriesDefinition _definition;
+    private readonly GesSeriesDefinition _definition;
     private readonly bool _hasCheckpoint;
     private readonly long _checkpointIndex;
-    private readonly GesVmSeriesCursor _checkpoint;
+    private readonly GesSeriesCursor _checkpoint;
 
-    private GesVmSeries(GesVmSeriesDefinition definition, long offset, bool hasCheckpoint, long checkpointIndex, in GesVmSeriesCursor checkpoint)
+    private GesSeries(GesSeriesDefinition definition, long offset, bool hasCheckpoint, long checkpointIndex, in GesSeriesCursor checkpoint)
     {
         _definition = definition;
         Offset = offset < 0 ? 0 : offset;
@@ -59,7 +59,7 @@ internal sealed class GesVmSeries
 
     internal long Offset { get; }
 
-    internal GesVmSeries Drop(long count)
+    internal GesSeries Drop(long count)
     {
         if (count <= 0)
         {
@@ -67,10 +67,10 @@ internal sealed class GesVmSeries
         }
 
         var offset = TryAddIndex(Offset, count, out var value) ? value : long.MaxValue;
-        return new GesVmSeries(_definition, offset, _hasCheckpoint, _checkpointIndex, in _checkpoint);
+        return new GesSeries(_definition, offset, _hasCheckpoint, _checkpointIndex, in _checkpoint);
     }
 
-    internal bool TryGetTerm(long index, ref GesVmValue value)
+    internal bool TryGetTerm(long index, ref GesValue value)
     {
         if (index < 0 || !TryAddIndex(Offset, index, out var absoluteIndex))
         {
@@ -83,7 +83,7 @@ internal sealed class GesVmSeries
             return _definition.TryGetRandomTerm(absoluteIndex, ref value);
         }
 
-        GesVmSeriesCursor cursor;
+        GesSeriesCursor cursor;
         var cursorIndex = 0L;
         if (_hasCheckpoint && _checkpointIndex <= absoluteIndex)
         {
@@ -114,26 +114,26 @@ internal sealed class GesVmSeries
         return _definition.TryReadCursor(in cursor, ref value);
     }
 
-    internal static GesVmSeries Natural(long start = 0, long step = 1)
+    internal static GesSeries Natural(long start = 0, long step = 1)
     {
-        var checkpoint = default(GesVmSeriesCursor);
-        return new GesVmSeries(new NaturalSeriesDefinition(start, step), 0, false, 0, in checkpoint);
+        var checkpoint = default(GesSeriesCursor);
+        return new GesSeries(new NaturalSeriesDefinition(start, step), 0, false, 0, in checkpoint);
     }
 
-    internal static GesVmSeries Fibonacci()
+    internal static GesSeries Fibonacci()
     {
         var definition = FibonacciSeriesDefinition.Instance;
-        var checkpoint = default(GesVmSeriesCursor);
+        var checkpoint = default(GesSeriesCursor);
         definition.TryCreateCursor(0, ref checkpoint);
-        return new GesVmSeries(definition, 0, true, 0, in checkpoint);
+        return new GesSeries(definition, 0, true, 0, in checkpoint);
     }
 
-    internal static GesVmSeries Factorial()
+    internal static GesSeries Factorial()
     {
         var definition = FactorialSeriesDefinition.Instance;
-        var checkpoint = default(GesVmSeriesCursor);
+        var checkpoint = default(GesSeriesCursor);
         definition.TryCreateCursor(0, ref checkpoint);
-        return new GesVmSeries(definition, 0, true, 0, in checkpoint);
+        return new GesSeries(definition, 0, true, 0, in checkpoint);
     }
 
     private static bool TryAddIndex(long left, long right, out long value)
@@ -150,49 +150,49 @@ internal sealed class GesVmSeries
         }
     }
 
-    private abstract class GesVmSeriesDefinition
+    private abstract class GesSeriesDefinition
     {
         internal abstract string SignatureId { get; }
 
         internal abstract bool IsRandomAccess { get; }
 
-        internal virtual bool TryGetRandomTerm(long index, ref GesVmValue value)
+        internal virtual bool TryGetRandomTerm(long index, ref GesValue value)
         {
             value.SetNothing();
             return false;
         }
 
-        internal virtual bool TryCreateCursor(long index, ref GesVmSeriesCursor cursor)
+        internal virtual bool TryCreateCursor(long index, ref GesSeriesCursor cursor)
         {
             cursor = default;
             _ = index;
             return false;
         }
 
-        internal virtual bool TryMoveNext(ref GesVmSeriesCursor cursor)
+        internal virtual bool TryMoveNext(ref GesSeriesCursor cursor)
         {
             _ = cursor;
             return false;
         }
 
-        internal virtual bool TryReadCursor(in GesVmSeriesCursor cursor, ref GesVmValue value)
+        internal virtual bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
         {
             value.SetNothing();
             return false;
         }
     }
 
-    private sealed class NaturalSeriesDefinition(long start, long step) : GesVmSeriesDefinition, IGesVmRandomIntegerSeries, IGesVmRandomDoubleSeries
+    private sealed class NaturalSeriesDefinition(long start, long step) : GesSeriesDefinition, IGesRandomIntegerSeries, IGesRandomDoubleSeries
     {
         internal override string SignatureId { get; } = $"natural({start.ToString(CultureInfo.InvariantCulture)},{step.ToString(CultureInfo.InvariantCulture)})";
 
-        string IGesVmRandomIntegerSeries.SignatureId => SignatureId;
+        string IGesRandomIntegerSeries.SignatureId => SignatureId;
 
-        string IGesVmRandomDoubleSeries.SignatureId => SignatureId;
+        string IGesRandomDoubleSeries.SignatureId => SignatureId;
 
         internal override bool IsRandomAccess => true;
 
-        internal override bool TryGetRandomTerm(long index, ref GesVmValue value)
+        internal override bool TryGetRandomTerm(long index, ref GesValue value)
         {
             if (index < 0)
             {
@@ -200,18 +200,18 @@ internal sealed class GesVmSeries
                 return false;
             }
 
-            if (((IGesVmRandomIntegerSeries)this).TryCalc(index, out var integerValue))
+            if (((IGesRandomIntegerSeries)this).TryCalc(index, out var integerValue))
             {
                 value.SetInteger(integerValue);
                 return true;
             }
 
-            ((IGesVmRandomDoubleSeries)this).TryCalc(index, out var doubleValue);
+            ((IGesRandomDoubleSeries)this).TryCalc(index, out var doubleValue);
             value.SetFloat(doubleValue);
             return true;
         }
 
-        bool IGesVmRandomIntegerSeries.TryCalc(long index, out long value)
+        bool IGesRandomIntegerSeries.TryCalc(long index, out long value)
         {
             try
             {
@@ -225,24 +225,24 @@ internal sealed class GesVmSeries
             }
         }
 
-        bool IGesVmRandomDoubleSeries.TryCalc(long index, out double value)
+        bool IGesRandomDoubleSeries.TryCalc(long index, out double value)
         {
             value = start + (step * (double)index);
             return index >= 0;
         }
     }
 
-    private sealed class FibonacciSeriesDefinition : GesVmSeriesDefinition, IGesVmForwardDoubleSeries
+    private sealed class FibonacciSeriesDefinition : GesSeriesDefinition, IGesForwardDoubleSeries
     {
         internal static FibonacciSeriesDefinition Instance { get; } = new();
 
         internal override string SignatureId => "fibonacci";
 
-        string IGesVmForwardDoubleSeries.SignatureId => SignatureId;
+        string IGesForwardDoubleSeries.SignatureId => SignatureId;
 
         internal override bool IsRandomAccess => false;
 
-        internal override bool TryCreateCursor(long index, ref GesVmSeriesCursor cursor)
+        internal override bool TryCreateCursor(long index, ref GesSeriesCursor cursor)
         {
             if (index != 0)
             {
@@ -255,7 +255,7 @@ internal sealed class GesVmSeries
             return true;
         }
 
-        internal override bool TryMoveNext(ref GesVmSeriesCursor cursor)
+        internal override bool TryMoveNext(ref GesSeriesCursor cursor)
         {
             if (cursor.Index == 0)
             {
@@ -272,35 +272,35 @@ internal sealed class GesVmSeries
             return true;
         }
 
-        internal override bool TryReadCursor(in GesVmSeriesCursor cursor, ref GesVmValue value)
+        internal override bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
         {
-            ((IGesVmForwardDoubleSeries)this).TryReadCursor(in cursor, out var number);
+            ((IGesForwardDoubleSeries)this).TryReadCursor(in cursor, out var number);
             value.SetFloat(number);
             return true;
         }
 
-        bool IGesVmForwardDoubleSeries.TryCreateCursor(long index, ref GesVmSeriesCursor cursor) => TryCreateCursor(index, ref cursor);
+        bool IGesForwardDoubleSeries.TryCreateCursor(long index, ref GesSeriesCursor cursor) => TryCreateCursor(index, ref cursor);
 
-        bool IGesVmForwardDoubleSeries.TryMoveNext(ref GesVmSeriesCursor cursor) => TryMoveNext(ref cursor);
+        bool IGesForwardDoubleSeries.TryMoveNext(ref GesSeriesCursor cursor) => TryMoveNext(ref cursor);
 
-        bool IGesVmForwardDoubleSeries.TryReadCursor(in GesVmSeriesCursor cursor, out double value)
+        bool IGesForwardDoubleSeries.TryReadCursor(in GesSeriesCursor cursor, out double value)
         {
             value = cursor.Index > 1476 ? double.PositiveInfinity : cursor.Current;
             return true;
         }
     }
 
-    private sealed class FactorialSeriesDefinition : GesVmSeriesDefinition, IGesVmForwardDoubleSeries
+    private sealed class FactorialSeriesDefinition : GesSeriesDefinition, IGesForwardDoubleSeries
     {
         internal static FactorialSeriesDefinition Instance { get; } = new();
 
         internal override string SignatureId => "factorial";
 
-        string IGesVmForwardDoubleSeries.SignatureId => SignatureId;
+        string IGesForwardDoubleSeries.SignatureId => SignatureId;
 
         internal override bool IsRandomAccess => false;
 
-        internal override bool TryCreateCursor(long index, ref GesVmSeriesCursor cursor)
+        internal override bool TryCreateCursor(long index, ref GesSeriesCursor cursor)
         {
             if (index != 0)
             {
@@ -312,25 +312,25 @@ internal sealed class GesVmSeries
             return true;
         }
 
-        internal override bool TryMoveNext(ref GesVmSeriesCursor cursor)
+        internal override bool TryMoveNext(ref GesSeriesCursor cursor)
         {
             cursor.Index++;
             cursor.Current *= cursor.Index;
             return true;
         }
 
-        internal override bool TryReadCursor(in GesVmSeriesCursor cursor, ref GesVmValue value)
+        internal override bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
         {
-            ((IGesVmForwardDoubleSeries)this).TryReadCursor(in cursor, out var number);
+            ((IGesForwardDoubleSeries)this).TryReadCursor(in cursor, out var number);
             value.SetFloat(number);
             return true;
         }
 
-        bool IGesVmForwardDoubleSeries.TryCreateCursor(long index, ref GesVmSeriesCursor cursor) => TryCreateCursor(index, ref cursor);
+        bool IGesForwardDoubleSeries.TryCreateCursor(long index, ref GesSeriesCursor cursor) => TryCreateCursor(index, ref cursor);
 
-        bool IGesVmForwardDoubleSeries.TryMoveNext(ref GesVmSeriesCursor cursor) => TryMoveNext(ref cursor);
+        bool IGesForwardDoubleSeries.TryMoveNext(ref GesSeriesCursor cursor) => TryMoveNext(ref cursor);
 
-        bool IGesVmForwardDoubleSeries.TryReadCursor(in GesVmSeriesCursor cursor, out double value)
+        bool IGesForwardDoubleSeries.TryReadCursor(in GesSeriesCursor cursor, out double value)
         {
             value = cursor.Index > 170 ? double.PositiveInfinity : cursor.Current;
             return true;
@@ -339,7 +339,7 @@ internal sealed class GesVmSeries
 
 }
 
-internal struct GesVmSeriesCursor
+internal struct GesSeriesCursor
 {
     internal long Index;
     internal double Previous;

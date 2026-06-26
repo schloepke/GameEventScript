@@ -8,9 +8,9 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterCustomType
 {
-    internal static void GesVmCreateRecordValue(this GesVmState vmState, ushort destinationRegister, in GesVmValue mapValue, ushort typeTextPointer)
+    internal static void GesVmCreateRecordValue(this GesVmState vmState, ushort destinationRegister, in GesValue mapValue, ushort typeTextPointer)
     {
-        if (mapValue.Kind is Map && mapValue.ObjectValue is GesVmValueMap map)
+        if (mapValue.Kind is Map && mapValue.ObjectValue is GesValueMap map)
         {
             vmState.SetRecord(destinationRegister, vmState.FetchStringByPointer(typeTextPointer), map);
             return;
@@ -76,7 +76,7 @@ internal static class GesVmRegisterCustomType
                 return;
             }
 
-            var converted = new GesVmValue();
+            var converted = new GesValue();
             var source = vmState.RegisterStaged((ushort)argumentIndex);
             switch (parameter.TypeName)
             {

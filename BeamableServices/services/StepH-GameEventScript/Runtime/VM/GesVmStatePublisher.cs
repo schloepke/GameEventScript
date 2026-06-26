@@ -58,7 +58,7 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool GesVmPublishMessageValue(this GesVmState vmState, ref GesVmValue messageValue, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValue(this GesVmState vmState, ref GesValue messageValue, bool publish, GameEventScriptSession session)
     {
         if (messageValue.Kind is Message && messageValue.ObjectValue is GameEventScriptMessage msg)
         {
@@ -66,7 +66,7 @@ internal static class GesVmStatePublisher
         }
         return false;
     }
-    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, ref GesVmValue messageValue, ReadOnlySpan<ushort> tagRegisters, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, ref GesValue messageValue, ReadOnlySpan<ushort> tagRegisters, bool publish, GameEventScriptSession session)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
         var tags = new List<string>(tagRegisters.Length);

@@ -6,20 +6,20 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterMemberIndexAccess
 {
-    internal static void GesVmMemberAccess(this GesVmState vmState, ushort destinationRegister, string key, in GesVmValue obj)
+    internal static void GesVmMemberAccess(this GesVmState vmState, ushort destinationRegister, string key, in GesValue obj)
     {
         switch (obj.Kind)
         {
-            case Map when obj.ObjectValue is GesVmValueMap map && map.TryGet(key, out var value):
+            case Map when obj.ObjectValue is GesValueMap map && map.TryGet(key, out var value):
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesVmCustomObject customObject && customObject.Map.TryGet(key, out var value):
+            case Custom when obj.ObjectValue is GesCustomObject customObject && customObject.Map.TryGet(key, out var value):
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesVmExternalObject externalObject && externalObject.ToMap().TryGet(key, out var value):
+            case Custom when obj.ObjectValue is GesExternalObject externalObject && externalObject.ToMap().TryGet(key, out var value):
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Vector or Point when obj.ObjectValue is GesVmValueVectorPoint vp && vp.TryGetComponent(key, out var value):
+            case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp && vp.TryGetComponent(key, out var value):
                 vmState.SetFloat(destinationRegister, value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:
@@ -37,7 +37,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         vmState.SetMap(destinationRegister, entries.ToMap());
                         return;
                     case "tags":
-                        var tagList = new GesVmValue[message.Tags.Count];
+                        var tagList = new GesValue[message.Tags.Count];
                         for (var i = 0; i < tagList.Length; i++) tagList[i].SetTag(message.Tags[i]);
                         vmState.SetList(destinationRegister, tagList);
                         return;
@@ -55,7 +55,7 @@ internal static class GesVmRegisterMemberIndexAccess
                         vmState.SetText(destinationRegister, signature.Name);
                         return;
                     case "parameters":
-                        var list = new GesVmValue[signature.Parameters.Count];
+                        var list = new GesValue[signature.Parameters.Count];
                         for (var i = 0; i < list.Length; i++) list[i].SetText(signature.Parameters[i]);
                         vmState.SetList(destinationRegister, list);
                         return;
@@ -72,7 +72,7 @@ internal static class GesVmRegisterMemberIndexAccess
         }
     }
 
-    internal static void GesVmIndexAccess(this GesVmState vmState, ushort destinationRegister, long indexIn, in GesVmValue obj)
+    internal static void GesVmIndexAccess(this GesVmState vmState, ushort destinationRegister, long indexIn, in GesValue obj)
     {
         if (indexIn <= 0)
         {
@@ -83,7 +83,7 @@ internal static class GesVmRegisterMemberIndexAccess
         var index = (int)indexIn - 1;
         switch (obj.Kind)
         {
-            case List when obj.ObjectValue is GesVmValue[] list:
+            case List when obj.ObjectValue is GesValue[] list:
                 if (index < list.Length) vmState.SetValue(destinationRegister, in list[index]);
                 else vmState.SetNothing(destinationRegister);
                 return;
@@ -91,7 +91,7 @@ internal static class GesVmRegisterMemberIndexAccess
                 if (index < dices.Length) vmState.SetInteger(destinationRegister, dices[index]);
                 else vmState.SetNothing(destinationRegister);
                 return;
-            case Vector or Point when obj.ObjectValue is GesVmValueVectorPoint vp:
+            case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp:
                 switch (index)
                 {
                     case 0:
@@ -108,12 +108,12 @@ internal static class GesVmRegisterMemberIndexAccess
                         break;
                 }
                 return;
-            case Range when obj.ObjectValue is GesVmValueRangeInteger integerRange:
+            case Range when obj.ObjectValue is GesValueRangeInteger integerRange:
                 var intRangeValue = integerRange.From + index * integerRange.Step;
                 if (integerRange.Step > 0 && intRangeValue <= integerRange.To || integerRange.Step < 0 && intRangeValue >= integerRange.To) vmState.SetInteger(destinationRegister, intRangeValue);
                 else vmState.SetNothing(destinationRegister);
                 return;
-            case Range when obj.ObjectValue is GesVmValueRangeFloat floatRange:
+            case Range when obj.ObjectValue is GesValueRangeFloat floatRange:
                 var floatRangeValue = floatRange.From + index * floatRange.Step;
                 if (floatRange.Step > 0 && floatRangeValue <= floatRange.To || floatRange.Step < 0 && floatRangeValue >= floatRange.To) vmState.SetFloat(destinationRegister, floatRangeValue);
                 else vmState.SetNothing(destinationRegister);
@@ -128,7 +128,7 @@ internal static class GesVmRegisterMemberIndexAccess
         }
     }
 
-    internal static void GesVmPropertyAccess(this GesVmState vmState, ushort destinationRegister, in GesVmValue property, in GesVmValue obj)
+    internal static void GesVmPropertyAccess(this GesVmState vmState, ushort destinationRegister, in GesValue property, in GesValue obj)
     {
         switch (property.Kind)
         {

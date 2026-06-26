@@ -2,18 +2,18 @@ using System;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal interface IGesVmIterator
+internal interface IGesIterator
 {
-    public bool TryNext(ref GesVmValue value);
+    public bool TryNext(ref GesValue value);
     public bool IsPatternSequence => false;
 }
 
-internal class GesVmIntegerRangeIterator(long from, long to, long step) : IGesVmIterator, IDisposable
+internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIterator, IDisposable
 {
     private long _current = from;
     private bool _disposed = false;
 
-    public bool TryNext(ref GesVmValue value)
+    public bool TryNext(ref GesValue value)
     {
         if (_disposed)
         {
@@ -38,12 +38,12 @@ internal class GesVmIntegerRangeIterator(long from, long to, long step) : IGesVm
     }
 }
 
-internal class GesVmFloatRangeIterator(double from, double to, double step) : IGesVmIterator, IDisposable
+internal class GesFloatRangeIterator(double from, double to, double step) : IGesIterator, IDisposable
 {
     private double _current = from;
     private bool _disposed;
 
-    public bool TryNext(ref GesVmValue value)
+    public bool TryNext(ref GesValue value)
     {
         if (_disposed)
         {
@@ -68,13 +68,13 @@ internal class GesVmFloatRangeIterator(double from, double to, double step) : IG
     }
 }
 
-internal class GesVmListIterator(GesVmValue[] list) : IGesVmIterator, IDisposable
+internal class GesListIterator(GesValue[] list) : IGesIterator, IDisposable
 {
     private int _current;
-    private GesVmValue[]? _list = list;
+    private GesValue[]? _list = list;
     public bool IsPatternSequence => true;
 
-    public bool TryNext(ref GesVmValue value)
+    public bool TryNext(ref GesValue value)
     {
         if (_list == null || _current >= _list.Length)
         {
@@ -93,13 +93,13 @@ internal class GesVmListIterator(GesVmValue[] list) : IGesVmIterator, IDisposabl
     }
 }
 
-internal class GesVmIntIterator(int[] values) : IGesVmIterator, IDisposable
+internal class GesIntIterator(int[] values) : IGesIterator, IDisposable
 {
     private int _current;
     private int[]? _values = values;
     public bool IsPatternSequence => true;
 
-    public bool TryNext(ref GesVmValue value)
+    public bool TryNext(ref GesValue value)
     {
         if (_values == null || _current >= _values.Length)
         {
@@ -118,12 +118,12 @@ internal class GesVmIntIterator(int[] values) : IGesVmIterator, IDisposable
     }
 }
 
-internal class GesVmStringIterator(string stringValue) : IGesVmIterator, IDisposable
+internal class GesStringIterator(string stringValue) : IGesIterator, IDisposable
 {
     private int _current;
     private string? _stringValue = stringValue;
 
-    public bool TryNext(ref GesVmValue value)
+    public bool TryNext(ref GesValue value)
     {
         if (_stringValue == null || _current >= _stringValue.Length)
         {
@@ -142,12 +142,12 @@ internal class GesVmStringIterator(string stringValue) : IGesVmIterator, IDispos
     }
 }
 
-internal class GesVmTripletIterator(GesVmValueVectorPoint triplet) : IGesVmIterator, IDisposable
+internal class GesTripletIterator(GesValueVectorPoint triplet) : IGesIterator, IDisposable
 {
     private int _current;
-    private GesVmValueVectorPoint? _triplet = triplet;
+    private GesValueVectorPoint? _triplet = triplet;
 
-    public bool TryNext(ref GesVmValue value)
+    public bool TryNext(ref GesValue value)
     {
         if (_triplet == null || _current >= 3)
         {

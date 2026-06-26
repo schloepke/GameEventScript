@@ -1,6 +1,6 @@
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal sealed class GesVmValueVectorPoint(double x, double y, double z)
+internal sealed class GesValueVectorPoint(double x, double y, double z)
 {
     internal readonly double X = x;
     internal readonly double Y = y;

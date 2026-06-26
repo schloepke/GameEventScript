@@ -7,7 +7,7 @@ internal static class GesVmRegisterCollections
 {
     internal static void GesVmCreateList(this GesVmState vmState, ushort destinationRegister)
     {
-        var list = new GesVmValue[vmState.StageLength];
+        var list = new GesValue[vmState.StageLength];
         for (ushort i = 0; i < vmState.StageLength; i++) list[i] = vmState.RegisterStaged(i);
         vmState.SetList(destinationRegister, list);
     }
@@ -35,12 +35,12 @@ internal static class GesVmRegisterCollections
         vmState.CreateListBuilder(destinationRegister);
     }
 
-    internal static void GesVmListBuilderAdd(this GesVmState vmState, in GesVmValue listBuilder, in GesVmValue value)
+    internal static void GesVmListBuilderAdd(this GesVmState vmState, in GesValue listBuilder, in GesValue value)
     {
         if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is GesVmValueListBuilder builder) builder.Add(value);
     }
 
-    internal static void GesVmListBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue listBuilder)
+    internal static void GesVmListBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue listBuilder)
     {
         if (listBuilder.Kind is ListBuilder && listBuilder.ObjectValue is GesVmValueListBuilder builder)
         {
@@ -56,7 +56,7 @@ internal static class GesVmRegisterCollections
         vmState.CreateMapBuilder(destinationRegister);
     }
 
-    internal static void GesVmMapBuilderAdd(this GesVmState vmState, in GesVmValue mapBuilder, in GesVmValue keyValue, in GesVmValue value)
+    internal static void GesVmMapBuilderAdd(this GesVmState vmState, in GesValue mapBuilder, in GesValue keyValue, in GesValue value)
     {
         if (mapBuilder.Kind is not MapBuilder || mapBuilder.ObjectValue is not GesVmValueMapBuilder builder) return;
         var key = keyValue.Kind switch
@@ -69,7 +69,7 @@ internal static class GesVmRegisterCollections
         builder.Set(key, value);
     }
 
-    internal static void GesVmMapBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue mapBuilder)
+    internal static void GesVmMapBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue mapBuilder)
     {
         if (mapBuilder.Kind is MapBuilder && mapBuilder.ObjectValue is GesVmValueMapBuilder builder)
         {
@@ -85,12 +85,12 @@ internal static class GesVmRegisterCollections
         vmState.CreateDistinctBuilder(destinationRegister);
     }
 
-    internal static void GesVmDistinctBuilderAdd(this GesVmState vmState, in GesVmValue distinctBuilder, in GesVmValue keyValue, in GesVmValue value)
+    internal static void GesVmDistinctBuilderAdd(this GesVmState vmState, in GesValue distinctBuilder, in GesValue keyValue, in GesValue value)
     {
         if (distinctBuilder.Kind is DistinctBuilder && distinctBuilder.ObjectValue is GesVmValueDistinctBuilder builder) builder.Add(in keyValue, in value);
     }
 
-    internal static void GesVmDistinctBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue distinctBuilder)
+    internal static void GesVmDistinctBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue distinctBuilder)
     {
         if (distinctBuilder.Kind is DistinctBuilder && distinctBuilder.ObjectValue is GesVmValueDistinctBuilder builder)
         {
@@ -106,18 +106,18 @@ internal static class GesVmRegisterCollections
         vmState.CreateGroupBuilder(destinationRegister);
     }
 
-    internal static void GesVmGroupBuilderAdd(this GesVmState vmState, in GesVmValue groupBuilder, in GesVmValue keyValue, in GesVmValue value)
+    internal static void GesVmGroupBuilderAdd(this GesVmState vmState, in GesValue groupBuilder, in GesValue keyValue, in GesValue value)
     {
         if (groupBuilder.Kind is not GroupBuilder || groupBuilder.ObjectValue is not GesVmValueGroupBuilder builder) return;
         var key = keyValue.Kind is Text or Tag ? keyValue.TextValue : keyValue.ToText;
         builder.Add(key, value);
     }
 
-    internal static void GesVmGroupBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesVmValue groupBuilder)
+    internal static void GesVmGroupBuilderFinish(this GesVmState vmState, ushort destinationRegister, in GesValue groupBuilder)
     {
         if (groupBuilder.Kind is GroupBuilder && groupBuilder.ObjectValue is GesVmValueGroupBuilder builder)
         {
-            var result = new GesVmValue();
+            var result = new GesValue();
             builder.WriteTo(ref result);
             vmState.SetValue(destinationRegister, in result);
             return;
@@ -131,12 +131,12 @@ internal static class GesVmRegisterCollections
         vmState.CreateOrderBuilder(destinationRegister);
     }
 
-    internal static void GesVmOrderBuilderAdd(this GesVmState vmState, in GesVmValue orderBuilder, in GesVmValue keyValue, in GesVmValue value)
+    internal static void GesVmOrderBuilderAdd(this GesVmState vmState, in GesValue orderBuilder, in GesValue keyValue, in GesValue value)
     {
         if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmValueOrderBuilder builder) builder.Add(in keyValue, in value);
     }
 
-    internal static void GesVmOrderBuilderFinishAscending(this GesVmState vmState, ushort destinationRegister, in GesVmValue orderBuilder)
+    internal static void GesVmOrderBuilderFinishAscending(this GesVmState vmState, ushort destinationRegister, in GesValue orderBuilder)
     {
         if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmValueOrderBuilder builder && builder.TryToList(descending: false, out var list))
         {
@@ -147,7 +147,7 @@ internal static class GesVmRegisterCollections
         vmState.SetNothing(destinationRegister);
     }
 
-    internal static void GesVmOrderBuilderFinishDescending(this GesVmState vmState, ushort destinationRegister, in GesVmValue orderBuilder)
+    internal static void GesVmOrderBuilderFinishDescending(this GesVmState vmState, ushort destinationRegister, in GesValue orderBuilder)
     {
         if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmValueOrderBuilder builder && builder.TryToList(descending: true, out var list))
         {

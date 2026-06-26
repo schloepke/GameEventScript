@@ -2,21 +2,21 @@ using System;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal sealed class GesVmValueMap
+internal sealed class GesValueMap
 {
     private static readonly string[] EntryKeys = ["key", "value"];
 
     private readonly string[] _keys;
-    private readonly GesVmValue[] _values;
+    private readonly GesValue[] _values;
     private readonly int _length;
-    private GesVmValue[]? _keyList;
-    private GesVmValue[]? _valueList;
-    private GesVmValue[]? _entries;
+    private GesValue[]? _keyList;
+    private GesValue[]? _valueList;
+    private GesValue[]? _entries;
 
-    internal GesVmValueMap(string[] keys, GesVmValue[] values, int count)
+    internal GesValueMap(string[] keys, GesValue[] values, int count)
     {
         _keys = new string[count];
-        _values = new GesVmValue[count];
+        _values = new GesValue[count];
 
         Array.Copy(keys, _keys, count);
         Array.Copy(values, _values, count);
@@ -35,11 +35,11 @@ internal sealed class GesVmValueMap
     internal int StorageLength => _keys.Length;
     internal bool HasHiddenEntries => _length != _keys.Length;
     
-    internal GesVmValue[] KeyList => _keyList ??= CreateListOfKeys();
-    internal GesVmValue[] ValueList => _valueList ??= CreateListOfValues();
-    internal GesVmValue[] EntryList => _entries ??= CreateListOfEntries();
+    internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
+    internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
+    internal GesValue[] EntryList => _entries ??= CreateListOfEntries();
 
-    public bool TryGet(string key, out GesVmValue value)
+    public bool TryGet(string key, out GesValue value)
     {
         var index = FindKeyIndex(key);
         if (index >= 0)
@@ -54,8 +54,8 @@ internal sealed class GesVmValueMap
 
     internal bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
     internal string KeyAt(int index) => _keys[index];
-    internal GesVmValue ValueAt(int index) => _values[index];
-    internal ref GesVmValue ValueRefAt(int index) => ref _values[index];
+    internal GesValue ValueAt(int index) => _values[index];
+    internal ref GesValue ValueRefAt(int index) => ref _values[index];
     internal bool IsVisibleAt(int index) => !_keys[index].StartsWith("_", StringComparison.Ordinal);
 
     private int FindKeyIndex(string key)
@@ -74,9 +74,9 @@ internal sealed class GesVmValueMap
         return -1;
     }
 
-    private GesVmValue[] CreateListOfKeys()
+    private GesValue[] CreateListOfKeys()
     {
-        var list = new GesVmValue[_length];
+        var list = new GesValue[_length];
         var i = 0;
         for (var index = 0; index < _keys.Length; index++)
         {
@@ -87,9 +87,9 @@ internal sealed class GesVmValueMap
         return list;
     }
 
-    private GesVmValue[] CreateListOfValues()
+    private GesValue[] CreateListOfValues()
     {
-        var list = new GesVmValue[_length];
+        var list = new GesValue[_length];
         var i = 0;
         for (var index = 0; index < _keys.Length; index++)
         {
@@ -99,18 +99,18 @@ internal sealed class GesVmValueMap
         return list;
     }
 
-    private GesVmValue[] CreateListOfEntries()
+    private GesValue[] CreateListOfEntries()
     {
-        var list = new GesVmValue[_length];
+        var list = new GesValue[_length];
         var i = 0;
         for (var index = 0; index < _keys.Length; index++)
         {
             var key = _keys[index];
             if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-            var entryValues = new GesVmValue[2];
+            var entryValues = new GesValue[2];
             entryValues[0].SetTag(key);
             entryValues[1] = _values[index];
-            list[i++].SetMap(new GesVmValueMap(EntryKeys, entryValues, 2));
+            list[i++].SetMap(new GesValueMap(EntryKeys, entryValues, 2));
         }
 
         return list;

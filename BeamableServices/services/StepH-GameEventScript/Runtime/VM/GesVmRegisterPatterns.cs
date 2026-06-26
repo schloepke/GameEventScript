@@ -8,9 +8,9 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterPatterns
 {
-    internal static void GesVmHasPattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesVmValue face)
+    internal static void GesVmHasPattern(this GesVmState vmState, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
     {
-        var result = new GesVmValue();
+        var result = new GesValue();
         if (pattern == CountFace)
         {
             switch (source.Kind)
@@ -19,11 +19,11 @@ internal static class GesVmRegisterPatterns
                     HasPatternDiceFace(ref result, dice, in face, count);
                     vmState.SetValue(destinationRegister, in result);
                     return;
-                case List when source.ObjectValue is GesVmValue[] list:
+                case List when source.ObjectValue is GesValue[] list:
                     HasPatternListFace(ref result, list, in face, count);
                     vmState.SetValue(destinationRegister, in result);
                     return;
-                case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                case Iterator when source.ObjectValue is IGesIterator iterator:
                     if (!iterator.IsPatternSequence)
                     {
                         vmState.SetBoolean(destinationRegister, false);
@@ -48,11 +48,11 @@ internal static class GesVmRegisterPatterns
                 HasPatternDice(ref result, dice, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
-            case List when source.ObjectValue is GesVmValue[] list:
+            case List when source.ObjectValue is GesValue[] list:
                 HasPatternList(ref result, list, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
-            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+            case Iterator when source.ObjectValue is IGesIterator iterator:
                 if (!iterator.IsPatternSequence)
                 {
                     vmState.SetBoolean(destinationRegister, false);
@@ -71,15 +71,15 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    internal static void GesVmTakePattern(this GesVmState vmState, ushort destinationRegister, in GesVmValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesVmValue face)
+    internal static void GesVmTakePattern(this GesVmState vmState, ushort destinationRegister, in GesValue source, GameEventScriptBytecodePatternKind pattern, short count, in GesValue face)
     {
-        var result = new GesVmValue();
+        var result = new GesValue();
         if (pattern == CountFace)
         {
             switch (source.Kind)
             {
                 case Dice when source.ObjectValue is int[] dice:
-                    var buffer = new GesVmValue[dice.Length];
+                    var buffer = new GesValue[dice.Length];
                     for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
                     var found = 0;
                     for (var i = 0; i < buffer.Length; i++) if (buffer[i].EqualsValue(in face)) found++;
@@ -87,14 +87,14 @@ internal static class GesVmRegisterPatterns
                     else SetTakenByFace(ref result, buffer, buffer.Length, in face, count, diceResult: true);
                     vmState.SetValue(destinationRegister, in result);
                     return;
-                case List when source.ObjectValue is GesVmValue[] list:
+                case List when source.ObjectValue is GesValue[] list:
                     var matches = 0;
                     for (var i = 0; i < list.Length; i++) if (list[i].EqualsValue(in face)) matches++;
                     if (matches < count) result.SetNothing();
                     else SetTakenByFace(ref result, list, list.Length, in face, count, diceResult: false);
                     vmState.SetValue(destinationRegister, in result);
                     return;
-                case Iterator when source.ObjectValue is IGesVmIterator iterator:
+                case Iterator when source.ObjectValue is IGesIterator iterator:
                     if (!iterator.IsPatternSequence)
                     {
                         vmState.SetNothing(destinationRegister);
@@ -119,11 +119,11 @@ internal static class GesVmRegisterPatterns
                 TakePatternDice(ref result, dice, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
-            case List when source.ObjectValue is GesVmValue[] list:
+            case List when source.ObjectValue is GesValue[] list:
                 TakePatternList(ref result, list, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
-            case Iterator when source.ObjectValue is IGesVmIterator iterator:
+            case Iterator when source.ObjectValue is IGesIterator iterator:
                 if (!iterator.IsPatternSequence)
                 {
                     vmState.SetNothing(destinationRegister);
@@ -139,7 +139,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    private static void HasPatternDice(ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count)
+    private static void HasPatternDice(ref GesValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count)
     {
         switch (pattern)
         {
@@ -169,7 +169,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    private static void HasPatternDiceFace(ref GesVmValue dst, int[] dice, in GesVmValue face, short count)
+    private static void HasPatternDiceFace(ref GesValue dst, int[] dice, in GesValue face, short count)
     {
         var faceNumber = face.AsNumeric;
         if (!double.IsFinite(faceNumber))
@@ -184,7 +184,7 @@ internal static class GesVmRegisterPatterns
         dst.SetBoolean(matches >= count);
     }
 
-    private static void HasPatternList(ref GesVmValue dst, GesVmValue[] list, GameEventScriptBytecodePatternKind pattern, short count)
+    private static void HasPatternList(ref GesValue dst, GesValue[] list, GameEventScriptBytecodePatternKind pattern, short count)
     {
         switch (pattern)
         {
@@ -214,40 +214,40 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    private static void HasPatternListFace(ref GesVmValue dst, GesVmValue[] list, in GesVmValue face, short count)
+    private static void HasPatternListFace(ref GesValue dst, GesValue[] list, in GesValue face, short count)
     {
         var matches = 0;
         for (var i = 0; i < list.Length; i++) if (list[i].EqualsValue(in face)) matches++;
         dst.SetBoolean(matches >= count);
     }
 
-    private static void HasPatternBuffer(ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count)
+    private static void HasPatternBuffer(ref GesValue dst, GesValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count)
     {
-        var list = new GesVmValue[length];
+        var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = items[i];
         HasPatternList(ref dst, list, pattern, count);
     }
 
-    private static void HasPatternBufferFace(ref GesVmValue dst, GesVmValue[] items, int length, in GesVmValue face, short count)
+    private static void HasPatternBufferFace(ref GesValue dst, GesValue[] items, int length, in GesValue face, short count)
     {
         var matches = 0;
         for (var i = 0; i < length; i++) if (items[i].EqualsValue(in face)) matches++;
         dst.SetBoolean(matches >= count);
     }
 
-    private static void TakePatternDice(ref GesVmValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count)
+    private static void TakePatternDice(ref GesValue dst, int[] dice, GameEventScriptBytecodePatternKind pattern, short count)
     {
-        var buffer = new GesVmValue[dice.Length];
+        var buffer = new GesValue[dice.Length];
         for (var i = 0; i < dice.Length; i++) buffer[i].SetInteger(dice[i]);
         TakePatternBuffer(ref dst, buffer, dice.Length, pattern, count, diceResult: true);
     }
 
-    private static void TakePatternList(ref GesVmValue dst, GesVmValue[] list, GameEventScriptBytecodePatternKind pattern, short count)
+    private static void TakePatternList(ref GesValue dst, GesValue[] list, GameEventScriptBytecodePatternKind pattern, short count)
     {
         TakePatternBuffer(ref dst, list, list.Length, pattern, count, diceResult: false);
     }
 
-    private static void TakePatternBuffer(ref GesVmValue dst, GesVmValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, bool diceResult)
+    private static void TakePatternBuffer(ref GesValue dst, GesValue[] items, int length, GameEventScriptBytecodePatternKind pattern, short count, bool diceResult)
     {
         switch (pattern)
         {
@@ -277,7 +277,7 @@ internal static class GesVmRegisterPatterns
         }
     }
 
-    private static void SetTakenByFace(ref GesVmValue dst, GesVmValue[] items, int length, in GesVmValue face, int count, bool diceResult)
+    private static void SetTakenByFace(ref GesValue dst, GesValue[] items, int length, in GesValue face, int count, bool diceResult)
     {
         if (diceResult)
         {
@@ -292,7 +292,7 @@ internal static class GesVmRegisterPatterns
             return;
         }
 
-        var list = new GesVmValue[count];
+        var list = new GesValue[count];
         var listIndex = 0;
         for (var i = 0; i < length && listIndex < count; i++)
         {
@@ -303,7 +303,7 @@ internal static class GesVmRegisterPatterns
         dst.SetList(list);
     }
 
-    private static void TakeFullHouse(ref GesVmValue dst, GesVmValue[] items, int length, bool diceResult)
+    private static void TakeFullHouse(ref GesValue dst, GesValue[] items, int length, bool diceResult)
     {
         for (var i = 0; i < length; i++)
         {
@@ -327,7 +327,7 @@ internal static class GesVmRegisterPatterns
                     return;
                 }
 
-                var list = new GesVmValue[5];
+                var list = new GesValue[5];
                 var li = 0;
                 for (var k = 0; k < length && li < 3; k++) if (items[k].EqualsValue(in items[i])) list[li++] = items[k];
                 for (var k = 0; k < length && li < 5; k++) if (items[k].EqualsValue(in items[p])) list[li++] = items[k];
@@ -339,7 +339,7 @@ internal static class GesVmRegisterPatterns
         dst.SetNothing();
     }
 
-    private static void TakeStraight(ref GesVmValue dst, GesVmValue[] items, int length, bool diceResult)
+    private static void TakeStraight(ref GesValue dst, GesValue[] items, int length, bool diceResult)
     {
         if (!IsStraightItems(items, length))
         {
@@ -378,7 +378,7 @@ internal static class GesVmRegisterPatterns
             return;
         }
 
-        var list = new GesVmValue[uniqueCount];
+        var list = new GesValue[uniqueCount];
         var listIndex = 0;
         for (var i = 0; i < length; i++)
         {
@@ -412,7 +412,7 @@ internal static class GesVmRegisterPatterns
         return firstCount == 3 && secondCount == 2 || firstCount == 2 && secondCount == 3;
     }
 
-    private static bool IsFullHouseList(GesVmValue[] list)
+    private static bool IsFullHouseList(GesValue[] list)
     {
         if (list.Length != 5) return false;
         var firstIndex = 0;
@@ -462,9 +462,9 @@ internal static class GesVmRegisterPatterns
         return true;
     }
 
-    private static bool IsStraightList(GesVmValue[] list) => IsStraightItems(list, list.Length);
+    private static bool IsStraightList(GesValue[] list) => IsStraightItems(list, list.Length);
 
-    private static bool IsStraightItems(GesVmValue[] items, int length)
+    private static bool IsStraightItems(GesValue[] items, int length)
     {
         if (length < 2) return false;
         Span<long> unique = stackalloc long[length];
@@ -495,18 +495,18 @@ internal static class GesVmRegisterPatterns
         return true;
     }
 
-    private static bool ReadIterator(GesVmState vmState, IGesVmIterator iterator, out GesVmValue[] items, out int length)
+    private static bool ReadIterator(GesVmState vmState, IGesIterator iterator, out GesValue[] items, out int length)
     {
-        var buffer = Array.Empty<GesVmValue>();
+        var buffer = Array.Empty<GesValue>();
         length = 0;
-        var item = new GesVmValue();
+        var item = new GesValue();
         try
         {
             while (iterator.TryNext(ref item))
             {
                 if (length == buffer.Length) Array.Resize(ref buffer, buffer.Length == 0 ? 8 : buffer.Length * 2);
                 buffer[length++] = item;
-                item = new GesVmValue();
+                item = new GesValue();
                 item.SetNothing();
             }
         }

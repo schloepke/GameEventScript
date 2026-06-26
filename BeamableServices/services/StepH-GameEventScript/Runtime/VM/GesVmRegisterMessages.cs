@@ -45,7 +45,7 @@ internal static class GesVmRegisterMessages
             vmState.SetNothing(destinationRegister);
         }
     }
-    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesVmValue handler, ReadOnlySpan<ushort> argumentRegisters)
+    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesValue handler, ReadOnlySpan<ushort> argumentRegisters)
     {
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
         {

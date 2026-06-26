@@ -6,17 +6,17 @@ using System.Text;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.Runtime.Values.GesVmValue.GesVmValueFlags;
+using static StepH.GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 32)]
-internal struct GesVmValue
+internal struct GesValue
 {
     [Flags]
-    internal enum GesVmValueFlags : byte
+    internal enum GesValueFlags : byte
     {
         None = 0,
 
@@ -34,7 +34,7 @@ internal struct GesVmValue
 
     [FieldOffset(16)] internal GameEventScriptBytecodeTypeKind Kind;
     [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
-    [FieldOffset(18)] internal GesVmValueFlags Flags;
+    [FieldOffset(18)] internal GesValueFlags Flags;
 
     internal readonly bool IsTrue => (Flags & IsTrueFlag) != 0;
     internal readonly bool IsFalse => (Flags & IsFalseFlag) != 0;
@@ -159,10 +159,10 @@ internal struct GesVmValue
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
         IntegerValue = 0;
-        ObjectValue = new GesVmValueVectorPoint(x, y, z);
+        ObjectValue = new GesValueVectorPoint(x, y, z);
     }
 
-    internal void SetVector(GesVmValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetVector(GesValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Vector;
         Flags = StorageObjectFlag | HasValueFlag | (vector.X is 0 or double.NaN && vector.Y is 0 or double.NaN && vector.Z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
@@ -177,10 +177,10 @@ internal struct GesVmValue
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
         IntegerValue = 0;
-        ObjectValue = new GesVmValueVectorPoint(x, y, z);
+        ObjectValue = new GesValueVectorPoint(x, y, z);
     }
 
-    internal void SetPoint(GesVmValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    internal void SetPoint(GesValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
         Kind = Point;
         Flags = StorageObjectFlag | HasValueFlag | (point.X is 0 or double.NaN && point.Y is 0 or double.NaN && point.Z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
@@ -200,7 +200,7 @@ internal struct GesVmValue
         ObjectValue = values;
     }
 
-    internal void SetList(GesVmValue[] list)
+    internal void SetList(GesValue[] list)
     {
         Kind = List;
         Flags = list.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
@@ -209,7 +209,7 @@ internal struct GesVmValue
         ObjectValue = list;
     }
 
-    internal void SetMap(GesVmValueMap valueMap)
+    internal void SetMap(GesValueMap valueMap)
     {
         Kind = Map;
         Flags = valueMap.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
@@ -218,16 +218,16 @@ internal struct GesVmValue
         ObjectValue = valueMap;
     }
 
-    internal void SetRecord(string typeName, GesVmValueMap record)
+    internal void SetRecord(string typeName, GesValueMap record)
     {
         Kind = Custom;
         Flags = record.Length > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
         Unit = UnitNone;
         IntegerValue = record.Length;
-        ObjectValue = new GesVmCustomObject(typeName, record);
+        ObjectValue = new GesCustomObject(typeName, record);
     }
 
-    internal void SetExternalCustomType(GesVmExternalObject value)
+    internal void SetExternalCustomType(GesExternalObject value)
     {
         Kind = Custom;
         Flags = StorageObjectFlag | HasValueFlag;
@@ -247,7 +247,7 @@ internal struct GesVmValue
         }
         else
         {
-            ObjectValue = new GesVmValueRangeInteger(from, to, step);
+            ObjectValue = new GesValueRangeInteger(from, to, step);
             if (step > 0) IntegerValue = unchecked((ulong)to - (ulong)from) / (ulong)step >= long.MaxValue ? long.MaxValue : (long)(unchecked((ulong)to - (ulong)from) / (ulong)step + 1UL);
             else IntegerValue = unchecked((ulong)from - (ulong)to) / unchecked(0UL - (ulong)step) >= long.MaxValue ? long.MaxValue : (long)(unchecked((ulong)from - (ulong)to) / unchecked(0UL - (ulong)step) + 1UL);
         }
@@ -272,14 +272,14 @@ internal struct GesVmValue
         }
         else
         {
-            ObjectValue = new GesVmValueRangeFloat(from, to, step);
+            ObjectValue = new GesValueRangeFloat(from, to, step);
             IntegerValue = (long)Math.Floor(Math.Abs(to - from) / Math.Abs(step)) + 1;
         }
 
         Flags = IntegerValue > 0 ? StorageObjectFlag | HasValueFlag : StorageObjectFlag;
     }
 
-    private static GesVmValueRangeInteger _emptyValueRangeInteger = new(0, 0, 0);
+    private static GesValueRangeInteger _emptyValueRangeInteger = new(0, 0, 0);
 
     internal void SetMessageHandler(GameEventScriptMessageSignature handler)
     {
@@ -299,7 +299,7 @@ internal struct GesVmValue
         ObjectValue = message;
     }
 
-    internal void SetSeries(GesVmSeries series)
+    internal void SetSeries(GesSeries series)
     {
         Kind = Series;
         Flags = StorageObjectFlag | HasValueFlag;
@@ -308,7 +308,7 @@ internal struct GesVmValue
         ObjectValue = series;
     }
 
-    internal void SetIterator(IGesVmIterator value)
+    internal void SetIterator(IGesIterator value)
     {
         Kind = Iterator;
         Flags = StorageObjectFlag;
@@ -382,7 +382,7 @@ internal struct GesVmValue
         return AsNumeric;
     }
 
-    internal bool EqualsValue(in GesVmValue other)
+    internal bool EqualsValue(in GesValue other)
     {
         if (Unit != other.Unit || Kind != other.Kind)
         {
@@ -401,7 +401,7 @@ internal struct GesVmValue
                 return IsTrue == other.IsTrue;
             case Text or Tag:
                 return string.Equals(TextValue, other.TextValue, StringComparison.Ordinal);
-            case Vector or Point when ObjectValue is GesVmValueVectorPoint left && other.ObjectValue is GesVmValueVectorPoint right:
+            case Vector or Point when ObjectValue is GesValueVectorPoint left && other.ObjectValue is GesValueVectorPoint right:
                 return left.X.Equals(right.X) && left.Y.Equals(right.Y) && left.Z.Equals(right.Z);
             case Dice when ObjectValue is int[] left && other.ObjectValue is int[] right:
                 if (left.Length != right.Length) return false;
@@ -411,7 +411,7 @@ internal struct GesVmValue
                 }
 
                 return true;
-            case List when ObjectValue is GesVmValue[] left && other.ObjectValue is GesVmValue[] right:
+            case List when ObjectValue is GesValue[] left && other.ObjectValue is GesValue[] right:
                 if (left.Length != right.Length) return false;
                 for (var i = 0; i < left.Length; i++)
                 {
@@ -419,7 +419,7 @@ internal struct GesVmValue
                 }
 
                 return true;
-            case Map when ObjectValue is GesVmValueMap left && other.ObjectValue is GesVmValueMap right:
+            case Map when ObjectValue is GesValueMap left && other.ObjectValue is GesValueMap right:
                 if (left.StorageLength != right.StorageLength || left.Length != right.Length) return false;
                 for (var i = 0; i < left.StorageLength; i++)
                 {
@@ -430,7 +430,7 @@ internal struct GesVmValue
                 }
 
                 return true;
-            case Custom when ObjectValue is GesVmCustomObject leftCustom && other.ObjectValue is GesVmCustomObject rightCustom:
+            case Custom when ObjectValue is GesCustomObject leftCustom && other.ObjectValue is GesCustomObject rightCustom:
                 if (!string.Equals(leftCustom.TypeName, rightCustom.TypeName, StringComparison.Ordinal)) return false;
                 var customLeftMap = leftCustom.Map;
                 var customRightMap = rightCustom.Map;
@@ -444,15 +444,15 @@ internal struct GesVmValue
                 }
 
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger left && other.ObjectValue is GesVmValueRangeInteger right:
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger left && other.ObjectValue is GesValueRangeInteger right:
                 return left.From == right.From && left.To == right.To && left.Step == right.Step;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat left && other.ObjectValue is GesVmValueRangeFloat right:
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat left && other.ObjectValue is GesValueRangeFloat right:
                 return left.From.Equals(right.From) && left.To.Equals(right.To) && left.Step.Equals(right.Step);
             case Handler when ObjectValue is GameEventScriptMessageSignature left && other.ObjectValue is GameEventScriptMessageSignature right:
                 return left.Equals(right);
             case Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
                 return left.Equals(right);
-            case Series when ObjectValue is GesVmSeries left && other.ObjectValue is GesVmSeries right:
+            case Series when ObjectValue is GesSeries left && other.ObjectValue is GesSeries right:
                 return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
             default:
                 return ReferenceEquals(ObjectValue, other.ObjectValue);
@@ -480,7 +480,7 @@ internal struct GesVmValue
             case Text or Tag:
                 hash.Add(TextValue, StringComparer.Ordinal);
                 break;
-            case Vector or Point when ObjectValue is GesVmValueVectorPoint vector:
+            case Vector or Point when ObjectValue is GesValueVectorPoint vector:
                 hash.Add(vector.X);
                 hash.Add(vector.Y);
                 hash.Add(vector.Z);
@@ -488,10 +488,10 @@ internal struct GesVmValue
             case Dice when ObjectValue is int[] dice:
                 for (var i = 0; i < dice.Length; i++) hash.Add(dice[i]);
                 break;
-            case List when ObjectValue is GesVmValue[] list:
+            case List when ObjectValue is GesValue[] list:
                 for (var i = 0; i < list.Length; i++) hash.Add(list[i].GetValueHashCode());
                 break;
-            case Map when ObjectValue is GesVmValueMap map:
+            case Map when ObjectValue is GesValueMap map:
                 for (var i = 0; i < map.StorageLength; i++)
                 {
                     hash.Add(map.KeyAt(i), StringComparer.Ordinal);
@@ -500,7 +500,7 @@ internal struct GesVmValue
                 }
 
                 break;
-            case Custom when ObjectValue is GesVmCustomObject custom:
+            case Custom when ObjectValue is GesCustomObject custom:
                 hash.Add(custom.TypeName, StringComparer.Ordinal);
                 var customMap = custom.Map;
                 for (var i = 0; i < customMap.StorageLength; i++)
@@ -511,12 +511,12 @@ internal struct GesVmValue
                 }
 
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range:
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
                 hash.Add(range.From);
                 hash.Add(range.To);
                 hash.Add(range.Step);
                 break;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range:
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
                 hash.Add(range.From);
                 hash.Add(range.To);
                 hash.Add(range.Step);
@@ -527,7 +527,7 @@ internal struct GesVmValue
             case Message when ObjectValue is GameEventScriptMessage message:
                 hash.Add(message);
                 break;
-            case Series when ObjectValue is GesVmSeries series:
+            case Series when ObjectValue is GesSeries series:
                 hash.Add(series.SignatureId, StringComparer.Ordinal);
                 hash.Add(series.Offset);
                 break;
@@ -539,33 +539,33 @@ internal struct GesVmValue
         return hash.ToHashCode();
     }
     
-    internal bool TryCreateIterator(out IGesVmIterator iterator)
+    internal bool TryCreateIterator(out IGesIterator iterator)
     {
         switch (Kind)
         {
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range:
-                iterator = new GesVmIntegerRangeIterator(range.From, range.To, range.Step);
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
+                iterator = new GesIntegerRangeIterator(range.From, range.To, range.Step);
                 return true;
-            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range:
-                iterator = new GesVmFloatRangeIterator(range.From, range.To, range.Step);
+            case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
+                iterator = new GesFloatRangeIterator(range.From, range.To, range.Step);
                 return true;
-            case List when ObjectValue is GesVmValue[] list:
-                iterator = new GesVmListIterator(list);
+            case List when ObjectValue is GesValue[] list:
+                iterator = new GesListIterator(list);
                 return true;
             case Dice when ObjectValue is int[] dices:
-                iterator = new GesVmIntIterator(dices);
+                iterator = new GesIntIterator(dices);
                 return true;
-            case Map when ObjectValue is GesVmValueMap map:
-                iterator = new GesVmListIterator(map.ValueList);
+            case Map when ObjectValue is GesValueMap map:
+                iterator = new GesListIterator(map.ValueList);
                 return true;
-            case Custom when ObjectValue is GesVmCustomObject custom:
-                iterator = new GesVmListIterator(custom.Map.ValueList);
+            case Custom when ObjectValue is GesCustomObject custom:
+                iterator = new GesListIterator(custom.Map.ValueList);
                 return true;
-            case Vector or Point when ObjectValue is GesVmValueVectorPoint vp:
-                iterator = new GesVmTripletIterator(vp);
+            case Vector or Point when ObjectValue is GesValueVectorPoint vp:
+                iterator = new GesTripletIterator(vp);
                 return true;
             case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
-                iterator = new GesVmStringIterator(text);
+                iterator = new GesStringIterator(text);
                 return true;
             case Series:
             default:
@@ -583,15 +583,15 @@ internal struct GesVmValue
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
         Text => TextValue,
         Tag => ":" + TextValue,
-        Vector when ObjectValue is GesVmValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
-        Point when ObjectValue is GesVmValueVectorPoint point => FormatTriplet("point", point, Unit),
+        Vector when ObjectValue is GesValueVectorPoint vector => FormatTriplet("vector", vector, Unit),
+        Point when ObjectValue is GesValueVectorPoint point => FormatTriplet("point", point, Unit),
         Dice when ObjectValue is int[] dice => FormatDice(dice),
-        List when ObjectValue is GesVmValue[] list => FormatList(list),
-        Map when ObjectValue is GesVmValueMap map => FormatMap(map),
-        Custom when ObjectValue is GesVmCustomObject custom => FormatMap(custom.Map),
-        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
-        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesVmValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
-        Series when ObjectValue is GesVmSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
+        List when ObjectValue is GesValue[] list => FormatList(list),
+        Map when ObjectValue is GesValueMap map => FormatMap(map),
+        Custom when ObjectValue is GesCustomObject custom => FormatMap(custom.Map),
+        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
+        GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
+        Series when ObjectValue is GesSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
         Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
         Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
         _ => Kind.ToString()
@@ -606,7 +606,7 @@ internal struct GesVmValue
         var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
         return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
     }
-    private static string FormatTriplet(string typeName, GesVmValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
+    private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
         => $"{typeName}[x: {FormatNumber(triplet.X, unit)}, y: {FormatNumber(triplet.Y, unit)}, z: {FormatNumber(triplet.Z, unit)}]";
     private static string FormatDice(int[] dice)
     {
@@ -622,7 +622,7 @@ internal struct GesVmValue
         builder.Append(']');
         return builder.ToString();
     }
-    private static string FormatList(GesVmValue[] list)
+    private static string FormatList(GesValue[] list)
     {
         var builder = new StringBuilder("[");
         for (var i = 0; i < list.Length; i++)
@@ -634,7 +634,7 @@ internal struct GesVmValue
         builder.Append(']');
         return builder.ToString();
     }
-    private static string FormatMap(GesVmValueMap valueMap)
+    private static string FormatMap(GesValueMap valueMap)
     {
         var builder = new StringBuilder("map[");
         var first = true;
@@ -644,7 +644,7 @@ internal struct GesVmValue
             first = false;
             builder.Append(valueMap.KeyAt(i));
             builder.Append(": ");
-            GesVmValue tempQualifier = valueMap.ValueAt(i);
+            GesValue tempQualifier = valueMap.ValueAt(i);
             builder.Append(tempQualifier.ToText);
         }
 

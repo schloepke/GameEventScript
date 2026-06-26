@@ -22,7 +22,7 @@ internal static class GesVmRegisterVectorPoint
                         return;
                     }
 
-                    if (first.ObjectValue is not GesVmValueVectorPoint triplet)
+                    if (first.ObjectValue is not GesValueVectorPoint triplet)
                     {
                         vmState.SetNothing(destinationRegister);
                         return;
@@ -105,7 +105,7 @@ internal static class GesVmRegisterVectorPoint
                         return;
                     }
 
-                    if (first.ObjectValue is not GesVmValueVectorPoint triplet)
+                    if (first.ObjectValue is not GesValueVectorPoint triplet)
                     {
                         vmState.SetNothing(destinationRegister);
                         return;

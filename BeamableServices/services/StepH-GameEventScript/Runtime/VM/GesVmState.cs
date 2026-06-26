@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
-using static StepH.GameEventScript.Runtime.Values.GesVmValue.GesVmValueFlags;
+using static StepH.GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 using static StepH.GameEventScript.Runtime.VM.GesVmState.StateValue;
 using StepH.GameEventScript.Runtime.Values;
 
@@ -32,7 +32,7 @@ internal class GesVmState
         internal bool NormalizeResultAsPredicate;
     }
 
-    internal GesVmValue[] EmptyList { get; init; }
+    internal GesValue[] EmptyList { get; init; }
 
     internal GameEventScriptBinary Binary { get; init; }
     internal string[] StringPool { get; init; }
@@ -43,8 +43,8 @@ internal class GesVmState
     internal ushort CallStackPointer { get; private set; }
     internal CallFrame[] CallStack { get; init; }
 
-    internal GesVmValue[] RegisterValues { get; private set; }
-    private GesVmValue _overflowRegister;
+    internal GesValue[] RegisterValues { get; private set; }
+    private GesValue _overflowRegister;
 
     internal ushort RandomGeneratorsPointer { get; private set; } = 0;
     internal GesVmXoshiroRandom[] RandomGenerators { get; init; }
@@ -76,7 +76,7 @@ internal class GesVmState
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterValues = new GesVmValue[InitialRegisterCapacity];
+        RegisterValues = new GesValue[InitialRegisterCapacity];
         RandomGenerators = new GesVmXoshiroRandom[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = new GesVmXoshiroRandom(0);
@@ -174,7 +174,7 @@ internal class GesVmState
         ProcessingMessage = message;
         return true;
     }
-    internal ref GesVmValue Register(ushort index) => ref RegisterValues[index + RegisterFrameStart];
+    internal ref GesValue Register(ushort index) => ref RegisterValues[index + RegisterFrameStart];
     internal bool IsRegisterTrue(ushort index)
     {
         ref var value = ref Register(index);
@@ -195,9 +195,9 @@ internal class GesVmState
         ref var value = ref Register(index);
         return value.Kind is GameEventScriptBytecodeTypeKind.Nothing;
     }
-    internal ref GesVmValue RegisterStaged(ushort index) => ref RegisterValues[index + RegisterFrameStart + RegisterFrameLength];
+    internal ref GesValue RegisterStaged(ushort index) => ref RegisterValues[index + RegisterFrameStart + RegisterFrameLength];
     internal void SetNothing(ushort index) => Register(index).SetNothing();
-    internal void SetValue(ushort index, in GesVmValue value) => Register(index) = value;
+    internal void SetValue(ushort index, in GesValue value) => Register(index) = value;
     internal void SetBoolean(ushort index, bool value) => Register(index).SetBoolean(value);
     internal void SetInteger(ushort index, long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetInteger(value, unit);
     internal void SetFloat(ushort index, double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetFloat(value, unit);
@@ -207,20 +207,20 @@ internal class GesVmState
     internal void SetTagPointer(ushort index, ushort pointer) => Register(index).SetTag(FetchStringByPointer(pointer));
     internal void SetTag(ushort index, string tag) => Register(index).SetTag(tag);
     internal void SetVector(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(x, y, z, unit);
-    internal void SetVector(ushort index, GesVmValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(vector, unit);
+    internal void SetVector(ushort index, GesValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetVector(vector, unit);
     internal void SetPoint(ushort index, double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetPoint(x, y, z, unit);
-    internal void SetPoint(ushort index, GesVmValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetPoint(point, unit);
+    internal void SetPoint(ushort index, GesValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone) => Register(index).SetPoint(point, unit);
     internal void SetDice(ushort index, int[] values) => Register(index).SetDice(values);
-    internal void SetList(ushort index, GesVmValue[] list) => Register(index).SetList(list);
-    internal void SetMap(ushort index, GesVmValueMap valueMap) => Register(index).SetMap(valueMap);
-    internal void SetRecord(ushort index, string typeName, GesVmValueMap record) => Register(index).SetRecord(typeName, record);
-    internal void SetExternalCustomType(ushort index, GesVmExternalObject value) => Register(index).SetExternalCustomType(value);
+    internal void SetList(ushort index, GesValue[] list) => Register(index).SetList(list);
+    internal void SetMap(ushort index, GesValueMap valueMap) => Register(index).SetMap(valueMap);
+    internal void SetRecord(ushort index, string typeName, GesValueMap record) => Register(index).SetRecord(typeName, record);
+    internal void SetExternalCustomType(ushort index, GesExternalObject value) => Register(index).SetExternalCustomType(value);
     internal void SetRange(ushort index, long from, long to, long step) => Register(index).SetRange(from, to, step);
     internal void SetRange(ushort index, double from, double to, double step) => Register(index).SetRange(from, to, step);
     internal void SetMessageHandler(ushort index, GameEventScriptMessageSignature handler) => Register(index).SetMessageHandler(handler);
     internal void SetMessage(ushort index, GameEventScriptMessage message) => Register(index).SetMessage(message);
-    internal void SetSeries(ushort index, GesVmSeries series) => Register(index).SetSeries(series);
-    internal void SetIterator(ushort index, IGesVmIterator value) => Register(index).SetIterator(value);
+    internal void SetSeries(ushort index, GesSeries series) => Register(index).SetSeries(series);
+    internal void SetIterator(ushort index, IGesIterator value) => Register(index).SetIterator(value);
     internal void CreateListBuilder(ushort index) => Register(index).SetListBuilder(new GesVmValueListBuilder());
     internal void CreateMapBuilder(ushort index) => Register(index).SetMapBuilder(new GesVmValueMapBuilder());
     internal void CreateDistinctBuilder(ushort index) => Register(index).SetDistinctBuilder(new GesVmValueDistinctBuilder());
@@ -368,7 +368,7 @@ internal class GesVmState
         StageLength = 0;
     }
     internal void StageRegister(ushort index) => AddStageRegister() = RegisterValues[index + RegisterFrameStart];
-    internal void StageValue(ref GesVmValue value) => AddStageRegister() = value;
+    internal void StageValue(ref GesValue value) => AddStageRegister() = value;
     internal void StageNothing() => AddStageRegister().SetNothing();
     internal void StageBoolean(bool value) => AddStageRegister().SetBoolean(value);
     internal void StageInteger(long value, GameEventScriptBytecodeInstructionUnit unit) => AddStageRegister().SetInteger(value, unit);
@@ -376,7 +376,7 @@ internal class GesVmState
     internal void StagePercentage(double value) => AddStageRegister().SetPercentage(value);
     internal void StageTextConstant(ushort constantIndex) => AddStageRegister().SetText(FetchStringByPointer(constantIndex));
     internal void StageTagConstant(ushort constantIndex) => AddStageRegister().SetTag(FetchStringByPointer(constantIndex));
-    private ref GesVmValue AddStageRegister()
+    private ref GesValue AddStageRegister()
     {
         var stageRegisterIndex = RegisterFrameStart + RegisterFrameLength + StageLength;
         if (!EnsureRegisterCapacity(stageRegisterIndex + 1)) return ref _overflowRegister;
@@ -394,7 +394,7 @@ internal class GesVmState
         } while (newLength < requiredRegisters);
 
         var oldLength = RegisterValues.Length;
-        var expanded = new GesVmValue[newLength];
+        var expanded = new GesValue[newLength];
         Array.Copy(RegisterValues, expanded, oldLength);
         RegisterValues = expanded;
 

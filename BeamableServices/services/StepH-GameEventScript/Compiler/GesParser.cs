@@ -458,7 +458,13 @@ internal sealed class GesParser
         do
         {
             SkipNewLines();
-            var tag = Expect(Tag).Text[1..];
+            var tagToken = Expect(Tag);
+            if (!tagToken.Text.StartsWith("#", StringComparison.Ordinal))
+            {
+                throw new GameEventScriptParseException($"Expected tag literal but found {tagToken.Text}", tagToken);
+            }
+
+            var tag = tagToken.Text[1..];
             var normalized = GameEventScriptMessage.NormalizeTagName(tag);
             if (normalized.Length > 0 && !tags.Contains(normalized, StringComparer.Ordinal))
             {
@@ -814,9 +820,8 @@ internal sealed class GesParser
     {
         var expression = ParseCollectionUnionExpression();
 
-        while (Current.Kind == Tag && string.Equals(Current.Text, ":default", StringComparison.Ordinal))
+        while (Match(Default))
         {
-            Advance();
             SkipNewLines();
             var right = ParseCollectionUnionExpression();
             expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.Default, right), expression, right);

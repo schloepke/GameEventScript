@@ -125,6 +125,40 @@
     },
     {
       "kind": "compileError",
+      "name": "legacy default tag operator is rejected",
+      "script": "on Start(value) {\n  let result be value :default 10\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy emit tag literal form is rejected",
+      "script": "on Start {\n  emit Done with :radio\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy handler matching tag literal form is rejected",
+      "script": "on Ping matching :radio {\n  emit Done\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "messageContains": "Expected tag literal"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "legacy handler without tag literal form is rejected",
+      "script": "on Ping without :blocked {\n  emit Done\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "messageContains": "Expected tag literal"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "legacy floor prefix builtin is rejected",
       "script": "on Start {\n  let value be #floor 10.4\n}",
       "expectedError": {

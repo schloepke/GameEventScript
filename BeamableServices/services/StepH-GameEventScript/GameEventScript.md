@@ -259,7 +259,7 @@ From high to low precedence:
 8. Membership and text boundaries: `in`, `∈`, `∉`, `in values of`, `starts with`, `ends with`
 9. Equality: `=`, `<>`, `≠`
 10. `and`, `xor`, `or`
-11. `:default`
+11. `default`
 12. Implication: `->`, `→`, `⇒`
 13. Guarded choice: `value when condition, otherwise fallback`
 
@@ -692,10 +692,10 @@ It is false for ordinary values, including `0`, `false`, `Infinity`, and
 
 `has value` is the exact complement of `empty`.
 
-`:default` uses the same presence semantics as `has value`:
+`default` uses the same presence semantics as `has value`:
 
 ```ges
-let displayName be unit.name :default 'Unknown'
+let displayName be unit.name default 'Unknown'
 ```
 
 ## Collections and Selectors
@@ -1003,7 +1003,7 @@ removes keys present in the right map. `map - tag`, `map - text`, and
 `map - listOfKeys` remove matching keys. Other unsupported operand
 combinations produce `nothing`.
 
-`:zip` is defined for lists only. It pairs items by index up to the shorter
+`zip` is defined for lists only. It pairs items by index up to the shorter
 operand length and returns a list of maps with `left` and `right` entries.
 Other operand combinations produce `nothing`.
 
@@ -1012,10 +1012,7 @@ containing any other value produces `nothing`.
 
 `+` concatenates text when either operand is text. The non-text operand is
 formatted with the same text representation used by `as :text`, so
-`'100' + '200'` is `'100200'` and `'hp: ' + 10` is `'hp: 10'`. `#combine`,
-`#merge`, `#except`, and `#intersect` are ordinary tag values. The old
-`:combine`, `:merge`, `:except`, and `:intersect` collection operators are not
-reserved language forms.
+`'100' + '200'` is `'100200'` and `'hp: ' + 10` is `'hp: 10'`.
 
 ## Randomness, Dice, and Series
 

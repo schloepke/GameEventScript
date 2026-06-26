@@ -678,10 +678,6 @@ only tag/text values; invalid key lists write `nothing`. `Dice & Integer` and
 shorter operand length. Each item is a map with `left` and `right` entries
 containing the paired values. Other operand combinations write `nothing`.
 
-There are no `Combine` or `Except` opcodes in portable bytecode. Source tags
-`:combine`, `:merge`, `:except`, and `:intersect` are ordinary tags, not
-collection operators.
-
 `Equal` and `NotEqual` preserve the same absent-value rule as
 other Group 2 operations: if either direct operand is `Nothing`, or an internal
 numeric `NaN` observed as `Nothing`, the result register receives `Nothing`.
@@ -1038,10 +1034,10 @@ The language distinguishes local/current-space emission from outward/shared-spac
 publishing:
 
 ```eventscript
-emit LocalEvent(value) with :internal
-publish BusEvent(value) with :radio, dynamicTags
+emit LocalEvent(value) with #internal
+publish BusEvent(value) with #radio, dynamicTags
 
-on BusEvent(value) matching :radio without :blocked {
+on BusEvent(value) matching #radio without #blocked {
 }
 ```
 
@@ -1057,8 +1053,8 @@ evaluate to a single tag or to a list of tags.
 
 Handlers may declare static tag filters:
 
-- `matching :a, :b`: all required tags must be present.
-- `without :x, :y`: none of the excluded tags may be present.
+- `matching #a, #b`: all required tags must be present.
+- `without #x, #y`: none of the excluded tags may be present.
 - no filter: any tag list matches as long as the message signature matches, or
   the message name matches for `MessageNameHandler` entries.
 

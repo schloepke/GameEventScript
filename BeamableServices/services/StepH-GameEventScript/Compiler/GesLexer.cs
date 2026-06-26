@@ -59,6 +59,7 @@ internal enum GesTokenKind
     Max,
     Zip,
     Roll,
+    Default,
     Module,
     Record,
     Predicate,
@@ -372,6 +373,7 @@ internal sealed class GesLexer
             "max" => new GesToken(GesTokenKind.Max, text, line, column, endLine, endColumn),
             "zip" => new GesToken(GesTokenKind.Zip, text, line, column, endLine, endColumn),
             "roll" => new GesToken(GesTokenKind.Roll, text, line, column, endLine, endColumn),
+            "default" => new GesToken(GesTokenKind.Default, text, line, column, endLine, endColumn),
             "module" => new GesToken(GesTokenKind.Module, text, line, column, endLine, endColumn),
             _ when char.IsUpper(text[0]) => new GesToken(GesTokenKind.Message, text, line, column, endLine, endColumn),
             _ => new GesToken(GesTokenKind.Identifier, text, line, column, endLine, endColumn)

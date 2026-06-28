@@ -172,7 +172,7 @@ internal static class GesCompiler
                         }
 
                         if (!string.IsNullOrEmpty(let.DeclaredType)) EmitCastInto(destination, destination, let.DeclaredType);
-                        if (TryClassifyHandlerSignature(let.Expression, context, out var handlerSignature))
+                        if (ClassifyHandlerSignature(let.Expression, context) is { } handlerSignature)
                         {
                             context.DeclareHandlerSignature(let.Identifier, handlerSignature);
                         }
@@ -1708,10 +1708,10 @@ internal static class GesCompiler
         {
             switch (source)
             {
-                case RangeIterationSourceNode range when TryGetRangeIteratorShort(range.RangeExpression, out var from, out var to, out var step):
+                case RangeIterationSourceNode range when GetRangeIteratorShort(range.RangeExpression) is { } shortRange:
                 {
                     var iterator = state.AllocateTemporary(_builder, context);
-                    _builder.CreateRangeIteratorShort(iterator, from, to, step);
+                    _builder.CreateRangeIteratorShort(iterator, shortRange.From, shortRange.To, shortRange.Step);
                     return iterator;
                 }
 
@@ -1825,7 +1825,7 @@ internal static class GesCompiler
 
         private void EmitRandomPush(ExpressionNode seedExpression, LoweringContext context, ExpressionState state)
         {
-            if (TryReadUnitlessIntegerLiteralSeed(seedExpression, out var seed))
+            if (ReadUnitlessIntegerLiteralSeed(seedExpression) is { } seed)
             {
                 _builder.RandomPushConstant(seed);
                 return;
@@ -1849,7 +1849,7 @@ internal static class GesCompiler
         private void EmitHandlerBindCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             var handler = context.Require(call.Name);
-            if (context.TryResolveHandlerSignature(call.Name, out var signature) &&
+            if (context.ResolveHandlerSignature(call.Name) is { } signature &&
                 !CallArgumentsMatchHandlerSignature(call.ArgumentList.Arguments, signature))
             {
                 foreach (var argument in call.ArgumentList.Arguments)
@@ -1958,10 +1958,10 @@ internal static class GesCompiler
 
         private bool TryEmitSpatialConstructor(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            if (!TryGetSpatialConstructorStageShape(constructor.Arguments, out var startComponent, out var arguments)) return false;
-            EmitStageArguments(arguments.Select(argument => argument.Expression), context, state);
-            if (constructor.TypeName == "point") _builder.CreatePoint(destination, (short)startComponent);
-            else _builder.CreateVector(destination, (short)startComponent);
+            if (GetSpatialConstructorStageShape(constructor.Arguments) is not { } shape) return false;
+            EmitStageArguments(shape.Arguments.Select(argument => argument.Expression), context, state);
+            if (constructor.TypeName == "point") _builder.CreatePoint(destination, (short)shape.StartComponent);
+            else _builder.CreateVector(destination, (short)shape.StartComponent);
             return true;
         }
 
@@ -1972,7 +1972,7 @@ internal static class GesCompiler
                 throw new GameEventScriptCompileException("GameEventScript binary compiler requires a type name.");
             }
 
-            if (TryGetQuantityUnit(typeName, out var unit))
+            if (GetQuantityUnit(typeName) is { } unit)
             {
                 _builder.CastUnit(destination, value, unit);
             }
@@ -1984,7 +1984,7 @@ internal static class GesCompiler
             {
                 _builder.CastNumeric(destination, value);
             }
-            else if (TryGetBytecodeTypeKind(typeName, out var kind))
+            else if (GetBytecodeTypeKind(typeName) is { } kind)
             {
                 _builder.Cast(destination, value, kind);
             }
@@ -2001,7 +2001,7 @@ internal static class GesCompiler
                 throw new GameEventScriptCompileException("GameEventScript binary compiler requires a type name.");
             }
 
-            if (TryGetQuantityUnit(typeName, out var unit))
+            if (GetQuantityUnit(typeName) is { } unit)
             {
                 _builder.CheckUnit(destination, value, unit);
             }
@@ -2021,7 +2021,7 @@ internal static class GesCompiler
             {
                 _builder.CheckFractional(destination, value);
             }
-            else if (TryGetBytecodeTypeKind(typeName, out var kind))
+            else if (GetBytecodeTypeKind(typeName) is { } kind)
             {
                 _builder.CheckType(destination, value, kind);
             }
@@ -2255,18 +2255,16 @@ internal static class GesCompiler
             return shape;
         }
 
-        private static bool TryClassifyHandlerSignature(ExpressionNode expression, LoweringContext context, out GameEventScriptMessageSignature signature)
+        private static GameEventScriptMessageSignature? ClassifyHandlerSignature(ExpressionNode expression, LoweringContext context)
         {
             switch (expression)
             {
                 case HandlerLiteralExpressionNode handler:
-                    signature = GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels);
-                    return true;
-                case IdentifierExpressionNode identifier when context.TryResolveHandlerSignature(identifier.Name, out signature):
-                    return true;
+                    return GameEventScriptMessageSignature.Create(handler.Message, handler.SignatureLabels);
+                case IdentifierExpressionNode identifier:
+                    return context.ResolveHandlerSignature(identifier.Name);
                 default:
-                    signature = GameEventScriptMessageSignature.Empty;
-                    return false;
+                    return null;
             }
         }
 
@@ -2298,76 +2296,61 @@ internal static class GesCompiler
             return shape;
         }
 
-        private static bool TryReadUnitlessIntegerLiteralSeed(ExpressionNode expression, out long seed)
+        private static long? ReadUnitlessIntegerLiteralSeed(ExpressionNode expression)
         {
             if (expression is IntegerLiteralExpressionNode integer)
             {
-                seed = integer.Value;
-                return true;
+                return integer.Value;
             }
 
             if (expression is UnaryExpressionNode { Operator: GesUnaryOperator.Negate, Operand: IntegerLiteralExpressionNode negated } &&
                 negated.Value != long.MinValue)
             {
-                seed = -negated.Value;
-                return true;
+                return -negated.Value;
             }
 
-            seed = 0;
-            return false;
+            return null;
         }
 
-        private static bool TryGetRangeIteratorShort(RangeExpressionNode range, out short from, out short to, out short step)
+        private static (short From, short To, short Step)? GetRangeIteratorShort(RangeExpressionNode range)
         {
-            step = 0;
-            if (TryGetShortIntegerLiteral(range.FromExpression, out from) &&
-                TryGetShortIntegerLiteral(range.ToExpression, out to) &&
-                (range.StepExpression is null || TryGetShortIntegerLiteral(range.StepExpression, out step)))
+            if (GetShortIntegerLiteral(range.FromExpression) is { } from &&
+                GetShortIntegerLiteral(range.ToExpression) is { } to)
             {
-                if (range.StepExpression is null) step = 1;
-                return true;
+                if (range.StepExpression is null) return (from, to, 1);
+                if (GetShortIntegerLiteral(range.StepExpression) is { } step) return (from, to, step);
             }
 
-            from = 0;
-            to = 0;
-            return false;
+            return null;
         }
 
-        private static bool TryGetShortIntegerLiteral(ExpressionNode expression, out short value)
+        private static short? GetShortIntegerLiteral(ExpressionNode expression)
         {
             if (expression is IntegerLiteralExpressionNode { Value: >= short.MinValue and <= short.MaxValue } integer)
             {
-                value = (short)integer.Value;
-                return true;
+                return (short)integer.Value;
             }
 
-            value = 0;
-            return false;
+            return null;
         }
 
-        private static bool TryGetSpatialConstructorStageShape(
-            IReadOnlyList<ArgumentNode> sourceArguments,
-            out int startComponent,
-            out IReadOnlyList<ArgumentNode> stagedArguments)
+        private static (int StartComponent, IReadOnlyList<ArgumentNode> Arguments)? GetSpatialConstructorStageShape(IReadOnlyList<ArgumentNode> sourceArguments)
         {
-            startComponent = 0;
-            stagedArguments = sourceArguments;
-            if (sourceArguments.Count == 0) return true;
+            if (sourceArguments.Count == 0) return (0, sourceArguments);
             var labeledCount = sourceArguments.Count(argument => argument.Label is not null);
-            if (labeledCount == 0) return true;
-            if (labeledCount != sourceArguments.Count) return false;
+            if (labeledCount == 0) return (0, sourceArguments);
+            if (labeledCount != sourceArguments.Count) return null;
             var firstComponent = GetSpatialComponentIndex(sourceArguments[0].Label);
             var lastComponent = GetSpatialComponentIndex(sourceArguments[^1].Label);
-            if (firstComponent < 0 || lastComponent < 0) return false;
-            if (lastComponent - firstComponent + 1 != sourceArguments.Count) return false;
-            if (firstComponent == 0 && sourceArguments.Count == 1) return false;
+            if (firstComponent < 0 || lastComponent < 0) return null;
+            if (lastComponent - firstComponent + 1 != sourceArguments.Count) return null;
+            if (firstComponent == 0 && sourceArguments.Count == 1) return null;
             for (var index = 0; index < sourceArguments.Count; index++)
             {
-                if (GetSpatialComponentIndex(sourceArguments[index].Label) != firstComponent + index) return false;
+                if (GetSpatialComponentIndex(sourceArguments[index].Label) != firstComponent + index) return null;
             }
 
-            startComponent = firstComponent;
-            return true;
+            return (firstComponent, sourceArguments);
         }
 
         private static int GetSpatialComponentIndex(string? label)
@@ -2390,17 +2373,17 @@ internal static class GesCompiler
         private static bool IsBuiltInCastType(string typeName)
             => typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional" ||
                GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName) ||
-               TryGetBytecodeTypeKind(typeName, out _);
+               GetBytecodeTypeKind(typeName) is not null;
 
-        private static bool TryGetQuantityUnit(string typeName, out GameEventScriptBytecodeInstructionUnit unit)
-        {
-            unit = GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName) ?? GameEventScriptBytecodeInstructionUnit.UnitNone;
-            return unit != GameEventScriptBytecodeInstructionUnit.UnitNone;
-        }
+        private static GameEventScriptBytecodeInstructionUnit? GetQuantityUnit(string typeName)
+            => GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName) is { } unit &&
+               unit != GameEventScriptBytecodeInstructionUnit.UnitNone
+                ? unit
+                : null;
 
-        private static bool TryGetBytecodeTypeKind(string typeName, out GameEventScriptBytecodeTypeKind typeKind)
+        private static GameEventScriptBytecodeTypeKind? GetBytecodeTypeKind(string typeName)
         {
-            typeKind = typeName switch
+            var typeKind = typeName switch
             {
                 "nothing" => GameEventScriptBytecodeTypeKind.Nothing,
                 "boolean" => GameEventScriptBytecodeTypeKind.Boolean,
@@ -2416,10 +2399,10 @@ internal static class GesCompiler
                 "handler" => GameEventScriptBytecodeTypeKind.Handler,
                 "map" => GameEventScriptBytecodeTypeKind.Map,
                 "dice" => GameEventScriptBytecodeTypeKind.Dice,
-                _ => 0
+                _ => (GameEventScriptBytecodeTypeKind)0
             };
 
-            return typeName == "nothing" || typeKind != 0;
+            return typeName == "nothing" || typeKind != 0 ? typeKind : null;
         }
 
     }
@@ -2492,18 +2475,15 @@ internal static class GesCompiler
             _handlerSignatureShadows.Add(name);
         }
 
-        public bool TryResolveHandlerSignature(string name, out GameEventScriptMessageSignature signature)
+        public GameEventScriptMessageSignature? ResolveHandlerSignature(string name)
         {
-            if (_handlerSignatures.TryGetValue(name, out signature)) return true;
+            if (_handlerSignatures.TryGetValue(name, out var signature)) return signature;
             if (_handlerSignatureShadows.Contains(name))
             {
-                signature = GameEventScriptMessageSignature.Empty;
-                return false;
+                return null;
             }
 
-            if (_parent is not null) return _parent.TryResolveHandlerSignature(name, out signature);
-            signature = GameEventScriptMessageSignature.Empty;
-            return false;
+            return _parent?.ResolveHandlerSignature(name);
         }
     }
 

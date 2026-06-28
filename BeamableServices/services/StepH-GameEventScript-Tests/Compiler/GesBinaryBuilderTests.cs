@@ -181,7 +181,8 @@ public sealed class GesBinaryBuilderTests
             .Optimize(context =>
             {
                 context.RemoveAt(0);
-                Assert.IsTrue(context.TryGetInstruction(0, out var load));
+                var load = context.GetInstruction(0);
+                Assert.IsNotNull(load);
                 context.ReplaceInstruction(0, load with { I64 = 2 });
                 context.InsertInstructionAfter(
                     0,
@@ -231,15 +232,16 @@ public sealed class GesBinaryBuilderTests
         var binary = builder
             .Optimize(context =>
             {
-                Assert.IsTrue(context.TryGetSourceRange(0, out var labelRange));
+                var labelRange = context.GetSourceRange(0);
                 Assert.AreEqual(outer, labelRange);
-                Assert.IsTrue(context.TryGetInstruction(1, out var firstLoad));
+                var firstLoad = context.GetInstruction(1);
+                Assert.IsNotNull(firstLoad);
                 context.ReplaceInstruction(1, firstLoad with { I64 = 10 });
-                Assert.IsTrue(context.TryGetSourceRange(1, out var rewrittenRange));
+                var rewrittenRange = context.GetSourceRange(1);
                 Assert.AreEqual(outer, rewrittenRange);
-                Assert.IsTrue(context.TryGetSourceRange(2, out var innerRange));
+                var innerRange = context.GetSourceRange(2);
                 Assert.AreEqual(inner, innerRange);
-                Assert.IsTrue(context.TryGetSourceRange(3, out var emptyRange));
+                var emptyRange = context.GetSourceRange(3);
                 Assert.IsNull(emptyRange);
             })
             .Build();

@@ -75,45 +75,39 @@ internal sealed partial class GesBinaryBuilder
 
         public GesLabelRef AddLabel(string? name = null) => _builder.AddLabel(name);
 
-        public bool TryGetInstruction(int index, out InstructionPlan instruction)
+        public InstructionPlan? GetInstruction(int index)
         {
             if ((uint)index < (uint)_items.Count && _items[index].Instruction is { } plan)
             {
-                instruction = plan;
-                return true;
+                return plan;
             }
 
-            instruction = default!;
-            return false;
+            return null;
         }
 
-        public bool TryGetLabel(int index, out GesLabelRef label)
+        public GesLabelRef? GetLabel(int index)
         {
             if ((uint)index < (uint)_items.Count && _items[index].Label is { } value)
             {
-                label = value;
-                return true;
+                return value;
             }
 
-            label = default;
-            return false;
+            return null;
         }
 
-        public bool TryGetSourceRange(int index, out GameEventScriptSourceLocation? sourceRange)
+        public GameEventScriptSourceLocation? GetSourceRange(int index)
         {
             if ((uint)index < (uint)_items.Count)
             {
-                sourceRange = _items[index].SourceRange;
-                return true;
+                return _items[index].SourceRange;
             }
 
-            sourceRange = null;
-            return false;
+            return null;
         }
 
         public InstructionCursor GetInstructionCursor(int index)
         {
-            if (!TryGetInstruction(index, out var instruction))
+            if (GetInstruction(index) is not { } instruction)
             {
                 throw new ArgumentOutOfRangeException(nameof(index), index, "Plan item is not an instruction.");
             }
@@ -351,8 +345,8 @@ internal sealed partial class GesBinaryBuilder
             var changed = false;
             for (var index = 0; index + 1 < context.Count; index++)
             {
-                if (!context.TryGetInstruction(index, out var instruction) ||
-                    !context.TryGetInstruction(index + 1, out var move) ||
+                if (context.GetInstruction(index) is not { } instruction ||
+                    context.GetInstruction(index + 1) is not { } move ||
                     move.OpCode != GameEventScriptBytecodeOpCode.Move ||
                     instruction.Destination.Kind != GesOperandKind.Register ||
                     move.X.Kind != GesOperandKind.Register ||

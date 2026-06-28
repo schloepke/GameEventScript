@@ -144,17 +144,16 @@ internal readonly record struct GesToken(GesTokenKind Kind, string Text, int Lin
 {
     public double FloatValue => double.Parse(NormalizedNumericText, CultureInfo.InvariantCulture);
 
-    public bool TryGetIntegerValue(out long value)
+    public long? GetIntegerValue()
     {
         if (Kind is GesTokenKind.Float or GesTokenKind.UnitNumber &&
             Text.IndexOf('.') < 0 &&
-            long.TryParse(NormalizeNumericText(Text), NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+            long.TryParse(NormalizeNumericText(Text), NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
         {
-            return true;
+            return value;
         }
 
-        value = 0;
-        return false;
+        return null;
     }
 
     public string NormalizedNumericText => NormalizeNumericText(Text);

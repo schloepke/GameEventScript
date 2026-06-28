@@ -1376,20 +1376,20 @@ internal sealed class GesParser
 
         if (!Match(OperatorNot))
         {
-            if (TryParseIntrinsicCallExpression(out var intrinsicCall))
+            if (ParseIntrinsicCallExpression() is { } intrinsicCall)
             {
                 return intrinsicCall;
             }
 
-            if (TryParseKeywordUnaryOperator(out var keywordOperator, out var rootExponent, out var keywordToken))
+            if (ParseKeywordUnaryOperator() is { } keywordOperator)
             {
                 var keywordOperand = ParseUnaryIntrinsicOperand();
-                if (TryCreateRootPowerExpression(rootExponent, keywordOperand, keywordToken, out var rootExpression))
+                if (CreateRootPowerExpression(keywordOperator.RootExponent, keywordOperand, keywordOperator.StartToken) is { } rootExpression)
                 {
                     return rootExpression;
                 }
 
-                return WithRange(new UnaryExpressionNode(keywordOperator, keywordOperand), keywordToken, Previous);
+                return WithRange(new UnaryExpressionNode(keywordOperator.Operator, keywordOperand), keywordOperator.StartToken, Previous);
             }
 
             return ParsePowerExpression();
@@ -1428,11 +1428,11 @@ internal sealed class GesParser
         return ParsePostfixExpression();
     }
 
-    private bool TryParseKeywordUnaryOperator(out GesUnaryOperator op, out double? rootExponent, out GesToken startToken)
+    private (GesUnaryOperator Operator, double? RootExponent, GesToken StartToken)? ParseKeywordUnaryOperator()
     {
-        op = default;
-        rootExponent = null;
-        startToken = Current;
+        var op = default(GesUnaryOperator);
+        double? rootExponent = null;
+        var startToken = Current;
         if (!Match(IntrinsicAbs))
         {
             if (Match(IntrinsicLn)) op = GesUnaryOperator.NaturalLog;
@@ -1473,7 +1473,7 @@ internal sealed class GesParser
             }
             else
             {
-                return false;
+                return null;
             }
         }
         else
@@ -1481,12 +1481,11 @@ internal sealed class GesParser
             op = GesUnaryOperator.Abs;
         }
 
-        return true;
+        return (op, rootExponent, startToken);
     }
 
-    private bool TryParseIntrinsicCallExpression(out ExpressionNode expression)
+    private ExpressionNode? ParseIntrinsicCallExpression()
     {
-        expression = null!;
         var startToken = Current;
         GesIntrinsicFunction function;
 
@@ -1531,13 +1530,12 @@ internal sealed class GesParser
         }
         else
         {
-            return false;
+            return null;
         }
 
         SkipNewLines();
         var arguments = ParseIntrinsicArgumentExpressions(function);
-        expression = WithRange(new IntrinsicCallExpressionNode(function, arguments), startToken, Previous);
-        return true;
+        return WithRange(new IntrinsicCallExpressionNode(function, arguments), startToken, Previous);
     }
 
     private IReadOnlyList<ExpressionNode> ParseIntrinsicArgumentExpressions(GesIntrinsicFunction function)
@@ -1571,25 +1569,20 @@ internal sealed class GesParser
         }
     }
 
-    private static bool TryGetMathConstant(GesTokenKind kind, out double value)
+    private static double? GetMathConstant(GesTokenKind kind)
     {
         switch (kind)
         {
             case MathConstantPi:
-                value = GameEventScriptMathConstants.Pi;
-                return true;
+                return GameEventScriptMathConstants.Pi;
             case MathConstantE:
-                value = GameEventScriptMathConstants.E;
-                return true;
+                return GameEventScriptMathConstants.E;
             case MathConstantTau:
-                value = GameEventScriptMathConstants.Tau;
-                return true;
+                return GameEventScriptMathConstants.Tau;
             case MathConstantInfinity:
-                value = GameEventScriptMathConstants.Infinity;
-                return true;
+                return GameEventScriptMathConstants.Infinity;
             default:
-                value = 0d;
-                return false;
+                return null;
         }
     }
 
@@ -1608,24 +1601,21 @@ internal sealed class GesParser
         return operand;
     }
 
-    private bool TryCreateRootPowerExpression(
+    private ExpressionNode? CreateRootPowerExpression(
         double? rootExponent,
         ExpressionNode operand,
-        GesToken startToken,
-        out ExpressionNode expression)
+        GesToken startToken)
     {
         if (!rootExponent.HasValue)
         {
-            expression = operand;
-            return false;
+            return null;
         }
 
         var exponentNode = new FloatLiteralExpressionNode(rootExponent.Value)
         {
             SourceRange = CreateRange(startToken, Previous)
         };
-        expression = WithRange(new BinaryExpressionNode(operand, GesBinaryOperator.Power, exponentNode), startToken, Previous);
-        return true;
+        return WithRange(new BinaryExpressionNode(operand, GesBinaryOperator.Power, exponentNode), startToken, Previous);
     }
 
     private ExpressionNode ParsePostfixExpression()
@@ -2063,7 +2053,7 @@ internal sealed class GesParser
 
         if (Match(GesTokenKind.Float))
         {
-            return Previous.TryGetIntegerValue(out var integerValue)
+            return Previous.GetIntegerValue() is { } integerValue
                 ? WithRange(new IntegerLiteralExpressionNode(integerValue), Previous)
                 : WithRange(new FloatLiteralExpressionNode(Previous.FloatValue), Previous);
         }
@@ -2075,7 +2065,7 @@ internal sealed class GesParser
 
         if (Match(GesTokenKind.UnitNumber))
         {
-            return Previous.TryGetIntegerValue(out var integerValue)
+            return Previous.GetIntegerValue() is { } integerValue
                 ? WithRange(new UnitIntegerLiteralExpressionNode(integerValue, Previous.UnitName), Previous)
                 : WithRange(new UnitFloatLiteralExpressionNode(Previous.FloatValue, Previous.UnitName), Previous);
         }
@@ -2111,7 +2101,7 @@ internal sealed class GesParser
             return WithRange(new TagLiteralExpressionNode(tagToken.Text[1..]), tagToken);
         }
 
-        if (TryGetMathConstant(Current.Kind, out var numericConstant))
+        if (GetMathConstant(Current.Kind) is { } numericConstant)
         {
             var constantToken = Current;
             Advance();
@@ -2430,7 +2420,7 @@ internal sealed class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        if (TryParseSliceScope(out var scope))
+        if (ParseSliceScope() is { } scope)
         {
             SkipNewLines();
             var countToken = Expect(GesTokenKind.Float);
@@ -2444,7 +2434,8 @@ internal sealed class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        if (!TryParseSliceScope(out var scope))
+        var scope = ParseSliceScope();
+        if (scope is null)
         {
             var token = Current;
             throw new GameEventScriptParseException($"Expected drop scope but found {token.Text}", token.Line, token.Column);
@@ -2462,34 +2453,29 @@ internal sealed class GesParser
         return WithRange(new SeriesTermSelectorNode(ParseExpression()), startToken);
     }
 
-    private bool TryParseSliceScope(out string scope)
+    private string? ParseSliceScope()
     {
-        scope = string.Empty;
         if (MatchWord("first"))
         {
-            scope = "first";
-            return true;
+            return "first";
         }
 
         if (MatchWord("last"))
         {
-            scope = "last";
-            return true;
+            return "last";
         }
 
         if (MatchWord("highest"))
         {
-            scope = "highest";
-            return true;
+            return "highest";
         }
 
         if (MatchWord("lowest"))
         {
-            scope = "lowest";
-            return true;
+            return "lowest";
         }
 
-        return false;
+        return null;
     }
 
     private CollectionSelectorNode ParseChooseSelector()

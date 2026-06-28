@@ -76,7 +76,7 @@ internal static class GameEventScriptExternalTypeValueConverter
         var text = value.AsText();
         if (value.Kind == GameEventScriptBytecodeTypeKind.Text)
         {
-            return GameEventScriptTagRules.TryNormalizeTextCast(text, out var normalized)
+            return GameEventScriptTagRules.NormalizeTextCast(text) is { } normalized
                 ? GameEventScriptValueFactory.GesTag(normalized)
                 : GameEventScriptValueFactory.GesNothing();
         }

@@ -6,52 +6,43 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal class GesVmUnitCalculation
 {
-    internal static bool TrySameUnit(in GesValue a, in GesValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static GameEventScriptBytecodeInstructionUnit? SameUnit(in GesValue a, in GesValue b)
     {
         if (a.Unit == b.Unit)
         {
-            unit = a.Unit;
-            return true;
+            return a.Unit;
         }
 
-        unit = UnitNone;
-        return false;
+        return null;
     }
-    internal static bool TrySameUnit(in GesValue a, in GesValue b, in GesValue c, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static GameEventScriptBytecodeInstructionUnit? SameUnit(in GesValue a, in GesValue b, in GesValue c)
     {
         if (a.Unit == b.Unit && b.Unit == c.Unit)
         {
-            unit = a.Unit;
-            return true;
+            return a.Unit;
         }
 
-        unit = UnitNone;
-        return false;
+        return null;
     }
-    internal static bool TryProductUnit(in GesValue a, in GesValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static GameEventScriptBytecodeInstructionUnit? ProductUnit(in GesValue a, in GesValue b)
     {
         if (a.HasUnit && b.HasUnit)
         {
-            unit = UnitNone;
-            return false;
+            return null;
         }
 
-        unit = a.Unit is UnitNone ? b.Unit : a.Unit;
-        return true;
+        return a.Unit is UnitNone ? b.Unit : a.Unit;
     }
-    internal static bool TryQuotientUnit(in GesValue a, in GesValue b, out GameEventScriptBytecodeInstructionUnit unit)
+    internal static GameEventScriptBytecodeInstructionUnit? QuotientUnit(in GesValue a, in GesValue b)
     {
         switch (a.HasUnit)
         {
             case false when !b.HasUnit:
-                unit = UnitNone;
-                return true;
+                return UnitNone;
             case true when !b.HasUnit:
-                unit = a.Unit;
-                return true;
+                return a.Unit;
             default:
-                unit = UnitNone;
-                return a.Unit == b.Unit;
+                return a.Unit == b.Unit ? UnitNone : null;
         }
     }
 

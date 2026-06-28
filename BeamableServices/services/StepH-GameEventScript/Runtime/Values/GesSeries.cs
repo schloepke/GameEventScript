@@ -7,14 +7,14 @@ internal interface IGesRandomIntegerSeries
 {
     string SignatureId { get; }
 
-    bool TryCalc(long index, out long value);
+    long? Calc(long index);
 }
 
 internal interface IGesRandomDoubleSeries
 {
     string SignatureId { get; }
 
-    bool TryCalc(long index, out double value);
+    double? Calc(long index);
 }
 
 internal interface IGesForwardIntegerSeries
@@ -25,7 +25,7 @@ internal interface IGesForwardIntegerSeries
 
     bool TryMoveNext(ref GesSeriesCursor cursor);
 
-    bool TryReadCursor(in GesSeriesCursor cursor, out long value);
+    long? ReadCursor(in GesSeriesCursor cursor);
 }
 
 internal interface IGesForwardDoubleSeries
@@ -36,7 +36,7 @@ internal interface IGesForwardDoubleSeries
 
     bool TryMoveNext(ref GesSeriesCursor cursor);
 
-    bool TryReadCursor(in GesSeriesCursor cursor, out double value);
+    double? ReadCursor(in GesSeriesCursor cursor);
 }
 
 internal sealed class GesSeries
@@ -66,13 +66,13 @@ internal sealed class GesSeries
             return this;
         }
 
-        var offset = TryAddIndex(Offset, count, out var value) ? value : long.MaxValue;
+        var offset = AddIndex(Offset, count) ?? long.MaxValue;
         return new GesSeries(_definition, offset, _hasCheckpoint, _checkpointIndex, in _checkpoint);
     }
 
     internal bool TryGetTerm(long index, ref GesValue value)
     {
-        if (index < 0 || !TryAddIndex(Offset, index, out var absoluteIndex))
+        if (index < 0 || AddIndex(Offset, index) is not { } absoluteIndex)
         {
             value.SetNothing();
             return false;
@@ -136,17 +136,16 @@ internal sealed class GesSeries
         return new GesSeries(definition, 0, true, 0, in checkpoint);
     }
 
-    private static bool TryAddIndex(long left, long right, out long value)
+    private static long? AddIndex(long left, long right)
     {
         try
         {
-            value = checked(left + right);
-            return value >= 0;
+            var value = checked(left + right);
+            return value >= 0 ? value : null;
         }
         catch (OverflowException)
         {
-            value = 0;
-            return false;
+            return null;
         }
     }
 
@@ -200,35 +199,37 @@ internal sealed class GesSeries
                 return false;
             }
 
-            if (((IGesRandomIntegerSeries)this).TryCalc(index, out var integerValue))
+            if (((IGesRandomIntegerSeries)this).Calc(index) is { } integerValue)
             {
                 value.SetInteger(integerValue);
                 return true;
             }
 
-            ((IGesRandomDoubleSeries)this).TryCalc(index, out var doubleValue);
-            value.SetFloat(doubleValue);
-            return true;
+            if (((IGesRandomDoubleSeries)this).Calc(index) is { } doubleValue)
+            {
+                value.SetFloat(doubleValue);
+                return true;
+            }
+
+            value.SetNothing();
+            return false;
         }
 
-        bool IGesRandomIntegerSeries.TryCalc(long index, out long value)
+        long? IGesRandomIntegerSeries.Calc(long index)
         {
             try
             {
-                value = checked(start + checked(step * index));
-                return true;
+                return checked(start + checked(step * index));
             }
             catch (OverflowException)
             {
-                value = 0;
-                return false;
+                return null;
             }
         }
 
-        bool IGesRandomDoubleSeries.TryCalc(long index, out double value)
+        double? IGesRandomDoubleSeries.Calc(long index)
         {
-            value = start + (step * (double)index);
-            return index >= 0;
+            return index >= 0 ? start + (step * (double)index) : null;
         }
     }
 
@@ -274,7 +275,12 @@ internal sealed class GesSeries
 
         internal override bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
         {
-            ((IGesForwardDoubleSeries)this).TryReadCursor(in cursor, out var number);
+            if (((IGesForwardDoubleSeries)this).ReadCursor(in cursor) is not { } number)
+            {
+                value.SetNothing();
+                return false;
+            }
+
             value.SetFloat(number);
             return true;
         }
@@ -283,11 +289,8 @@ internal sealed class GesSeries
 
         bool IGesForwardDoubleSeries.TryMoveNext(ref GesSeriesCursor cursor) => TryMoveNext(ref cursor);
 
-        bool IGesForwardDoubleSeries.TryReadCursor(in GesSeriesCursor cursor, out double value)
-        {
-            value = cursor.Index > 1476 ? double.PositiveInfinity : cursor.Current;
-            return true;
-        }
+        double? IGesForwardDoubleSeries.ReadCursor(in GesSeriesCursor cursor)
+            => cursor.Index > 1476 ? double.PositiveInfinity : cursor.Current;
     }
 
     private sealed class FactorialSeriesDefinition : GesSeriesDefinition, IGesForwardDoubleSeries
@@ -321,7 +324,12 @@ internal sealed class GesSeries
 
         internal override bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
         {
-            ((IGesForwardDoubleSeries)this).TryReadCursor(in cursor, out var number);
+            if (((IGesForwardDoubleSeries)this).ReadCursor(in cursor) is not { } number)
+            {
+                value.SetNothing();
+                return false;
+            }
+
             value.SetFloat(number);
             return true;
         }
@@ -330,11 +338,8 @@ internal sealed class GesSeries
 
         bool IGesForwardDoubleSeries.TryMoveNext(ref GesSeriesCursor cursor) => TryMoveNext(ref cursor);
 
-        bool IGesForwardDoubleSeries.TryReadCursor(in GesSeriesCursor cursor, out double value)
-        {
-            value = cursor.Index > 170 ? double.PositiveInfinity : cursor.Current;
-            return true;
-        }
+        double? IGesForwardDoubleSeries.ReadCursor(in GesSeriesCursor cursor)
+            => cursor.Index > 170 ? double.PositiveInfinity : cursor.Current;
     }
 
 }

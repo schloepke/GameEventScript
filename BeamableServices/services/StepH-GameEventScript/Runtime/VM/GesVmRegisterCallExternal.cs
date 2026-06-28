@@ -37,7 +37,8 @@ internal static class GesVmRegisterCallExternal
             }
 
             var reference = new GameEventScriptExtensionReference(state.FetchStringByPointer(shape[0]), state.FetchStringByPointer(shape[1]), labels);
-            if (!GesStandardExtensions.TryInvoke(reference, arguments.AsSpan(0, argumentCount), out var result))
+            var result = GesStandardExtensions.Invoke(reference, arguments.AsSpan(0, argumentCount));
+            if (result is null)
             {
                 state.SetNothing(destinationRegister);
                 state.RaiseError($"Unknown standard extension '{reference.SignatureId}'.");

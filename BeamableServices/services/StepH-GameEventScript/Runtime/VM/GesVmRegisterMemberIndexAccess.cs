@@ -10,16 +10,16 @@ internal static class GesVmRegisterMemberIndexAccess
     {
         switch (obj.Kind)
         {
-            case Map when obj.ObjectValue is GesValueMap map && map.TryGet(key, out var value):
+            case Map when obj.ObjectValue is GesValueMap map && map.Get(key) is { } value:
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesCustomObject customObject && customObject.Map.TryGet(key, out var value):
+            case Custom when obj.ObjectValue is GesCustomObject customObject && customObject.Map.Get(key) is { } value:
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesExternalObject externalObject && externalObject.ToMap().TryGet(key, out var value):
+            case Custom when obj.ObjectValue is GesExternalObject externalObject && externalObject.ToMap().Get(key) is { } value:
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp && vp.TryGetComponent(key, out var value):
+            case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp && vp.GetComponent(key) is { } value:
                 vmState.SetFloat(destinationRegister, value, obj.Unit);
                 return;
             case Message when obj.ObjectValue is GameEventScriptMessage message:

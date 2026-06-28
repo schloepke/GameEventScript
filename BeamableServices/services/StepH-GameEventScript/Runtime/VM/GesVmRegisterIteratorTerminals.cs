@@ -40,10 +40,14 @@ internal static class GesVmRegisterIteratorTerminals
 
         IGesIterator iterator;
         if (source is { Kind: Iterator, ObjectValue: IGesIterator sourceIterator }) iterator = sourceIterator;
-        else if (!source.TryCreateIterator(out iterator))
+        else if (source.CreateIterator() is not { } createdIterator)
         {
             vmState.SetNothing(destinationRegister);
             return;
+        }
+        else
+        {
+            iterator = createdIterator;
         }
 
         long count = 0;

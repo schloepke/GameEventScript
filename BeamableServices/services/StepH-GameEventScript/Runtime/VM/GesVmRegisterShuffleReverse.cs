@@ -36,7 +36,7 @@ internal static class GesVmRegisterShuffleReverse
                     break;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)) dst.SetRange(last, range.From, -range.Step);
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) dst.SetRange(last, range.From, -range.Step);
                 else dst.SetNothing();
                 break;
             }
@@ -49,7 +49,7 @@ internal static class GesVmRegisterShuffleReverse
                     break;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last)) dst.SetRange(last, range.From, -range.Step);
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) dst.SetRange(last, range.From, -range.Step);
                 else dst.SetNothing();
                 break;
             }
@@ -102,7 +102,7 @@ internal static class GesVmRegisterShuffleReverse
                 var result = new GesValue[(int)length];
                 for (var i = 0; i < result.Length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i + 1L, out var value)) result[i].SetInteger(value);
+                    if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, i + 1L) is { } value) result[i].SetInteger(value);
                     else result[i].SetNothing();
                 }
 
@@ -128,7 +128,7 @@ internal static class GesVmRegisterShuffleReverse
                 var result = new GesValue[(int)length];
                 for (var i = 0; i < result.Length; i++)
                 {
-                    if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, i + 1L, out var value)) result[i].SetFloat(value);
+                    if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, i + 1L) is { } value) result[i].SetFloat(value);
                     else result[i].SetNothing();
                 }
 

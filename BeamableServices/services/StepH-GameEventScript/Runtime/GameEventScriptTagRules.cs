@@ -20,27 +20,23 @@ internal static class GameEventScriptTagRules
         return true;
     }
 
-    internal static bool TryNormalizeTextCast(string? value, out string tagName)
+    internal static string? NormalizeTextCast(string? value)
     {
         switch (value)
         {
             case "true":
             case "True":
-                tagName = "true";
-                return true;
+                return "true";
             case "false":
             case "False":
-                tagName = "false";
-                return true;
+                return "false";
         }
 
         if (IsValidTagName(value))
         {
-            tagName = value!;
-            return true;
+            return value!;
         }
 
-        tagName = string.Empty;
-        return false;
+        return null;
     }
 }

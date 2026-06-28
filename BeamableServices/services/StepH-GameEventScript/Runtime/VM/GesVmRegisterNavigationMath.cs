@@ -17,7 +17,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadRadians(in value, out var radians))
+        if (ReadRadians(in value) is not { } radians)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -34,7 +34,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadRadians(in value, out var radians))
+        if (ReadRadians(in value) is not { } radians)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -51,7 +51,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadRadians(in value, out var radians))
+        if (ReadRadians(in value) is not { } radians)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -68,7 +68,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadUnitlessNumeric(in value, out var number) || number < -1d || number > 1d)
+        if (ReadUnitlessNumeric(in value) is not { } number || number < -1d || number > 1d)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -85,7 +85,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadUnitlessNumeric(in value, out var number) || number < -1d || number > 1d)
+        if (ReadUnitlessNumeric(in value) is not { } number || number < -1d || number > 1d)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -102,7 +102,7 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadUnitlessNumeric(in value, out var number))
+        if (ReadUnitlessNumeric(in value) is not { } number)
         {
             vmState.SetNothing(destinationRegister);
             return;
@@ -119,15 +119,17 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadNumeric(in y, out var yNumber, out var yUnit) ||
-            !TryReadNumeric(in x, out var xNumber, out var xUnit) ||
-            yUnit != xUnit)
+        var yValue = ReadNumeric(in y);
+        var xValue = ReadNumeric(in x);
+        if (yValue is not { } yNumber ||
+            xValue is not { } xNumber ||
+            yNumber.Unit != xNumber.Unit)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, yNumber == 0d && xNumber == 0d ? 0d : Math.Atan2(yNumber, xNumber));
+        vmState.SetFloat(destinationRegister, yNumber.Number == 0d && xNumber.Number == 0d ? 0d : Math.Atan2(yNumber.Number, xNumber.Number));
     }
 
     internal static void GesVmHypot2D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y)
@@ -138,13 +140,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit2(in x, in y, out var xNumber, out var yNumber, out var unit))
+        if (ReadSameUnit2(in x, in y) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, Math.Sqrt(xNumber * xNumber + yNumber * yNumber), unit);
+        vmState.SetFloat(destinationRegister, Math.Sqrt(read.A * read.A + read.B * read.B), read.Unit);
     }
 
     internal static void GesVmHypot3D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y, in GesValue z)
@@ -155,13 +157,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit3(in x, in y, in z, out var xNumber, out var yNumber, out var zNumber, out var unit))
+        if (ReadSameUnit3(in x, in y, in z) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, Math.Sqrt(xNumber * xNumber + yNumber * yNumber + zNumber * zNumber), unit);
+        vmState.SetFloat(destinationRegister, Math.Sqrt(read.A * read.A + read.B * read.B + read.C * read.C), read.Unit);
     }
 
     internal static void GesVmDistance(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
@@ -174,25 +176,25 @@ internal static class GesVmRegisterNavigationMath
 
         if (left.IsNumeric && right.IsNumeric)
         {
-            if (!TryReadSameUnit2(in left, in right, out var a, out var b, out var unit))
+            if (ReadSameUnit2(in left, in right) is not { } scalarRead)
             {
                 vmState.SetNothing(destinationRegister);
                 return;
             }
 
-            vmState.SetFloat(destinationRegister, Math.Abs(a - b), unit);
+            vmState.SetFloat(destinationRegister, Math.Abs(scalarRead.A - scalarRead.B), scalarRead.Unit);
             return;
         }
 
-        if (!TryReadPair3D(in left, in right, out var lx, out var ly, out var lz, out var rx, out var ry, out var rz))
+        if (ReadPair3D(in left, in right) is not { } pair)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var dx = lx - rx;
-        var dy = ly - ry;
-        var dz = lz - rz;
+        var dx = pair.Lx - pair.Rx;
+        var dy = pair.Ly - pair.Ry;
+        var dz = pair.Lz - pair.Rz;
         vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy + dz * dz), left.Unit);
     }
 
@@ -204,15 +206,15 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit4(in x1, in y1, in x2, in y2, out var ax, out var ay, out var bx, out var by, out var unit))
+        if (ReadSameUnit4(in x1, in y1, in x2, in y2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var dx = ax - bx;
-        var dy = ay - by;
-        vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy), unit);
+        var dx = read.A - read.C;
+        var dy = read.B - read.D;
+        vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy), read.Unit);
     }
 
     internal static void GesVmDistance3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
@@ -223,16 +225,16 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2, out var ax, out var ay, out var az, out var bx, out var by, out var bz, out var unit))
+        if (ReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var dx = ax - bx;
-        var dy = ay - by;
-        var dz = az - bz;
-        vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy + dz * dz), unit);
+        var dx = read.A - read.D;
+        var dy = read.B - read.E;
+        var dz = read.C - read.F;
+        vmState.SetFloat(destinationRegister, Math.Sqrt(dx * dx + dy * dy + dz * dz), read.Unit);
     }
 
     internal static void GesVmDistanceSquared(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
@@ -245,26 +247,26 @@ internal static class GesVmRegisterNavigationMath
 
         if (left.IsNumeric && right.IsNumeric)
         {
-            if (!TryReadSameUnit2(in left, in right, out var a, out var b, out _))
+            if (ReadSameUnit2(in left, in right) is not { } scalarRead)
             {
                 vmState.SetNothing(destinationRegister);
                 return;
             }
 
-            var d = a - b;
+            var d = scalarRead.A - scalarRead.B;
             vmState.SetFloat(destinationRegister, d * d);
             return;
         }
 
-        if (!TryReadPair3D(in left, in right, out var lx, out var ly, out var lz, out var rx, out var ry, out var rz))
+        if (ReadPair3D(in left, in right) is not { } pair)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var dx = lx - rx;
-        var dy = ly - ry;
-        var dz = lz - rz;
+        var dx = pair.Lx - pair.Rx;
+        var dy = pair.Ly - pair.Ry;
+        var dz = pair.Lz - pair.Rz;
         vmState.SetFloat(destinationRegister, dx * dx + dy * dy + dz * dz);
     }
 
@@ -276,14 +278,14 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit4(in x1, in y1, in x2, in y2, out var ax, out var ay, out var bx, out var by, out _))
+        if (ReadSameUnit4(in x1, in y1, in x2, in y2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var dx = ax - bx;
-        var dy = ay - by;
+        var dx = read.A - read.C;
+        var dy = read.B - read.D;
         vmState.SetFloat(destinationRegister, dx * dx + dy * dy);
     }
 
@@ -295,15 +297,15 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2, out var ax, out var ay, out var az, out var bx, out var by, out var bz, out _))
+        if (ReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var dx = ax - bx;
-        var dy = ay - by;
-        var dz = az - bz;
+        var dx = read.A - read.D;
+        var dy = read.B - read.E;
+        var dz = read.C - read.F;
         vmState.SetFloat(destinationRegister, dx * dx + dy * dy + dz * dz);
     }
 
@@ -344,13 +346,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit2(in x, in y, out var xNumber, out var yNumber, out _))
+        if (ReadSameUnit2(in x, in y) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, xNumber * xNumber + yNumber * yNumber);
+        vmState.SetFloat(destinationRegister, read.A * read.A + read.B * read.B);
     }
 
     internal static void GesVmLengthSquared3D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y, in GesValue z)
@@ -361,13 +363,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit3(in x, in y, in z, out var xNumber, out var yNumber, out var zNumber, out _))
+        if (ReadSameUnit3(in x, in y, in z) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, xNumber * xNumber + yNumber * yNumber + zNumber * zNumber);
+        vmState.SetFloat(destinationRegister, read.A * read.A + read.B * read.B + read.C * read.C);
     }
 
     internal static void GesVmNormalize(this GesVmState vmState, ushort destinationRegister, in GesValue value)
@@ -402,20 +404,20 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit2(in x, in y, out var xNumber, out var yNumber, out _))
+        if (ReadSameUnit2(in x, in y) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var length = Math.Sqrt(xNumber * xNumber + yNumber * yNumber);
+        var length = Math.Sqrt(read.A * read.A + read.B * read.B);
         if (length == 0d || double.IsNaN(length))
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetVector(destinationRegister, xNumber / length, yNumber / length, 0d);
+        vmState.SetVector(destinationRegister, read.A / length, read.B / length, 0d);
     }
 
     internal static void GesVmNormalize3D(this GesVmState vmState, ushort destinationRegister, in GesValue x, in GesValue y, in GesValue z)
@@ -426,20 +428,20 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit3(in x, in y, in z, out var xNumber, out var yNumber, out var zNumber, out _))
+        if (ReadSameUnit3(in x, in y, in z) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        var length = Math.Sqrt(xNumber * xNumber + yNumber * yNumber + zNumber * zNumber);
+        var length = Math.Sqrt(read.A * read.A + read.B * read.B + read.C * read.C);
         if (length == 0d || double.IsNaN(length))
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetVector(destinationRegister, xNumber / length, yNumber / length, zNumber / length);
+        vmState.SetVector(destinationRegister, read.A / length, read.B / length, read.C / length);
     }
 
     internal static void GesVmDot(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
@@ -450,13 +452,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadPair3D(in left, in right, out var lx, out var ly, out var lz, out var rx, out var ry, out var rz))
+        if (ReadPair3D(in left, in right) is not { } pair)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, lx * rx + ly * ry + lz * rz);
+        vmState.SetFloat(destinationRegister, pair.Lx * pair.Rx + pair.Ly * pair.Ry + pair.Lz * pair.Rz);
     }
 
     internal static void GesVmDot2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
@@ -467,13 +469,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit4(in x1, in y1, in x2, in y2, out var ax, out var ay, out var bx, out var by, out _))
+        if (ReadSameUnit4(in x1, in y1, in x2, in y2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, ax * bx + ay * by);
+        vmState.SetFloat(destinationRegister, read.A * read.C + read.B * read.D);
     }
 
     internal static void GesVmDot3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
@@ -484,13 +486,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2, out var ax, out var ay, out var az, out var bx, out var by, out var bz, out _))
+        if (ReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, ax * bx + ay * by + az * bz);
+        vmState.SetFloat(destinationRegister, read.A * read.D + read.B * read.E + read.C * read.F);
     }
 
     internal static void GesVmCross(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
@@ -501,13 +503,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadPair3D(in left, in right, out var lx, out var ly, out var lz, out var rx, out var ry, out var rz))
+        if (ReadPair3D(in left, in right) is not { } pair)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetVector(destinationRegister, ly * rz - lz * ry, lz * rx - lx * rz, lx * ry - ly * rx);
+        vmState.SetVector(destinationRegister, pair.Ly * pair.Rz - pair.Lz * pair.Ry, pair.Lz * pair.Rx - pair.Lx * pair.Rz, pair.Lx * pair.Ry - pair.Ly * pair.Rx);
     }
 
     internal static void GesVmCross2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
@@ -518,13 +520,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit4(in x1, in y1, in x2, in y2, out var ax, out var ay, out var bx, out var by, out _))
+        if (ReadSameUnit4(in x1, in y1, in x2, in y2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetFloat(destinationRegister, ax * by - ay * bx);
+        vmState.SetFloat(destinationRegister, read.A * read.D - read.B * read.C);
     }
 
     internal static void GesVmCross3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
@@ -535,13 +537,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2, out var ax, out var ay, out var az, out var bx, out var by, out var bz, out _))
+        if (ReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        vmState.SetVector(destinationRegister, ay * bz - az * by, az * bx - ax * bz, ax * by - ay * bx);
+        vmState.SetVector(destinationRegister, read.B * read.F - read.C * read.E, read.C * read.D - read.A * read.F, read.A * read.E - read.B * read.D);
     }
 
     internal static void GesVmAngleBetween(this GesVmState vmState, ushort destinationRegister, in GesValue left, in GesValue right)
@@ -552,13 +554,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadPair3D(in left, in right, out var lx, out var ly, out var lz, out var rx, out var ry, out var rz))
+        if (ReadPair3D(in left, in right) is not { } pair)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        SetAngleBetween(vmState, destinationRegister, lx, ly, lz, rx, ry, rz);
+        SetAngleBetween(vmState, destinationRegister, pair.Lx, pair.Ly, pair.Lz, pair.Rx, pair.Ry, pair.Rz);
     }
 
     internal static void GesVmAngleBetween2D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue x2, in GesValue y2)
@@ -569,13 +571,13 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit4(in x1, in y1, in x2, in y2, out var ax, out var ay, out var bx, out var by, out _))
+        if (ReadSameUnit4(in x1, in y1, in x2, in y2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        SetAngleBetween(vmState, destinationRegister, ax, ay, 0d, bx, by, 0d);
+        SetAngleBetween(vmState, destinationRegister, read.A, read.B, 0d, read.C, read.D, 0d);
     }
 
     internal static void GesVmAngleBetween3D(this GesVmState vmState, ushort destinationRegister, in GesValue x1, in GesValue y1, in GesValue z1, in GesValue x2, in GesValue y2, in GesValue z2)
@@ -586,184 +588,146 @@ internal static class GesVmRegisterNavigationMath
             return;
         }
 
-        if (!TryReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2, out var ax, out var ay, out var az, out var bx, out var by, out var bz, out _))
+        if (ReadSameUnit6(in x1, in y1, in z1, in x2, in y2, in z2) is not { } read)
         {
             vmState.SetNothing(destinationRegister);
             return;
         }
 
-        SetAngleBetween(vmState, destinationRegister, ax, ay, az, bx, by, bz);
+        SetAngleBetween(vmState, destinationRegister, read.A, read.B, read.C, read.D, read.E, read.F);
     }
 
-    private static bool TryReadRadians(in GesValue value, out double radians)
+    private static double? ReadRadians(in GesValue value)
     {
         if (!value.IsNumeric || value.Unit.IsNumericUnit() && value.Unit != UnitDegree)
         {
-            radians = 0d;
-            return false;
+            return null;
         }
 
         var number = value.AsNumeric;
-        radians = value.Unit == UnitDegree
+        var radians = value.Unit == UnitDegree
             ? number / 180d * GameEventScriptMathConstants.Pi
             : number;
-        return !double.IsNaN(radians);
+        return double.IsNaN(radians) ? null : radians;
     }
 
-    private static bool TryReadUnitlessNumeric(in GesValue value, out double number)
+    private static double? ReadUnitlessNumeric(in GesValue value)
     {
         if (!value.IsNumeric || value.Unit.IsNumericUnit())
         {
-            number = 0d;
-            return false;
+            return null;
         }
 
-        number = value.AsNumeric;
-        return !double.IsNaN(number);
+        var number = value.AsNumeric;
+        return double.IsNaN(number) ? null : number;
     }
 
-    private static bool TryReadNumeric(in GesValue value, out double number, out GameEventScriptBytecodeInstructionUnit unit)
+    private static (double Number, GameEventScriptBytecodeInstructionUnit Unit)? ReadNumeric(in GesValue value)
     {
         if (!value.IsNumeric)
         {
-            number = 0d;
-            unit = UnitNone;
-            return false;
+            return null;
         }
 
-        number = value.AsNumeric;
-        unit = value.Unit;
-        return !double.IsNaN(number);
+        var number = value.AsNumeric;
+        return double.IsNaN(number) ? null : (number, value.Unit);
     }
 
-    private static bool TryReadSameUnit2(
+    private static (double A, double B, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit2(
+        in GesValue a,
+        in GesValue b)
+    {
+        var aValue = ReadNumeric(in a);
+        var bValue = ReadNumeric(in b);
+        if (aValue is not { } av ||
+            bValue is not { } bv ||
+            av.Unit != bv.Unit)
+        {
+            return null;
+        }
+
+        return (av.Number, bv.Number, av.Unit);
+    }
+
+    private static (double A, double B, double C, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit3(
         in GesValue a,
         in GesValue b,
-        out double aNumber,
-        out double bNumber,
-        out GameEventScriptBytecodeInstructionUnit unit)
+        in GesValue c)
     {
-        if (!TryReadNumeric(in a, out aNumber, out var aUnit) ||
-            !TryReadNumeric(in b, out bNumber, out var bUnit) ||
-            aUnit != bUnit)
+        var aValue = ReadNumeric(in a);
+        var bValue = ReadNumeric(in b);
+        var cValue = ReadNumeric(in c);
+        if (aValue is not { } av ||
+            bValue is not { } bv ||
+            cValue is not { } cv ||
+            av.Unit != bv.Unit ||
+            bv.Unit != cv.Unit)
         {
-            aNumber = 0d;
-            bNumber = 0d;
-            unit = UnitNone;
-            return false;
+            return null;
         }
 
-        unit = aUnit;
-        return true;
+        return (av.Number, bv.Number, cv.Number, av.Unit);
     }
 
-    private static bool TryReadSameUnit3(
-        in GesValue a,
-        in GesValue b,
-        in GesValue c,
-        out double aNumber,
-        out double bNumber,
-        out double cNumber,
-        out GameEventScriptBytecodeInstructionUnit unit)
-    {
-        if (!TryReadNumeric(in a, out aNumber, out var aUnit) ||
-            !TryReadNumeric(in b, out bNumber, out var bUnit) ||
-            !TryReadNumeric(in c, out cNumber, out var cUnit) ||
-            aUnit != bUnit ||
-            bUnit != cUnit)
-        {
-            aNumber = 0d;
-            bNumber = 0d;
-            cNumber = 0d;
-            unit = UnitNone;
-            return false;
-        }
-
-        unit = aUnit;
-        return true;
-    }
-
-    private static bool TryReadSameUnit4(
+    private static (double A, double B, double C, double D, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit4(
         in GesValue a,
         in GesValue b,
         in GesValue c,
-        in GesValue d,
-        out double aNumber,
-        out double bNumber,
-        out double cNumber,
-        out double dNumber,
-        out GameEventScriptBytecodeInstructionUnit unit)
+        in GesValue d)
     {
-        if (!TryReadNumeric(in a, out aNumber, out var aUnit) ||
-            !TryReadNumeric(in b, out bNumber, out var bUnit) ||
-            !TryReadNumeric(in c, out cNumber, out var cUnit) ||
-            !TryReadNumeric(in d, out dNumber, out var dUnit) ||
-            aUnit != bUnit ||
-            bUnit != cUnit ||
-            cUnit != dUnit)
+        var aValue = ReadNumeric(in a);
+        var bValue = ReadNumeric(in b);
+        var cValue = ReadNumeric(in c);
+        var dValue = ReadNumeric(in d);
+        if (aValue is not { } av ||
+            bValue is not { } bv ||
+            cValue is not { } cv ||
+            dValue is not { } dv ||
+            av.Unit != bv.Unit ||
+            bv.Unit != cv.Unit ||
+            cv.Unit != dv.Unit)
         {
-            aNumber = 0d;
-            bNumber = 0d;
-            cNumber = 0d;
-            dNumber = 0d;
-            unit = UnitNone;
-            return false;
+            return null;
         }
 
-        unit = aUnit;
-        return true;
+        return (av.Number, bv.Number, cv.Number, dv.Number, av.Unit);
     }
 
-    private static bool TryReadSameUnit6(
+    private static (double A, double B, double C, double D, double E, double F, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit6(
         in GesValue a,
         in GesValue b,
         in GesValue c,
         in GesValue d,
         in GesValue e,
-        in GesValue f,
-        out double aNumber,
-        out double bNumber,
-        out double cNumber,
-        out double dNumber,
-        out double eNumber,
-        out double fNumber,
-        out GameEventScriptBytecodeInstructionUnit unit)
+        in GesValue f)
     {
-        if (!TryReadNumeric(in a, out aNumber, out var aUnit) ||
-            !TryReadNumeric(in b, out bNumber, out var bUnit) ||
-            !TryReadNumeric(in c, out cNumber, out var cUnit) ||
-            !TryReadNumeric(in d, out dNumber, out var dUnit) ||
-            !TryReadNumeric(in e, out eNumber, out var eUnit) ||
-            !TryReadNumeric(in f, out fNumber, out var fUnit) ||
-            aUnit != bUnit ||
-            bUnit != cUnit ||
-            cUnit != dUnit ||
-            dUnit != eUnit ||
-            eUnit != fUnit)
+        var aValue = ReadNumeric(in a);
+        var bValue = ReadNumeric(in b);
+        var cValue = ReadNumeric(in c);
+        var dValue = ReadNumeric(in d);
+        var eValue = ReadNumeric(in e);
+        var fValue = ReadNumeric(in f);
+        if (aValue is not { } av ||
+            bValue is not { } bv ||
+            cValue is not { } cv ||
+            dValue is not { } dv ||
+            eValue is not { } ev ||
+            fValue is not { } fv ||
+            av.Unit != bv.Unit ||
+            bv.Unit != cv.Unit ||
+            cv.Unit != dv.Unit ||
+            dv.Unit != ev.Unit ||
+            ev.Unit != fv.Unit)
         {
-            aNumber = 0d;
-            bNumber = 0d;
-            cNumber = 0d;
-            dNumber = 0d;
-            eNumber = 0d;
-            fNumber = 0d;
-            unit = UnitNone;
-            return false;
+            return null;
         }
 
-        unit = aUnit;
-        return true;
+        return (av.Number, bv.Number, cv.Number, dv.Number, ev.Number, fv.Number, av.Unit);
     }
 
-    private static bool TryReadPair3D(
+    private static (double Lx, double Ly, double Lz, double Rx, double Ry, double Rz)? ReadPair3D(
         in GesValue left,
-        in GesValue right,
-        out double lx,
-        out double ly,
-        out double lz,
-        out double rx,
-        out double ry,
-        out double rz)
+        in GesValue right)
     {
         if (left.Unit != right.Unit ||
             left.Kind is not (Vector or Point) ||
@@ -771,17 +735,10 @@ internal static class GesVmRegisterNavigationMath
             left.ObjectValue is not GesValueVectorPoint leftTriplet ||
             right.ObjectValue is not GesValueVectorPoint rightTriplet)
         {
-            lx = ly = lz = rx = ry = rz = 0d;
-            return false;
+            return null;
         }
 
-        lx = leftTriplet.X;
-        ly = leftTriplet.Y;
-        lz = leftTriplet.Z;
-        rx = rightTriplet.X;
-        ry = rightTriplet.Y;
-        rz = rightTriplet.Z;
-        return true;
+        return (leftTriplet.X, leftTriplet.Y, leftTriplet.Z, rightTriplet.X, rightTriplet.Y, rightTriplet.Z);
     }
 
     private static void SetAngleBetween(GesVmState vmState, ushort destinationRegister, double ax, double ay, double az, double bx, double by, double bz)

@@ -204,7 +204,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
             _ => null
         };
 
-        if (map is not null && map.TryGet(key, out var mapValue) && !key.StartsWith("_", StringComparison.Ordinal))
+        if (map is not null && map.Get(key) is { } mapValue && !key.StartsWith("_", StringComparison.Ordinal))
         {
             return GameEventScriptValueFactory.FromVmValue(in mapValue);
         }

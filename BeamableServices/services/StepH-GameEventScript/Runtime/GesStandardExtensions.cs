@@ -12,16 +12,14 @@ internal static class GesStandardExtensions
 {
     public static bool IsStandardReference(GameEventScriptExtensionReference reference) => IsSeriesStandardReference(reference);
 
-    public static bool TryInvoke(GameEventScriptExtensionReference reference, ReadOnlySpan<GameEventScriptValue> arguments, out GameEventScriptValue value)
+    public static GameEventScriptValue? Invoke(GameEventScriptExtensionReference reference, ReadOnlySpan<GameEventScriptValue> arguments)
     {
-        value = GesNothing();
         if (!IsSeriesStandardReference(reference))
         {
-            return false;
+            return null;
         }
 
-        value = EvaluateSeries(reference, arguments);
-        return true;
+        return EvaluateSeries(reference, arguments);
     }
 
     private static bool IsSeriesStandardReference(GameEventScriptExtensionReference reference) => reference.ExtensionName == "series" && reference.FunctionName switch

@@ -138,7 +138,7 @@ internal static class GesVmRegisterCollections
 
     internal static void GesVmOrderBuilderFinishAscending(this GesVmState vmState, ushort destinationRegister, in GesValue orderBuilder)
     {
-        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder && builder.TryToList(descending: false, out var list))
+        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder && builder.ToList(descending: false) is { } list)
         {
             vmState.SetList(destinationRegister, list);
             return;
@@ -149,7 +149,7 @@ internal static class GesVmRegisterCollections
 
     internal static void GesVmOrderBuilderFinishDescending(this GesVmState vmState, ushort destinationRegister, in GesValue orderBuilder)
     {
-        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder && builder.TryToList(descending: true, out var list))
+        if (orderBuilder.Kind is OrderBuilder && orderBuilder.ObjectValue is GesVmOrderBuilder builder && builder.ToList(descending: true) is { } list)
         {
             vmState.SetList(destinationRegister, list);
             return;

@@ -6,22 +6,14 @@ internal sealed class GesValueVectorPoint(double x, double y, double z)
     internal readonly double Y = y;
     internal readonly double Z = z;
 
-    public bool TryGetComponent(string key, out double value)
+    public double? GetComponent(string key)
     {
-        switch (key)
+        return key switch
         {
-            case "x":
-                value = X;
-                return true;
-            case "y":
-                value = Y;
-                return true;
-            case "z":
-                value = Z;
-                return true;
-            default:
-                value = 0;
-                return false;
-        }
+            "x" => X,
+            "y" => Y,
+            "z" => Z,
+            _ => null
+        };
     }
 }

@@ -32,7 +32,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     var found = false;
                     for (var j = 0; j < resultLength; j++)
                     {
-                        if (!result[j].EqualsValue(ref item)) continue;
+                        if (!result[j].EqualsValue(in item)) continue;
                         found = true;
                         break;
                     }
@@ -94,7 +94,7 @@ internal static class GesVmRegisterSortGroupDistinct
                         var found = false;
                         for (var i = 0; i < count; i++)
                         {
-                            if (!values[i].EqualsValue(ref item)) continue;
+                            if (!values[i].EqualsValue(in item)) continue;
                             found = true;
                             break;
                         }
@@ -192,7 +192,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last))
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
                     dst.SetRange(last, range.From, -range.Step);
                     return;
@@ -217,7 +217,7 @@ internal static class GesVmRegisterSortGroupDistinct
                     return;
                 }
 
-                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, length, out var last))
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last)
                 {
                     dst.SetRange(last, range.From, -range.Step);
                     return;
@@ -275,7 +275,7 @@ internal static class GesVmRegisterSortGroupDistinct
             var j = i - 1;
             while (j >= 0)
             {
-                if (!TryCompareAscending(ref values[j], ref value, out var comparison)) return false;
+                if (CompareAscending(ref values[j], ref value) is not { } comparison) return false;
                 if ((descending ? -comparison : comparison) <= 0) break;
                 values[j + 1] = values[j];
                 j--;
@@ -296,7 +296,7 @@ internal static class GesVmRegisterSortGroupDistinct
             var j = i - 1;
             while (j >= 0)
             {
-                if (!TryCompareAscending(ref keys[j], ref key, out var comparison)) return false;
+                if (CompareAscending(ref keys[j], ref key) is not { } comparison) return false;
                 if ((descending ? -comparison : comparison) <= 0) break;
                 values[j + 1] = values[j];
                 keys[j + 1] = keys[j];
@@ -310,65 +310,59 @@ internal static class GesVmRegisterSortGroupDistinct
         return true;
     }
 
-    private static bool TryCompareAscending(ref GesValue a, ref GesValue b, out int comparison)
+    private static int? CompareAscending(ref GesValue a, ref GesValue b)
     {
-        comparison = 0;
         if (a.Kind is Nothing || b.Kind is Nothing)
         {
-            return false;
+            return null;
         }
 
         if (a.IsNumeric && b.IsNumeric)
         {
             if (a.Unit != b.Unit)
             {
-                return false;
+                return null;
             }
 
             var left = a.AsNumeric;
             var right = b.AsNumeric;
             if (double.IsNaN(left) || double.IsNaN(right))
             {
-                return false;
+                return null;
             }
 
-            comparison = left.CompareTo(right);
-            return true;
+            return left.CompareTo(right);
         }
 
         var leftRank = GetStableRank(ref a);
         var rightRank = GetStableRank(ref b);
         if (leftRank != rightRank)
         {
-            comparison = leftRank.CompareTo(rightRank);
-            return true;
+            return leftRank.CompareTo(rightRank);
         }
 
         switch (a.Kind)
         {
             case Text when b.Kind is Text:
             case Tag when b.Kind is Tag:
-                comparison = StringComparer.Ordinal.Compare(a.TextValue, b.TextValue);
-                return true;
+                return StringComparer.Ordinal.Compare(a.TextValue, b.TextValue);
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
                 if (a.Unit != b.Unit ||
                     a.ObjectValue is not GesValueVectorPoint leftTriplet ||
                     b.ObjectValue is not GesValueVectorPoint rightTriplet)
                 {
-                    return false;
+                    return null;
                 }
 
-                comparison = leftTriplet.X.CompareTo(rightTriplet.X);
+                var comparison = leftTriplet.X.CompareTo(rightTriplet.X);
                 if (comparison == 0) comparison = leftTriplet.Y.CompareTo(rightTriplet.Y);
                 if (comparison == 0) comparison = leftTriplet.Z.CompareTo(rightTriplet.Z);
-                return true;
+                return comparison;
             case GameEventScriptBytecodeTypeKind.Boolean when b.Kind is GameEventScriptBytecodeTypeKind.Boolean:
-                comparison = a.IsTrue.CompareTo(b.IsTrue);
-                return true;
+                return a.IsTrue.CompareTo(b.IsTrue);
             default:
-                comparison = 0;
-                return true;
+                return 0;
         }
     }
     private static int GetStableRank(ref GesValue value)

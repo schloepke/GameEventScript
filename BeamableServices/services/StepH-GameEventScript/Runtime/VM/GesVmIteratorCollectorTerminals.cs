@@ -64,11 +64,11 @@ internal static class GesVmIteratorCollectorTerminals
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastInteger)) vmState.SetInteger(destinationRegister, lastInteger);
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastInteger) vmState.SetInteger(destinationRegister, lastInteger);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                if (GameEventScriptRangeMath.TryGetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step), out var lastFloat)) vmState.SetFloat(destinationRegister, lastFloat);
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step)) is { } lastFloat) vmState.SetFloat(destinationRegister, lastFloat);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Map when source.ObjectValue is GesValueMap map:

@@ -539,38 +539,29 @@ internal struct GesValue
         return hash.ToHashCode();
     }
     
-    internal bool TryCreateIterator(out IGesIterator iterator)
+    internal IGesIterator? CreateIterator()
     {
         switch (Kind)
         {
             case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range:
-                iterator = new GesIntegerRangeIterator(range.From, range.To, range.Step);
-                return true;
+                return new GesIntegerRangeIterator(range.From, range.To, range.Step);
             case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range:
-                iterator = new GesFloatRangeIterator(range.From, range.To, range.Step);
-                return true;
+                return new GesFloatRangeIterator(range.From, range.To, range.Step);
             case List when ObjectValue is GesValue[] list:
-                iterator = new GesListIterator(list);
-                return true;
+                return new GesListIterator(list);
             case Dice when ObjectValue is int[] dices:
-                iterator = new GesIntIterator(dices);
-                return true;
+                return new GesIntIterator(dices);
             case Map when ObjectValue is GesValueMap map:
-                iterator = new GesListIterator(map.ValueList);
-                return true;
+                return new GesListIterator(map.ValueList);
             case Custom when ObjectValue is GesCustomObject custom:
-                iterator = new GesListIterator(custom.Map.ValueList);
-                return true;
+                return new GesListIterator(custom.Map.ValueList);
             case Vector or Point when ObjectValue is GesValueVectorPoint vp:
-                iterator = new GesTripletIterator(vp);
-                return true;
+                return new GesTripletIterator(vp);
             case Text or Tag when this is { IsStorageObject: true, ObjectValue: string text }:
-                iterator = new GesStringIterator(text);
-                return true;
+                return new GesStringIterator(text);
             case Series:
             default:
-                iterator = default;
-                return false;
+                return null;
         }
     }
     

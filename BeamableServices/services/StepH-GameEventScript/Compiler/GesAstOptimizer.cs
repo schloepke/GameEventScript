@@ -390,7 +390,8 @@ internal static class GesAstOptimizer
             arguments[index] = argument;
         }
 
-        if (!GesStandardExtensions.TryInvoke(reference, arguments, out var value))
+        var value = GesStandardExtensions.Invoke(reference, arguments);
+        if (value is null)
         {
             return false;
         }

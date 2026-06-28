@@ -127,29 +127,28 @@ internal sealed class GesVmTableBuilder
     public static GesVmTableBuilder Map(GesTableColumnKind keyKind, GesTableColumnKind valueKind, int capacity = 0, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
         new(GesTableShape.Map(keyKind, valueKind, keyNameIndex, valueNameIndex), capacity);
 
-    public bool TryAddRow(ReadOnlySpan<GesTableCell> cells, out int rowIndex)
+    public int? AddRow(ReadOnlySpan<GesTableCell> cells)
     {
-        rowIndex = -1;
         if (cells.Length != _shape.ColumnCount)
         {
-            return false;
+            return null;
         }
 
         for (var i = 0; i < cells.Length; i++)
         {
             if (cells[i].Kind != _shape.Columns[i].Kind || !CanWrite(i, cells[i]))
             {
-                return false;
+                return null;
             }
         }
 
-        rowIndex = _rowCount++;
+        var rowIndex = _rowCount++;
         for (var i = 0; i < cells.Length; i++)
         {
             Write(i, cells[i], rowIndex);
         }
 
-        return true;
+        return rowIndex;
     }
 
     public GesTable ToTable() => new(ToData());
@@ -313,7 +312,7 @@ internal sealed class GesVmDistinctBuilder
         {
             var existing = _keys[i];
             var candidate = key;
-            if (existing.EqualsValue(ref candidate)) return;
+            if (existing.EqualsValue(in candidate)) return;
         }
 
         if (_count == _keys.Length)
@@ -372,12 +371,11 @@ internal sealed class GesVmOrderBuilder
         _count++;
     }
 
-    internal bool TryToList(bool descending, out GesValue[] result)
+    internal GesValue[]? ToList(bool descending)
     {
         if (_count == 0)
         {
-            result = [];
-            return true;
+            return [];
         }
 
         var keys = new GesValue[_count];
@@ -390,11 +388,9 @@ internal sealed class GesVmOrderBuilder
 
         if (!GesVmRegisterSortGroupDistinct.SortValuesByKeys(values, keys, _count, descending))
         {
-            result = [];
-            return false;
+            return null;
         }
 
-        result = values;
-        return true;
+        return values;
     }
 }

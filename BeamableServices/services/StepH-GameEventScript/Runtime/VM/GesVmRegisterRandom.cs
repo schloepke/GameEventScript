@@ -12,26 +12,26 @@ internal static class GesVmRegisterRandom
         switch (from.Kind)
         {
             case Integer when to.Kind is Integer:
-                if (TrySameUnit(in from, in to, out var unit)) vmState.SetInteger(destinationRegister, randomGenerator.NextInclusiveInteger(from.IntegerValue, to.IntegerValue), unit);
+                if (SameUnit(in from, in to) is { } unit) vmState.SetInteger(destinationRegister, randomGenerator.NextInclusiveInteger(from.IntegerValue, to.IntegerValue), unit);
                 else vmState.SetFloat(destinationRegister, double.NaN);
                 return;
             case Float when to.Kind is Float:
-                if (TrySameUnit(in from, in to, out unit))
+                if (SameUnit(in from, in to) is { } floatUnit)
                 {
                     var left = from.FloatValue;
                     var right = to.FloatValue;
-                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), unit);
+                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), floatUnit);
                     else vmState.SetFloat(destinationRegister, double.NaN);
                 }
                 else vmState.SetFloat(destinationRegister, double.NaN);
 
                 return;
             case Float or Integer when to.Kind is Float or Integer:
-                if (TrySameUnit(in from, in to, out unit))
+                if (SameUnit(in from, in to) is { } mixedUnit)
                 {
                     var left = from.AsNumeric;
                     var right = to.AsNumeric;
-                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), unit);
+                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), mixedUnit);
                     else vmState.SetFloat(destinationRegister, double.NaN);
                 }
                 else vmState.SetFloat(destinationRegister, double.NaN);
@@ -75,7 +75,7 @@ internal static class GesVmRegisterRandom
                     return;
                 }
 
-                if (!TrySameUnit(in from, in to, out unit))
+                if (SameUnit(in from, in to) is not { } fallbackUnit)
                 {
                     vmState.SetFloat(destinationRegister, double.NaN);
                     return;
@@ -83,7 +83,7 @@ internal static class GesVmRegisterRandom
 
                 var fallbackLeft = from.AsNumeric;
                 var fallbackRight = to.AsNumeric;
-                if (double.IsFinite(fallbackLeft) && double.IsFinite(fallbackRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(fallbackLeft, fallbackRight), unit);
+                if (double.IsFinite(fallbackLeft) && double.IsFinite(fallbackRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(fallbackLeft, fallbackRight), fallbackUnit);
                 else vmState.SetFloat(destinationRegister, double.NaN);
                 return;
         }
@@ -96,7 +96,7 @@ internal static class GesVmRegisterRandom
             return;
         }
 
-        if (!TrySameUnit(in from, in to, out var unit))
+        if (SameUnit(in from, in to) is not { } unit)
         {
             vmState.SetFloat(destinationRegister, double.NaN);
             return;

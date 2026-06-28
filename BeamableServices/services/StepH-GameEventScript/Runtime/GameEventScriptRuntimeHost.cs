@@ -423,12 +423,13 @@ internal sealed class GameEventScriptRuntimeHost
                     break;
                 }
 
-                if (!state.TryDequeue(out var queuedInvocation))
+                var queuedInvocation = state.Dequeue();
+                if (queuedInvocation is null)
                 {
                     break;
                 }
 
-                if (queuedInvocation is null || !state.TryStartDelivery())
+                if (!state.TryStartDelivery())
                 {
                     continue;
                 }
@@ -515,19 +516,19 @@ internal sealed class GameEventScriptRuntimeHost
         return executed;
     }
 
-    private bool TryGetSubscriptions(string signatureId, out MessageSubscription[] subscriptions)
+    private MessageSubscription[]? GetSubscriptions(string signatureId)
     {
         lock (_dispatchGate)
         {
-            return _dispatchIndex.TryGetValue(signatureId, out subscriptions!);
+            return _dispatchIndex.TryGetValue(signatureId, out var subscriptions) ? subscriptions : null;
         }
     }
 
-    private bool TryGetNameSubscriptions(string messageName, out MessageSubscription[] subscriptions)
+    private MessageSubscription[]? GetNameSubscriptions(string messageName)
     {
         lock (_dispatchGate)
         {
-            return _messageNameDispatchIndex.TryGetValue(messageName, out subscriptions!);
+            return _messageNameDispatchIndex.TryGetValue(messageName, out var subscriptions) ? subscriptions : null;
         }
     }
 
@@ -543,10 +544,10 @@ internal sealed class GameEventScriptRuntimeHost
             return false;
         }
 
-        var hasExactSubscriptions = TryGetSubscriptions(message.SignatureId, out var exactSubscriptions) &&
-                                    exactSubscriptions.Length > 0;
-        var hasNameSubscriptions = TryGetNameSubscriptions(message.Name, out var nameSubscriptions) &&
-                                       nameSubscriptions.Length > 0;
+        var exactSubscriptions = GetSubscriptions(message.SignatureId) ?? [];
+        var nameSubscriptions = GetNameSubscriptions(message.Name) ?? [];
+        var hasExactSubscriptions = exactSubscriptions.Length > 0;
+        var hasNameSubscriptions = nameSubscriptions.Length > 0;
         if (!hasExactSubscriptions && !hasNameSubscriptions)
         {
             return TryEnqueueUndeliverableInvocation(state, message);
@@ -581,10 +582,10 @@ internal sealed class GameEventScriptRuntimeHost
             return false;
         }
 
-        var hasExactSubscriptions = TryGetSubscriptions(GameEventScriptSystemEndpoints.UndeliverableSignatureId, out var exactSubscriptions) &&
-                                    exactSubscriptions.Length > 0;
-        var hasNameSubscriptions = TryGetNameSubscriptions(GameEventScriptSystemEndpoints.UndeliverableName, out var nameSubscriptions) &&
-                                       nameSubscriptions.Length > 0;
+        var exactSubscriptions = GetSubscriptions(GameEventScriptSystemEndpoints.UndeliverableSignatureId) ?? [];
+        var nameSubscriptions = GetNameSubscriptions(GameEventScriptSystemEndpoints.UndeliverableName) ?? [];
+        var hasExactSubscriptions = exactSubscriptions.Length > 0;
+        var hasNameSubscriptions = nameSubscriptions.Length > 0;
         if (!hasExactSubscriptions && !hasNameSubscriptions)
         {
             return false;
@@ -873,18 +874,16 @@ internal sealed class GameEventScriptHostRunState
         return true;
     }
 
-    public bool TryDequeue(out GameEventScriptRuntimeHost.QueuedInvocation? queuedInvocation)
+    public GameEventScriptRuntimeHost.QueuedInvocation? Dequeue()
     {
         lock (_queueGate)
         {
             if (_queue.Count == 0)
             {
-                queuedInvocation = null;
-                return false;
+                return null;
             }
 
-            queuedInvocation = _queue.Dequeue();
-            return true;
+            return _queue.Dequeue();
         }
     }
 

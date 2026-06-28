@@ -117,17 +117,15 @@ internal sealed class GesTableShape
             new GesTableColumnDefinition(keyNameIndex, keyKind, GesTableColumnFlags.Unique),
             new GesTableColumnDefinition(valueNameIndex, valueKind));
 
-    public bool TryGetColumnIndex(ushort nameIndex, out ushort index)
+    public ushort? GetColumnIndex(ushort nameIndex)
     {
         for (var i = 0; i < Columns.Length; i++)
         {
             if (Columns[i].NameIndex != nameIndex) continue;
-            index = checked((ushort)i);
-            return true;
+            return checked((ushort)i);
         }
 
-        index = 0;
-        return false;
+        return null;
     }
 }
 
@@ -189,11 +187,11 @@ internal sealed class GesTable
     public ushort GetTextIndex(int rowIndex, int columnIndex) => checked((ushort)ReadScalar(rowIndex, columnIndex));
     public ushort GetTagIndex(int rowIndex, int columnIndex) => checked((ushort)ReadScalar(rowIndex, columnIndex));
 
-    public bool TryFindBoolean(int columnIndex, bool value, out int rowIndex) => TryFindScalar(columnIndex, value ? 1UL : 0UL, out rowIndex);
-    public bool TryFindInteger(int columnIndex, long value, out int rowIndex) => TryFindScalar(columnIndex, unchecked((ulong)value), out rowIndex);
-    public bool TryFindFloat(int columnIndex, double value, out int rowIndex) => TryFindScalar(columnIndex, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)), out rowIndex);
-    public bool TryFindTextIndex(int columnIndex, ushort value, out int rowIndex) => TryFindScalar(columnIndex, value, out rowIndex);
-    public bool TryFindTagIndex(int columnIndex, ushort value, out int rowIndex) => TryFindScalar(columnIndex, value, out rowIndex);
+    public int? FindBoolean(int columnIndex, bool value) => FindScalar(columnIndex, value ? 1UL : 0UL);
+    public int? FindInteger(int columnIndex, long value) => FindScalar(columnIndex, unchecked((ulong)value));
+    public int? FindFloat(int columnIndex, double value) => FindScalar(columnIndex, unchecked((ulong)BitConverter.DoubleToInt64Bits(value)));
+    public int? FindTextIndex(int columnIndex, ushort value) => FindScalar(columnIndex, value);
+    public int? FindTagIndex(int columnIndex, ushort value) => FindScalar(columnIndex, value);
     private ulong ReadScalar(int rowIndex, int columnIndex) => Data.Data[GetOffset(rowIndex, columnIndex)];
     private int GetOffset(int rowIndex, int columnIndex)
     {
@@ -201,7 +199,7 @@ internal sealed class GesTable
         return checked((int)(column.DataStart + (uint)rowIndex * GesTableData.GetColumnWidth(column.Kind)));
     }
 
-    private bool TryFindScalar(int columnIndex, ulong value, out int rowIndex)
+    private int? FindScalar(int columnIndex, ulong value)
     {
         var column = Data.Columns[columnIndex];
         var width = GesTableData.GetColumnWidth(column.Kind);
@@ -210,14 +208,12 @@ internal sealed class GesTable
         {
             if (Data.Data[offset] == value)
             {
-                rowIndex = checked((int)row);
-                return true;
+                return checked((int)row);
             }
 
             offset += width;
         }
 
-        rowIndex = -1;
-        return false;
+        return null;
     }
 }

@@ -203,7 +203,11 @@ internal static class GesVmRegisterTypeCastCheck
                 for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
                 {
                     var argumentName = vmState.FetchStringByPointer(bind.ArgumentNames[argumentIndex]);
-                    if (map.TryGet(argumentName, out var argument)) vmState.StageValue(ref argument);
+                    if (map.Get(argumentName) is { } argument)
+                    {
+                        var stagedArgument = argument;
+                        vmState.StageValue(ref stagedArgument);
+                    }
                     else vmState.StageNothing();
                 }
 
@@ -498,7 +502,7 @@ internal static class GesVmRegisterTypeCastCheck
                 break;
             case Map when xValue.ObjectValue is GesValueMap map:
             {
-                if (map.TryGet("x", out var mapXValue))
+                if (map.Get("x") is { } mapXValue)
                 {
                     if (!mapXValue.IsNumeric && mapXValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
@@ -509,7 +513,7 @@ internal static class GesVmRegisterTypeCastCheck
                     x = mapXValue.AsNumeric;
                 }
 
-                if (map.TryGet("y", out var yValue))
+                if (map.Get("y") is { } yValue)
                 {
                     if (!yValue.IsNumeric && yValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
@@ -520,7 +524,7 @@ internal static class GesVmRegisterTypeCastCheck
                     y = yValue.AsNumeric;
                 }
 
-                if (map.TryGet("z", out var zValue))
+                if (map.Get("z") is { } zValue)
                 {
                     if (!zValue.IsNumeric && zValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
@@ -542,7 +546,7 @@ internal static class GesVmRegisterTypeCastCheck
             case Custom when xValue.ObjectValue is GesCustomObject customObject:
             {
                 var map = customObject.Map;
-                if (map.TryGet("x", out var mapXValue))
+                if (map.Get("x") is { } mapXValue)
                 {
                     if (!mapXValue.IsNumeric && mapXValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
@@ -553,7 +557,7 @@ internal static class GesVmRegisterTypeCastCheck
                     x = mapXValue.AsNumeric;
                 }
 
-                if (map.TryGet("y", out var yValue))
+                if (map.Get("y") is { } yValue)
                 {
                     if (!yValue.IsNumeric && yValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
@@ -564,7 +568,7 @@ internal static class GesVmRegisterTypeCastCheck
                     y = yValue.AsNumeric;
                 }
 
-                if (map.TryGet("z", out var zValue))
+                if (map.Get("z") is { } zValue)
                 {
                     if (!zValue.IsNumeric && zValue.Kind is not GameEventScriptBytecodeTypeKind.Boolean)
                     {
@@ -620,7 +624,7 @@ internal static class GesVmRegisterTypeCastCheck
                 else dst.SetNothing();
                 return;
             case Text when xValue.ObjectValue is string text:
-                if (GameEventScriptTagRules.TryNormalizeTextCast(text, out var tag)) dst.SetTag(tag);
+                if (GameEventScriptTagRules.NormalizeTextCast(text) is { } tag) dst.SetTag(tag);
                 else dst.SetNothing();
                 return;
             case GameEventScriptBytecodeTypeKind.Boolean:

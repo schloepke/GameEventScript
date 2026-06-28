@@ -39,17 +39,15 @@ internal sealed class GesValueMap
     internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
     internal GesValue[] EntryList => _entries ??= CreateListOfEntries();
 
-    public bool TryGet(string key, out GesValue value)
+    public GesValue? Get(string key)
     {
         var index = FindKeyIndex(key);
         if (index >= 0)
         {
-            value = _values[index];
-            return true;
+            return _values[index];
         }
 
-        value = default;
-        return false;
+        return null;
     }
 
     internal bool ContainsKey(string key) => FindKeyIndex(key) >= 0;

@@ -8,7 +8,7 @@ internal static class GesVmRegisterIterators
 {
     internal static void GesVmIteratorCreate(this GesVmState vmState, ushort destinationRegister, in GesValue x)
     {
-        if (x.TryCreateIterator(out var iterator)) vmState.SetIterator(destinationRegister, iterator);
+        if (x.CreateIterator() is { } iterator) vmState.SetIterator(destinationRegister, iterator);
         else vmState.SetNothing(destinationRegister);
     }
 

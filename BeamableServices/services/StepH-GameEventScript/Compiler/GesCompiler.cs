@@ -1444,24 +1444,6 @@ internal static class GesCompiler
             ExpressionNode expression,
             LoweringContext parentContext,
             ExpressionState parentState,
-            out GesRegisterRef itemBinding)
-        {
-            itemBinding = parentContext.AddTemporary(identifier);
-            using var sourceRange = _builder.SourceRange(expression.SourceRange);
-            using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}");
-            var helperContext = LoweringContext.ForRoutineWithParent(helper, parentContext);
-            helperContext.DeclareExisting(identifier, itemBinding);
-            var result = EmitExpressionForRead(expression, helperContext, new ExpressionState(parentState.NextRegister));
-            _builder.ReturnValue(result);
-            return helper.EntryLabel;
-        }
-
-        private GesLabelRef EmitSelectorHelperExpression(
-            string name,
-            string identifier,
-            ExpressionNode expression,
-            LoweringContext parentContext,
-            ExpressionState parentState,
             GesRegisterRef itemBinding)
         {
             using var sourceRange = _builder.SourceRange(expression.SourceRange);

@@ -29,8 +29,8 @@ internal static class GesVmRegisterPatterns
                         vmState.SetBoolean(destinationRegister, false);
                         return;
                     }
-                    if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
-                    HasPatternBufferFace(ref result, items, length, in face, count);
+                    var read = ReadIterator(iterator);
+                    HasPatternBufferFace(ref result, read.Items, read.Length, in face, count);
                     vmState.SetValue(destinationRegister, in result);
                     return;
                 case Series:
@@ -58,8 +58,8 @@ internal static class GesVmRegisterPatterns
                     vmState.SetBoolean(destinationRegister, false);
                     return;
                 }
-                if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
-                HasPatternBuffer(ref result, items, length, pattern, count);
+                var read = ReadIterator(iterator);
+                HasPatternBuffer(ref result, read.Items, read.Length, pattern, count);
                 vmState.SetValue(destinationRegister, in result);
                 return;
             case Series:
@@ -100,11 +100,11 @@ internal static class GesVmRegisterPatterns
                         vmState.SetNothing(destinationRegister);
                         return;
                     }
-                    if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
+                    var read = ReadIterator(iterator);
                     var iteratorMatches = 0;
-                    for (var i = 0; i < length; i++) if (items[i].EqualsValue(in face)) iteratorMatches++;
+                    for (var i = 0; i < read.Length; i++) if (read.Items[i].EqualsValue(in face)) iteratorMatches++;
                     if (iteratorMatches < count) result.SetNothing();
-                    else SetTakenByFace(ref result, items, length, in face, count, diceResult: false);
+                    else SetTakenByFace(ref result, read.Items, read.Length, in face, count, diceResult: false);
                     vmState.SetValue(destinationRegister, in result);
                     return;
                 default:
@@ -129,8 +129,8 @@ internal static class GesVmRegisterPatterns
                     vmState.SetNothing(destinationRegister);
                     return;
                 }
-                if (!ReadIterator(vmState, iterator, out var items, out var length)) return;
-                TakePatternBuffer(ref result, items, length, pattern, count, diceResult: false);
+                var read = ReadIterator(iterator);
+                TakePatternBuffer(ref result, read.Items, read.Length, pattern, count, diceResult: false);
                 vmState.SetValue(destinationRegister, in result);
                 return;
             default:
@@ -495,10 +495,10 @@ internal static class GesVmRegisterPatterns
         return true;
     }
 
-    private static bool ReadIterator(GesVmState vmState, IGesIterator iterator, out GesValue[] items, out int length)
+    private static IteratorBuffer ReadIterator(IGesIterator iterator)
     {
         var buffer = Array.Empty<GesValue>();
-        length = 0;
+        var length = 0;
         var item = new GesValue();
         try
         {
@@ -515,7 +515,8 @@ internal static class GesVmRegisterPatterns
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
 
-        items = buffer;
-        return true;
+        return new IteratorBuffer(buffer, length);
     }
+
+    private readonly record struct IteratorBuffer(GesValue[] Items, int Length);
 }

@@ -10,6 +10,8 @@ using static StepH.GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
+internal readonly record struct GesNumericWithUnit(double Value, GameEventScriptBytecodeInstructionUnit Unit);
+
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 32)]
@@ -376,11 +378,8 @@ internal struct GesValue
         foreach (var value in values) sum += value;
         return sum;
     }
-    public double AsNumericWithUnit(out GameEventScriptBytecodeInstructionUnit unit)
-    {
-        unit = Unit;
-        return AsNumeric;
-    }
+    internal GesNumericWithUnit AsNumericWithUnit()
+        => new(AsNumeric, Unit);
 
     internal bool EqualsValue(in GesValue other)
     {

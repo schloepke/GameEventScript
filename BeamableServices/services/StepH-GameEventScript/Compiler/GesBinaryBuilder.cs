@@ -199,8 +199,7 @@ internal sealed partial class GesBinaryBuilder
 
         ushort ResolveText(string text)
         {
-            builder.AddText(text, out var index);
-            return index;
+            return builder.AddText(text);
         }
 
         ushort ResolveList(IReadOnlyList<GesRegisterRef> registers)
@@ -213,7 +212,7 @@ internal sealed partial class GesBinaryBuilder
 
             var key = string.Join(",", values.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             if (listIndexes.TryGetValue(key, out var existing)) return existing;
-            builder.AddUInt16Slice(values, out var listIndex);
+            var listIndex = builder.AddUInt16Slice(values);
             listIndexes.Add(key, listIndex);
             return listIndex;
         }
@@ -228,7 +227,7 @@ internal sealed partial class GesBinaryBuilder
 
             var key = "t:" + string.Join(",", indexes.Select(value => value.ToString(System.Globalization.CultureInfo.InvariantCulture)));
             if (listIndexes.TryGetValue(key, out var existing)) return existing;
-            builder.AddUInt16Slice(indexes, out var listIndex);
+            var listIndex = builder.AddUInt16Slice(indexes);
             listIndexes.Add(key, listIndex);
             return listIndex;
         }
@@ -300,25 +299,25 @@ internal sealed partial class GesBinaryBuilder
             return this;
         }
 
-        public BinaryMaterializer AddText(string text, out ushort index)
+        public ushort AddText(string text)
         {
             _ = text ?? throw new ArgumentNullException(nameof(text));
-            if (_textIndexes.TryGetValue(text, out index))
+            if (_textIndexes.TryGetValue(text, out var index))
             {
-                return this;
+                return index;
             }
 
             index = checked((ushort)_textConstants.Count);
             _textConstants.Add(text);
             _textIndexes.Add(text, index);
-            return this;
+            return index;
         }
 
-        public BinaryMaterializer AddUInt16Slice(IReadOnlyList<ushort> value, out ushort index)
+        public ushort AddUInt16Slice(IReadOnlyList<ushort> value)
         {
-            index = checked((ushort)_uint16Slices.Count);
+            var index = checked((ushort)_uint16Slices.Count);
             _uint16Slices.Add(value.ToArray());
-            return this;
+            return index;
         }
 
         public BinaryMaterializer AddBind(GameEventScriptBinaryBindEntry bind)

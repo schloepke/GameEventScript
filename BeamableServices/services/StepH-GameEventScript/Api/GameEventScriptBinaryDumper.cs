@@ -189,7 +189,7 @@ public static class GameEventScriptBinaryDumper
                 }
 
                 AppendAlignedLabel(builder, context.CodeLabel(i));
-                if (context.TryGetCodeLabelComment(i, out var labelComment))
+                if (context.GetCodeLabelComment(i) is { } labelComment)
                 {
                     builder.Append(" // ").Append(labelComment);
                 }
@@ -442,7 +442,7 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddOutboundMessageComment(List<string> comments, DisassemblyContext context, ushort id)
     {
-        if (context.TryGetBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, id, out var entry))
+        if (context.GetBindEntry(GameEventScriptBinaryBindKind.OutboundMessage, id) is { } entry)
         {
             AddBindSignatureComment(comments, context, entry);
         }
@@ -450,7 +450,7 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddRecordComment(List<string> comments, DisassemblyContext context, ushort id)
     {
-        if (context.TryGetBindEntry(GameEventScriptBinaryBindKind.Record, id, out var entry))
+        if (context.GetBindEntry(GameEventScriptBinaryBindKind.Record, id) is { } entry)
         {
             AddBindSignatureComment(comments, context, entry);
         }
@@ -461,7 +461,7 @@ public static class GameEventScriptBinaryDumper
         var kind = opCode == GameEventScriptBytecodeOpCode.CreateExternalType
             ? GameEventScriptBinaryBindKind.ExternalType
             : GameEventScriptBinaryBindKind.ExtensionCall;
-        if (context.TryGetBindEntry(kind, id, out var entry))
+        if (context.GetBindEntry(kind, id) is { } entry)
         {
             AddBindSignatureComment(comments, context, entry);
         }
@@ -501,7 +501,7 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddCodeEntryComment(List<string> comments, DisassemblyContext context, ushort address)
     {
-        if (context.TryGetCodeLabelComment(address, out var comment))
+        if (context.GetCodeLabelComment(address) is { } comment)
         {
             comments.Add(comment);
         }
@@ -628,19 +628,18 @@ public static class GameEventScriptBinaryDumper
         internal string TextLabel(int index)
             => (uint)index < (uint)_textLabels.Length ? _textLabels[index] : "T_" + index.ToString(CultureInfo.InvariantCulture);
 
-        internal bool TryGetCodeLabelComment(ushort address, out string comment)
+        internal string? GetCodeLabelComment(ushort address)
         {
             if (address == NoAddress)
             {
-                comment = string.Empty;
-                return false;
+                return null;
             }
 
-            return TryGetCodeLabelComment((int)address, out comment);
+            return GetCodeLabelComment((int)address);
         }
 
-        internal bool TryGetCodeLabelComment(int address, out string comment)
-            => _codeLabelComments.TryGetValue(address, out comment);
+        internal string? GetCodeLabelComment(int address)
+            => _codeLabelComments.TryGetValue(address, out var comment) ? comment : null;
 
         internal string ListLabel(int index)
             => (uint)index < (uint)_listLabels.Length ? _listLabels[index] : "U16_" + index.ToString(CultureInfo.InvariantCulture);
@@ -665,16 +664,14 @@ public static class GameEventScriptBinaryDumper
         internal string ResolveText(ushort index)
             => index < Binary.TextConstantTable.Slices.Length ? Binary.TextConstantTable.Resolve(index) : "#" + index.ToString(CultureInfo.InvariantCulture);
 
-        internal bool TryGetBindEntry(GameEventScriptBinaryBindKind kind, ushort id, out GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+        internal GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry? GetBindEntry(GameEventScriptBinaryBindKind kind, ushort id)
         {
             if (_bindsByKindAndId.TryGetValue((kind, id), out var index))
             {
-                entry = Binary.BindTable.Entries[index];
-                return true;
+                return Binary.BindTable.Entries[index];
             }
 
-            entry = default;
-            return false;
+            return null;
         }
 
         private string BindLabel(GameEventScriptBinaryBindKind kind, ushort id, string fallback)
@@ -775,18 +772,18 @@ public static class GameEventScriptBinaryDumper
                 var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
                 for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
                 {
-                    if (!TryGetListIndex(instruction, operands[operandIndex], out var listIndex, out var prefix, out var role))
+                    if (GetListIndex(instruction, operands[operandIndex]) is not { } list)
                     {
                         continue;
                     }
 
-                    if ((uint)listIndex >= (uint)labels.Length)
+                    if ((uint)list.Index >= (uint)labels.Length)
                     {
                         continue;
                     }
 
-                    labels[listIndex] = prefix + "_" + listIndex.ToString(CultureInfo.InvariantCulture);
-                    roles[listIndex] = PreferListRole(roles[listIndex], role);
+                    labels[list.Index] = list.Prefix + "_" + list.Index.ToString(CultureInfo.InvariantCulture);
+                    roles[list.Index] = PreferListRole(roles[list.Index], list.Role);
                 }
             }
         }
@@ -1026,67 +1023,35 @@ public static class GameEventScriptBinaryDumper
         private static ListRole PreferListRole(ListRole current, ListRole candidate)
             => current == ListRole.Raw ? candidate : current;
 
-        private static bool TryGetListIndex(
+        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(
             GameEventScriptBytecodeInstruction instruction,
-            GameEventScriptOpcodePrinter.OperandPart part,
-            out ushort index,
-            out string prefix,
-            out ListRole role)
+            GameEventScriptOpcodePrinter.OperandPart part)
         {
             switch (part)
             {
                 case MessageShapeList:
-                    index = instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex;
-                    prefix = "Shape";
-                    role = ListRole.Texts;
-                    return true;
+                    return (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex, "Shape", ListRole.Texts);
                 case StandardExtensionShapeList:
-                    index = instruction.SecondaryListIndex;
-                    prefix = "StdExt";
-                    role = ListRole.Texts;
-                    return true;
+                    return (instruction.SecondaryListIndex, "StdExt", ListRole.Texts);
                 case ArgumentNameList:
-                    index = instruction.ListIndex;
-                    prefix = "Names";
-                    role = ListRole.Texts;
-                    return true;
+                    return (instruction.ListIndex, "Names", ListRole.Texts);
                 case KeyNameList:
-                    index = instruction.SecondaryListIndex;
-                    prefix = "Keys";
-                    role = ListRole.Texts;
-                    return true;
+                    return (instruction.SecondaryListIndex, "Keys", ListRole.Texts);
                 case ArgumentRegisterList:
-                    index = instruction.ListIndex;
-                    prefix = "Args";
-                    role = ListRole.Registers;
-                    return true;
+                    return (instruction.ListIndex, "Args", ListRole.Registers);
                 case ItemRegisterList:
-                    index = instruction.ListIndex;
-                    prefix = "Items";
-                    role = ListRole.Registers;
-                    return true;
+                    return (instruction.ListIndex, "Items", ListRole.Registers);
                 case ValueRegisterList:
-                    index = instruction.ListIndex;
-                    prefix = "Values";
-                    role = ListRole.Registers;
-                    return true;
+                    return (instruction.ListIndex, "Values", ListRole.Registers);
                 case CaptureRegisterList:
-                    index = CaptureRegisterListIndex(instruction);
-                    prefix = "Captures";
-                    role = ListRole.Registers;
-                    return true;
+                    return (CaptureRegisterListIndex(instruction), "Captures", ListRole.Registers);
                 case TagRegisterList:
-                    index = instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
+                    var index = instruction.OpCode is GameEventScriptBytecodeOpCode.EmitMessageWithTags or GameEventScriptBytecodeOpCode.PublishMessageWithTags
                         ? instruction.SecondaryListIndex
                         : instruction.ListIndex;
-                    prefix = "Tags";
-                    role = ListRole.Registers;
-                    return true;
+                    return (index, "Tags", ListRole.Registers);
                 default:
-                    index = 0;
-                    prefix = string.Empty;
-                    role = ListRole.Raw;
-                    return false;
+                    return null;
             }
         }
     }

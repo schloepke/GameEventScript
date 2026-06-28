@@ -100,7 +100,7 @@ public sealed class GameEventScriptRandomGenerator
     public long NextInclusiveInteger(long minInclusive, long maxInclusive)
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        if (TryDequeueSequenceValue(out var queuedValue))
+        if (DequeueSequenceValue() is { } queuedValue)
         {
             return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
         }
@@ -128,7 +128,7 @@ public sealed class GameEventScriptRandomGenerator
     {
         if (double.IsNaN(minInclusive) || double.IsNaN(maxInclusive)) return double.NaN;
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
-        if (TryDequeueSequenceValue(out var queuedValue))
+        if (DequeueSequenceValue() is { } queuedValue)
         {
             return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
         }
@@ -155,16 +155,14 @@ public sealed class GameEventScriptRandomGenerator
     private ulong _s2;
     private ulong _s3;
 
-    private bool TryDequeueSequenceValue(out double value)
+    private double? DequeueSequenceValue()
     {
         if (_sequence == null || _sequenceIndex >= _sequence.Length)
         {
-            value = 0;
-            return false;
+            return null;
         }
 
-        value = _sequence[_sequenceIndex++];
-        return true;
+        return _sequence[_sequenceIndex++];
     }
 
     private static long ToLongSaturated(double value) => value switch

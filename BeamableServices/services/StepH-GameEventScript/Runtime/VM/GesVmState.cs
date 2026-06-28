@@ -112,7 +112,8 @@ internal class GesVmState
             }
 
             var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], labels);
-            if (!extensionRegistry.TryResolve(reference, out var function))
+            var function = extensionRegistry.Resolve(reference);
+            if (function is null)
             {
                 throw new GameEventScriptDynamicLinkException(
                     $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
@@ -134,7 +135,8 @@ internal class GesVmState
             }
 
             var reference = new GameEventScriptExternalTypeConstructorReference(typeName, labels);
-            if (!typeRegistry.TryResolve(reference, out var constructor))
+            var constructor = typeRegistry.Resolve(reference);
+            if (constructor is null)
             {
                 throw new GameEventScriptDynamicLinkException(
                     $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");

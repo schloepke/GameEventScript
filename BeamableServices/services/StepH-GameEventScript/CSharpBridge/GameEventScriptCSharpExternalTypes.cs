@@ -121,17 +121,16 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         return new GameEventScriptCSharpExternalTypeRegistry(definitions);
     }
 
-    public bool TryResolve(GameEventScriptExternalTypeConstructorReference reference, out IGameEventScriptExternalTypeConstructor constructor)
+    public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));
         if (Types.TryGetValue(reference.TypeName, out var typeDefinition) &&
-            typeDefinition.ConstructorBindings.TryGetValue(reference.SignatureId, out constructor!))
+            typeDefinition.ConstructorBindings.TryGetValue(reference.SignatureId, out var constructor))
         {
-            return true;
+            return constructor;
         }
 
-        constructor = default!;
-        return false;
+        return null;
     }
 
     private static GameEventScriptExternalTypeDefinition BuildDefinition(Type clrType)
@@ -425,7 +424,8 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
             return checked((byte)value.AsInteger());
         }
 
-        if (value.TryGetExternalObject(targetType, out var externalObject))
+        var externalObject = value.GetExternalObject(targetType);
+        if (externalObject is not null)
         {
             return externalObject;
         }

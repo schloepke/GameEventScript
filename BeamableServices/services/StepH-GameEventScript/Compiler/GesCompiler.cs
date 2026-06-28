@@ -2236,7 +2236,7 @@ internal static class GesCompiler
                 throw new GameEventScriptCompileException($"GameEventScript external type ':{reference.TypeName}' is not registered.");
             }
 
-            if (!typeDefinition.TryGetConstructor(reference.ArgumentLabels, out _))
+            if (!typeDefinition.HasConstructor(reference.ArgumentLabels))
             {
                 throw new GameEventScriptCompileException($"GameEventScript external type constructor ':{reference.SignatureId}' is not registered.");
             }
@@ -2385,9 +2385,7 @@ internal static class GesCompiler
                 : (short)value;
 
         private static GameEventScriptBytecodeInstructionUnit ResolveUnitOrNone(string unitName)
-            => GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitName, out var unit)
-                ? unit
-                : GameEventScriptBytecodeInstructionUnit.UnitNone;
+            => GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitName) ?? GameEventScriptBytecodeInstructionUnit.UnitNone;
 
         private static bool IsBuiltInCastType(string typeName)
             => typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional" ||
@@ -2395,7 +2393,10 @@ internal static class GesCompiler
                TryGetBytecodeTypeKind(typeName, out _);
 
         private static bool TryGetQuantityUnit(string typeName, out GameEventScriptBytecodeInstructionUnit unit)
-            => GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(typeName, out unit);
+        {
+            unit = GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName) ?? GameEventScriptBytecodeInstructionUnit.UnitNone;
+            return unit != GameEventScriptBytecodeInstructionUnit.UnitNone;
+        }
 
         private static bool TryGetBytecodeTypeKind(string typeName, out GameEventScriptBytecodeTypeKind typeKind)
         {

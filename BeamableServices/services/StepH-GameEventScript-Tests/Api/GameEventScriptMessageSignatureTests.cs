@@ -93,7 +93,8 @@ public sealed class GameEventScriptMessageSignatureTests
     {
         var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
 
-        Assert.IsTrue(signature.TryCreateMessage([GameEventScriptValueFactory.GesInteger(7)], out var message));
+        var message = signature.CreateMessage([GameEventScriptValueFactory.GesInteger(7)]);
+        Assert.IsNotNull(message);
         Assert.AreEqual("Ping(amount)", message.SignatureId);
     }
 }

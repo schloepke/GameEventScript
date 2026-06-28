@@ -22,7 +22,9 @@ internal static class GesVmStatePublisher
 
         try
         {
-            var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs));
+            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs);
+            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, arguments.SignatureLabels);
+            var message = GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId);
             return publish ? session.Publish(message) : session.Emit(message);
         }
         catch (ArgumentException)
@@ -50,7 +52,9 @@ internal static class GesVmStatePublisher
 
         try
         {
-            var message = GameEventScriptMessage.Create(messageName, GameEventScriptNamedArguments.CreateOrdered(pairs), tags);
+            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs);
+            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, arguments.SignatureLabels);
+            var message = GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId, tags);
             return publish ? session.Publish(message) : session.Emit(message);
         }
         catch (ArgumentException)

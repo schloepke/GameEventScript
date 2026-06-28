@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.Api;
 
 public interface IGameEventScriptExtensionRegistry
 {
-    bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function);
+    IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference);
 }
 
 public interface IGameEventScriptExtensionFunction
@@ -24,11 +24,7 @@ internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptEx
     {
     }
 
-    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
-    {
-        function = default!;
-        return false;
-    }
+    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference) => null;
 }
 
 public sealed class GameEventScriptExtensionReference

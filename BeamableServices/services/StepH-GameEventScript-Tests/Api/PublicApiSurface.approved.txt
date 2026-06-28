@@ -92,10 +92,10 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitSecond = 3
   enum-field UnitInvalid = 255
 static class StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits
+  method static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? ParseQuantityTypeName(System.String typeName)
+  method static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? ParseTypeName(System.String typeName)
   method static System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static System.Boolean IsQuantityTypeName(System.String typeName)
-  method static System.Boolean TryParseQuantityTypeName(System.String typeName, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
-  method static System.Boolean TryParseTypeName(System.String typeName, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit& unit)
   method static System.String ToSuffix(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
   method static System.String ToTypeName(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
@@ -414,6 +414,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefin
   property System.String Name { get }
   property System.String TypeName { get }
 abstract class StepH.GameEventScript.Api.GameEventScriptFatalRuntimeException
+sealed class StepH.GameEventScript.Api.GameEventScriptFloatRange
+  ctor GameEventScriptFloatRange(System.Double from, System.Double to, System.Double step)
+  property System.Double From { get }
+  property System.Double Step { get }
+  property System.Double To { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptHost Load(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
   method StepH.GameEventScript.Api.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor handler, System.Int32 priority)
@@ -440,6 +445,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
 enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
   enum-field None = 0
   enum-field NormalizeResultAsPredicate = 32
+sealed class StepH.GameEventScript.Api.GameEventScriptIntegerRange
+  ctor GameEventScriptIntegerRange(System.Int64 from, System.Int64 to, System.Int64 step)
+  property System.Int64 From { get }
+  property System.Int64 Step { get }
+  property System.Int64 To { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.Collections.Generic.IEnumerable<System.String> tags)
   method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.String[] tags)
@@ -467,11 +477,11 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor
 sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   field static StepH.GameEventScript.Api.GameEventScriptMessageSignature Empty
   field static System.String UnlabeledParameterName
+  method StepH.GameEventScript.Api.GameEventScriptMessage CreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
   method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Api.GameEventScriptValue[] arguments)
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptMessageSignature other)
   method System.Boolean Equals(System.Object obj)
   method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  method System.Boolean TryCreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptValue> arguments, StepH.GameEventScript.Api.GameEventScriptMessage& message)
   method System.Int32 GetHashCode()
   method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
   method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
@@ -482,7 +492,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   property System.String SignatureId { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptNamedArguments
   method System.Boolean ContainsKey(System.String key)
-  method System.Boolean TryGetValue(System.String key, StepH.GameEventScript.Api.GameEventScriptValue& value)
   method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Api.GameEventScriptValue>> GetEnumerator()
   method System.String ToString()
   method static StepH.GameEventScript.Api.GameEventScriptNamedArguments Create(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> values)
@@ -598,16 +607,11 @@ struct StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry
   property System.UInt16 Length { get set }
   property System.UInt16 Start { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptValue
+  method StepH.GameEventScript.Api.GameEventScriptValue GetMapValue(System.String key)
   method System.Boolean AsBoolean()
   method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptValue other)
   method System.Boolean Equals(System.Object obj)
   method System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method System.Boolean TryGetCustomTypeName(System.String& typeName)
-  method System.Boolean TryGetExternalObject(System.Type objectType, System.Object& value)
-  method System.Boolean TryGetExternalObject<T>(T& value)
-  method System.Boolean TryGetFloatRange(System.Double& from, System.Double& to, System.Double& step)
-  method System.Boolean TryGetIntegerRange(System.Int64& from, System.Int64& to, System.Int64& step)
-  method System.Boolean TryGetMapValue(System.String key, StepH.GameEventScript.Api.GameEventScriptValue& value)
   method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> AsMap()
   method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptValue> AsList()
   method System.Collections.Generic.IReadOnlyList<System.Int32> AsDice()
@@ -615,10 +619,14 @@ sealed class StepH.GameEventScript.Api.GameEventScriptValue
   method System.Double AsNumeric()
   method System.Int32 GetHashCode()
   method System.Int64 AsInteger()
+  method System.Object GetExternalObject(System.Type objectType)
   method System.String AsText()
   method System.String ToString()
+  method T GetExternalObject<T>()
   property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind Kind { get }
+  property StepH.GameEventScript.Api.GameEventScriptFloatRange FloatRange { get }
+  property StepH.GameEventScript.Api.GameEventScriptIntegerRange IntegerRange { get }
   property StepH.GameEventScript.Api.GameEventScriptMessage Message { get }
   property StepH.GameEventScript.Api.GameEventScriptMessageSignature Handler { get }
   property System.Boolean Boolean { get }
@@ -635,6 +643,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptValue
   property System.Double Z { get }
   property System.Int32 Length { get }
   property System.Int64 Integer { get }
+  property System.String CustomTypeName { get }
   property System.String Text { get }
 static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Api.GameEventScriptValue GesBoolean(System.Boolean boolean)
@@ -660,12 +669,12 @@ interface StepH.GameEventScript.Api.IGameEventScriptDispatcher
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
   method StepH.GameEventScript.Api.GameEventScriptValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
-  method System.Boolean TryResolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference, StepH.GameEventScript.Api.IGameEventScriptExtensionFunction& function)
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionFunction Resolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference)
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor
   method StepH.GameEventScript.Api.GameEventScriptValue Invoke(System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
   property StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition Definition { get }
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry
-  method System.Boolean TryResolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference, StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor& constructor)
+  method StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor Resolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference)
   property System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> Types { get }
 interface StepH.GameEventScript.Api.IGameEventScriptMessageInvocation
   method System.Int32 RunSlice(System.Int32 maxSteps)

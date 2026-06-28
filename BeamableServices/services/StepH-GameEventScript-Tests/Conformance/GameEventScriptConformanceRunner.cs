@@ -661,15 +661,14 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
     {
     }
 
-    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
+    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
     {
         if (string.Equals(reference.ExtensionName, "math", StringComparison.Ordinal) &&
             string.Equals(reference.FunctionName, "floor", StringComparison.Ordinal) &&
             reference.ArgumentLabels.Count == 1 &&
             IsUnlabeled(reference.ArgumentLabels[0]))
         {
-            function = MathFloor;
-            return true;
+            return MathFloor;
         }
 
         if (string.Equals(reference.ExtensionName, "math", StringComparison.Ordinal) &&
@@ -677,24 +676,21 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             reference.ArgumentLabels.Count > 0 &&
             reference.ArgumentLabels.All(IsUnlabeled))
         {
-            function = MathMax;
-            return true;
+            return MathMax;
         }
 
         if (string.Equals(reference.ExtensionName, "nav", StringComparison.Ordinal) &&
             string.Equals(reference.FunctionName, "shortestTurn", StringComparison.Ordinal) &&
             reference.ArgumentLabels.SequenceEqual(["from", "to"], StringComparer.Ordinal))
         {
-            function = NavShortestTurn;
-            return true;
+            return NavShortestTurn;
         }
 
         if (string.Equals(reference.ExtensionName, "nav", StringComparison.Ordinal) &&
             string.Equals(reference.FunctionName, "isNorth", StringComparison.Ordinal) &&
             reference.ArgumentLabels.Count == 1)
         {
-            function = NavIsNorth;
-            return true;
+            return NavIsNorth;
         }
 
         if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
@@ -702,8 +698,7 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             reference.ArgumentLabels.Count == 1 &&
             IsUnlabeled(reference.ArgumentLabels[0]))
         {
-            function = TestVectorSum;
-            return true;
+            return TestVectorSum;
         }
 
         if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
@@ -711,28 +706,24 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
             reference.ArgumentLabels.Count == 1 &&
             IsUnlabeled(reference.ArgumentLabels[0]))
         {
-            function = TestEcho;
-            return true;
+            return TestEcho;
         }
 
         if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
             string.Equals(reference.FunctionName, "truth", StringComparison.Ordinal) &&
             reference.ArgumentLabels.Count == 0)
         {
-            function = TestTruth;
-            return true;
+            return TestTruth;
         }
 
         if (string.Equals(reference.ExtensionName, "test", StringComparison.Ordinal) &&
             string.Equals(reference.FunctionName, "fail", StringComparison.Ordinal) &&
             reference.ArgumentLabels.Count == 0)
         {
-            function = TestFail;
-            return true;
+            return TestFail;
         }
 
-        function = default!;
-        return false;
+        return null;
     }
 
     private static bool IsUnlabeled(string label)

@@ -10,7 +10,7 @@ public interface IGameEventScriptExternalTypeRegistry
 {
     IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> Types { get; }
 
-    bool TryResolve(GameEventScriptExternalTypeConstructorReference reference, out IGameEventScriptExternalTypeConstructor constructor);
+    IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference);
 }
 
 public interface IGameEventScriptExternalTypeConstructor
@@ -59,28 +59,16 @@ public sealed class GameEventScriptExternalTypeDefinition
 
     internal IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> ConstructorBindings { get; }
 
-    internal bool TryGetConstructor(IReadOnlyCollection<string> argumentLabels, out IGameEventScriptExternalTypeConstructor constructor)
+    internal bool HasConstructor(IReadOnlyCollection<string> argumentLabels)
     {
         var signatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(Name, argumentLabels);
-        if (ConstructorBindings.TryGetValue(signatureId, out constructor!))
-        {
-            return true;
-        }
-
-        constructor = default!;
-        return Constructors.Any(constructorDefinition => string.Equals(constructorDefinition.SignatureId, signatureId, StringComparison.Ordinal));
+        return ConstructorBindings.ContainsKey(signatureId) ||
+               Constructors.Any(constructorDefinition => string.Equals(constructorDefinition.SignatureId, signatureId, StringComparison.Ordinal));
     }
 
-    internal bool TryGetField(string fieldName, object instance, out GameEventScriptValue value)
+    internal GameEventScriptValue? GetField(string fieldName, object instance)
     {
-        if (FieldReaders.TryGetValue(fieldName, out var reader))
-        {
-            value = reader(instance);
-            return true;
-        }
-
-        value = GameEventScriptValueFactory.GesNothing();
-        return false;
+        return FieldReaders.TryGetValue(fieldName, out var reader) ? reader(instance) : null;
     }
 }
 
@@ -213,9 +201,5 @@ internal sealed class GameEventScriptEmptyExternalTypeRegistry : IGameEventScrip
     public IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> Types { get; } =
         new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
 
-    public bool TryResolve(GameEventScriptExternalTypeConstructorReference reference, out IGameEventScriptExternalTypeConstructor constructor)
-    {
-        constructor = default!;
-        return false;
-    }
+    public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference) => null;
 }

@@ -121,25 +121,24 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <returns>A message with this signature's name and parameter names.</returns>
-    public GameEventScriptMessage WithArguments(params GameEventScriptValue[] arguments) => !TryCreateMessage(arguments, out var message)
-        ? throw new ArgumentException($"Message signature '{SignatureId}' expects {Parameters.Count} argument(s) but received {arguments.Length}.", nameof(arguments))
-        : message;
+    public GameEventScriptMessage WithArguments(params GameEventScriptValue[] arguments)
+    {
+        var message = CreateMessage(arguments);
+        return message ?? throw new ArgumentException($"Message signature '{SignatureId}' expects {Parameters.Count} argument(s) but received {arguments.Length}.", nameof(arguments));
+    }
 
     /// <summary>
-    /// Attempts to create a message by binding ordered values to this signature's parameter names.
+    /// Creates a message by binding ordered values to this signature's parameter names.
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
-    /// <param name="message">The created message when the argument count matches; otherwise undefined.</param>
-    /// <returns><c>true</c> when the argument count matches the signature; otherwise <c>false</c>.</returns>
-    public bool TryCreateMessage(IReadOnlyList<GameEventScriptValue> arguments, out GameEventScriptMessage message)
+    /// <returns>The created message when the argument count matches; otherwise <c>null</c>.</returns>
+    public GameEventScriptMessage? CreateMessage(IReadOnlyList<GameEventScriptValue> arguments)
     {
-        message = default!;
-        if (Name.Length == 0) return false;
-        if (arguments.Count != Parameters.Count) return false;
+        if (Name.Length == 0) return null;
+        if (arguments.Count != Parameters.Count) return null;
         if (arguments.Count == 0)
         {
-            message = GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.Empty, SignatureId);
-            return true;
+            return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.Empty, SignatureId);
         }
         var pairs = new KeyValuePair<string, GameEventScriptValue>[arguments.Count];
         for (var index = 0; index < arguments.Count; index++)
@@ -147,8 +146,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             pairs[index] = new KeyValuePair<string, GameEventScriptValue>(Parameters[index], arguments[index] ?? GameEventScriptValueFactory.GesNothing());
         }
 
-        message = GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.CreateOrdered(pairs, Parameters), SignatureId);
-        return true;
+        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.CreateOrdered(pairs, Parameters), SignatureId);
     }
 
     private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)

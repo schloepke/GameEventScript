@@ -101,15 +101,8 @@ internal sealed class GameEventScriptOverlayExtensionRegistry(
     IGameEventScriptExtensionRegistry localRegistry,
     IGameEventScriptExtensionRegistry baseRegistry) : IGameEventScriptExtensionRegistry
 {
-    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
-    {
-        if (localRegistry.TryResolve(reference, out function))
-        {
-            return true;
-        }
-
-        return baseRegistry.TryResolve(reference, out function);
-    }
+    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
+        => localRegistry.Resolve(reference) ?? baseRegistry.Resolve(reference);
 }
 
 internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptExtensionRegistry
@@ -135,10 +128,10 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         return new GameEventScriptCSharpExtensionRegistry(functions);
     }
 
-    public bool TryResolve(GameEventScriptExtensionReference reference, out IGameEventScriptExtensionFunction function)
+    public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));
-        return _functions.TryGetValue(reference.SignatureId, out function!);
+        return _functions.GetValueOrDefault(reference.SignatureId);
     }
 
     private static void RegisterExtensionType(Type extensionType, IDictionary<string, IGameEventScriptExtensionFunction> functions)
@@ -502,7 +495,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>
     {
         public bool TryRead(GameEventScriptValue input, out T value)
-            => input.TryGetExternalObject(out value);
+            => (value = input.GetExternalObject<T>()!) is not null;
     }
 
     private sealed class ValueReturnConverter : IExtensionReturnConverter<GameEventScriptValue>

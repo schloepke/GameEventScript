@@ -143,7 +143,7 @@ public sealed class GameEventScriptExternalTypeTests
     {
         var registry = GameEventScriptCSharpExtensions.CreateRegistry(typeof(ValueExtensionFunctions));
 
-        Assert.IsTrue(registry.TryResolve(new GameEventScriptExtensionReference("value", "value", [GameEventScriptMessageSignature.UnlabeledParameterName]), out _));
+        Assert.IsNotNull(registry.Resolve(new GameEventScriptExtensionReference("value", "value", [GameEventScriptMessageSignature.UnlabeledParameterName])));
     }
 
     [TestMethod]
@@ -159,9 +159,11 @@ public sealed class GameEventScriptExternalTypeTests
             .Build();
         var reference = new GameEventScriptExtensionReference("overlay", "value", []);
 
-        Assert.IsTrue(baseRegistry.TryResolve(reference, out var baseFunction));
+        var baseFunction = baseRegistry.Resolve(reference);
+        Assert.IsNotNull(baseFunction);
         Assert.AreEqual(1, baseFunction.Invoke(null!, ReadOnlySpan<GameEventScriptValue>.Empty).AsInteger());
-        Assert.IsTrue(extendedRegistry.TryResolve(reference, out var extendedFunction));
+        var extendedFunction = extendedRegistry.Resolve(reference);
+        Assert.IsNotNull(extendedFunction);
         Assert.AreEqual(2, extendedFunction.Invoke(null!, ReadOnlySpan<GameEventScriptValue>.Empty).AsInteger());
     }
 

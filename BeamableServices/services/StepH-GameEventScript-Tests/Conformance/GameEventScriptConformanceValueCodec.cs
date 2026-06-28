@@ -153,7 +153,7 @@ internal static class GameEventScriptConformanceValueCodec
             return new JsonObject { ["type"] = ":nothing" };
         }
 
-        if (value.TryGetCustomTypeName(out var customTypeName))
+        if (value.CustomTypeName is { } customTypeName)
         {
             return new JsonObject
             {
@@ -230,12 +230,13 @@ internal static class GameEventScriptConformanceValueCodec
                 throw new InvalidOperationException($"Invalid numeric unit '{unitName}'.");
             }
 
-            if (!GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitName[1..], out var parsedUnit))
+            var parsedUnit = GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitName[1..]);
+            if (parsedUnit is null)
             {
                 throw new InvalidOperationException($"Invalid numeric unit '{unitName}'.");
             }
 
-            return parsedUnit;
+            return parsedUnit.Value;
         }
 
         return null;
@@ -320,25 +321,25 @@ internal static class GameEventScriptConformanceValueCodec
 
     private static JsonObject ToRangeJson(GameEventScriptValue value)
     {
-        if (value.TryGetIntegerRange(out var from, out var to, out var step))
+        if (value.IntegerRange is { } integerRange)
         {
             return new JsonObject
             {
                 ["type"] = ":range",
-                ["from"] = from.ToString(CultureInfo.InvariantCulture),
-                ["to"] = to.ToString(CultureInfo.InvariantCulture),
-                ["step"] = step.ToString(CultureInfo.InvariantCulture)
+                ["from"] = integerRange.From.ToString(CultureInfo.InvariantCulture),
+                ["to"] = integerRange.To.ToString(CultureInfo.InvariantCulture),
+                ["step"] = integerRange.Step.ToString(CultureInfo.InvariantCulture)
             };
         }
 
-        if (value.TryGetFloatRange(out var fromFloat, out var toFloat, out var stepFloat))
+        if (value.FloatRange is { } floatRange)
         {
             return new JsonObject
             {
                 ["type"] = ":range",
-                ["from"] = FormatFloat(fromFloat),
-                ["to"] = FormatFloat(toFloat),
-                ["step"] = FormatFloat(stepFloat)
+                ["from"] = FormatFloat(floatRange.From),
+                ["to"] = FormatFloat(floatRange.To),
+                ["step"] = FormatFloat(floatRange.Step)
             };
         }
 

@@ -36,40 +36,27 @@ public static class GameEventScriptBytecodeInstructionUnits
             _ => throw new ArgumentOutOfRangeException(nameof(unit), unit, "Unknown GameEventScript numeric unit.")
         };
 
-    public static bool TryParseTypeName(string? typeName, out GameEventScriptBytecodeInstructionUnit unit)
-    {
-        unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
-        return typeName switch
+    public static GameEventScriptBytecodeInstructionUnit? ParseTypeName(string? typeName)
+        => typeName switch
         {
-            "degree" or "\u00B0" => Set(GameEventScriptBytecodeInstructionUnit.UnitDegree, out unit),
-            "meter" => Set(GameEventScriptBytecodeInstructionUnit.UnitMeter, out unit),
-            "second" => Set(GameEventScriptBytecodeInstructionUnit.UnitSecond, out unit),
-            _ => false
+            "degree" or "\u00B0" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
+            "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
+            "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
+            _ => null
         };
-    }
 
-    public static bool TryParseQuantityTypeName(string? typeName, out GameEventScriptBytecodeInstructionUnit unit)
-    {
-        unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
-        return typeName != null && typeName.StartsWith("quantity:", StringComparison.Ordinal) && TryParseQuantityName(typeName["quantity:".Length..], out unit);
-    }
+    public static GameEventScriptBytecodeInstructionUnit? ParseQuantityTypeName(string? typeName)
+        => typeName != null && typeName.StartsWith("quantity:", StringComparison.Ordinal)
+            ? ParseQuantityName(typeName["quantity:".Length..])
+            : null;
 
-    private static bool TryParseQuantityName(string? quantityName, out GameEventScriptBytecodeInstructionUnit unit)
-    {
-        unit = GameEventScriptBytecodeInstructionUnit.UnitNone;
-        return quantityName switch
+    private static GameEventScriptBytecodeInstructionUnit? ParseQuantityName(string? quantityName)
+        => quantityName switch
         {
-            "degree" => Set(GameEventScriptBytecodeInstructionUnit.UnitDegree, out unit),
-            "m" or "meter" => Set(GameEventScriptBytecodeInstructionUnit.UnitMeter, out unit),
-            "s" or "second" => Set(GameEventScriptBytecodeInstructionUnit.UnitSecond, out unit),
-            _ => false
+            "degree" => GameEventScriptBytecodeInstructionUnit.UnitDegree,
+            "m" or "meter" => GameEventScriptBytecodeInstructionUnit.UnitMeter,
+            "s" or "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
+            _ => null
         };
-    }
-    
-    private static bool Set(GameEventScriptBytecodeInstructionUnit value, out GameEventScriptBytecodeInstructionUnit unit)
-    {
-        unit = value;
-        return true;
-    }
     
 }

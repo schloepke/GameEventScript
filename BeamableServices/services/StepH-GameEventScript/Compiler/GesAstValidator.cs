@@ -1542,7 +1542,7 @@ internal static class GesAstValidator
         => typeName is "nothing" or "tag" or "text" or "percentage" or
             "vector" or "point" or "boolean" or "number" or "numeric" or "series" or
             "list" or "range" or "message" or "handler" or "map" or "dice" ||
-            GameEventScriptBytecodeInstructionUnits.TryParseQuantityTypeName(typeName, out _);
+            GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName) is not null;
 
     private static void ValidateRemovedType(
         ParsedScript parsedScriptContext,

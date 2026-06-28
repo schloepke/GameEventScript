@@ -412,7 +412,7 @@ internal static class GesAstOptimizer
                 value = GameEventScriptValueFactory.GesInteger(integerLiteral.Value);
                 return true;
             case UnitIntegerLiteralExpressionNode unitIntegerLiteral:
-                value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitIntegerLiteral.UnitName, out var integerUnit)
+                value = GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitIntegerLiteral.UnitName) is { } integerUnit
                     ? GameEventScriptValueFactory.GesInteger(unitIntegerLiteral.Value, integerUnit)
                     : GameEventScriptValueFactory.GesNothing();
                 return true;
@@ -420,7 +420,7 @@ internal static class GesAstOptimizer
                 value = GameEventScriptValueFactory.GesFloat(floatLiteral.Value);
                 return true;
             case UnitFloatLiteralExpressionNode unitFloatLiteral:
-                value = GameEventScriptBytecodeInstructionUnits.TryParseTypeName(unitFloatLiteral.UnitName, out var unit)
+                value = GameEventScriptBytecodeInstructionUnits.ParseTypeName(unitFloatLiteral.UnitName) is { } unit
                     ? GameEventScriptValueFactory.GesFloat(unitFloatLiteral.Value, unit)
                     : GameEventScriptValueFactory.GesNothing();
                 return true;

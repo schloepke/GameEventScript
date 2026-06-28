@@ -5,6 +5,24 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
+public sealed class GameEventScriptIntegerRange(long from, long to, long step)
+{
+    public long From { get; } = from;
+
+    public long To { get; } = to;
+
+    public long Step { get; } = step;
+}
+
+public sealed class GameEventScriptFloatRange(double from, double to, double step)
+{
+    public double From { get; } = from;
+
+    public double To { get; } = to;
+
+    public double Step { get; } = step;
+}
+
 /// <summary>
 /// External value type backed by the same compact storage used by the virtual machine.
 /// </summary>
@@ -176,7 +194,7 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
         return result;
     }
 
-    public bool TryGetMapValue(string key, out GameEventScriptValue value)
+    public GameEventScriptValue? GetMapValue(string key)
     {
         var map = _value.ObjectValue switch
         {
@@ -188,89 +206,40 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
 
         if (map is not null && map.TryGet(key, out var mapValue) && !key.StartsWith("_", StringComparison.Ordinal))
         {
-            value = GameEventScriptValueFactory.FromVmValue(in mapValue);
-            return true;
+            return GameEventScriptValueFactory.FromVmValue(in mapValue);
         }
 
-        value = GameEventScriptValueFactory.GesNothing();
-        return false;
+        return null;
     }
 
-    public bool TryGetCustomTypeName(out string typeName)
+    public string? CustomTypeName => _value.ObjectValue switch
     {
-        if (_value.ObjectValue is GesExternalObject externalObject)
-        {
-            typeName = externalObject.CustomTypeName;
-            return true;
-        }
+        GesExternalObject externalObject => externalObject.CustomTypeName,
+        GesCustomObject customObject => customObject.TypeName,
+        _ => null
+    };
 
-        if (_value.ObjectValue is GesCustomObject customObject)
-        {
-            typeName = customObject.TypeName;
-            return true;
-        }
+    public GameEventScriptIntegerRange? IntegerRange => _value.ObjectValue is GesValueRangeInteger range
+        ? new GameEventScriptIntegerRange(range.From, range.To, range.Step)
+        : null;
 
-        typeName = string.Empty;
-        return false;
-    }
+    public GameEventScriptFloatRange? FloatRange => _value.ObjectValue is GesValueRangeFloat range
+        ? new GameEventScriptFloatRange(range.From, range.To, range.Step)
+        : null;
 
-    public bool TryGetIntegerRange(out long from, out long to, out long step)
-    {
-        if (_value.ObjectValue is GesValueRangeInteger range)
-        {
-            from = range.From;
-            to = range.To;
-            step = range.Step;
-            return true;
-        }
+    public T? GetExternalObject<T>()
+        => GetExternalObject(typeof(T)) is T typed ? typed : default;
 
-        from = 0;
-        to = 0;
-        step = 0;
-        return false;
-    }
-
-    public bool TryGetFloatRange(out double from, out double to, out double step)
-    {
-        if (_value.ObjectValue is GesValueRangeFloat range)
-        {
-            from = range.From;
-            to = range.To;
-            step = range.Step;
-            return true;
-        }
-
-        from = 0d;
-        to = 0d;
-        step = 0d;
-        return false;
-    }
-
-    public bool TryGetExternalObject<T>(out T value)
-    {
-        if (TryGetExternalObject(typeof(T), out var externalObject) &&
-            externalObject is T typed)
-        {
-            value = typed;
-            return true;
-        }
-
-        value = default!;
-        return false;
-    }
-
-    public bool TryGetExternalObject(Type objectType, out object value)
+    public object? GetExternalObject(Type objectType)
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
         if (_value.ObjectValue is GesExternalObject externalObject &&
             objectType.IsInstanceOfType(externalObject.Instance))
         {
-            value = externalObject.Instance;
-            return true;
+            return externalObject.Instance;
         }
 
-        value = default!;
-        return false;
+        return null;
     }
 
     internal ref readonly GesValue GetVmValue() => ref _value;

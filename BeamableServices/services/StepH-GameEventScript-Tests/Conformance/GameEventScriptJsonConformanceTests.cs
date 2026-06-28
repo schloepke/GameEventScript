@@ -1317,10 +1317,10 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         foreach (var key in expected.Arguments.Keys.Concat(actual.Arguments.Keys).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
         {
-            var hasExpected = expected.Arguments.TryGetValue(key, out var expectedValue);
-            var hasActual = actual.Arguments.TryGetValue(key, out var actualValue);
-            var expectedJson = hasExpected ? GameEventScriptConformanceValueCodec.ToCanonicalJson(expectedValue!) : "<missing>";
-            var actualJson = hasActual ? GameEventScriptConformanceValueCodec.ToCanonicalJson(actualValue!) : "<missing>";
+            var hasExpected = expected.Arguments.ContainsKey(key);
+            var hasActual = actual.Arguments.ContainsKey(key);
+            var expectedJson = hasExpected ? GameEventScriptConformanceValueCodec.ToCanonicalJson(expected.Arguments[key]) : "<missing>";
+            var actualJson = hasActual ? GameEventScriptConformanceValueCodec.ToCanonicalJson(actual.Arguments[key]) : "<missing>";
             if (!string.Equals(expectedJson, actualJson, StringComparison.Ordinal))
             {
                 AppendDiff(builder, $"message[{messageIndex}].args.{key}", expectedJson, actualJson);

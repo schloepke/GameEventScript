@@ -100,14 +100,15 @@ public sealed class GameEventScriptValueTests
 
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Map, map.Kind);
         Assert.AreEqual(2, map.Length);
-        Assert.IsTrue(map.TryGetMapValue("a", out var a));
+        var a = map.GetMapValue("a");
+        Assert.IsNotNull(a);
         Assert.AreEqual(1, a.Integer);
         CollectionAssert.AreEqual(new[] { "a", "z" }, map.AsMap().Keys.ToArray());
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Custom, record.Kind);
         Assert.AreEqual(1, record.Length);
-        Assert.IsTrue(record.TryGetCustomTypeName(out var typeName));
-        Assert.AreEqual("unit", typeName);
-        Assert.IsTrue(record.TryGetMapValue("hp", out var hp));
+        Assert.AreEqual("unit", record.CustomTypeName);
+        var hp = record.GetMapValue("hp");
+        Assert.IsNotNull(hp);
         Assert.AreEqual(10, hp.Integer);
         Assert.IsFalse(record.AsMap().ContainsKey("_hidden"));
     }
@@ -122,14 +123,14 @@ public sealed class GameEventScriptValueTests
         var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
         var handler = GameEventScriptValueFactory.GesHandler(signature);
 
-        Assert.IsTrue(intRange.TryGetIntegerRange(out var from, out var to, out var step));
-        Assert.AreEqual(1, from);
-        Assert.AreEqual(5, to);
-        Assert.AreEqual(2, step);
-        Assert.IsTrue(floatRange.TryGetFloatRange(out var fromFloat, out var toFloat, out var stepFloat));
-        Assert.AreEqual(1.5d, fromFloat);
-        Assert.AreEqual(2.5d, toFloat);
-        Assert.AreEqual(0.5d, stepFloat);
+        Assert.IsNotNull(intRange.IntegerRange);
+        Assert.AreEqual(1, intRange.IntegerRange.From);
+        Assert.AreEqual(5, intRange.IntegerRange.To);
+        Assert.AreEqual(2, intRange.IntegerRange.Step);
+        Assert.IsNotNull(floatRange.FloatRange);
+        Assert.AreEqual(1.5d, floatRange.FloatRange.From);
+        Assert.AreEqual(2.5d, floatRange.FloatRange.To);
+        Assert.AreEqual(0.5d, floatRange.FloatRange.Step);
         Assert.AreSame(message, messageValue.Message);
         Assert.AreSame(signature, handler.Handler);
     }

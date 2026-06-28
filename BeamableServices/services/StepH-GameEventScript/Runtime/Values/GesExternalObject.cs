@@ -24,7 +24,8 @@ internal sealed class GesExternalObject(object instance, GameEventScriptExternal
         var count = 0;
         foreach (var field in Definition.Fields)
         {
-            if (!Definition.TryGetField(field.Name, Instance, out var sourceValue))
+            var sourceValue = Definition.GetField(field.Name, Instance);
+            if (sourceValue is null)
             {
                 continue;
             }

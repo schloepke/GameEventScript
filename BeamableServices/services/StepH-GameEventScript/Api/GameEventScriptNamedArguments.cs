@@ -9,7 +9,7 @@ namespace StepH.GameEventScript.Api;
 /// Provides functionality for accessing arguments by name or index,
 /// as well as normalizing argument collections to ensure consistent formatting.
 /// </summary>
-public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, GameEventScriptValue>
+public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValuePair<string, GameEventScriptValue>>
 {
     /// Represents an empty instance of the GameEventScriptNamedArguments class.
     /// Provides a shared, immutable, and pre-initialized empty object that can be used
@@ -50,7 +50,9 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// <returns>A normalized read-only dictionary where null values are replaced with "Nothing".
     /// If the input collection is null or empty, an empty collection is returned.</returns>
     public static IReadOnlyDictionary<string, GameEventScriptValue> Normalize(IReadOnlyDictionary<string, GameEventScriptValue>? values)
-        => values is null || values.Count == 0 ? Empty : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptValueFactory.GesNothing(), StringComparer.Ordinal);
+        => values is null || values.Count == 0
+            ? new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
+            : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptValueFactory.GesNothing(), StringComparer.Ordinal);
 
     /// <summary>
     /// Retrieves the value associated with the specified key from the collection of named arguments.
@@ -92,17 +94,6 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyDictionary<string, 
     /// <param name="key">The key to locate in the collection.</param>
     /// <returns><c>true</c> if the key is found in the collection; otherwise, <c>false</c>.</returns>
     public bool ContainsKey(string key) => _values.ContainsKey(key);
-
-    /// <summary>
-    /// Attempts to retrieve the value associated with the specified key from the collection of named arguments.
-    /// </summary>
-    /// <param name="key">The key of the value to retrieve. Must not be null.</param>
-    /// <param name="value">When this method returns, contains the value associated with the specified key
-    /// if the key is found; otherwise, the default value for <see cref="GameEventScriptValue"/>.
-    /// This parameter is passed uninitialized.</param>
-    /// <returns><c>true</c> if the object that implements <see cref="IReadOnlyDictionary{TKey, TValue}"/> contains
-    /// an element with the specified key; otherwise, <c>false</c>.</returns>
-    public bool TryGetValue(string key, out GameEventScriptValue value) => _values.TryGetValue(key, out value!);
 
     /// <summary>
     /// Returns an enumerator that iterates through the key-value pairs

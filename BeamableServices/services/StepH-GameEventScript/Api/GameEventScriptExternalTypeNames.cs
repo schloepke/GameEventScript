@@ -36,7 +36,7 @@ internal static class GameEventScriptExternalTypeNames
 
     public static (GameEventScriptBytecodeTypeKind? Kind, GameEventScriptBytecodeInstructionUnit? Unit) GetKindAndUnit(string typeName)
     {
-        if (GameEventScriptBytecodeInstructionUnits.TryParseTypeName(typeName, out var unit))
+        if (GameEventScriptBytecodeInstructionUnits.ParseTypeName(typeName) is { } unit)
         {
             return (GameEventScriptBytecodeTypeKind.Float, unit);
         }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using StepH.GameEventScript.Api;
@@ -21,30 +20,8 @@ internal sealed class GesParser
         options ??= new GameEventScriptCompileOptions();
 
         var normalizedScript = script.Replace("\r\n", "\n").Replace('\r', '\n');
-        var hash = ComputeShortHash(normalizedScript);
-        var rawTokens = new GesLexer(normalizedScript, options).Tokenize().ToList();
-        var moduleName = TryResolveModuleName(rawTokens) ?? $"AnonymousModule_{hash}";
-        var resolvedSourceName = string.IsNullOrWhiteSpace(sourceName) ? $"UnknownSource_{hash}" : sourceName;
-        var tokens = new List<GesToken>();
-        var initialErrors = new List<GameEventScriptCompileError>();
-        foreach (var token in rawTokens)
-        {
-            if (token.Kind == Illegal)
-            {
-                initialErrors.Add(new GameEventScriptCompileError(
-                    $"Illegal token '{token.Text}'",
-                    moduleName,
-                    token.Text,
-                    GameEventScriptSymbolKind.Unknown,
-                    GameEventScriptCompileErrorKind.Syntax,
-                    new GameEventScriptSourceLocation(resolvedSourceName, token.Line, token.Column, token.EndLine, token.EndColumn, moduleName)));
-                continue;
-            }
-
-            tokens.Add(token);
-        }
-
-        return new GesParser(tokens, moduleName, resolvedSourceName, initialErrors).ParseScript();
+        var reader = new GesTokenReader(new GesLexer(normalizedScript, options));
+        return new GesParser(reader, normalizedScript, sourceName).ParseScript();
     }
 
     private static bool IsCollectionZipOperator(GesToken token)
@@ -68,25 +45,33 @@ internal sealed class GesParser
         }
     }
 
-    private readonly IReadOnlyList<GesToken> _tokens;
-    private readonly string _moduleName;
-    private readonly string _sourceName;
+    private readonly GesTokenReader _reader;
+    private readonly string _script;
+    private readonly string? _requestedSourceName;
     private readonly List<GameEventScriptCompileError> _errors;
-    private int _index;
+    private string? _hash;
+    private string? _moduleName;
+    private string? _sourceName;
 
-    private GesParser(IReadOnlyList<GesToken> tokens, string moduleName, string sourceName, IReadOnlyList<GameEventScriptCompileError> initialErrors)
+    private GesParser(GesTokenReader reader, string script, string? sourceName)
     {
-        _tokens = tokens;
-        _moduleName = moduleName;
-        _sourceName = sourceName;
-        _errors = initialErrors.ToList();
+        _reader = reader;
+        _script = script;
+        _requestedSourceName = sourceName;
+        _errors = [];
     }
 
+    private string ModuleName => _moduleName ??= $"AnonymousModule_{Hash}";
+
+    private string SourceName => _sourceName ??= string.IsNullOrWhiteSpace(_requestedSourceName) ? $"UnknownSource_{Hash}" : _requestedSourceName;
+
+    private string Hash => _hash ??= ComputeShortHash(_script);
+
     private GameEventScriptSourceLocation CreateRange(GesToken token)
-        => new(_sourceName, token.Line, token.Column, token.EndLine, token.EndColumn, _moduleName);
+        => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName);
 
     private GameEventScriptSourceLocation CreateRange(GesToken start, GesToken end)
-        => new(_sourceName, start.Line, start.Column, end.EndLine, end.EndColumn, _moduleName);
+        => new(SourceName, start.Line, start.Column, end.EndLine, end.EndColumn, ModuleName);
 
     private GameEventScriptSourceLocation? MergeRanges(ScriptNode? first, ScriptNode? last = null)
     {
@@ -101,7 +86,7 @@ internal sealed class GesParser
         var endColumn = end.EndColumn ?? end.Column;
         return endLine is null || endColumn is null
             ? null
-            : new GameEventScriptSourceLocation(_sourceName, start.Line, start.Column, endLine, endColumn, _moduleName);
+            : new GameEventScriptSourceLocation(SourceName, start.Line, start.Column, endLine, endColumn, ModuleName);
     }
 
     private T WithRange<T>(T node, GesToken startToken) where T : ScriptNode
@@ -125,12 +110,27 @@ internal sealed class GesParser
         var functionDefinitions = new List<FunctionDefinitionNode>();
         var handlers = new List<EventHandlerNode>();
         SkipStatementSeparators();
-        ParseOptionalModuleDeclaration();
+        try
+        {
+            ParseOptionalModuleDeclaration();
+        }
+        catch (GameEventScriptParseException ex)
+        {
+            AddParseError(ex);
+            SynchronizeTopLevel();
+        }
+
         SkipStatementSeparators();
         while (!Is(EndOfFile))
         {
             try
             {
+                if (Is(Illegal))
+                {
+                    var token = Advance();
+                    throw new GameEventScriptParseException($"Illegal token '{token.Text}'", token);
+                }
+
                 if (Match(Record))
                 {
                     typeDefinitions.Add(ParseTypeDefinition());
@@ -163,15 +163,14 @@ internal sealed class GesParser
             throw new GameEventScriptCompileException(_errors);
         }
 
-        var module = new ParsedScript(_moduleName, _sourceName, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
-        var firstToken = _tokens.FirstOrDefault();
+        var module = new ParsedScript(ModuleName, SourceName, typeDefinitions, predicateDefinitions, functionDefinitions, handlers);
+        var firstToken = _reader.FirstToken;
         if (firstToken.Kind == EndOfFile)
         {
             return module with { SourceRange = CreateRange(firstToken) };
         }
 
-        var lastToken = _tokens.LastOrDefault(token => token.Kind != EndOfFile);
-        return module with { SourceRange = CreateRange(firstToken, lastToken) };
+        return module with { SourceRange = CreateRange(firstToken, _reader.LastNonEofToken) };
     }
 
     private static string ComputeShortHash(string text)
@@ -179,37 +178,6 @@ internal sealed class GesParser
         using var sha256 = SHA256.Create();
         var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(text));
         return BitConverter.ToString(bytes, 0, 4).Replace("-", string.Empty, StringComparison.Ordinal);
-    }
-
-    private static string? TryResolveModuleName(IReadOnlyList<GesToken> tokens)
-    {
-        var index = 0;
-        while (index < tokens.Count && tokens[index].Kind == NewLine)
-        {
-            index++;
-        }
-
-        if (index >= tokens.Count || tokens[index].Kind != Module)
-        {
-            return null;
-        }
-
-        index++;
-        while (index < tokens.Count && tokens[index].Kind == NewLine)
-        {
-            index++;
-        }
-
-        if (index >= tokens.Count)
-        {
-            return null;
-        }
-
-        return tokens[index].Kind switch
-        {
-            Identifier or Message => tokens[index].Text,
-            _ => null
-        };
     }
 
     private void ParseOptionalModuleDeclaration()
@@ -220,12 +188,13 @@ internal sealed class GesParser
         }
 
         SkipNewLines();
+        ThrowIfIllegalToken();
         if (Current.Kind is not (Identifier or Message))
         {
             throw new GameEventScriptParseException($"Expected module name but found {Current.Kind}", Current.Line, Current.Column);
         }
 
-        Advance();
+        _moduleName = Advance().Text;
     }
 
     private TypeDefinitionNode ParseTypeDefinition()
@@ -417,6 +386,8 @@ internal sealed class GesParser
 
     private string ParseEventHandlerMessageName()
     {
+        ThrowIfIllegalToken();
+
         if (Is(Message))
         {
             return Advance().Text;
@@ -466,7 +437,7 @@ internal sealed class GesParser
 
             var tag = tagToken.Text[1..];
             var normalized = GameEventScriptMessage.NormalizeTagName(tag);
-            if (normalized.Length > 0 && !tags.Contains(normalized, StringComparer.Ordinal))
+            if (normalized.Length > 0 && !ContainsTag(tags, normalized))
             {
                 tags.Add(normalized);
             }
@@ -474,6 +445,19 @@ internal sealed class GesParser
             SkipNewLines();
         }
         while (Match(Comma));
+    }
+
+    private static bool ContainsTag(IReadOnlyList<string> tags, string normalized)
+    {
+        for (var index = 0; index < tags.Count; index++)
+        {
+            if (string.Equals(tags[index], normalized, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private IReadOnlyList<StatementNode> ParseStatementsUntil(GesTokenKind closingKind)
@@ -1004,28 +988,14 @@ internal sealed class GesParser
 
     private bool IsValuesOfOperator()
     {
-        var lookahead = _index;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        if (lookahead >= _tokens.Count
-            || _tokens[lookahead].Kind != Identifier
-            || !string.Equals(_tokens[lookahead].Text, "values", StringComparison.Ordinal))
+        var first = _reader.PeekSignificant(0);
+        if (first.Kind != Identifier || !string.Equals(first.Text, "values", StringComparison.Ordinal))
         {
             return false;
         }
 
-        lookahead++;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count
-            && _tokens[lookahead].Kind == Identifier
-            && string.Equals(_tokens[lookahead].Text, "of", StringComparison.Ordinal);
+        var second = _reader.PeekSignificant(1);
+        return second.Kind == Identifier && string.Equals(second.Text, "of", StringComparison.Ordinal);
     }
 
     private DicePatternNode ParseDicePattern()
@@ -2004,6 +1974,8 @@ internal sealed class GesParser
 
     private ExpressionNode ParsePrimaryExpression()
     {
+        ThrowIfIllegalToken();
+
         if (IsTypeConstructorStart())
         {
             return ParseTypeConstructorExpression();
@@ -2339,13 +2311,7 @@ internal sealed class GesParser
             return false;
         }
 
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Colon;
+        return _reader.PeekSignificant(1).Kind == Colon;
     }
 
     private RandomExpressionNode ParseRandomExpression()
@@ -2501,15 +2467,8 @@ internal sealed class GesParser
         ExpressionNode? weightExpression = null;
         if (Current.Kind == Identifier)
         {
-            var lookahead = _index + 1;
-            while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-            {
-                lookahead++;
-            }
-
-            if (lookahead < _tokens.Count &&
-                _tokens[lookahead].Kind == Identifier &&
-                string.Equals(_tokens[lookahead].Text, "where", StringComparison.Ordinal))
+            var lookahead = _reader.PeekSignificant(1);
+            if (lookahead.Kind == Identifier && string.Equals(lookahead.Text, "where", StringComparison.Ordinal))
             {
                 identifier = ExpectIdentifier();
                 ExpectWord("where");
@@ -2694,6 +2653,8 @@ internal sealed class GesParser
 
     private GesToken Expect(GesTokenKind kind)
     {
+        ThrowIfIllegalToken();
+
         if (Is(kind))
         {
             return Advance();
@@ -2705,6 +2666,8 @@ internal sealed class GesParser
 
     private string ExpectIdentifier()
     {
+        ThrowIfIllegalToken();
+
         if (Is(Identifier))
         {
             return Advance().Text;
@@ -2716,7 +2679,35 @@ internal sealed class GesParser
 
     private bool Match(params GesTokenKind[] kinds)
     {
-        if (!kinds.Any(Is)) return false;
+        for (var index = 0; index < kinds.Length; index++)
+        {
+            if (Is(kinds[index]))
+            {
+                Advance();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool Match(GesTokenKind first, GesTokenKind second)
+    {
+        if (!Is(first) && !Is(second)) return false;
+        Advance();
+        return true;
+    }
+
+    private bool Match(GesTokenKind first, GesTokenKind second, GesTokenKind third, GesTokenKind fourth)
+    {
+        if (!Is(first) && !Is(second) && !Is(third) && !Is(fourth)) return false;
+        Advance();
+        return true;
+    }
+
+    private bool Match(GesTokenKind first, GesTokenKind second, GesTokenKind third, GesTokenKind fourth, GesTokenKind fifth)
+    {
+        if (!Is(first) && !Is(second) && !Is(third) && !Is(fourth) && !Is(fifth)) return false;
         Advance();
         return true;
     }
@@ -2735,15 +2726,7 @@ internal sealed class GesParser
     private bool Is(GesTokenKind kind) => Current.Kind == kind;
 
     private bool IsNextSignificantToken(GesTokenKind kind)
-    {
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == kind;
-    }
+        => _reader.PeekSignificant(1).Kind == kind;
 
     private bool IsSeededRandomStatementStart()
     {
@@ -2752,24 +2735,12 @@ internal sealed class GesParser
             return false;
         }
 
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == With;
+        return _reader.PeekSignificant(1).Kind == With;
     }
 
     private bool IsElseClauseStart()
     {
-        var lookahead = _index;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Else;
+        return _reader.PeekSignificant(0).Kind == Else;
     }
 
     private bool IsCallExpressionStart()
@@ -2779,13 +2750,7 @@ internal sealed class GesParser
             return false;
         }
 
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == LeftParen;
+        return _reader.PeekSignificant(1).Kind == LeftParen;
     }
 
     private bool IsExtensionCallStart()
@@ -2795,24 +2760,12 @@ internal sealed class GesParser
             return false;
         }
 
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != Dot)
+        if (_reader.PeekSignificant(1).Kind != Dot)
         {
             return false;
         }
 
-        lookahead++;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        if (lookahead >= _tokens.Count || !IsExtensionFunctionNameKind(_tokens[lookahead].Kind))
+        if (!IsExtensionFunctionNameKind(_reader.PeekSignificant(2).Kind))
         {
             return false;
         }
@@ -2827,13 +2780,7 @@ internal sealed class GesParser
             return false;
         }
 
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == LeftParen;
+        return _reader.PeekSignificant(1).Kind == LeftParen;
     }
 
     private (string ExtensionName, string FunctionName, GesToken EndToken) ParseExtensionSymbol()
@@ -2863,17 +2810,13 @@ internal sealed class GesParser
             return false;
         }
 
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == Colon;
+        return _reader.PeekSignificant(1).Kind == Colon;
     }
 
     private string ExpectArgumentLabel()
     {
+        ThrowIfIllegalToken();
+
         if (IsArgumentLabelKind(Current.Kind))
         {
             return Advance().Text;
@@ -2899,6 +2842,8 @@ internal sealed class GesParser
 
     private GesToken ExpectExtensionFunctionName()
     {
+        ThrowIfIllegalToken();
+
         if (IsExtensionFunctionNameKind(Current.Kind))
         {
             return Advance();
@@ -2910,6 +2855,8 @@ internal sealed class GesParser
 
     private string ParseTypeName()
     {
+        ThrowIfIllegalToken();
+
         if (Match(Nothing))
         {
             return "nothing";
@@ -2951,35 +2898,17 @@ internal sealed class GesParser
 
     private bool IsQuantityTypeSpecifierAhead()
     {
-        var lookahead = _index;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != LeftParen)
+        if (_reader.PeekSignificant(0).Kind != LeftParen)
         {
             return false;
         }
 
-        lookahead++;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        if (lookahead >= _tokens.Count || _tokens[lookahead].Kind != Identifier)
+        if (_reader.PeekSignificant(1).Kind != Identifier)
         {
             return false;
         }
 
-        lookahead++;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count && _tokens[lookahead].Kind == RightParen;
+        return _reader.PeekSignificant(2).Kind == RightParen;
     }
 
     private void ExpectValueWord()
@@ -3011,19 +2940,14 @@ internal sealed class GesParser
 
     private bool IsNextSignificantWord(string word)
     {
-        var lookahead = _index + 1;
-        while (lookahead < _tokens.Count && _tokens[lookahead].Kind == NewLine)
-        {
-            lookahead++;
-        }
-
-        return lookahead < _tokens.Count &&
-               _tokens[lookahead].Kind == Identifier &&
-               string.Equals(_tokens[lookahead].Text, word, StringComparison.Ordinal);
+        var lookahead = _reader.PeekSignificant(1);
+        return lookahead.Kind == Identifier && string.Equals(lookahead.Text, word, StringComparison.Ordinal);
     }
 
     private void ExpectWord(string word)
     {
+        ThrowIfIllegalToken();
+
         if (MatchWord(word))
         {
             return;
@@ -3032,6 +2956,14 @@ internal sealed class GesParser
         throw new GameEventScriptParseException(
             $"Expected {word} but found {Current.Text}",
             Current);
+    }
+
+    private void ThrowIfIllegalToken()
+    {
+        if (Current.Kind == Illegal)
+        {
+            throw new GameEventScriptParseException($"Illegal token '{Current.Text}'", Current);
+        }
     }
 
     private void SkipNewLines()
@@ -3088,28 +3020,21 @@ internal sealed class GesParser
     }
 
     private GesToken Advance()
-    {
-        if (!Is(EndOfFile))
-        {
-            _index++;
-        }
+        => _reader.Advance();
 
-        return Previous;
-    }
+    private GesToken Current => _reader.Current;
 
-    private GesToken Current => _tokens[_index];
-
-    private GesToken Previous => _tokens[_index - 1];
+    private GesToken Previous => _reader.Previous;
 
     private void AddParseError(GameEventScriptParseException exception)
     {
         _errors.Add(new GameEventScriptCompileError(
             exception.Message,
-            _moduleName,
+            ModuleName,
             string.Empty,
             GameEventScriptSymbolKind.Unknown,
             GameEventScriptCompileErrorKind.Syntax,
-            new GameEventScriptSourceLocation(_sourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, _moduleName)));
+            new GameEventScriptSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName)));
     }
 
     private void SynchronizeTopLevel()

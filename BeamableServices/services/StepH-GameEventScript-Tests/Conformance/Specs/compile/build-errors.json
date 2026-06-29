@@ -504,6 +504,16 @@
         "kind": "Syntax",
         "messageContains": "removed; use direct math intrinsics"
       }
+    },
+    {
+      "kind": "compileError",
+      "name": "illegal token recovery continues at next handler",
+      "script": "on Start {\n  let first be x2\n}\n\non Done {\n  let second be y2\n}",
+      "expectedError": {
+        "phase": "syntax",
+        "kind": "Syntax",
+        "messageContains": "Illegal token 'y2'"
+      }
     }
   ]
 }

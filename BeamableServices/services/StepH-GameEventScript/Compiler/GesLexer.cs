@@ -179,7 +179,7 @@ internal sealed class GesLexer
         _ = options ?? new GameEventScriptCompileOptions();
     }
 
-    public IEnumerable<GesToken> Tokenize()
+    public GesToken ReadNextToken()
     {
         while (true)
         {
@@ -187,8 +187,7 @@ internal sealed class GesLexer
 
             if (IsAtEnd)
             {
-                yield return new GesToken(GesTokenKind.EndOfFile, string.Empty, _line, _column, _line, _column);
-                yield break;
+                return new GesToken(GesTokenKind.EndOfFile, string.Empty, _line, _column, _line, _column);
             }
 
             switch (Current)
@@ -203,16 +202,14 @@ internal sealed class GesLexer
                         Advance();
                     }
 
-                    yield return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
-                    continue;
+                    return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
                 }
                 case '\n':
                 {
                     var newlineLine = _line;
                     var newlineColumn = _column;
                     Advance();
-                    yield return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
-                    continue;
+                    return new GesToken(GesTokenKind.NewLine, "\\n", newlineLine, newlineColumn, _line, _column);
                 }
             }
 
@@ -222,31 +219,39 @@ internal sealed class GesLexer
 
             if (IsWordStart(ch))
             {
-                yield return ReadWordLikeToken(startLine, startColumn);
-                continue;
+                return ReadWordLikeToken(startLine, startColumn);
             }
 
             if (char.IsDigit(ch))
             {
-                yield return ReadNumberLikeToken(startLine, startColumn);
-                continue;
+                return ReadNumberLikeToken(startLine, startColumn);
             }
 
             switch (ch)
             {
                 case '\'':
                 case '"':
-                    yield return ReadTextToken(startLine, startColumn);
-                    continue;
+                    return ReadTextToken(startLine, startColumn);
                 case ':' when char.IsLower(Peek()):
-                    yield return ReadSelectorToken(startLine, startColumn);
-                    continue;
+                    return ReadSelectorToken(startLine, startColumn);
                 case '#' when char.IsLower(Peek()):
-                    yield return ReadTagToken(startLine, startColumn);
-                    continue;
+                    return ReadTagToken(startLine, startColumn);
                 default:
-                    yield return ReadOperatorToken(startLine, startColumn);
-                    continue;
+                    return ReadOperatorToken(startLine, startColumn);
+            }
+        }
+    }
+
+    public List<GesToken> Tokenize()
+    {
+        var tokens = new List<GesToken>(Math.Max(8, _length / 4));
+        while (true)
+        {
+            var token = ReadNextToken();
+            tokens.Add(token);
+            if (token.Kind == GesTokenKind.EndOfFile)
+            {
+                return tokens;
             }
         }
     }

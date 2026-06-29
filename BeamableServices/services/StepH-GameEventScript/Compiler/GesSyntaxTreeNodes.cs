@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
@@ -45,7 +44,58 @@ internal sealed record ArgumentListNode(IReadOnlyList<ArgumentNode> Arguments) :
 
     public int Count => Arguments.Count;
 
-    public IReadOnlyList<ExpressionNode> Expressions => Arguments.Select(argument => argument.Expression).ToArray();
+    public IReadOnlyList<ExpressionNode> Expressions { get; } = GesSyntaxTreeNodeLists.ToExpressions(Arguments);
+}
+
+internal static class GesSyntaxTreeNodeLists
+{
+    public static IReadOnlyList<string> ToParameterNames(IReadOnlyList<ParameterNode> parameters)
+    {
+        if (parameters.Count == 0)
+        {
+            return [];
+        }
+
+        var names = new string[parameters.Count];
+        for (var index = 0; index < names.Length; index++)
+        {
+            names[index] = parameters[index].LocalName;
+        }
+
+        return names;
+    }
+
+    public static IReadOnlyList<string> ToSignatureLabels(IReadOnlyList<ParameterNode> parameters)
+    {
+        if (parameters.Count == 0)
+        {
+            return [];
+        }
+
+        var labels = new string[parameters.Count];
+        for (var index = 0; index < labels.Length; index++)
+        {
+            labels[index] = parameters[index].SignatureLabel;
+        }
+
+        return labels;
+    }
+
+    public static IReadOnlyList<ExpressionNode> ToExpressions(IReadOnlyList<ArgumentNode> arguments)
+    {
+        if (arguments.Count == 0)
+        {
+            return [];
+        }
+
+        var expressions = new ExpressionNode[arguments.Count];
+        for (var index = 0; index < expressions.Length; index++)
+        {
+            expressions[index] = arguments[index].Expression;
+        }
+
+        return expressions;
+    }
 }
 
 internal enum EventHandlerDispatchKind
@@ -62,9 +112,9 @@ internal sealed record EventHandlerNode(
     IReadOnlyList<string>? RequiredTags = null,
     IReadOnlyList<string>? ExcludedTags = null) : ScriptNode
 {
-    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 
-    public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+    public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(ParameterList);
 
     public IReadOnlyList<string> MatchingTags { get; } = RequiredTags ?? [];
 
@@ -78,12 +128,12 @@ internal sealed record TypeFieldDefinitionNode(string Name, string TypeName, Exp
 }
 internal sealed record PredicateDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
 {
-    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 }
 
 internal sealed record FunctionDefinitionNode(string Name, IReadOnlyList<ParameterNode> ParameterList, ExpressionNode Expression) : ScriptNode
 {
-    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 }
 
 // Statement nodes
@@ -263,9 +313,9 @@ internal sealed record IdentifierExpressionNode(string Name) : ExpressionNode;
 internal sealed record TagLiteralExpressionNode(string Name) : ExpressionNode;
 internal sealed record HandlerLiteralExpressionNode(string Message, IReadOnlyList<ParameterNode> ParameterList) : ExpressionNode
 {
-    public IReadOnlyList<string> Parameters => ParameterList.Select(parameter => parameter.LocalName).ToArray();
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(ParameterList);
 
-    public IReadOnlyList<string> SignatureLabels => ParameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+    public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(ParameterList);
 }
 
 internal sealed record MessageLiteralExpressionNode(string Message, ArgumentListNode ArgumentList) : ExpressionNode

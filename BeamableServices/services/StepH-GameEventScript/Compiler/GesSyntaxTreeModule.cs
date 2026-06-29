@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 
@@ -48,9 +47,9 @@ internal sealed class GesCallableDefinition(
 
     public IReadOnlyList<ParameterNode> ParameterList { get; } = parameterList ?? throw new ArgumentNullException(nameof(parameterList));
 
-    public IReadOnlyList<string> Parameters { get; } = parameterList.Select(parameter => parameter.LocalName).ToArray();
+    public IReadOnlyList<string> Parameters { get; } = GesSyntaxTreeNodeLists.ToParameterNames(parameterList);
 
-    public IReadOnlyList<string> SignatureLabels { get; } = parameterList.Select(parameter => parameter.SignatureLabel).ToArray();
+    public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(parameterList);
 
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 

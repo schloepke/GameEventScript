@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Compiler;
 using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
@@ -127,7 +126,13 @@ public sealed class GameEventScriptBuilder
     internal GesSyntaxTreeModule BuildModule(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
-        var modules = _sources.Select(source => GesParser.Parse(source.Text, source.SourceName, compileOptions)).ToArray();
+        var modules = new ParsedScript[_sources.Count];
+        for (var index = 0; index < _sources.Count; index++)
+        {
+            var source = _sources[index];
+            modules[index] = GesParser.Parse(source.Text, source.SourceName, compileOptions);
+        }
+
         var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
         var externalTypeDefinitions = _externalTypeRegistry.Types;
@@ -135,14 +140,19 @@ public sealed class GameEventScriptBuilder
         var predicateDefinitions = BuildPredicateDefinitionMap(modules, errors);
         var functionDefinitions = BuildFunctionDefinitionMap(modules, errors);
         var callables = BuildCallableDefinitionMap(predicateDefinitions, functionDefinitions);
-        var handlers = BuildHandlerMap(modules).ToDictionary(pair => pair.Key, IReadOnlyList<EventHandlerNode> (pair) => pair.Value, StringComparer.Ordinal);
+        var handlers = BuildHandlerMap(modules);
 
-        foreach (var conflictName in predicateDefinitions.Keys.Where(functionDefinitions.ContainsKey))
+        foreach (var conflictName in predicateDefinitions.Keys)
         {
-            var conflictModule = modules.FirstOrDefault(module => module.FunctionDefinitions.Any(function => string.Equals(function.Name, conflictName, StringComparison.Ordinal))) ??
-                                 modules.FirstOrDefault(module => module.PredicateDefinitions.Any(predicate => string.Equals(predicate.Name, conflictName, StringComparison.Ordinal)));
-            var conflictNode = conflictModule?.FunctionDefinitions.FirstOrDefault(function => string.Equals(function.Name, conflictName, StringComparison.Ordinal)) ??
-                               (ScriptNode?)conflictModule?.PredicateDefinitions.FirstOrDefault(predicate => string.Equals(predicate.Name, conflictName, StringComparison.Ordinal));
+            if (!functionDefinitions.ContainsKey(conflictName))
+            {
+                continue;
+            }
+
+            var conflictModule = FindModuleWithCallable(modules, conflictName, true) ??
+                                 FindModuleWithCallable(modules, conflictName, false);
+            var conflictNode = FindCallableNode(conflictModule?.FunctionDefinitions, conflictName) ??
+                               (ScriptNode?)FindCallableNode(conflictModule?.PredicateDefinitions, conflictName);
             errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, PredicateFunctionConflict, conflictNode);
         }
 
@@ -164,24 +174,79 @@ public sealed class GameEventScriptBuilder
         {
             0 => "EmptyModule",
             1 => modules[0].ModuleName,
-            _ => string.Join("+", modules.Select(module => module.ModuleName))
+            _ => JoinModuleNames(modules)
         };
 
-    private static Dictionary<string, List<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedScript> modules)
+    private static string JoinModuleNames(IReadOnlyList<ParsedScript> modules)
     {
-        var map = new Dictionary<string, List<EventHandlerNode>>(StringComparer.Ordinal);
+        var result = modules[0].ModuleName;
+        for (var index = 1; index < modules.Count; index++)
+        {
+            result += "+" + modules[index].ModuleName;
+        }
+
+        return result;
+    }
+
+    private static ParsedScript? FindModuleWithCallable(IReadOnlyList<ParsedScript> modules, string name, bool function)
+    {
+        for (var moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
+        {
+            var module = modules[moduleIndex];
+            var definitions = function
+                ? (IReadOnlyList<ScriptNode>)module.FunctionDefinitions
+                : module.PredicateDefinitions;
+            if (FindCallableNode(definitions, name) is not null)
+            {
+                return module;
+            }
+        }
+
+        return null;
+    }
+
+    private static ScriptNode? FindCallableNode(IReadOnlyList<ScriptNode>? definitions, string name)
+    {
+        if (definitions is null)
+        {
+            return null;
+        }
+
+        for (var index = 0; index < definitions.Count; index++)
+        {
+            var definition = definitions[index];
+            var definitionName = definition switch
+            {
+                FunctionDefinitionNode function => function.Name,
+                PredicateDefinitionNode predicate => predicate.Name,
+                _ => null
+            };
+            if (string.Equals(definitionName, name, StringComparison.Ordinal))
+            {
+                return definition;
+            }
+        }
+
+        return null;
+    }
+
+    private static Dictionary<string, IReadOnlyList<EventHandlerNode>> BuildHandlerMap(IReadOnlyList<ParsedScript> modules)
+    {
+        var map = new Dictionary<string, IReadOnlyList<EventHandlerNode>>(StringComparer.Ordinal);
 
         foreach (var module in modules)
         {
             foreach (var handler in module.Handlers)
             {
-                if (!map.TryGetValue(handler.Message, out var handlers))
+                if (!map.TryGetValue(handler.Message, out var existing))
                 {
-                    handlers = [];
-                    map[handler.Message] = handlers;
+                    var newHandlers = new List<EventHandlerNode>();
+                    newHandlers.Add(handler);
+                    map[handler.Message] = newHandlers;
+                    continue;
                 }
 
-                handlers.Add(handler);
+                ((List<EventHandlerNode>)existing).Add(handler);
             }
         }
 
@@ -197,16 +262,39 @@ public sealed class GameEventScriptBuilder
         {
             if (map.ContainsKey(externalType.Name))
             {
-                var module = modules.FirstOrDefault(parsedModule => parsedModule.TypeDefinitions.Any(type => string.Equals(type.Name, externalType.Name, StringComparison.Ordinal)));
+                var module = FindModuleWithType(modules, externalType.Name);
                 errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GameEventScriptSymbolKind.Type, DuplicateType);
                 continue;
             }
 
-            var fields = externalType.Fields.Select(field => new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null, field.Name)).ToArray();
+            var fields = new TypeFieldDefinitionNode[externalType.Fields.Count];
+            for (var index = 0; index < fields.Length; index++)
+            {
+                var field = externalType.Fields[index];
+                fields[index] = new TypeFieldDefinitionNode(field.Name, field.TypeName, null, null, null, field.Name);
+            }
+
             map[externalType.Name] = new TypeDefinitionNode(externalType.Name, fields);
         }
 
         return map;
+    }
+
+    private static ParsedScript? FindModuleWithType(IReadOnlyList<ParsedScript> modules, string name)
+    {
+        for (var moduleIndex = 0; moduleIndex < modules.Count; moduleIndex++)
+        {
+            var module = modules[moduleIndex];
+            for (var typeIndex = 0; typeIndex < module.TypeDefinitions.Count; typeIndex++)
+            {
+                if (string.Equals(module.TypeDefinitions[typeIndex].Name, name, StringComparison.Ordinal))
+                {
+                    return module;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static Dictionary<string, TypeDefinitionNode> BuildTypeDefinitionMap(IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
@@ -260,12 +348,12 @@ public sealed class GameEventScriptBuilder
 
         foreach (var pair in predicateDefinitions)
         {
-            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList.ToArray(), pair.Value.Expression, PredicateCall, pair.Value.SourceRange);
+            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList, pair.Value.Expression, PredicateCall, pair.Value.SourceRange);
         }
 
         foreach (var pair in functionDefinitions)
         {
-            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList.ToArray(), pair.Value.Expression, FunctionCall, pair.Value.SourceRange);
+            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList, pair.Value.Expression, FunctionCall, pair.Value.SourceRange);
         }
 
         return map;

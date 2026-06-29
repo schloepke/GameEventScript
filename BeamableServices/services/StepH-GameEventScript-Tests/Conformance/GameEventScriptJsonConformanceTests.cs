@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Runtime;
 
@@ -192,6 +193,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     private static readonly double PerformanceElapsedMinimumToleranceMilliseconds = 1d;
     private static readonly int PerformanceIterations = 1_000;
     private static readonly int PerformanceWarmupIterations = 10;
+    private static readonly int PerformanceCompileWarmupIterations = 3;
     private const int DefaultIterations = 1_000;
     private const int DefaultWarmupIterations = 100;
 
@@ -221,6 +223,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.AppendLine($"cases={testCases.Count}");
         report.AppendLine($"performanceIterations={PerformanceIterations}");
         report.AppendLine($"performanceWarmupIterations={PerformanceWarmupIterations}");
+        report.AppendLine($"performanceCompileWarmupIterations={PerformanceCompileWarmupIterations}");
         report.AppendLine();
         binaryDumpReport.AppendLine("# GameEventScript Performance Binary Dump Report");
         binaryDumpReport.AppendLine();
@@ -536,23 +539,27 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
         var iterations = ResolveIterationCount(PerformanceIterations, testCase.Test.Iterations, DefaultIterations);
         var warmupIterations = ResolveIterationCount(PerformanceWarmupIterations, testCase.Test.WarmupIterations, DefaultWarmupIterations);
-        var compiled = Measure("compile", () =>
-        {
-            var binary = GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test);
-            return new CompiledPerformanceModule(binary, GameEventScriptManager.CreateModule(binary, 4096, 256));
-        });
-        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, compiled.Value.Binary);
+        var compileOptions = GameEventScriptConformanceRunner.CreateCompileOptionsForTest(testCase.Test);
+        WarmupCompilePipeline(testCase, compileOptions, PerformanceCompileWarmupIterations);
+        var astBuild = Measure("astBuild", () =>
+            GameEventScriptConformanceRunner.CreateScriptBuilderForTest(testCase.Test).BuildModule(compileOptions));
+        var binaryBuild = Measure("binaryBuild", () =>
+            GesCompiler.Compile(astBuild.Value, compileOptions));
+        var moduleLoad = Measure("moduleLoad", () =>
+            GameEventScriptManager.CreateModule(binaryBuild.Value, 4096, 256));
+        var compiled = new CompiledPerformanceModule(binaryBuild.Value, moduleLoad.Value);
+        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, compiled.Binary);
         if (testCase.Test.DumpBinary)
         {
             TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
-            TestContext.WriteLine(StableBinaryDump(compiled.Value.Binary, GetScriptSourceForDump(testCase)));
+            TestContext.WriteLine(StableBinaryDump(compiled.Binary, GetScriptSourceForDump(testCase)));
         }
 
-        AssertPerformanceCorrectness(testCase, "new vm", compiled.Value.Module);
+        AssertPerformanceCorrectness(testCase, "new vm", compiled.Module);
 
-        var newRun = MeasurePerformanceRun(testCase, compiled.Value.Module, iterations, warmupIterations);
+        var newRun = MeasurePerformanceRun(testCase, compiled.Module, iterations, warmupIterations);
 
-        AppendPerformanceCase(report, testCase, iterations, warmupIterations, compiled, newRun);
+        AppendPerformanceCase(report, testCase, iterations, warmupIterations, astBuild, binaryBuild, moduleLoad, newRun);
     }
 
     private static void AppendPerformanceBinaryDumpCase(
@@ -588,7 +595,9 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         GameEventScriptConformanceCase testCase,
         int iterations,
         int warmupIterations,
-        Measured<CompiledPerformanceModule> compiled,
+        Measured<GesSyntaxTreeModule> astBuild,
+        Measured<GameEventScriptBinary> binaryBuild,
+        Measured<IGameEventScriptModule> moduleLoad,
         PerformanceRunMetrics run)
     {
         report.AppendLine($"## {testCase.SuiteName}/{testCase.Test.Name}");
@@ -596,7 +605,10 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.AppendLine($"iterations={iterations}");
         report.AppendLine($"warmupIterations={warmupIterations}");
         report.AppendLine($"steps={testCase.Test.Steps!.Count}");
-        AppendMeasured(report, "compile", compiled);
+        AppendMeasured(report, "astBuild", astBuild);
+        AppendMeasured(report, "binaryBuild", binaryBuild);
+        AppendMeasured(report, "moduleLoad", moduleLoad);
+        AppendCompileTotal(report, astBuild, binaryBuild, moduleLoad);
         AppendRun(report, "run", run, iterations);
         report.AppendLine();
     }
@@ -726,6 +738,19 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     private static int ResolveIterationCount(int testOverride, int? jsonValue, int defaultValue)
         => testOverride >= 0 ? testOverride : Math.Max(0, jsonValue ?? defaultValue);
 
+    private static void WarmupCompilePipeline(
+        GameEventScriptConformanceCase testCase,
+        GameEventScriptCompileOptions compileOptions,
+        int iterations)
+    {
+        for (var iteration = 0; iteration < iterations; iteration++)
+        {
+            var module = GameEventScriptConformanceRunner.CreateScriptBuilderForTest(testCase.Test).BuildModule(compileOptions);
+            var binary = GesCompiler.Compile(module, compileOptions);
+            _ = GameEventScriptManager.CreateModule(binary, 4096, 256);
+        }
+    }
+
     private static Measured<T> Measure<T>(string name, Func<T> action)
     {
         ForceFullCollection();
@@ -744,6 +769,24 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.Append(label);
         report.Append(".allocatedKb=");
         report.AppendLine(FormatAllocatedKilobytes(measured.AllocatedBytes));
+    }
+
+    private static void AppendCompileTotal(
+        StringBuilder report,
+        Measured<GesSyntaxTreeModule> astBuild,
+        Measured<GameEventScriptBinary> binaryBuild,
+        Measured<IGameEventScriptModule> moduleLoad)
+    {
+        report.Append("compile.elapsedMs=");
+        report.AppendLine(FormatMilliseconds(
+            astBuild.Elapsed.TotalMilliseconds +
+            binaryBuild.Elapsed.TotalMilliseconds +
+            moduleLoad.Elapsed.TotalMilliseconds));
+        report.Append("compile.allocatedKb=");
+        report.AppendLine(FormatAllocatedKilobytes(
+            astBuild.AllocatedBytes +
+            binaryBuild.AllocatedBytes +
+            moduleLoad.AllocatedBytes));
     }
 
     private static void AppendRun(StringBuilder report, string label, PerformanceRunMetrics run, int iterations)
@@ -790,7 +833,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
     private sealed record Measured<T>(string Name, T Value, TimeSpan Elapsed, long AllocatedBytes);
 
-    private sealed record CompiledPerformanceModule(GameEventScriptBinary Binary, IGameEventScriptModule Module);
+    private readonly record struct CompiledPerformanceModule(GameEventScriptBinary Binary, IGameEventScriptModule Module);
 
     private sealed record PerformanceRunMetrics(
         TimeSpan Elapsed,

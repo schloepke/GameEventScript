@@ -373,6 +373,12 @@ internal static class GameEventScriptConformanceRunner
         return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
     }
 
+    internal static GameEventScriptBuilder CreateScriptBuilderForTest(GameEventScriptConformanceTest test)
+        => CreateScriptBuilder(test);
+
+    internal static GameEventScriptCompileOptions CreateCompileOptionsForTest(GameEventScriptConformanceTest test)
+        => CreateCompileOptions(test);
+
     private static GameEventScriptBuilder CreateScriptBuilder(GameEventScriptConformanceTest test)
     {
         var builder = GameEventScriptManager.CreateScriptBuilder()

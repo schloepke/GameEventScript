@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 
@@ -8,16 +7,30 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesAstValidator
 {
-    private sealed class ValidationScope(IEnumerable<string>? names = null)
+    private sealed class ValidationScope
     {
-        private readonly HashSet<string> _variables = names is null ? new HashSet<string>(StringComparer.Ordinal) : new HashSet<string>(names, StringComparer.Ordinal);
-        private readonly Dictionary<string, string> _declaredTypes = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _variables;
+        private readonly Dictionary<string, string> _declaredTypes;
 
-        public static ValidationScope Create(IEnumerable<ParameterNode> parameters)
+        public ValidationScope()
         {
-            var scope = new ValidationScope(parameters.Select(parameter => parameter.LocalName));
-            foreach (var parameter in parameters)
+            _variables = new HashSet<string>(StringComparer.Ordinal);
+            _declaredTypes = new Dictionary<string, string>(StringComparer.Ordinal);
+        }
+
+        private ValidationScope(ValidationScope parent)
+        {
+            _variables = new HashSet<string>(StringComparer.Ordinal);
+            _declaredTypes = new Dictionary<string, string>(parent._declaredTypes, StringComparer.Ordinal);
+        }
+
+        public static ValidationScope Create(IReadOnlyList<ParameterNode> parameters)
+        {
+            var scope = new ValidationScope();
+            for (var index = 0; index < parameters.Count; index++)
             {
+                var parameter = parameters[index];
+                scope._variables.Add(parameter.LocalName);
                 scope.DeclareType(parameter.LocalName, parameter.DeclaredType);
             }
 
@@ -25,15 +38,7 @@ internal static class GesAstValidator
         }
 
         public static ValidationScope CreateChild(ValidationScope parent)
-        {
-            var scope = new ValidationScope();
-            foreach (var pair in parent._declaredTypes)
-            {
-                scope._declaredTypes[pair.Key] = pair.Value;
-            }
-
-            return scope;
-        }
+            => new(parent);
 
         public IReadOnlyDictionary<string, string> DeclaredTypes => _declaredTypes;
 
@@ -58,12 +63,14 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, GameEventScriptCompileOptions options, GesValidationErrors errors)
     {
         _ = options;
-        foreach (var typeDefinition in parsedScript.TypeDefinitions)
+        for (var typeDefinitionIndex = 0; typeDefinitionIndex < parsedScript.TypeDefinitions.Count; typeDefinitionIndex++)
         {
+            var typeDefinition = parsedScript.TypeDefinitions[typeDefinitionIndex];
             ValidateRemovedType(parsedScript, typeDefinition.Name, typeDefinition, errors);
 
-            foreach (var field in typeDefinition.Fields)
+            for (var fieldIndex = 0; fieldIndex < typeDefinition.Fields.Count; fieldIndex++)
             {
+                var field = typeDefinition.Fields[fieldIndex];
                 ValidateIdentifierCase(
                     parsedScript,
                     field.Name,
@@ -89,8 +96,9 @@ internal static class GesAstValidator
             }
         }
 
-        foreach (var predicateDefinition in parsedScript.PredicateDefinitions)
+        for (var predicateIndex = 0; predicateIndex < parsedScript.PredicateDefinitions.Count; predicateIndex++)
         {
+            var predicateDefinition = parsedScript.PredicateDefinitions[predicateIndex];
             ValidateIdentifierCase(
                     parsedScript,
                     predicateDefinition.Name,
@@ -99,8 +107,9 @@ internal static class GesAstValidator
                     "Predicate names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
 
-            foreach (var parameter in predicateDefinition.Parameters)
+            for (var parameterIndex = 0; parameterIndex < predicateDefinition.Parameters.Count; parameterIndex++)
             {
+                var parameter = predicateDefinition.Parameters[parameterIndex];
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
@@ -111,23 +120,14 @@ internal static class GesAstValidator
             }
 
             ValidateParameterTypeHints(parsedScript, "Predicate", predicateDefinition.Name, predicateDefinition.ParameterList, typeDefinitions, errors);
-
-            var duplicateParameters = predicateDefinition.Parameters
-                .GroupBy(parameter => parameter, StringComparer.Ordinal)
-                .Where(group => group.Count() > 1)
-                .Select(group => group.Key);
-
-            foreach (var duplicateParameter in duplicateParameters)
-            {
-                var duplicateParameterNode = predicateDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
-                errors.Add(
-                    parsedScript,
-                    $"Predicate '{predicateDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
-                    predicateDefinition.Name,
-                    GameEventScriptSymbolKind.Predicate,
-                    GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
-                    duplicateParameterNode);
-            }
+            ValidateDuplicateParameterDefinitions(
+                parsedScript,
+                predicateDefinition.Name,
+                GameEventScriptSymbolKind.Predicate,
+                GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
+                "Predicate",
+                predicateDefinition.ParameterList,
+                errors);
 
             ValidateExpressionReferences(
                 parsedScript,
@@ -139,8 +139,9 @@ internal static class GesAstValidator
             ValidatePredicateResultExpression(parsedScript, predicateDefinition, callables, typeDefinitions, errors);
         }
 
-        foreach (var functionDefinition in parsedScript.FunctionDefinitions)
+        for (var functionIndex = 0; functionIndex < parsedScript.FunctionDefinitions.Count; functionIndex++)
         {
+            var functionDefinition = parsedScript.FunctionDefinitions[functionIndex];
             ValidateIdentifierCase(
                     parsedScript,
                     functionDefinition.Name,
@@ -149,8 +150,9 @@ internal static class GesAstValidator
                     "Function names must use identifier casing (start lowercase, letters only, optional final _index suffix)",
                     errors);
 
-            foreach (var parameter in functionDefinition.Parameters)
+            for (var parameterIndex = 0; parameterIndex < functionDefinition.Parameters.Count; parameterIndex++)
             {
+                var parameter = functionDefinition.Parameters[parameterIndex];
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
@@ -161,23 +163,14 @@ internal static class GesAstValidator
             }
 
             ValidateParameterTypeHints(parsedScript, "Function", functionDefinition.Name, functionDefinition.ParameterList, typeDefinitions, errors);
-
-            var duplicateParameters = functionDefinition.Parameters
-                .GroupBy(parameter => parameter, StringComparer.Ordinal)
-                .Where(group => group.Count() > 1)
-                .Select(group => group.Key);
-
-            foreach (var duplicateParameter in duplicateParameters)
-            {
-                var duplicateParameterNode = functionDefinition.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
-                errors.Add(
-                    parsedScript,
-                    $"Function '{functionDefinition.Name}' declares parameter '{duplicateParameter}' more than once",
-                    functionDefinition.Name,
-                    GameEventScriptSymbolKind.Function,
-                    GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
-                    duplicateParameterNode);
-            }
+            ValidateDuplicateParameterDefinitions(
+                parsedScript,
+                functionDefinition.Name,
+                GameEventScriptSymbolKind.Function,
+                GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
+                "Function",
+                functionDefinition.ParameterList,
+                errors);
 
             ValidateExpressionReferences(
                 parsedScript,
@@ -188,8 +181,9 @@ internal static class GesAstValidator
                 BuildDeclaredTypeMap(functionDefinition.ParameterList));
         }
 
-        foreach (var handler in parsedScript.Handlers)
+        for (var handlerIndex = 0; handlerIndex < parsedScript.Handlers.Count; handlerIndex++)
         {
+            var handler = parsedScript.Handlers[handlerIndex];
             if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Message))
             {
                 ValidateInitializationHandler(parsedScript, handler, errors);
@@ -210,8 +204,9 @@ internal static class GesAstValidator
                 ValidateMessageNameHandler(parsedScript, handler, errors);
             }
 
-            foreach (var parameter in handler.Parameters)
+            for (var parameterIndex = 0; parameterIndex < handler.Parameters.Count; parameterIndex++)
             {
+                var parameter = handler.Parameters[parameterIndex];
                 ValidateIdentifierCase(
                     parsedScript,
                     parameter,
@@ -222,27 +217,19 @@ internal static class GesAstValidator
             }
 
             ValidateParameterTypeHints(parsedScript, "Handler", handler.Message, handler.ParameterList, typeDefinitions, errors);
-
-            var duplicateParameters = handler.Parameters
-                .GroupBy(parameter => parameter, StringComparer.Ordinal)
-                .Where(group => group.Count() > 1)
-                .Select(group => group.Key);
-
-            foreach (var duplicateParameter in duplicateParameters)
-            {
-                var duplicateParameterNode = handler.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
-                errors.Add(
-                    parsedScript,
-                    $"Handler '{handler.Message}' declares parameter '{duplicateParameter}' more than once",
-                    handler.Message,
-                    GameEventScriptSymbolKind.Handler,
-                    GameEventScriptCompileErrorKind.DuplicateHandlerParameter,
-                    duplicateParameterNode);
-            }
+            ValidateDuplicateParameterDefinitions(
+                parsedScript,
+                handler.Message,
+                GameEventScriptSymbolKind.Handler,
+                GameEventScriptCompileErrorKind.DuplicateHandlerParameter,
+                "Handler",
+                handler.ParameterList,
+                errors);
 
             var handlerScope = ValidationScope.Create(handler.ParameterList);
-            foreach (var statement in handler.Statements)
+            for (var statementIndex = 0; statementIndex < handler.Statements.Count; statementIndex++)
             {
+                var statement = handler.Statements[statementIndex];
                 ValidateStatementReferences(parsedScript, statement, callables, typeDefinitions, errors, handlerScope);
             }
         }
@@ -357,8 +344,9 @@ internal static class GesAstValidator
         {
             case PublishStatementNode publish:
                 ValidateExpressionReferences(parsedScriptContext, publish.MessageExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
-                foreach (var tagExpression in publish.TagExpressions)
+                for (var tagIndex = 0; tagIndex < publish.TagExpressions.Count; tagIndex++)
                 {
+                    var tagExpression = publish.TagExpressions[tagIndex];
                     ValidateExpressionReferences(parsedScriptContext, tagExpression, callables, typeDefinitions, errors, scope.DeclaredTypes);
                 }
 
@@ -437,8 +425,9 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
-        foreach (var parameter in parameters)
+        for (var index = 0; index < parameters.Count; index++)
         {
+            var parameter = parameters[index];
             if (string.IsNullOrEmpty(parameter.DeclaredType) ||
                 IsBuiltinConstructorType(parameter.DeclaredType!) ||
                 typeDefinitions.ContainsKey(parameter.DeclaredType!))
@@ -465,8 +454,9 @@ internal static class GesAstValidator
         ValidationScope parentScope)
     {
         var bodyScope = body.IsBlock ? ValidationScope.CreateChild(parentScope) : parentScope;
-        foreach (var nested in body.Statements)
+        for (var index = 0; index < body.Statements.Count; index++)
         {
+            var nested = body.Statements[index];
             ValidateStatementReferences(parsedScriptContext, nested, callables, typeDefinitions, errors, bodyScope);
         }
     }
@@ -564,8 +554,9 @@ internal static class GesAstValidator
     private static IReadOnlyDictionary<string, string> BuildDeclaredTypeMap(IReadOnlyList<ParameterNode> parameters)
     {
         var types = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var parameter in parameters)
+        for (var index = 0; index < parameters.Count; index++)
         {
+            var parameter = parameters[index];
             if (!string.IsNullOrWhiteSpace(parameter.DeclaredType))
             {
                 types[parameter.LocalName] = parameter.DeclaredType!;
@@ -573,6 +564,19 @@ internal static class GesAstValidator
         }
 
         return types;
+    }
+
+    private static TypeFieldDefinitionNode? FindField(IReadOnlyList<TypeFieldDefinitionNode> fields, string name)
+    {
+        for (var index = 0; index < fields.Count; index++)
+        {
+            if (string.Equals(fields[index].Name, name, StringComparison.Ordinal))
+            {
+                return fields[index];
+            }
+        }
+
+        return null;
     }
 
     private static StaticExpressionInfo ClassifyExpression(
@@ -682,7 +686,7 @@ internal static class GesAstValidator
             return StaticExpressionInfo.Unknown;
         }
 
-        var field = typeDefinition.Fields.FirstOrDefault(candidate => string.Equals(candidate.Name, memberAccess.Member, StringComparison.Ordinal));
+        var field = FindField(typeDefinition.Fields, memberAccess.Member);
         return field is null ? StaticExpressionInfo.Unknown : FromDeclaredType(field.TypeName);
     }
 
@@ -796,8 +800,9 @@ internal static class GesAstValidator
         ISet<string> visitedCallables)
     {
         var result = StaticExpressionInfo.Nothing;
-        foreach (var branch in guardedChoice.Branches)
+        for (var index = 0; index < guardedChoice.Branches.Count; index++)
         {
+            var branch = guardedChoice.Branches[index];
             result = MergePredicateCompatibleResults(
                 result,
                 ClassifyExpression(branch.ValueExpression, callables, typeDefinitions, declaredTypes, visitedCallables));
@@ -862,8 +867,9 @@ internal static class GesAstValidator
                         errors);
                     ValidateDuplicateNamedArguments(parsedScriptContext, call.Name, call.ArgumentList.Arguments, errors);
                     ValidateCallExpression(parsedScriptContext, call, callables, typeDefinitions, errors);
-                    foreach (var argument in call.ArgumentList.Arguments)
+                    for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Arguments.Count; argumentIndex++)
                     {
+                        var argument = call.ArgumentList.Arguments[argumentIndex];
                         if (argument.Label is not null)
                         {
                             ValidateIdentifierCase(
@@ -888,8 +894,9 @@ internal static class GesAstValidator
                         GameEventScriptSymbolKind.Handler,
                         $"Handler literal '{handlerLiteral.Message}' must use message casing (start uppercase and contain only letters)",
                         errors);
-                    foreach (var parameter in handlerLiteral.Parameters)
+                    for (var parameterIndex = 0; parameterIndex < handlerLiteral.Parameters.Count; parameterIndex++)
                     {
+                        var parameter = handlerLiteral.Parameters[parameterIndex];
                         ValidateIdentifierCase(
                             parsedScriptContext,
                             parameter,
@@ -911,8 +918,9 @@ internal static class GesAstValidator
                         $"Message literal '{messageLiteral.Message}' must use message casing (start uppercase and contain only letters)",
                         errors);
                     ValidateDuplicateNamedArguments(parsedScriptContext, messageLiteral.Message, messageLiteral.Arguments, errors);
-                    foreach (var argument in messageLiteral.Arguments)
+                    for (var argumentIndex = 0; argumentIndex < messageLiteral.Arguments.Count; argumentIndex++)
                     {
+                        var argument = messageLiteral.Arguments[argumentIndex];
                         if (argument.Label is not null)
                         {
                             ValidateIdentifierCase(
@@ -930,8 +938,9 @@ internal static class GesAstValidator
                     return;
 
                 case ExtensionCallExpressionNode extensionCall:
-                    foreach (var argument in extensionCall.Arguments)
+                    for (var argumentIndex = 0; argumentIndex < extensionCall.Arguments.Count; argumentIndex++)
                     {
+                        var argument = extensionCall.Arguments[argumentIndex];
                         ValidateExpressionReferences(parsedScriptContext, argument.Expression, callables, typeDefinitions, errors, declaredTypes);
                     }
 
@@ -973,8 +982,9 @@ internal static class GesAstValidator
                     continue;
 
                 case VariadicTaggedExpressionNode variadic:
-                    foreach (var argument in variadic.Arguments)
+                    for (var argumentIndex = 0; argumentIndex < variadic.Arguments.Count; argumentIndex++)
                     {
+                        var argument = variadic.Arguments[argumentIndex];
                         ValidateExpressionReferences(parsedScriptContext, argument, callables, typeDefinitions, errors, declaredTypes);
                     }
 
@@ -1026,8 +1036,9 @@ internal static class GesAstValidator
                     continue;
 
                 case GuardedChoiceExpressionNode guardedChoice:
-                    foreach (var branch in guardedChoice.Branches)
+                    for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
                     {
+                        var branch = guardedChoice.Branches[branchIndex];
                         ValidateExpressionReferences(parsedScriptContext, branch.ValueExpression, callables, typeDefinitions, errors, declaredTypes);
                         ValidateExpressionReferences(parsedScriptContext, branch.ConditionExpression, callables, typeDefinitions, errors, declaredTypes);
                     }
@@ -1060,16 +1071,18 @@ internal static class GesAstValidator
                     return;
 
                 case ListLiteralExpressionNode list:
-                    foreach (var item in list.Items)
+                    for (var itemIndex = 0; itemIndex < list.Items.Count; itemIndex++)
                     {
+                        var item = list.Items[itemIndex];
                         ValidateExpressionReferences(parsedScriptContext, item, callables, typeDefinitions, errors, declaredTypes);
                     }
 
                     return;
 
                 case MapLiteralExpressionNode dictionary:
-                    foreach (var entry in dictionary.Entries)
+                    for (var entryIndex = 0; entryIndex < dictionary.Entries.Count; entryIndex++)
                     {
+                        var entry = dictionary.Entries[entryIndex];
                         ValidateExpressionReferences(parsedScriptContext, entry.Value, callables, typeDefinitions, errors, declaredTypes);
                     }
 
@@ -1307,7 +1320,7 @@ internal static class GesAstValidator
     {
         if (!callables.TryGetValue(call.Name, out var callable))
         {
-            if (call.ArgumentList.Arguments.All(argument => argument.Label is null))
+            if (AllArgumentsUnlabeled(call.ArgumentList.Arguments))
             {
                 errors.Add(
                     parsedScriptContext,
@@ -1351,6 +1364,107 @@ internal static class GesAstValidator
         }
     }
 
+    private static bool AllArgumentsUnlabeled(IReadOnlyList<ArgumentNode> arguments)
+    {
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            if (arguments[index].Label is not null)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static int CountUnlabeledArguments(IReadOnlyList<ArgumentNode> arguments)
+    {
+        var count = 0;
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            if (arguments[index].Label is null)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static int CountLabeledArguments(IReadOnlyList<ArgumentNode> arguments)
+    {
+        var count = 0;
+        for (var index = 0; index < arguments.Count; index++)
+        {
+            if (arguments[index].Label is not null)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static TypeFieldDefinitionNode[] ReadConstructorFields(IReadOnlyList<TypeFieldDefinitionNode> fields)
+    {
+        var count = 0;
+        for (var index = 0; index < fields.Count; index++)
+        {
+            if (fields[index].IsConstructorParameter)
+            {
+                count++;
+            }
+        }
+
+        if (count == 0)
+        {
+            return [];
+        }
+
+        var constructorFields = new TypeFieldDefinitionNode[count];
+        var targetIndex = 0;
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var field = fields[index];
+            if (field.IsConstructorParameter)
+            {
+                constructorFields[targetIndex++] = field;
+            }
+        }
+
+        return constructorFields;
+    }
+
+    private static int CountUnlabeledConstructorFields(IReadOnlyList<TypeFieldDefinitionNode> fields)
+    {
+        var count = 0;
+        for (var index = 0; index < fields.Count; index++)
+        {
+            if (string.Equals(fields[index].ConstructorLabel, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static HashSet<string> BuildLabeledConstructorFieldSet(IReadOnlyList<TypeFieldDefinitionNode> fields)
+    {
+        var fieldNames = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var label = fields[index].ConstructorLabel;
+            if (label is not null &&
+                !string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                fieldNames.Add(label);
+            }
+        }
+
+        return fieldNames;
+    }
+
     private static void ValidateTypeConstructorExpression(
         ParsedScript parsedScriptContext,
         TypeConstructorExpressionNode constructor,
@@ -1360,8 +1474,9 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, string>? declaredTypes = null)
     {
         ValidateDuplicateNamedArguments(parsedScriptContext, constructor.TypeName, constructor.Arguments, errors);
-        foreach (var argument in constructor.Arguments)
+        for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
         {
+            var argument = constructor.Arguments[argumentIndex];
             if (argument.Label is not null)
             {
                 ValidateIdentifierCase(
@@ -1394,23 +1509,24 @@ internal static class GesAstValidator
             return;
         }
 
-        var constructorFields = typeDefinition.Fields.Where(field => field.IsConstructorParameter).ToArray();
-        var unlabeledConstructorFieldCount = constructorFields.Count(field =>
-            string.Equals(field.ConstructorLabel, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal));
-        var unlabeledArgumentCount = constructor.Arguments.Count(argument => argument.Label is null);
+        var constructorFields = ReadConstructorFields(typeDefinition.Fields);
+        var unlabeledConstructorFieldCount = CountUnlabeledConstructorFields(constructorFields);
+        var unlabeledArgumentCount = CountUnlabeledArguments(constructor.Arguments);
         if (unlabeledArgumentCount > unlabeledConstructorFieldCount)
         {
             AddTypeConstructorError(parsedScriptContext, constructor.TypeName, $"Custom type constructor ':{constructor.TypeName}' requires labeled field arguments", errors);
         }
 
-        var fieldNames = new HashSet<string>(
-            constructorFields
-                .Where(field => !string.Equals(field.ConstructorLabel, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-                .Select(field => field.ConstructorLabel!),
-            StringComparer.Ordinal);
-        foreach (var argument in constructor.Arguments.Where(argument => argument.Label is not null))
+        var fieldNames = BuildLabeledConstructorFieldSet(constructorFields);
+        for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
         {
-            if (!fieldNames.Contains(argument.Label!))
+            var argument = constructor.Arguments[argumentIndex];
+            if (argument.Label is null)
+            {
+                continue;
+            }
+
+            if (!fieldNames.Contains(argument.Label))
             {
                 AddTypeConstructorError(
                     parsedScriptContext,
@@ -1458,12 +1574,12 @@ internal static class GesAstValidator
         }
 
         if (constructor.Arguments.Count is 2 &&
-            constructor.Arguments.All(argument => argument.Label is null))
+            AllArgumentsUnlabeled(constructor.Arguments))
         {
             return;
         }
 
-        var labeledCount = constructor.Arguments.Count(argument => argument.Label is not null);
+        var labeledCount = CountLabeledArguments(constructor.Arguments);
         if (labeledCount is not 0 && labeledCount != constructor.Arguments.Count)
         {
             AddTypeConstructorError(
@@ -1635,22 +1751,23 @@ internal static class GesAstValidator
         IReadOnlyList<ArgumentNode> arguments,
         GesValidationErrors errors)
     {
-        var duplicateArguments = arguments
-            .Where(argument => argument.Label is not null)
-            .GroupBy(argument => argument.Name, StringComparer.Ordinal)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key);
-
-        foreach (var duplicateArgument in duplicateArguments)
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var reported = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < arguments.Count; index++)
         {
-            var duplicateArgumentNode = arguments.Last(argument => string.Equals(argument.Name, duplicateArgument, StringComparison.Ordinal));
+            var argument = arguments[index];
+            if (argument.Label is null || seen.Add(argument.Name) || !reported.Add(argument.Name))
+            {
+                continue;
+            }
+
             errors.Add(
                 parsedScriptContext,
-                $"Named argument '{duplicateArgument}' is declared more than once",
+                $"Named argument '{argument.Name}' is declared more than once",
                 symbolName,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.DuplicatePublishArgument,
-                duplicateArgumentNode);
+                argument);
         }
     }
 
@@ -1659,21 +1776,52 @@ internal static class GesAstValidator
         HandlerLiteralExpressionNode handlerLiteral,
         GesValidationErrors errors)
     {
-        var duplicateParameters = handlerLiteral.Parameters
-            .GroupBy(parameter => parameter, StringComparer.Ordinal)
-            .Where(group => group.Count() > 1)
-            .Select(group => group.Key);
-
-        foreach (var duplicateParameter in duplicateParameters)
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var reported = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < handlerLiteral.ParameterList.Count; index++)
         {
-            var duplicateParameterNode = handlerLiteral.ParameterList.Last(parameter => string.Equals(parameter.LocalName, duplicateParameter, StringComparison.Ordinal));
+            var parameter = handlerLiteral.ParameterList[index];
+            if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName))
+            {
+                continue;
+            }
+
             errors.Add(
                 parsedScriptContext,
-                $"Handler literal '{handlerLiteral.Message}' declares parameter '{duplicateParameter}' more than once",
+                $"Handler literal '{handlerLiteral.Message}' declares parameter '{parameter.LocalName}' more than once",
                 handlerLiteral.Message,
                 GameEventScriptSymbolKind.Handler,
                 GameEventScriptCompileErrorKind.DuplicateHandlerParameter,
-                duplicateParameterNode);
+                parameter);
+        }
+    }
+
+    private static void ValidateDuplicateParameterDefinitions(
+        ParsedScript parsedScriptContext,
+        string declarationName,
+        GameEventScriptSymbolKind symbolKind,
+        GameEventScriptCompileErrorKind errorKind,
+        string declarationKind,
+        IReadOnlyList<ParameterNode> parameters,
+        GesValidationErrors errors)
+    {
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var reported = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            var parameter = parameters[index];
+            if (seen.Add(parameter.LocalName) || !reported.Add(parameter.LocalName))
+            {
+                continue;
+            }
+
+            errors.Add(
+                parsedScriptContext,
+                $"{declarationKind} '{declarationName}' declares parameter '{parameter.LocalName}' more than once",
+                declarationName,
+                symbolKind,
+                errorKind,
+                parameter);
         }
     }
 

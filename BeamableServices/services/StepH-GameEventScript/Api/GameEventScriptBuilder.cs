@@ -164,7 +164,7 @@ public sealed class GameEventScriptBuilder
         errors.ThrowIfAny();
 
         var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions);
-        return compileOptions.Optimize ? GesAstOptimizer.Optimize(moduleResult, compileOptions) : moduleResult;
+        return compileOptions.Optimize ? GesAstOptimizer.Optimize(moduleResult) : moduleResult;
     }
 
     private sealed record SourceInput(string Text, string? SourceName);

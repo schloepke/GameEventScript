@@ -130,7 +130,7 @@ public sealed class GameEventScriptBuilder
         for (var index = 0; index < _sources.Count; index++)
         {
             var source = _sources[index];
-            modules[index] = GesParser.Parse(source.Text, source.SourceName, compileOptions);
+            modules[index] = GesParser.Parse(source.Text, source.SourceName);
         }
 
         var errors = new GesValidationErrors();

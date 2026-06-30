@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Security.Cryptography;
-using System.Text;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Compiler.GesTokenKind;
@@ -14,18 +12,13 @@ internal sealed class GesParser
     private const double SquareRootExponent = 0.5d;
     private const double CubeRootExponent = 0.3333333333333333333333333333d;
 
-    public static ParsedScript Parse(string script, string? sourceName = null, GameEventScriptCompileOptions? options = null)
+    public static ParsedScript Parse(string script, string? sourceName = null)
     {
         _ = script ?? throw new ArgumentNullException(nameof(script));
-        options ??= new GameEventScriptCompileOptions();
 
-        var normalizedScript = script.Replace("\r\n", "\n").Replace('\r', '\n');
-        var reader = new GesTokenReader(new GesLexer(normalizedScript, options));
-        return new GesParser(reader, normalizedScript, sourceName).ParseScript();
+        var reader = new GesTokenReader(new GesLexer(script));
+        return new GesParser(reader, sourceName).ParseScript();
     }
-
-    private static bool IsCollectionZipOperator(GesToken token)
-        => token.Kind == Zip;
 
     private sealed class GameEventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
     {
@@ -46,26 +39,21 @@ internal sealed class GesParser
     }
 
     private readonly GesTokenReader _reader;
-    private readonly string _script;
     private readonly string? _requestedSourceName;
     private readonly List<GameEventScriptCompileError> _errors;
-    private string? _hash;
     private string? _moduleName;
     private string? _sourceName;
 
-    private GesParser(GesTokenReader reader, string script, string? sourceName)
+    private GesParser(GesTokenReader reader, string? sourceName)
     {
         _reader = reader;
-        _script = script;
         _requestedSourceName = sourceName;
         _errors = [];
     }
 
-    private string ModuleName => _moduleName ??= $"AnonymousModule_{Hash}";
+    private string ModuleName => _moduleName ?? string.Empty;
 
-    private string SourceName => _sourceName ??= string.IsNullOrWhiteSpace(_requestedSourceName) ? $"UnknownSource_{Hash}" : _requestedSourceName;
-
-    private string Hash => _hash ??= ComputeShortHash(_script);
+    private string SourceName => _sourceName ??= string.IsNullOrWhiteSpace(_requestedSourceName) ? "UnknownSource" : _requestedSourceName;
 
     private GameEventScriptSourceLocation CreateRange(GesToken token)
         => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName);
@@ -171,13 +159,6 @@ internal sealed class GesParser
         }
 
         return module with { SourceRange = CreateRange(firstToken, _reader.LastNonEofToken) };
-    }
-
-    private static string ComputeShortHash(string text)
-    {
-        using var sha256 = SHA256.Create();
-        var bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(text));
-        return BitConverter.ToString(bytes, 0, 4).Replace("-", string.Empty, StringComparison.Ordinal);
     }
 
     private void ParseOptionalModuleDeclaration()
@@ -846,7 +827,7 @@ internal sealed class GesParser
     {
         var expression = ParseOrExpression();
 
-        while (IsCollectionZipOperator(Current))
+        while (Current.Kind == Zip)
         {
             Advance();
             SkipNewLines();
@@ -2677,23 +2658,23 @@ internal sealed class GesParser
         throw new GameEventScriptParseException($"Expected Identifier but found {token.Kind}", token);
     }
 
-    private bool Match(params GesTokenKind[] kinds)
+    private bool Match(GesTokenKind kind)
     {
-        for (var index = 0; index < kinds.Length; index++)
-        {
-            if (Is(kinds[index]))
-            {
-                Advance();
-                return true;
-            }
-        }
-
-        return false;
+        if (!Is(kind)) return false;
+        Advance();
+        return true;
     }
 
     private bool Match(GesTokenKind first, GesTokenKind second)
     {
         if (!Is(first) && !Is(second)) return false;
+        Advance();
+        return true;
+    }
+
+    private bool Match(GesTokenKind first, GesTokenKind second, GesTokenKind third)
+    {
+        if (!Is(first) && !Is(second) && !Is(third)) return false;
         Advance();
         return true;
     }

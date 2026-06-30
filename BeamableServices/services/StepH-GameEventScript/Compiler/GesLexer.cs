@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
-using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -172,11 +170,10 @@ internal sealed class GesLexer
     private int _line = 1;
     private int _column = 1;
 
-    public GesLexer(string input, GameEventScriptCompileOptions? options = null)
+    public GesLexer(string input)
     {
         _input = input ?? throw new ArgumentNullException(nameof(input));
         _length = _input.Length;
-        _ = options ?? new GameEventScriptCompileOptions();
     }
 
     public GesToken ReadNextToken()
@@ -242,20 +239,6 @@ internal sealed class GesLexer
         }
     }
 
-    public List<GesToken> Tokenize()
-    {
-        var tokens = new List<GesToken>(Math.Max(8, _length / 4));
-        while (true)
-        {
-            var token = ReadNextToken();
-            tokens.Add(token);
-            if (token.Kind == GesTokenKind.EndOfFile)
-            {
-                return tokens;
-            }
-        }
-    }
-
     private bool IsAtEnd => _index >= _length;
 
     private char Current => _input[_index];
@@ -282,16 +265,20 @@ internal sealed class GesLexer
         _index++;
     }
 
-    private string ReadWhile(Func<char, bool> predicate)
+    private void ReadWordLetters()
     {
-        var start = _index;
-
-        while (!IsAtEnd && predicate(Current))
+        while (!IsAtEnd && IsWordLetter(Current))
         {
             Advance();
         }
+    }
 
-        return _input[start.._index];
+    private void ReadDigits()
+    {
+        while (!IsAtEnd && char.IsDigit(Current))
+        {
+            Advance();
+        }
     }
 
     private GesToken CreateToken(GesTokenKind kind, string text, int startLine, int startColumn)
@@ -300,95 +287,98 @@ internal sealed class GesLexer
     private GesToken CreateUnitNumberToken(string text, string unitName, int startLine, int startColumn)
         => new(GesTokenKind.UnitNumber, text, startLine, startColumn, _line, _column, unitName);
 
-    private static GesToken CreateWordToken(string text, int line, int column, int endLine, int endColumn)
+    private GesToken CreateWordToken(int start, int length, int line, int column, int endLine, int endColumn)
     {
-        return text switch
-        {
-            "on" => new GesToken(GesTokenKind.On, text, line, column, endLine, endColumn),
-            "record" => new GesToken(GesTokenKind.Record, text, line, column, endLine, endColumn),
-            "predicate" => new GesToken(GesTokenKind.Predicate, text, line, column, endLine, endColumn),
-            "function" => new GesToken(GesTokenKind.Function, text, line, column, endLine, endColumn),
-            "emit" => new GesToken(GesTokenKind.Emit, text, line, column, endLine, endColumn),
-            "publish" => new GesToken(GesTokenKind.Publish, text, line, column, endLine, endColumn),
-            "matching" => new GesToken(GesTokenKind.Matching, text, line, column, endLine, endColumn),
-            "without" => new GesToken(GesTokenKind.Without, text, line, column, endLine, endColumn),
-            "let" => new GesToken(GesTokenKind.Let, text, line, column, endLine, endColumn),
-            "as" => new GesToken(GesTokenKind.As, text, line, column, endLine, endColumn),
-            "be" => new GesToken(GesTokenKind.Be, text, line, column, endLine, endColumn),
-            "when" => new GesToken(GesTokenKind.When, text, line, column, endLine, endColumn),
-            "otherwise" => new GesToken(GesTokenKind.Otherwise, text, line, column, endLine, endColumn),
-            "has" => new GesToken(GesTokenKind.Has, text, line, column, endLine, endColumn),
-            "empty" => new GesToken(GesTokenKind.Empty, text, line, column, endLine, endColumn),
-            "if" => new GesToken(GesTokenKind.If, text, line, column, endLine, endColumn),
-            "else" => new GesToken(GesTokenKind.Else, text, line, column, endLine, endColumn),
-            "for" => new GesToken(GesTokenKind.For, text, line, column, endLine, endColumn),
-            "in" => new GesToken(GesTokenKind.In, text, line, column, endLine, endColumn),
-            "starts" => new GesToken(GesTokenKind.Starts, text, line, column, endLine, endColumn),
-            "ends" => new GesToken(GesTokenKind.Ends, text, line, column, endLine, endColumn),
-            "with" => new GesToken(GesTokenKind.With, text, line, column, endLine, endColumn),
-            "is" => new GesToken(GesTokenKind.Is, text, line, column, endLine, endColumn),
-            "numeric" => new GesToken(GesTokenKind.Numeric, text, line, column, endLine, endColumn),
-            "or" => new GesToken(GesTokenKind.OperatorOr, text, line, column, endLine, endColumn),
-            "xor" => new GesToken(GesTokenKind.OperatorXor, text, line, column, endLine, endColumn),
-            "and" => new GesToken(GesTokenKind.OperatorAnd, text, line, column, endLine, endColumn),
-            "div" => new GesToken(GesTokenKind.OperatorIntegerDivide, text, line, column, endLine, endColumn),
-            "mod" => new GesToken(GesTokenKind.OperatorModulo, text, line, column, endLine, endColumn),
-            "rem" => new GesToken(GesTokenKind.OperatorRemainder, text, line, column, endLine, endColumn),
-            "not" => new GesToken(GesTokenKind.OperatorNot, text, line, column, endLine, endColumn),
-            "to" => new GesToken(GesTokenKind.To, text, line, column, endLine, endColumn),
-            "true" => new GesToken(GesTokenKind.True, text, line, column, endLine, endColumn),
-            "false" => new GesToken(GesTokenKind.False, text, line, column, endLine, endColumn),
-            "nothing" => new GesToken(GesTokenKind.Nothing, text, line, column, endLine, endColumn),
-            "pi" => new GesToken(GesTokenKind.MathConstantPi, text, line, column, endLine, endColumn),
-            "e" => new GesToken(GesTokenKind.MathConstantE, text, line, column, endLine, endColumn),
-            "tau" => new GesToken(GesTokenKind.MathConstantTau, text, line, column, endLine, endColumn),
-            "infinity" => new GesToken(GesTokenKind.MathConstantInfinity, text, line, column, endLine, endColumn),
-            "abs" => new GesToken(GesTokenKind.IntrinsicAbs, text, line, column, endLine, endColumn),
-            "ln" => new GesToken(GesTokenKind.IntrinsicLn, text, line, column, endLine, endColumn),
-            "exp" => new GesToken(GesTokenKind.IntrinsicExp, text, line, column, endLine, endColumn),
-            "sqrt" => new GesToken(GesTokenKind.IntrinsicSqrt, text, line, column, endLine, endColumn),
-            "cbrt" => new GesToken(GesTokenKind.IntrinsicCbrt, text, line, column, endLine, endColumn),
-            "chance" => new GesToken(GesTokenKind.IntrinsicChance, text, line, column, endLine, endColumn),
-            "floor" => new GesToken(GesTokenKind.IntrinsicFloor, text, line, column, endLine, endColumn),
-            "ceil" => new GesToken(GesTokenKind.IntrinsicCeil, text, line, column, endLine, endColumn),
-            "truncate" => new GesToken(GesTokenKind.IntrinsicTruncate, text, line, column, endLine, endColumn),
-            "rad" => new GesToken(GesTokenKind.IntrinsicRad, text, line, column, endLine, endColumn),
-            "deg" => new GesToken(GesTokenKind.IntrinsicDeg, text, line, column, endLine, endColumn),
-            "wrap" => new GesToken(GesTokenKind.IntrinsicWrap, text, line, column, endLine, endColumn),
-            "round" => new GesToken(GesTokenKind.IntrinsicRound, text, line, column, endLine, endColumn),
-            "sin" => new GesToken(GesTokenKind.IntrinsicSin, text, line, column, endLine, endColumn),
-            "cos" => new GesToken(GesTokenKind.IntrinsicCos, text, line, column, endLine, endColumn),
-            "tan" => new GesToken(GesTokenKind.IntrinsicTan, text, line, column, endLine, endColumn),
-            "asin" => new GesToken(GesTokenKind.IntrinsicAsin, text, line, column, endLine, endColumn),
-            "acos" => new GesToken(GesTokenKind.IntrinsicAcos, text, line, column, endLine, endColumn),
-            "atan" => new GesToken(GesTokenKind.IntrinsicAtan, text, line, column, endLine, endColumn),
-            "atan2" => new GesToken(GesTokenKind.IntrinsicAtan2, text, line, column, endLine, endColumn),
-            "hypot" => new GesToken(GesTokenKind.IntrinsicHypot, text, line, column, endLine, endColumn),
-            "distance" => new GesToken(GesTokenKind.IntrinsicDistance, text, line, column, endLine, endColumn),
-            "squared" => new GesToken(GesTokenKind.IntrinsicSquared, text, line, column, endLine, endColumn),
-            "length" => new GesToken(GesTokenKind.IntrinsicLength, text, line, column, endLine, endColumn),
-            "normalize" => new GesToken(GesTokenKind.IntrinsicNormalize, text, line, column, endLine, endColumn),
-            "dot" => new GesToken(GesTokenKind.IntrinsicDot, text, line, column, endLine, endColumn),
-            "cross" => new GesToken(GesTokenKind.IntrinsicCross, text, line, column, endLine, endColumn),
-            "angle" => new GesToken(GesTokenKind.IntrinsicAngle, text, line, column, endLine, endColumn),
-            "random" => new GesToken(GesTokenKind.KeywordRandom, text, line, column, endLine, endColumn),
-            "clamp" => new GesToken(GesTokenKind.Clamp, text, line, column, endLine, endColumn),
-            "min" => new GesToken(GesTokenKind.Min, text, line, column, endLine, endColumn),
-            "max" => new GesToken(GesTokenKind.Max, text, line, column, endLine, endColumn),
-            "zip" => new GesToken(GesTokenKind.Zip, text, line, column, endLine, endColumn),
-            "roll" => new GesToken(GesTokenKind.Roll, text, line, column, endLine, endColumn),
-            "default" => new GesToken(GesTokenKind.Default, text, line, column, endLine, endColumn),
-            "module" => new GesToken(GesTokenKind.Module, text, line, column, endLine, endColumn),
-            _ when char.IsUpper(text[0]) => new GesToken(GesTokenKind.Message, text, line, column, endLine, endColumn),
-            _ => new GesToken(GesTokenKind.Identifier, text, line, column, endLine, endColumn)
-        };
+        if (IsWordAt(start, length, "on")) return new GesToken(GesTokenKind.On, "on", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "record")) return new GesToken(GesTokenKind.Record, "record", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "predicate")) return new GesToken(GesTokenKind.Predicate, "predicate", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "function")) return new GesToken(GesTokenKind.Function, "function", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "emit")) return new GesToken(GesTokenKind.Emit, "emit", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "publish")) return new GesToken(GesTokenKind.Publish, "publish", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "matching")) return new GesToken(GesTokenKind.Matching, "matching", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "without")) return new GesToken(GesTokenKind.Without, "without", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "let")) return new GesToken(GesTokenKind.Let, "let", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "as")) return new GesToken(GesTokenKind.As, "as", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "be")) return new GesToken(GesTokenKind.Be, "be", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "when")) return new GesToken(GesTokenKind.When, "when", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "otherwise")) return new GesToken(GesTokenKind.Otherwise, "otherwise", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "has")) return new GesToken(GesTokenKind.Has, "has", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "empty")) return new GesToken(GesTokenKind.Empty, "empty", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "if")) return new GesToken(GesTokenKind.If, "if", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "else")) return new GesToken(GesTokenKind.Else, "else", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "for")) return new GesToken(GesTokenKind.For, "for", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "in")) return new GesToken(GesTokenKind.In, "in", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "starts")) return new GesToken(GesTokenKind.Starts, "starts", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "ends")) return new GesToken(GesTokenKind.Ends, "ends", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "with")) return new GesToken(GesTokenKind.With, "with", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "is")) return new GesToken(GesTokenKind.Is, "is", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "numeric")) return new GesToken(GesTokenKind.Numeric, "numeric", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "or")) return new GesToken(GesTokenKind.OperatorOr, "or", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "xor")) return new GesToken(GesTokenKind.OperatorXor, "xor", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "and")) return new GesToken(GesTokenKind.OperatorAnd, "and", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "div")) return new GesToken(GesTokenKind.OperatorIntegerDivide, "div", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "mod")) return new GesToken(GesTokenKind.OperatorModulo, "mod", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "rem")) return new GesToken(GesTokenKind.OperatorRemainder, "rem", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "not")) return new GesToken(GesTokenKind.OperatorNot, "not", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "to")) return new GesToken(GesTokenKind.To, "to", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "true")) return new GesToken(GesTokenKind.True, "true", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "false")) return new GesToken(GesTokenKind.False, "false", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "nothing")) return new GesToken(GesTokenKind.Nothing, "nothing", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "pi")) return new GesToken(GesTokenKind.MathConstantPi, "pi", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "e")) return new GesToken(GesTokenKind.MathConstantE, "e", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "tau")) return new GesToken(GesTokenKind.MathConstantTau, "tau", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "infinity")) return new GesToken(GesTokenKind.MathConstantInfinity, "infinity", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "abs")) return new GesToken(GesTokenKind.IntrinsicAbs, "abs", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "ln")) return new GesToken(GesTokenKind.IntrinsicLn, "ln", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "exp")) return new GesToken(GesTokenKind.IntrinsicExp, "exp", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "sqrt")) return new GesToken(GesTokenKind.IntrinsicSqrt, "sqrt", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "cbrt")) return new GesToken(GesTokenKind.IntrinsicCbrt, "cbrt", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "chance")) return new GesToken(GesTokenKind.IntrinsicChance, "chance", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "floor")) return new GesToken(GesTokenKind.IntrinsicFloor, "floor", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "ceil")) return new GesToken(GesTokenKind.IntrinsicCeil, "ceil", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "truncate")) return new GesToken(GesTokenKind.IntrinsicTruncate, "truncate", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "rad")) return new GesToken(GesTokenKind.IntrinsicRad, "rad", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "deg")) return new GesToken(GesTokenKind.IntrinsicDeg, "deg", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "wrap")) return new GesToken(GesTokenKind.IntrinsicWrap, "wrap", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "round")) return new GesToken(GesTokenKind.IntrinsicRound, "round", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "sin")) return new GesToken(GesTokenKind.IntrinsicSin, "sin", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "cos")) return new GesToken(GesTokenKind.IntrinsicCos, "cos", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "tan")) return new GesToken(GesTokenKind.IntrinsicTan, "tan", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "asin")) return new GesToken(GesTokenKind.IntrinsicAsin, "asin", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "acos")) return new GesToken(GesTokenKind.IntrinsicAcos, "acos", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "atan")) return new GesToken(GesTokenKind.IntrinsicAtan, "atan", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "atan2")) return new GesToken(GesTokenKind.IntrinsicAtan2, "atan2", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "hypot")) return new GesToken(GesTokenKind.IntrinsicHypot, "hypot", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "distance")) return new GesToken(GesTokenKind.IntrinsicDistance, "distance", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "squared")) return new GesToken(GesTokenKind.IntrinsicSquared, "squared", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "length")) return new GesToken(GesTokenKind.IntrinsicLength, "length", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "normalize")) return new GesToken(GesTokenKind.IntrinsicNormalize, "normalize", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "dot")) return new GesToken(GesTokenKind.IntrinsicDot, "dot", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "cross")) return new GesToken(GesTokenKind.IntrinsicCross, "cross", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "angle")) return new GesToken(GesTokenKind.IntrinsicAngle, "angle", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "random")) return new GesToken(GesTokenKind.KeywordRandom, "random", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "clamp")) return new GesToken(GesTokenKind.Clamp, "clamp", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "min")) return new GesToken(GesTokenKind.Min, "min", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "max")) return new GesToken(GesTokenKind.Max, "max", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "zip")) return new GesToken(GesTokenKind.Zip, "zip", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "roll")) return new GesToken(GesTokenKind.Roll, "roll", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "default")) return new GesToken(GesTokenKind.Default, "default", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "module")) return new GesToken(GesTokenKind.Module, "module", line, column, endLine, endColumn);
+
+        var text = _input[start..(start + length)];
+        return char.IsUpper(text[0])
+            ? new GesToken(GesTokenKind.Message, text, line, column, endLine, endColumn)
+            : new GesToken(GesTokenKind.Identifier, text, line, column, endLine, endColumn);
     }
+
+    private bool IsWordAt(int start, int length, string word)
+        => length == word.Length && string.CompareOrdinal(_input, start, word, 0, length) == 0;
 
     private GesToken ReadWordLikeToken(int line, int column)
     {
         var start = _index;
         var first = Current;
-        var word = ReadWhile(IsWordLetter);
+        ReadWordLetters();
         if (char.IsLower(first) && !IsAtEnd && Current == '_')
         {
             Advance();
@@ -402,19 +392,21 @@ internal sealed class GesLexer
                 return CreateToken(GesTokenKind.Illegal, _input[start.._index], line, column);
             }
 
-            word = _input[start.._index];
+            if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
+            {
+                return CreateToken(GesTokenKind.Identifier, _input[start.._index], line, column);
+            }
         }
-        else if (string.Equals(word, "d", StringComparison.Ordinal) && !IsAtEnd && char.IsDigit(Current))
+        else if (_index - start == 1 && _input[start] == 'd' && !IsAtEnd && char.IsDigit(Current))
         {
-            return CreateWordToken(word, line, column, _line, _column);
+            return CreateWordToken(start, 1, line, column, _line, _column);
         }
-        else if (string.Equals(word, "atan", StringComparison.Ordinal) && !IsAtEnd && Current == '2')
+        else if (_index - start == 4 && IsWordAt(start, 4, "atan") && !IsAtEnd && Current == '2')
         {
             Advance();
-            word = _input[start.._index];
         }
 
-        if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(word, line, column, _line, _column);
+        if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current))) return CreateWordToken(start, _index - start, line, column, _line, _column);
         while (!IsAtEnd && !char.IsWhiteSpace(Current))
         {
             Advance();
@@ -436,7 +428,7 @@ internal sealed class GesLexer
             return IsAtEnd || !char.IsDigit(Current);
         }
 
-        ReadWhile(char.IsDigit);
+        ReadDigits();
         return true;
     }
 
@@ -444,29 +436,31 @@ internal sealed class GesLexer
     {
         var start = _index;
         Advance();
-        var selector = ReadWhile(char.IsLetter);
+        var selectorStart = _index;
+        ReadWordLetters();
+        var selectorLength = _index - selectorStart;
 
         if (IsAtEnd || (!StartsAttachedIllegalOperatorSequence() && IsValidWordBoundary(Current)))
-            return selector switch
-            {
-                "any" => CreateToken(GesTokenKind.SelectorAny, $":{selector}", line, column),
-                "all" => CreateToken(GesTokenKind.SelectorAll, $":{selector}", line, column),
-                "filter" => CreateToken(GesTokenKind.SelectorFilter, $":{selector}", line, column),
-                "has" => CreateToken(GesTokenKind.SelectorHas, $":{selector}", line, column),
-                "take" => CreateToken(GesTokenKind.SelectorTake, $":{selector}", line, column),
-                "drop" => CreateToken(GesTokenKind.SelectorDrop, $":{selector}", line, column),
-                "count" => CreateToken(GesTokenKind.SelectorCount, $":{selector}", line, column),
-                "choose" => CreateToken(GesTokenKind.SelectorChoose, $":{selector}", line, column),
-                "draw" => CreateToken(GesTokenKind.SelectorDraw, $":{selector}", line, column),
-                "shuffle" => CreateToken(GesTokenKind.SelectorShuffle, $":{selector}", line, column),
-                "reverse" => CreateToken(GesTokenKind.SelectorReverse, $":{selector}", line, column),
-                "sum" => CreateToken(GesTokenKind.SelectorSum, $":{selector}", line, column),
-                "average" => CreateToken(GesTokenKind.SelectorAverage, $":{selector}", line, column),
-                "select" => CreateToken(GesTokenKind.SelectorSelect, $":{selector}", line, column),
-                "contains" => CreateToken(GesTokenKind.SelectorContains, $":{selector}", line, column),
-                "sort" => CreateToken(GesTokenKind.SelectorSort, $":{selector}", line, column),
-                _ => CreateToken(GesTokenKind.Tag, $":{selector}", line, column)
-            };
+        {
+            if (IsWordAt(selectorStart, selectorLength, "any")) return CreateToken(GesTokenKind.SelectorAny, ":any", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "all")) return CreateToken(GesTokenKind.SelectorAll, ":all", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "filter")) return CreateToken(GesTokenKind.SelectorFilter, ":filter", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "has")) return CreateToken(GesTokenKind.SelectorHas, ":has", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "take")) return CreateToken(GesTokenKind.SelectorTake, ":take", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "drop")) return CreateToken(GesTokenKind.SelectorDrop, ":drop", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "count")) return CreateToken(GesTokenKind.SelectorCount, ":count", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "choose")) return CreateToken(GesTokenKind.SelectorChoose, ":choose", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "draw")) return CreateToken(GesTokenKind.SelectorDraw, ":draw", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "shuffle")) return CreateToken(GesTokenKind.SelectorShuffle, ":shuffle", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "reverse")) return CreateToken(GesTokenKind.SelectorReverse, ":reverse", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "sum")) return CreateToken(GesTokenKind.SelectorSum, ":sum", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "average")) return CreateToken(GesTokenKind.SelectorAverage, ":average", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "select")) return CreateToken(GesTokenKind.SelectorSelect, ":select", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "contains")) return CreateToken(GesTokenKind.SelectorContains, ":contains", line, column);
+            if (IsWordAt(selectorStart, selectorLength, "sort")) return CreateToken(GesTokenKind.SelectorSort, ":sort", line, column);
+            return CreateToken(GesTokenKind.Tag, _input[start.._index], line, column);
+        }
+
         while (!IsAtEnd && !char.IsWhiteSpace(Current))
         {
             Advance();
@@ -480,7 +474,7 @@ internal sealed class GesLexer
         var start = _index;
         Advance();
         var tagStart = _index;
-        ReadWhile(IsWordLetter);
+        ReadWordLetters();
         if (!IsAtEnd && Current == '_')
         {
             Advance();

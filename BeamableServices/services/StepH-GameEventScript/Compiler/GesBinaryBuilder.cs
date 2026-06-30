@@ -28,9 +28,7 @@ internal sealed partial class GesBinaryBuilder
 
     public GesBinaryBuilder WithModuleName(string moduleName)
     {
-        _moduleName = string.IsNullOrWhiteSpace(moduleName)
-            ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
-            : moduleName;
+        _moduleName = moduleName ?? string.Empty;
         return this;
     }
 
@@ -287,9 +285,7 @@ internal sealed partial class GesBinaryBuilder
 
         public BinaryMaterializer WithModuleName(string moduleName)
         {
-            _moduleName = string.IsNullOrWhiteSpace(moduleName)
-                ? throw new ArgumentException("Module name must be non-empty.", nameof(moduleName))
-                : moduleName;
+            _moduleName = moduleName ?? string.Empty;
             return this;
         }
 
@@ -335,11 +331,114 @@ internal sealed partial class GesBinaryBuilder
         public GameEventScriptBinary Build()
             => new(
                 new GameEventScriptBinaryHeader { Version = _version, Flags = _flags },
-                _moduleName,
+                ResolveModuleName(),
                 BuildTextTable(_textConstants),
                 BuildUInt16Table(_uint16Slices),
                 new GameEventScriptBinaryBindTable(_binds),
                 _instructions.ToArray());
+
+        private string ResolveModuleName()
+            => string.IsNullOrWhiteSpace(_moduleName)
+                ? FormattableString.Invariant($"AnonymousModule_{ComputeBinaryHash():X8}")
+                : _moduleName;
+
+        private uint ComputeBinaryHash()
+        {
+            var hash = 2166136261u;
+
+            MixUShort(ref hash, _version);
+            MixUInt(ref hash, (uint)_flags);
+
+            for (var index = 0; index < _textConstants.Count; index++)
+            {
+                MixString(ref hash, _textConstants[index]);
+            }
+
+            for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
+            {
+                var slice = _uint16Slices[sliceIndex];
+                MixInt(ref hash, slice.Count);
+                for (var index = 0; index < slice.Count; index++)
+                {
+                    MixUShort(ref hash, slice[index]);
+                }
+            }
+
+            for (var index = 0; index < _binds.Count; index++)
+            {
+                var bind = _binds[index];
+                MixUInt(ref hash, (uint)bind.Kind);
+                MixUShort(ref hash, bind.Name);
+                MixInt(ref hash, bind.ArgumentNames.Count);
+                for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
+                {
+                    MixUShort(ref hash, bind.ArgumentNames[argumentIndex]);
+                }
+
+                MixUShort(ref hash, bind.EntryAddress);
+                MixUShort(ref hash, bind.Id);
+                MixInt(ref hash, bind.RequiredTags.Count);
+                for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
+                {
+                    MixUShort(ref hash, bind.RequiredTags[tagIndex]);
+                }
+
+                MixInt(ref hash, bind.ExcludedTags.Count);
+                for (var tagIndex = 0; tagIndex < bind.ExcludedTags.Count; tagIndex++)
+                {
+                    MixUShort(ref hash, bind.ExcludedTags[tagIndex]);
+                }
+            }
+
+            for (var index = 0; index < _instructions.Count; index++)
+            {
+                var instruction = _instructions[index];
+                MixByte(ref hash, (byte)instruction.OpCode);
+                MixByte(ref hash, instruction.UnitAndFlags);
+                MixUShort(ref hash, instruction.DestinationRegister);
+                MixUShort(ref hash, (ushort)instruction.ImmediateX);
+                MixUShort(ref hash, (ushort)instruction.ImmediateY);
+                MixULong(ref hash, instruction.Payload);
+            }
+
+            return hash;
+        }
+
+        private static void MixString(ref uint hash, string value)
+        {
+            MixInt(ref hash, value.Length);
+            for (var index = 0; index < value.Length; index++)
+            {
+                MixUShort(ref hash, value[index]);
+            }
+        }
+
+        private static void MixInt(ref uint hash, int value)
+            => MixUInt(ref hash, unchecked((uint)value));
+
+        private static void MixUShort(ref uint hash, ushort value)
+        {
+            MixByte(ref hash, (byte)value);
+            MixByte(ref hash, (byte)(value >> 8));
+        }
+
+        private static void MixUInt(ref uint hash, uint value)
+        {
+            MixUShort(ref hash, (ushort)value);
+            MixUShort(ref hash, (ushort)(value >> 16));
+        }
+
+        private static void MixULong(ref uint hash, ulong value)
+        {
+            MixUInt(ref hash, (uint)value);
+            MixUInt(ref hash, (uint)(value >> 32));
+        }
+
+        private static void MixByte(ref uint hash, byte value)
+        {
+            hash ^= value;
+            hash *= 16777619u;
+        }
 
         private static GameEventScriptTextTable BuildTextTable(IReadOnlyList<string> values)
         {

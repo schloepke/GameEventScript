@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
@@ -15,7 +14,7 @@ internal sealed partial class GesBinaryBuilder
 
     private readonly List<RoutinePlan> _routines = [];
     private readonly Stack<int> _routineStack = [];
-    private readonly Stack<ScopePlan> _scopeStack = [];
+    private readonly List<ScopePlan> _scopeStack = [];
 
     private int CurrentRoutineId => _routineStack.Count == 0 ? NoRoutineId : _routineStack.Peek();
 
@@ -65,14 +64,15 @@ internal sealed partial class GesBinaryBuilder
         var parentRoutineId = CurrentRoutineId;
         var routineId = _routines.Count;
         var entryLabel = AddLabel(name);
-        var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, argumentNames?.ToArray() ?? []);
+        var routine = new RoutinePlan(routineId, parentRoutineId, kind, name, entryLabel, CopyStringList(argumentNames));
         _routines.Add(routine);
         _routineStack.Push(routineId);
         MarkLabel(entryLabel);
 
         var arguments = new List<GesRegisterRef>(routine.ArgumentNames.Count);
-        foreach (var argumentName in routine.ArgumentNames)
+        for (var index = 0; index < routine.ArgumentNames.Count; index++)
         {
+            var argumentName = routine.ArgumentNames[index];
             arguments.Add(AddRegister(argumentName));
         }
 
@@ -90,7 +90,7 @@ internal sealed partial class GesBinaryBuilder
     {
         if (_routineStack.Count == 0) throw new InvalidOperationException("Cannot begin a lexical scope outside a routine.");
         var scope = new ScopePlan(_scopeStack.Count, CurrentRoutineId, string.IsNullOrWhiteSpace(name) ? null : name);
-        _scopeStack.Push(scope);
+        _scopeStack.Add(scope);
         return new GesBinaryLexicalScope(this, scope);
     }
 
@@ -101,9 +101,12 @@ internal sealed partial class GesBinaryBuilder
             throw new InvalidOperationException("Routine scopes must be closed in reverse creation order.");
         }
 
-        if (_scopeStack.Any(scope => scope.RoutineId == routineId))
+        for (var index = 0; index < _scopeStack.Count; index++)
         {
-            throw new InvalidOperationException($"Routine '{_routines[routineId].Name}' still has open lexical scopes.");
+            if (_scopeStack[index].RoutineId == routineId)
+            {
+                throw new InvalidOperationException($"Routine '{_routines[routineId].Name}' still has open lexical scopes.");
+            }
         }
 
         _routines[routineId].IsClosed = true;
@@ -112,20 +115,21 @@ internal sealed partial class GesBinaryBuilder
 
     private void EndLexicalScope(ScopePlan scope)
     {
-        if (_scopeStack.Count == 0 || !_scopeStack.Peek().Equals(scope))
+        if (_scopeStack.Count == 0 || !_scopeStack[^1].Equals(scope))
         {
             throw new InvalidOperationException("Lexical scopes must be closed in reverse creation order.");
         }
 
-        _scopeStack.Pop();
+        _scopeStack.RemoveAt(_scopeStack.Count - 1);
     }
 
     private void EnsureScopesClosed()
     {
         if (_scopeStack.Count > 0) throw new InvalidOperationException("Cannot build binary while lexical scopes are still open.");
         if (_routineStack.Count > 0) throw new InvalidOperationException("Cannot build binary while routines are still open.");
-        foreach (var routine in _routines)
+        for (var index = 0; index < _routines.Count; index++)
         {
+            var routine = _routines[index];
             if (!routine.IsClosed) throw new InvalidOperationException($"Routine '{routine.Name}' was not closed.");
         }
     }
@@ -134,15 +138,18 @@ internal sealed partial class GesBinaryBuilder
         IReadOnlyList<PlanItem> items,
         IReadOnlyDictionary<int, ushort> registerMap)
     {
-        if (_routines.Count == 0) return items.ToArray();
+        if (_routines.Count == 0) return CopyPlanItems(items);
 
-        var result = items.ToArray();
-        foreach (var routine in _routines)
+        var result = CopyPlanItems(items);
+        for (var routineIndex = 0; routineIndex < _routines.Count; routineIndex++)
         {
+            var routine = _routines[routineIndex];
             var registerLocalsIndex = FindRoutineRegisterLocalsIndex(result, routine);
             var maxRegisterIndex = -1;
-            foreach (var register in _registers.Where(register => register.RoutineId == routine.Id))
+            for (var registerSymbolIndex = 0; registerSymbolIndex < _registers.Count; registerSymbolIndex++)
             {
+                var register = _registers[registerSymbolIndex];
+                if (register.RoutineId != routine.Id) continue;
                 if (registerMap.TryGetValue(register.Id, out var registerIndex) && registerIndex > maxRegisterIndex)
                 {
                     maxRegisterIndex = registerIndex;

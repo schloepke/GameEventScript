@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
@@ -23,7 +22,7 @@ internal sealed partial class GesBinaryBuilder
         EnsureScopesClosed();
         var context = new RewriteContext(this, LinearizePlanItems());
         pass.Rewrite(context);
-        _rewrittenItems = context.ToArray();
+        _rewrittenItems = context.CopyItems();
         return this;
     }
 
@@ -33,19 +32,20 @@ internal sealed partial class GesBinaryBuilder
         EnsureScopesClosed();
         var context = new RewriteContext(this, LinearizePlanItems());
         rewrite(context);
-        _rewrittenItems = context.ToArray();
+        _rewrittenItems = context.CopyItems();
         return this;
     }
 
     private PlanItem[] RunDefaultOptimizationPasses(IReadOnlyList<PlanItem> items)
     {
         var context = new RewriteContext(this, items);
-        foreach (var pass in DefaultOptimizationPasses)
+        for (var index = 0; index < DefaultOptimizationPasses.Length; index++)
         {
+            var pass = DefaultOptimizationPasses[index];
             pass.Rewrite(context);
         }
 
-        return context.ToArray();
+        return context.CopyItems();
     }
 
     internal sealed class RewriteContext
@@ -56,7 +56,11 @@ internal sealed partial class GesBinaryBuilder
         internal RewriteContext(GesBinaryBuilder builder, IReadOnlyList<PlanItem> items)
         {
             _builder = builder;
-            _items = items.ToList();
+            _items = new List<PlanItem>(items.Count);
+            for (var index = 0; index < items.Count; index++)
+            {
+                _items.Add(items[index]);
+            }
         }
 
         internal IReadOnlyList<PlanItem> Items => _items;
@@ -169,10 +173,11 @@ internal sealed partial class GesBinaryBuilder
         {
             _builder.RequireRegister(register);
             var count = 0;
-            foreach (var item in _items)
+            for (var index = 0; index < _items.Count; index++)
             {
+                var item = _items[index];
                 if (item.Instruction is not { } instruction) continue;
-                count += instruction.ReadRegisters().Count(value => value.Id == register.Id);
+                count += instruction.CountRegisterReads(register);
             }
 
             return count;
@@ -182,8 +187,9 @@ internal sealed partial class GesBinaryBuilder
         {
             _builder.RequireRegister(register);
             var count = 0;
-            foreach (var item in _items)
+            for (var index = 0; index < _items.Count; index++)
             {
+                var item = _items[index];
                 if (item.Instruction?.Destination.Kind == GesOperandKind.Register &&
                     item.Instruction.Destination.RegisterRef.Id == register.Id)
                 {
@@ -256,7 +262,17 @@ internal sealed partial class GesBinaryBuilder
             _items.RemoveAt(index);
         }
 
-        internal PlanItem[] ToArray() => _items.ToArray();
+        internal PlanItem[] CopyItems()
+        {
+            if (_items.Count == 0) return [];
+            var result = new PlanItem[_items.Count];
+            for (var index = 0; index < _items.Count; index++)
+            {
+                result[index] = _items[index];
+            }
+
+            return result;
+        }
 
         private InstructionPlan? FindPreviousInstruction(int index)
         {
@@ -353,7 +369,7 @@ internal sealed partial class GesBinaryBuilder
                     move.Destination.Kind != GesOperandKind.Register ||
                     instruction.Destination.RegisterRef.Id != move.X.RegisterRef.Id ||
                     !context.IsTemporary(instruction.Destination.RegisterRef) ||
-                    instruction.ReadRegisters().Any(register => register.Id == move.Destination.RegisterRef.Id) ||
+                    instruction.ReadsRegister(move.Destination.RegisterRef) ||
                     context.CountRegisterReads(instruction.Destination.RegisterRef) != 1 ||
                     context.CountRegisterWrites(instruction.Destination.RegisterRef) != 1)
                 {

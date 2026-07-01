@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
@@ -49,7 +49,21 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// </param>
     /// <returns>A new instance of the <see cref="GameEventScriptMessage"/> class constructed with the specified name and arguments.</returns>
     public static GameEventScriptMessage Create(string name, params (string name, GameEventScriptValue value)[] arguments)
-        => new(name, GameEventScriptNamedArguments.CreateOrdered(arguments.Select(pair => new KeyValuePair<string, GameEventScriptValue>(pair.name, pair.value)).ToArray()));
+    {
+        if (arguments.Length == 0)
+        {
+            return new GameEventScriptMessage(name, GameEventScriptNamedArguments.Empty);
+        }
+
+        var pairs = new KeyValuePair<string, GameEventScriptValue>[arguments.Length];
+        for (var index = 0; index < arguments.Length; index++)
+        {
+            var argument = arguments[index];
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(argument.name, argument.value);
+        }
+
+        return new GameEventScriptMessage(name, GameEventScriptNamedArguments.CreateOrdered(pairs));
+    }
 
     /// <summary>
     /// Gets the name of the message associated with the GameEventScriptMessage instance.
@@ -92,7 +106,24 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     public override string ToString()
     {
         var message = Arguments.Count == 0 ? Name : $"{Name}({Arguments})";
-        return Tags.Count == 0 ? message : $"{message} with {string.Join(", ", Tags.Select(tag => $"#{tag}"))}";
+        if (Tags.Count == 0)
+        {
+            return message;
+        }
+
+        var builder = new StringBuilder(message);
+        builder.Append(" with ");
+        for (var index = 0; index < Tags.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append('#').Append(Tags[index]);
+        }
+
+        return builder.ToString();
     }
 
     /// <summary>
@@ -103,7 +134,20 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     public bool HasTag(string tag)
     {
         var normalized = NormalizeTagName(tag);
-        return !string.IsNullOrEmpty(normalized) && Tags.Contains(normalized, StringComparer.Ordinal);
+        if (string.IsNullOrEmpty(normalized))
+        {
+            return false;
+        }
+
+        for (var index = 0; index < Tags.Count; index++)
+        {
+            if (string.Equals(Tags[index], normalized, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /// <inheritdoc />
@@ -112,7 +156,15 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
         if (other is null) return false;
         if (ReferenceEquals(this, other)) return true;
         if (!string.Equals(SignatureId, other.SignatureId, StringComparison.Ordinal)) return false;
-        if (!Tags.SequenceEqual(other.Tags, StringComparer.Ordinal)) return false;
+        if (Tags.Count != other.Tags.Count) return false;
+        for (var index = 0; index < Tags.Count; index++)
+        {
+            if (!string.Equals(Tags[index], other.Tags[index], StringComparison.Ordinal))
+            {
+                return false;
+            }
+        }
+
         if (Arguments.Count != other.Arguments.Count) return false;
 
         for (var index = 0; index < Arguments.Count; index++)
@@ -135,14 +187,14 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     {
         var hash = new HashCode();
         hash.Add(SignatureId, StringComparer.Ordinal);
-        foreach (var value in Arguments.Values)
+        for (var index = 0; index < Arguments.Count; index++)
         {
-            hash.Add(value);
+            hash.Add(Arguments[index]);
         }
 
-        foreach (var tag in Tags)
+        for (var index = 0; index < Tags.Count; index++)
         {
-            hash.Add(tag, StringComparer.Ordinal);
+            hash.Add(Tags[index], StringComparer.Ordinal);
         }
 
         return hash.ToHashCode();
@@ -153,7 +205,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// </summary>
     /// <param name="tags">The normalized tag names or tag literals using a leading '#'.</param>
     /// <returns>A message copy with the merged tags.</returns>
-    public GameEventScriptMessage WithTags(IEnumerable<string>? tags) => new(Name, Arguments, SignatureId, NormalizeTags(Tags.Concat(tags ?? [])));
+    public GameEventScriptMessage WithTags(IEnumerable<string>? tags) => new(Name, Arguments, SignatureId, MergeTags(Tags, tags));
 
     /// <summary>
     /// Creates a copy of this message with the provided delivery tags merged into the existing tag set.
@@ -210,6 +262,62 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
             normalizedTags.Add(normalized);
         }
 
-        return normalizedTags.Count == 0 ? [] : normalizedTags.ToArray();
+        if (normalizedTags.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new string[normalizedTags.Count];
+        for (var index = 0; index < normalizedTags.Count; index++)
+        {
+            result[index] = normalizedTags[index];
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<string> MergeTags(IReadOnlyList<string> existingTags, IEnumerable<string>? newTags)
+    {
+        if (newTags is null)
+        {
+            return existingTags;
+        }
+
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var mergedTags = new List<string>(existingTags.Count);
+        for (var index = 0; index < existingTags.Count; index++)
+        {
+            var existingTag = existingTags[index];
+            if (existingTag.Length == 0 || !seen.Add(existingTag))
+            {
+                continue;
+            }
+
+            mergedTags.Add(existingTag);
+        }
+
+        foreach (var tag in newTags)
+        {
+            var normalized = NormalizeTagName(tag);
+            if (normalized.Length == 0 || !seen.Add(normalized))
+            {
+                continue;
+            }
+
+            mergedTags.Add(normalized);
+        }
+
+        if (mergedTags.Count == existingTags.Count)
+        {
+            return existingTags;
+        }
+
+        var result = new string[mergedTags.Count];
+        for (var index = 0; index < mergedTags.Count; index++)
+        {
+            result[index] = mergedTags[index];
+        }
+
+        return result;
     }
 }

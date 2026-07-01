@@ -499,15 +499,13 @@ internal static class GesVmRegisterPatterns
     {
         var buffer = Array.Empty<GesValue>();
         var length = 0;
-        var item = new GesValue();
         try
         {
-            while (iterator.TryNext(ref item))
+            GesIteratorResult item;
+            while ((item = iterator.Next()).HasValue)
             {
                 if (length == buffer.Length) Array.Resize(ref buffer, buffer.Length == 0 ? 8 : buffer.Length * 2);
-                buffer[length++] = item;
-                item = new GesValue();
-                item.SetNothing();
+                buffer[length++] = item.Value;
             }
         }
         finally

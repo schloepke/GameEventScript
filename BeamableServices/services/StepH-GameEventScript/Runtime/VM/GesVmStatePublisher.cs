@@ -12,19 +12,17 @@ internal static class GesVmStatePublisher
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
-        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
-        var messageName = vmState.FetchStringByPointer(signature.Name);
+        if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(signature.ArgumentNames[index], GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
         }
 
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs);
-            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, arguments.SignatureLabels);
-            var message = GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId);
+            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, signature.ArgumentNames);
+            var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
             return publish ? session.Publish(message) : session.Emit(message);
         }
         catch (ArgumentException)
@@ -36,12 +34,11 @@ internal static class GesVmStatePublisher
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
-        if (signature.Kind != GameEventScriptBinaryBindKind.OutboundMessage || argumentRegisters.Length != signature.ArgumentNames.Count) return false;
-        var messageName = vmState.FetchStringByPointer(signature.Name);
+        if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
         var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(signature.ArgumentNames[index]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
+            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(signature.ArgumentNames[index], GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
         }
 
         var tags = new List<string>(tagRegisters.Length);
@@ -52,9 +49,8 @@ internal static class GesVmStatePublisher
 
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs);
-            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, arguments.SignatureLabels);
-            var message = GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId, tags);
+            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, signature.ArgumentNames);
+            var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId, tags);
             return publish ? session.Publish(message) : session.Emit(message);
         }
         catch (ArgumentException)

@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptMessageSignature;
 
@@ -28,6 +27,8 @@ internal sealed class GameEventScriptRuntimeHost
     private bool _liveStateInitializationQueued;
     private bool _automaticDispatchScheduled;
     private long _nextRegistrationOrder;
+    private const int DispatchEnqueueMatched = 1;
+    private const int DispatchEnqueueAccepted = 2;
 
     internal GameEventScriptRuntimeHost(GameEventScriptRandomGenerator random, IGameEventScriptRuntimeObserver? runtimeObserver,
         IGameEventScriptExtensionRegistry? extensionRegistry,
@@ -53,14 +54,7 @@ internal sealed class GameEventScriptRuntimeHost
         _ = module ?? throw new ArgumentNullException(nameof(module));
         module.Bind(_extensionRegistry, _externalTypeRegistry);
 
-        var handlerEntries = module.Handlers.ToArray();
-        foreach (var handler in handlerEntries)
-        {
-            _ = handler ?? throw new ArgumentException("Module contains a null handler.", nameof(module));
-            _ = handler.Signature ?? throw new ArgumentException("Module contains a handler with a null signature.", nameof(module));
-        }
-
-        RegisterMany(handlerEntries, priority);
+        RegisterMany(module, priority);
         return this;
     }
 
@@ -109,14 +103,7 @@ internal sealed class GameEventScriptRuntimeHost
         _ = module ?? throw new ArgumentNullException(nameof(module));
         module.Bind(_extensionRegistry, _externalTypeRegistry);
 
-        var handlerEntries = module.Handlers.ToArray();
-        foreach (var handler in handlerEntries)
-        {
-            _ = handler ?? throw new ArgumentException("Module contains a null handler.", nameof(module));
-            _ = handler.Signature ?? throw new ArgumentException("Module contains a handler with a null signature.", nameof(module));
-        }
-
-        RegisterMany(handlerEntries, priority);
+        RegisterMany(module, priority);
         return this;
     }
 
@@ -328,13 +315,15 @@ internal sealed class GameEventScriptRuntimeHost
     }
 
     private void RegisterMany(
-        IReadOnlyList<GameEventScriptMessageHandlerDescriptor> handlers,
+        IGameEventScriptModule module,
         int priority)
     {
         lock (_dispatchGate)
         {
-            foreach (var handler in handlers)
+            foreach (var handler in module.Handlers)
             {
+                _ = handler ?? throw new ArgumentException("Module contains a null handler.", nameof(module));
+                _ = handler.Signature ?? throw new ArgumentException("Module contains a handler with a null signature.", nameof(module));
                 RegisterLocked(handler, priority);
             }
         }
@@ -553,25 +542,16 @@ internal sealed class GameEventScriptRuntimeHost
             return TryEnqueueUndeliverableInvocation(state, message);
         }
 
-        var accepted = false;
-        var matched = false;
-        foreach (var subscription in EnumerateDispatchSubscriptions(
-                     exactSubscriptions,
-                     hasExactSubscriptions,
-                     nameSubscriptions,
-                     hasNameSubscriptions))
-        {
-            if (!subscription.MatchesTags(message))
-            {
-                continue;
-            }
+        var enqueueResult = EnqueueMatchingDispatchSubscriptions(
+            state,
+            message,
+            exactSubscriptions,
+            hasExactSubscriptions,
+            nameSubscriptions,
+            hasNameSubscriptions);
 
-            matched = true;
-            accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
-        }
-
-        return matched
-            ? accepted
+        return (enqueueResult & DispatchEnqueueMatched) != 0
+            ? (enqueueResult & DispatchEnqueueAccepted) != 0
             : TryEnqueueUndeliverableInvocation(state, message);
     }
 
@@ -591,24 +571,16 @@ internal sealed class GameEventScriptRuntimeHost
             return false;
         }
 
-        var accepted = false;
-        var matched = false;
-        foreach (var subscription in EnumerateDispatchSubscriptions(
-                     exactSubscriptions,
-                     hasExactSubscriptions,
-                     nameSubscriptions,
-                     hasNameSubscriptions))
-        {
-            if (!subscription.MatchesTags(message))
-            {
-                continue;
-            }
+        var enqueueResult = EnqueueMatchingDispatchSubscriptions(
+            state,
+            message,
+            exactSubscriptions,
+            hasExactSubscriptions,
+            nameSubscriptions,
+            hasNameSubscriptions);
 
-            matched = true;
-            accepted |= state.Enqueue(new QueuedInvocation(message, subscription));
-        }
-
-        return matched && accepted;
+        return (enqueueResult & DispatchEnqueueMatched) != 0 &&
+               (enqueueResult & DispatchEnqueueAccepted) != 0;
     }
 
     private void EnqueueInitializationInvocations(GameEventScriptHostRunState state)
@@ -636,60 +608,126 @@ internal sealed class GameEventScriptRuntimeHost
         }
     }
 
-    private static IEnumerable<MessageSubscription> EnumerateDispatchSubscriptions(
+    private static int EnqueueMatchingDispatchSubscriptions(
+        GameEventScriptHostRunState state,
+        GameEventScriptMessage message,
         MessageSubscription[] exactSubscriptions,
         bool hasExactSubscriptions,
         MessageSubscription[] nameSubscriptions,
         bool hasNameSubscriptions)
     {
+        var result = 0;
         if (!hasExactSubscriptions)
         {
-            foreach (var subscription in nameSubscriptions)
+            for (var index = 0; index < nameSubscriptions.Length; index++)
             {
-                yield return subscription;
+                var subscription = nameSubscriptions[index];
+                if (!subscription.MatchesTags(message))
+                {
+                    continue;
+                }
+
+                result |= DispatchEnqueueMatched;
+                if (state.Enqueue(new QueuedInvocation(message, subscription)))
+                {
+                    result |= DispatchEnqueueAccepted;
+                }
             }
 
-            yield break;
+            return result;
         }
 
         if (!hasNameSubscriptions)
         {
-            foreach (var subscription in exactSubscriptions)
+            for (var index = 0; index < exactSubscriptions.Length; index++)
             {
-                yield return subscription;
+                var subscription = exactSubscriptions[index];
+                if (!subscription.MatchesTags(message))
+                {
+                    continue;
+                }
+
+                result |= DispatchEnqueueMatched;
+                if (state.Enqueue(new QueuedInvocation(message, subscription)))
+                {
+                    result |= DispatchEnqueueAccepted;
+                }
             }
 
-            yield break;
+            return result;
         }
 
         var exactIndex = 0;
         var nameIndex = 0;
         while (exactIndex < exactSubscriptions.Length && nameIndex < nameSubscriptions.Length)
         {
+            MessageSubscription subscription;
             if (CompareDispatchOrder(exactSubscriptions[exactIndex], nameSubscriptions[nameIndex]) <= 0)
             {
-                yield return exactSubscriptions[exactIndex++];
+                subscription = exactSubscriptions[exactIndex++];
             }
             else
             {
-                yield return nameSubscriptions[nameIndex++];
+                subscription = nameSubscriptions[nameIndex++];
+            }
+
+            if (!subscription.MatchesTags(message))
+            {
+                continue;
+            }
+
+            result |= DispatchEnqueueMatched;
+            if (state.Enqueue(new QueuedInvocation(message, subscription)))
+            {
+                result |= DispatchEnqueueAccepted;
             }
         }
 
         while (exactIndex < exactSubscriptions.Length)
         {
-            yield return exactSubscriptions[exactIndex++];
+            var subscription = exactSubscriptions[exactIndex++];
+            if (!subscription.MatchesTags(message))
+            {
+                continue;
+            }
+
+            result |= DispatchEnqueueMatched;
+            if (state.Enqueue(new QueuedInvocation(message, subscription)))
+            {
+                result |= DispatchEnqueueAccepted;
+            }
         }
 
         while (nameIndex < nameSubscriptions.Length)
         {
-            yield return nameSubscriptions[nameIndex++];
+            var subscription = nameSubscriptions[nameIndex++];
+            if (!subscription.MatchesTags(message))
+            {
+                continue;
+            }
+
+            result |= DispatchEnqueueMatched;
+            if (state.Enqueue(new QueuedInvocation(message, subscription)))
+            {
+                result |= DispatchEnqueueAccepted;
+            }
         }
+
+        return result;
     }
 
     private static MessageSubscription[] InsertSubscriptionByDispatchOrder(MessageSubscription[] handlers, MessageSubscription subscription)
     {
-        var insertIndex = Array.FindIndex(handlers, existing => CompareDispatchOrder(subscription, existing) < 0);
+        var insertIndex = -1;
+        for (var index = 0; index < handlers.Length; index++)
+        {
+            if (CompareDispatchOrder(subscription, handlers[index]) < 0)
+            {
+                insertIndex = index;
+                break;
+            }
+        }
+
         var result = new MessageSubscription[handlers.Length + 1];
         if (insertIndex < 0)
         {

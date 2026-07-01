@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 
 namespace StepH.GameEventScript.Api;
 
@@ -99,9 +98,22 @@ internal static class GameEventScriptExternalTypeNames
     }
 
     private static bool IsLetterOnlyLowerStart(string value)
-        => value.Length > 0 &&
-           char.IsLower(value[0]) &&
-           value.All(char.IsLetter);
+    {
+        if (value.Length == 0 || !char.IsLower(value[0]))
+        {
+            return false;
+        }
+
+        for (var index = 0; index < value.Length; index++)
+        {
+            if (!char.IsLetter(value[index]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static bool IsIdentifier(string value)
     {
@@ -113,7 +125,15 @@ internal static class GameEventScriptExternalTypeNames
         var underscore = value.LastIndexOf('_');
         if (underscore < 0)
         {
-            return value.All(char.IsLetter);
+            for (var index = 0; index < value.Length; index++)
+            {
+                if (!char.IsLetter(value[index]))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         if (underscore == 0 || underscore == value.Length - 1)
@@ -123,7 +143,23 @@ internal static class GameEventScriptExternalTypeNames
 
         var prefix = value[..underscore];
         var suffix = value[(underscore + 1)..];
-        if (!prefix.All(char.IsLetter) || !suffix.All(char.IsDigit))
+        for (var index = 0; index < prefix.Length; index++)
+        {
+            if (!char.IsLetter(prefix[index]))
+            {
+                return false;
+            }
+        }
+
+        for (var index = 0; index < suffix.Length; index++)
+        {
+            if (!char.IsDigit(suffix[index]))
+            {
+                return false;
+            }
+        }
+
+        if (suffix.Length == 0)
         {
             return false;
         }

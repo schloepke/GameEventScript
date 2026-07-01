@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -84,9 +83,9 @@ public readonly struct GameEventScriptBinaryBindTable
         IReadOnlyList<ushort>? requiredTags = null,
         IReadOnlyList<ushort>? excludedTags = null)
     {
-        private readonly ushort[]? _argumentNames = argumentNames?.ToArray() ?? [];
-        private readonly ushort[]? _requiredTags = requiredTags?.ToArray() ?? [];
-        private readonly ushort[]? _excludedTags = excludedTags?.ToArray() ?? [];
+        private readonly ushort[]? _argumentNames = Copy(argumentNames);
+        private readonly ushort[]? _requiredTags = Copy(requiredTags);
+        private readonly ushort[]? _excludedTags = Copy(excludedTags);
 
         public ushort Id { get; } = id;
 
@@ -101,13 +100,29 @@ public readonly struct GameEventScriptBinaryBindTable
         public IReadOnlyList<ushort> ExcludedTags => _excludedTags ?? [];
 
         public ushort EntryAddress { get; } = entryAddress;
+
+        private static ushort[] Copy(IReadOnlyList<ushort>? values)
+        {
+            if (values is null || values.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new ushort[values.Count];
+            for (var index = 0; index < values.Count; index++)
+            {
+                result[index] = values[index];
+            }
+
+            return result;
+        }
     }
 
     private readonly GameEventScriptBinaryBindEntry[]? _entries;
 
     public GameEventScriptBinaryBindTable(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
     {
-        _entries = entries?.ToArray() ?? [];
+        _entries = Copy(entries);
         EntryCount = ToEntryCount(_entries.Length);
     }
 
@@ -116,6 +131,22 @@ public readonly struct GameEventScriptBinaryBindTable
     public IReadOnlyList<GameEventScriptBinaryBindEntry> Entries => _entries ?? [];
 
     private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptBinary tables cannot exceed 65535 entries.") : checked((ushort)count);
+
+    private static GameEventScriptBinaryBindEntry[] Copy(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
+    {
+        if (entries is null || entries.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new GameEventScriptBinaryBindEntry[entries.Count];
+        for (var index = 0; index < entries.Count; index++)
+        {
+            result[index] = entries[index];
+        }
+
+        return result;
+    }
     
 }
 

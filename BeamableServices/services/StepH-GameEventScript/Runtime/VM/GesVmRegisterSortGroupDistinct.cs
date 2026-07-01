@@ -84,17 +84,17 @@ internal static class GesVmRegisterSortGroupDistinct
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
             {
-                var item = new GesValue();
                 var values = new GesValue[16];
                 var count = 0;
                 try
                 {
-                    while (iterator.TryNext(ref item))
+                    GesIteratorResult item;
+                    while ((item = iterator.Next()).HasValue)
                     {
                         var found = false;
                         for (var i = 0; i < count; i++)
                         {
-                            if (!values[i].EqualsValue(in item)) continue;
+                            if (!values[i].EqualsValue(in item.Value)) continue;
                             found = true;
                             break;
                         }
@@ -107,7 +107,7 @@ internal static class GesVmRegisterSortGroupDistinct
                             values = resized;
                         }
 
-                        values[count++] = item;
+                        values[count++] = item.Value;
                     }
                 }
                 finally
@@ -228,12 +228,12 @@ internal static class GesVmRegisterSortGroupDistinct
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
             {
-                var item = new GesValue();
                 var values = new GesValue[16];
                 var count = 0;
                 try
                 {
-                    while (iterator.TryNext(ref item))
+                    GesIteratorResult item;
+                    while ((item = iterator.Next()).HasValue)
                     {
                         if (count == values.Length)
                         {
@@ -242,7 +242,7 @@ internal static class GesVmRegisterSortGroupDistinct
                             values = resized;
                         }
 
-                        values[count++] = item;
+                        values[count++] = item.Value;
                     }
                 }
                 finally

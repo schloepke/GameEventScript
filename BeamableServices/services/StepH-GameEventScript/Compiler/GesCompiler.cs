@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.VM;
@@ -42,12 +41,193 @@ internal static class GesCompiler
             return _builder.Build();
         }
 
+        private static TypeDefinitionNode[] ReadOrderedTypes(IReadOnlyDictionary<string, TypeDefinitionNode> source)
+        {
+            if (source.Count == 0) return [];
+            var result = new TypeDefinitionNode[source.Count];
+            var offset = 0;
+            if (source is Dictionary<string, TypeDefinitionNode> dictionary)
+            {
+                var enumerator = dictionary.GetEnumerator();
+                while (enumerator.MoveNext()) result[offset++] = enumerator.Current.Value;
+            }
+            else
+            {
+                using var enumerator = source.GetEnumerator();
+                while (enumerator.MoveNext()) result[offset++] = enumerator.Current.Value;
+            }
+
+            Array.Sort(result, static (left, right) => string.Compare(left.Name, right.Name, StringComparison.Ordinal));
+            return result;
+        }
+
+        private static KeyValuePair<string, IReadOnlyList<EventHandlerNode>>[] ReadOrderedHandlerGroups(IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> source)
+        {
+            if (source.Count == 0) return [];
+            var result = new KeyValuePair<string, IReadOnlyList<EventHandlerNode>>[source.Count];
+            var offset = 0;
+            if (source is Dictionary<string, IReadOnlyList<EventHandlerNode>> dictionary)
+            {
+                var enumerator = dictionary.GetEnumerator();
+                while (enumerator.MoveNext()) result[offset++] = enumerator.Current;
+            }
+            else
+            {
+                using var enumerator = source.GetEnumerator();
+                while (enumerator.MoveNext()) result[offset++] = enumerator.Current;
+            }
+
+            Array.Sort(result, static (left, right) => string.Compare(left.Key, right.Key, StringComparison.Ordinal));
+            return result;
+        }
+
+        private static GesCallableDefinition[] ReadOrderedCallables(IReadOnlyDictionary<string, GesCallableDefinition> source)
+        {
+            if (source.Count == 0) return [];
+            var result = new GesCallableDefinition[source.Count];
+            var offset = 0;
+            if (source is Dictionary<string, GesCallableDefinition> dictionary)
+            {
+                var enumerator = dictionary.GetEnumerator();
+                while (enumerator.MoveNext()) result[offset++] = enumerator.Current.Value;
+            }
+            else
+            {
+                using var enumerator = source.GetEnumerator();
+                while (enumerator.MoveNext()) result[offset++] = enumerator.Current.Value;
+            }
+
+            Array.Sort(result, static (left, right) => string.Compare(left.Name, right.Name, StringComparison.Ordinal));
+            return result;
+        }
+
+        private static string[] ReadConstructorArgumentNames(IReadOnlyList<TypeFieldDefinitionNode> fields)
+        {
+            var count = CountConstructorParameters(fields);
+            if (count == 0) return [];
+            var result = new string[count];
+            var offset = 0;
+            for (var index = 0; index < fields.Count; index++)
+            {
+                var field = fields[index];
+                if (!field.IsConstructorParameter) continue;
+                result[offset++] = field.ConstructorLabel!;
+            }
+
+            return result;
+        }
+
+        private static string[] ReadFieldNames(IReadOnlyList<TypeFieldDefinitionNode> fields)
+        {
+            if (fields.Count == 0) return [];
+            var result = new string[fields.Count];
+            for (var index = 0; index < fields.Count; index++)
+            {
+                result[index] = fields[index].Name;
+            }
+
+            return result;
+        }
+
+        private static string[] ReadArgumentNames(IReadOnlyList<ArgumentNode> arguments)
+        {
+            if (arguments.Count == 0) return [];
+            var result = new string[arguments.Count];
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                result[index] = arguments[index].Name;
+            }
+
+            return result;
+        }
+
+        private static string[] ReadMapKeys(IReadOnlyList<MapEntryNode> entries)
+        {
+            if (entries.Count == 0) return [];
+            var result = new string[entries.Count];
+            for (var index = 0; index < entries.Count; index++)
+            {
+                result[index] = entries[index].Key;
+            }
+
+            return result;
+        }
+
+        private GesRegisterRef[] EmitExpressionRegisters(IReadOnlyList<ExpressionNode> expressions, LoweringContext context, ExpressionState state)
+        {
+            if (expressions.Count == 0) return [];
+            var result = new GesRegisterRef[expressions.Count];
+            for (var index = 0; index < expressions.Count; index++)
+            {
+                result[index] = EmitExpressionForRead(expressions[index], context, state);
+            }
+
+            return result;
+        }
+
+        private GesRegisterRef[] EmitArgumentExpressionRegisters(IReadOnlyList<ArgumentNode> arguments, LoweringContext context, ExpressionState state)
+        {
+            if (arguments.Count == 0) return [];
+            var result = new GesRegisterRef[arguments.Count];
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                result[index] = EmitExpressionForRead(arguments[index].Expression, context, state);
+            }
+
+            return result;
+        }
+
+        private static int CountConstructorParameters(IReadOnlyList<TypeFieldDefinitionNode> fields)
+        {
+            var count = 0;
+            for (var index = 0; index < fields.Count; index++)
+            {
+                if (fields[index].IsConstructorParameter) count++;
+            }
+
+            return count;
+        }
+
+        private static ArgumentNode? FindUnlabeledArgument(IReadOnlyList<ArgumentNode> arguments, int unlabeledIndex)
+        {
+            var currentUnlabeledIndex = 0;
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                var argument = arguments[index];
+                if (argument.Label is not null) continue;
+                if (currentUnlabeledIndex == unlabeledIndex) return argument;
+                currentUnlabeledIndex++;
+            }
+
+            return null;
+        }
+
+        private static ArgumentNode? FindLabeledArgument(IReadOnlyList<ArgumentNode> arguments, string label)
+        {
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                var argument = arguments[index];
+                if (argument.Label is not null && string.Equals(argument.Name, label, StringComparison.Ordinal)) return argument;
+            }
+
+            return null;
+        }
+
+        private static string ReadSingleOrDefault(IReadOnlyList<string> values, string fallback)
+        {
+            if (values.Count == 0) return fallback;
+            if (values.Count == 1) return values[0];
+            throw new GameEventScriptCompileException("Message-name handler can only have one message parameter.");
+        }
+
         private void EmitRecordConstructors()
         {
-            foreach (var type in module.TypeDefinitions.Values.OrderBy(type => type.Name, StringComparer.Ordinal))
+            var orderedTypes = ReadOrderedTypes(module.TypeDefinitions);
+            for (var typeIndex = 0; typeIndex < orderedTypes.Length; typeIndex++)
             {
+                var type = orderedTypes[typeIndex];
                 using var sourceRange = _builder.SourceRange(type.SourceRange);
-                var argumentNames = type.Fields.Where(field => field.IsConstructorParameter).Select(field => field.ConstructorLabel!).ToArray();
+                var argumentNames = ReadConstructorArgumentNames(type.Fields);
                 using var routine = _builder.BeginRecordConstructor(type.Name, argumentNames);
                 _recordConstructors[type.Name] = routine.Bind;
 
@@ -87,13 +267,13 @@ internal static class GesCompiler
                     }
                 }
 
-                foreach (var fieldRegister in fieldRegisters)
+                for (var fieldIndex = 0; fieldIndex < fieldRegisters.Length; fieldIndex++)
                 {
-                    _builder.StageRegister(fieldRegister);
+                    _builder.StageRegister(fieldRegisters[fieldIndex]);
                 }
 
                 var map = state.AllocateTemporary(_builder, context);
-                _builder.CreateMap(map, type.Fields.Select(field => field.Name).ToArray());
+                _builder.CreateMap(map, ReadFieldNames(type.Fields));
                 var record = state.AllocateTemporary(_builder, context);
                 _builder.CreateRecordValue(record, map, type.Name);
                 _builder.ReturnValue(record);
@@ -102,14 +282,16 @@ internal static class GesCompiler
 
         private void EmitHandlers()
         {
-            foreach (var handlerGroup in module.Handlers.OrderBy(pair => pair.Key, StringComparer.Ordinal))
+            var orderedHandlerGroups = ReadOrderedHandlerGroups(module.Handlers);
+            for (var groupIndex = 0; groupIndex < orderedHandlerGroups.Length; groupIndex++)
             {
+                var handlerGroup = orderedHandlerGroups[groupIndex];
                 for (var handlerIndex = 0; handlerIndex < handlerGroup.Value.Count; handlerIndex++)
                 {
                     var handler = handlerGroup.Value[handlerIndex];
                     using var sourceRange = _builder.SourceRange(handler.SourceRange);
                     using var routine = handler.DispatchKind == EventHandlerDispatchKind.MessageName
-                        ? _builder.BeginMessageNameHandler(handler.Message, handler.Parameters.SingleOrDefault() ?? "message", (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags)
+                        ? _builder.BeginMessageNameHandler(handler.Message, ReadSingleOrDefault(handler.Parameters, "message"), (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags)
                         : _builder.BeginHandler(handler.Message, handler.SignatureLabels, (ushort)handlerIndex, handler.MatchingTags, handler.WithoutTags);
                     var context = LoweringContext.ForRoutine(routine);
                     for (var index = 0; index < handler.Parameters.Count; index++)
@@ -129,8 +311,10 @@ internal static class GesCompiler
 
         private void EmitCallables()
         {
-            foreach (var callable in module.Callables.Values.OrderBy(callable => callable.Name, StringComparer.Ordinal))
+            var orderedCallables = ReadOrderedCallables(module.Callables);
+            for (var callableIndex = 0; callableIndex < orderedCallables.Length; callableIndex++)
             {
+                var callable = orderedCallables[callableIndex];
                 var kind = callable.Kind == GameEventScriptCallableKind.PredicateCall
                     ? GameEventScriptBinaryBindKind.Predicate
                     : GameEventScriptBinaryBindKind.Function;
@@ -157,8 +341,9 @@ internal static class GesCompiler
 
         private void EmitStatements(IReadOnlyList<StatementNode> statements, LoweringContext context)
         {
-            foreach (var statement in statements)
+            for (var statementIndex = 0; statementIndex < statements.Count; statementIndex++)
             {
+                var statement = statements[statementIndex];
                 using var sourceRange = _builder.SourceRange(statement.SourceRange);
                 switch (statement)
                 {
@@ -250,11 +435,11 @@ internal static class GesCompiler
 
         private void EmitPublish(PublishStatementNode publish, LoweringContext context)
         {
-            var tags = publish.TagExpressions.Select(expression => EmitExpressionForRead(expression, context, new ExpressionState(context.RegisterCount))).ToArray();
+            var tags = EmitExpressionRegisters(publish.TagExpressions, context, new ExpressionState(context.RegisterCount));
             if (publish.MessageExpression is MessageLiteralExpressionNode message)
             {
-                var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
-                var arguments = message.Arguments.Select(argument => EmitExpressionForRead(argument.Expression, context, new ExpressionState(context.RegisterCount))).ToArray();
+                var argumentNames = ReadArgumentNames(message.Arguments);
+                var arguments = EmitArgumentExpressionRegisters(message.Arguments, context, new ExpressionState(context.RegisterCount));
                 var bind = ResolveOutboundMessage(message.Message, argumentNames);
                 if (publish.Kind == PublishStatementKind.Publish)
                 {
@@ -364,8 +549,8 @@ internal static class GesCompiler
             {
                 case MessageLiteralExpressionNode message:
                 {
-                    var argumentNames = message.Arguments.Select(argument => argument.Name).ToArray();
-                    var arguments = message.Arguments.Select(argument => EmitExpressionForRead(argument.Expression, context, state)).ToArray();
+                    var argumentNames = ReadArgumentNames(message.Arguments);
+                    var arguments = EmitArgumentExpressionRegisters(message.Arguments, context, state);
                     _builder.LoadMessage(destination, MessageShape(message.Message, argumentNames), arguments);
                     return destination;
                 }
@@ -380,8 +565,8 @@ internal static class GesCompiler
                     return destination;
 
                 case MapLiteralExpressionNode map:
-                    EmitStageArguments(map.Entries.Select(entry => entry.Value), context, state);
-                    _builder.CreateMap(destination, map.Entries.Select(entry => entry.Key).ToArray());
+                    EmitStageMapValues(map.Entries, context, state);
+                    _builder.CreateMap(destination, ReadMapKeys(map.Entries));
                     return destination;
 
                 case RangeExpressionNode range:
@@ -1550,8 +1735,9 @@ internal static class GesCompiler
         {
             var result = state.AllocateTemporary(_builder, context);
             _builder.LoadTrue(result);
-            foreach (var entry in pattern.Entries)
+            for (var entryIndex = 0; entryIndex < pattern.Entries.Count; entryIndex++)
             {
+                var entry = pattern.Entries[entryIndex];
                 var member = state.AllocateTemporary(_builder, context);
                 _builder.MemberAccess(member, entry.Key, target);
                 GesRegisterRef entryMatch;
@@ -1670,8 +1856,9 @@ internal static class GesCompiler
         private void EmitGuardedChoiceInto(GuardedChoiceExpressionNode guardedChoice, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             var endLabel = _builder.AddLabel("choice_end");
-            foreach (var branch in guardedChoice.Branches)
+            for (var branchIndex = 0; branchIndex < guardedChoice.Branches.Count; branchIndex++)
             {
+                var branch = guardedChoice.Branches[branchIndex];
                 var nextBranchLabel = _builder.AddLabel("choice_next");
                 var condition = EmitExpressionForRead(branch.ConditionExpression, context, state);
                 _builder.JumpIfNotTrue(condition, nextBranchLabel);
@@ -1734,10 +1921,48 @@ internal static class GesCompiler
                 : StageArgumentPlan.FromRegister(EmitExpressionForRead(expression, context, state));
         }
 
-        private void EmitStageArguments(IEnumerable<ExpressionNode> expressions, LoweringContext context, ExpressionState state)
+        private void EmitStageArguments(IReadOnlyList<ExpressionNode> expressions, LoweringContext context, ExpressionState state)
         {
-            var arguments = expressions.Select(expression => PrepareStageArgument(expression, context, state)).ToArray();
-            foreach (var argument in arguments) EmitStageArgument(argument);
+            if (expressions.Count == 0) return;
+            var arguments = new StageArgumentPlan[expressions.Count];
+            for (var index = 0; index < expressions.Count; index++)
+            {
+                arguments[index] = PrepareStageArgument(expressions[index], context, state);
+            }
+
+            EmitPreparedStageArguments(arguments);
+        }
+
+        private void EmitStageArgumentNodes(IReadOnlyList<ArgumentNode> arguments, LoweringContext context, ExpressionState state)
+        {
+            if (arguments.Count == 0) return;
+            var prepared = new StageArgumentPlan[arguments.Count];
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                prepared[index] = PrepareStageArgument(arguments[index].Expression, context, state);
+            }
+
+            EmitPreparedStageArguments(prepared);
+        }
+
+        private void EmitStageMapValues(IReadOnlyList<MapEntryNode> entries, LoweringContext context, ExpressionState state)
+        {
+            if (entries.Count == 0) return;
+            var arguments = new StageArgumentPlan[entries.Count];
+            for (var index = 0; index < entries.Count; index++)
+            {
+                arguments[index] = PrepareStageArgument(entries[index].Value, context, state);
+            }
+
+            EmitPreparedStageArguments(arguments);
+        }
+
+        private void EmitPreparedStageArguments(IReadOnlyList<StageArgumentPlan> arguments)
+        {
+            for (var index = 0; index < arguments.Count; index++)
+            {
+                EmitStageArgument(arguments[index]);
+            }
         }
 
         private void EmitStageArgument(StageArgumentPlan argument)
@@ -1834,8 +2059,9 @@ internal static class GesCompiler
             if (context.ResolveHandlerSignature(call.Name) is { } signature &&
                 !CallArgumentsMatchHandlerSignature(call.ArgumentList.Arguments, signature))
             {
-                foreach (var argument in call.ArgumentList.Arguments)
+                for (var argumentIndex = 0; argumentIndex < call.ArgumentList.Arguments.Count; argumentIndex++)
                 {
+                    var argument = call.ArgumentList.Arguments[argumentIndex];
                     EmitExpressionForRead(argument.Expression, context, state);
                 }
 
@@ -1843,7 +2069,7 @@ internal static class GesCompiler
                 return;
             }
 
-            var arguments = call.Arguments.Select(argument => EmitExpressionForRead(argument, context, state)).ToArray();
+            var arguments = EmitExpressionRegisters(call.Arguments, context, state);
             _builder.BindHandler(destination, handler, arguments);
         }
 
@@ -1872,8 +2098,8 @@ internal static class GesCompiler
 
         private void EmitExtensionCallInto(ExtensionCallExpressionNode extensionCall, GesRegisterRef destination, LoweringContext context, ExpressionState state, bool isPredicate)
         {
-            var argumentNames = extensionCall.Arguments.Select(argument => argument.Name).ToArray();
-            var arguments = extensionCall.Arguments.Select(argument => EmitExpressionForRead(argument.Expression, context, state)).ToArray();
+            var argumentNames = ReadArgumentNames(extensionCall.Arguments);
+            var arguments = EmitArgumentExpressionRegisters(extensionCall.Arguments, context, state);
             var reference = new GameEventScriptExtensionReference(extensionCall.ExtensionName, extensionCall.FunctionName, argumentNames);
             EmitExtensionReferenceInto(reference, destination, arguments, isPredicate);
         }
@@ -1901,36 +2127,46 @@ internal static class GesCompiler
 
             if (module.TypeDefinitions.TryGetValue(constructor.TypeName, out var type))
             {
-                var labeled = constructor.Arguments.Where(argument => argument.Label is not null).ToDictionary(argument => argument.Name, StringComparer.Ordinal);
-                var unlabeled = constructor.Arguments.Where(argument => argument.Label is null).ToArray();
                 var unlabeledIndex = 0;
-                var stagedArguments = new List<StageArgumentPlan>();
-                foreach (var field in type.Fields)
+                var stagedArgumentCount = CountConstructorParameters(type.Fields);
+                var stagedArguments = stagedArgumentCount == 0 ? [] : new StageArgumentPlan[stagedArgumentCount];
+                var stagedArgumentIndex = 0;
+                for (var fieldIndex = 0; fieldIndex < type.Fields.Count; fieldIndex++)
                 {
+                    var field = type.Fields[fieldIndex];
                     if (!field.IsConstructorParameter) continue;
                     if (field.ConstructorLabel == GameEventScriptMessageSignature.UnlabeledParameterName)
                     {
-                        stagedArguments.Add(unlabeledIndex < unlabeled.Length ? PrepareStageArgument(unlabeled[unlabeledIndex++].Expression, context, state) : StageArgumentPlan.Nothing);
+                        var argument = FindUnlabeledArgument(constructor.Arguments, unlabeledIndex);
+                        if (argument is null)
+                        {
+                            stagedArguments[stagedArgumentIndex++] = StageArgumentPlan.Nothing;
+                        }
+                        else
+                        {
+                            unlabeledIndex++;
+                            stagedArguments[stagedArgumentIndex++] = PrepareStageArgument(argument.Expression, context, state);
+                        }
                     }
-                    else if (labeled.TryGetValue(field.ConstructorLabel!, out var argument))
+                    else if (FindLabeledArgument(constructor.Arguments, field.ConstructorLabel!) is { } argument)
                     {
-                        stagedArguments.Add(PrepareStageArgument(argument.Expression, context, state));
+                        stagedArguments[stagedArgumentIndex++] = PrepareStageArgument(argument.Expression, context, state);
                     }
                     else
                     {
-                        stagedArguments.Add(StageArgumentPlan.Nothing);
+                        stagedArguments[stagedArgumentIndex++] = StageArgumentPlan.Nothing;
                     }
                 }
 
-                foreach (var argument in stagedArguments) EmitStageArgument(argument);
+                EmitPreparedStageArguments(stagedArguments);
                 _builder.CreateRecord(destination, ResolveRecordConstructor(type));
                 return;
             }
 
             if (module.ExternalTypeDefinitions.ContainsKey(constructor.TypeName))
             {
-                var argumentNames = constructor.Arguments.Select(argument => argument.Name).ToArray();
-                EmitStageArguments(constructor.Arguments.Select(argument => argument.Expression), context, state);
+                var argumentNames = ReadArgumentNames(constructor.Arguments);
+                EmitStageArgumentNodes(constructor.Arguments, context, state);
                 _builder.CreateExternalType(destination, ResolveExternalTypeConstructor(constructor.TypeName, argumentNames), argumentNames);
                 return;
             }
@@ -1941,7 +2177,7 @@ internal static class GesCompiler
         private bool TryEmitSpatialConstructor(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             if (GetSpatialConstructorStageShape(constructor.Arguments) is not { } shape) return false;
-            EmitStageArguments(shape.Arguments.Select(argument => argument.Expression), context, state);
+            EmitStageArgumentNodes(shape.Arguments, context, state);
             if (constructor.TypeName == "point") _builder.CreatePoint(destination, (short)shape.StartComponent);
             else _builder.CreateVector(destination, (short)shape.StartComponent);
             return true;
@@ -2319,7 +2555,12 @@ internal static class GesCompiler
         private static (int StartComponent, IReadOnlyList<ArgumentNode> Arguments)? GetSpatialConstructorStageShape(IReadOnlyList<ArgumentNode> sourceArguments)
         {
             if (sourceArguments.Count == 0) return (0, sourceArguments);
-            var labeledCount = sourceArguments.Count(argument => argument.Label is not null);
+            var labeledCount = 0;
+            for (var index = 0; index < sourceArguments.Count; index++)
+            {
+                if (sourceArguments[index].Label is not null) labeledCount++;
+            }
+
             if (labeledCount == 0) return (0, sourceArguments);
             if (labeledCount != sourceArguments.Count) return null;
             var firstComponent = GetSpatialComponentIndex(sourceArguments[0].Label);

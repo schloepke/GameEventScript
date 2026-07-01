@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
@@ -28,8 +28,8 @@ public sealed class GameEventScriptExternalTypeDefinition
         IEnumerable<GameEventScriptExternalTypeConstructorDefinition> constructors)
         : this(
             name,
-            (fields ?? throw new ArgumentNullException(nameof(fields))).ToArray(),
-            (constructors ?? throw new ArgumentNullException(nameof(constructors))).ToArray(),
+            CopyFields(fields ?? throw new ArgumentNullException(nameof(fields))),
+            CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors))),
             new Dictionary<string, Func<object, GameEventScriptValue>>(StringComparer.Ordinal),
             new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal))
     {
@@ -62,13 +62,93 @@ public sealed class GameEventScriptExternalTypeDefinition
     internal bool HasConstructor(IReadOnlyCollection<string> argumentLabels)
     {
         var signatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(Name, argumentLabels);
-        return ConstructorBindings.ContainsKey(signatureId) ||
-               Constructors.Any(constructorDefinition => string.Equals(constructorDefinition.SignatureId, signatureId, StringComparison.Ordinal));
+        if (ConstructorBindings.ContainsKey(signatureId))
+        {
+            return true;
+        }
+
+        for (var index = 0; index < Constructors.Count; index++)
+        {
+            if (string.Equals(Constructors[index].SignatureId, signatureId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     internal GameEventScriptValue? GetField(string fieldName, object instance)
     {
         return FieldReaders.TryGetValue(fieldName, out var reader) ? reader(instance) : null;
+    }
+
+    private static GameEventScriptExternalTypeFieldDefinition[] CopyFields(IEnumerable<GameEventScriptExternalTypeFieldDefinition> fields)
+    {
+        if (fields is IReadOnlyCollection<GameEventScriptExternalTypeFieldDefinition> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new GameEventScriptExternalTypeFieldDefinition[collection.Count];
+            var index = 0;
+            foreach (var field in collection)
+            {
+                result[index++] = field;
+            }
+
+            return result;
+        }
+
+        var list = new List<GameEventScriptExternalTypeFieldDefinition>();
+        foreach (var field in fields)
+        {
+            list.Add(field);
+        }
+
+        var values = new GameEventScriptExternalTypeFieldDefinition[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            values[index] = list[index];
+        }
+
+        return values;
+    }
+
+    private static GameEventScriptExternalTypeConstructorDefinition[] CopyConstructors(IEnumerable<GameEventScriptExternalTypeConstructorDefinition> constructors)
+    {
+        if (constructors is IReadOnlyCollection<GameEventScriptExternalTypeConstructorDefinition> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new GameEventScriptExternalTypeConstructorDefinition[collection.Count];
+            var index = 0;
+            foreach (var constructor in collection)
+            {
+                result[index++] = constructor;
+            }
+
+            return result;
+        }
+
+        var list = new List<GameEventScriptExternalTypeConstructorDefinition>();
+        foreach (var constructor in constructors)
+        {
+            list.Add(constructor);
+        }
+
+        var values = new GameEventScriptExternalTypeConstructorDefinition[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            values[index] = list[index];
+        }
+
+        return values;
     }
 }
 
@@ -152,14 +232,70 @@ public sealed class GameEventScriptExternalTypeParameterDefinition
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
 
-public sealed class GameEventScriptExternalTypeConstructorDefinition(string typeName, IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
+public sealed class GameEventScriptExternalTypeConstructorDefinition
 {
-    public string TypeName { get; } = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+    public GameEventScriptExternalTypeConstructorDefinition(string typeName, IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
+    {
+        TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        Parameters = CopyParameters(parameters ?? throw new ArgumentNullException(nameof(parameters)));
+        SignatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(TypeName, CreateParameterNameArray(Parameters));
+    }
 
-    public IReadOnlyList<GameEventScriptExternalTypeParameterDefinition> Parameters { get; } =
-        (parameters ?? throw new ArgumentNullException(nameof(parameters))).ToArray();
+    public string TypeName { get; }
 
-    public string SignatureId => GameEventScriptExternalTypeConstructorReference.CreateSignatureId(TypeName, Parameters.Select(parameter => parameter.Name));
+    public IReadOnlyList<GameEventScriptExternalTypeParameterDefinition> Parameters { get; }
+
+    public string SignatureId { get; }
+
+    private static GameEventScriptExternalTypeParameterDefinition[] CopyParameters(IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
+    {
+        if (parameters is IReadOnlyCollection<GameEventScriptExternalTypeParameterDefinition> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return [];
+            }
+
+            var result = new GameEventScriptExternalTypeParameterDefinition[collection.Count];
+            var index = 0;
+            foreach (var parameter in collection)
+            {
+                result[index++] = parameter;
+            }
+
+            return result;
+        }
+
+        var list = new List<GameEventScriptExternalTypeParameterDefinition>();
+        foreach (var parameter in parameters)
+        {
+            list.Add(parameter);
+        }
+
+        var values = new GameEventScriptExternalTypeParameterDefinition[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            values[index] = list[index];
+        }
+
+        return values;
+    }
+
+    private static string[] CreateParameterNameArray(IReadOnlyList<GameEventScriptExternalTypeParameterDefinition> parameters)
+    {
+        if (parameters.Count == 0)
+        {
+            return [];
+        }
+
+        var values = new string[parameters.Count];
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            values[index] = parameters[index].Name;
+        }
+
+        return values;
+    }
 }
 
 public sealed class GameEventScriptExternalTypeConstructorReference
@@ -167,10 +303,7 @@ public sealed class GameEventScriptExternalTypeConstructorReference
     public GameEventScriptExternalTypeConstructorReference(string typeName, IEnumerable<string?>? argumentLabels)
     {
         TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-        ArgumentLabels = (argumentLabels ?? Array.Empty<string?>())
-            .Select(label => GameEventScriptExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels)))
-            .OrderBy(label => label, StringComparer.Ordinal)
-            .ToArray();
+        ArgumentLabels = NormalizeAndSortLabels(argumentLabels);
         SignatureId = CreateSignatureId(TypeName, ArgumentLabels);
     }
 
@@ -183,10 +316,66 @@ public sealed class GameEventScriptExternalTypeConstructorReference
     public static string CreateSignatureId(string typeName, IEnumerable<string?>? argumentLabels)
     {
         var normalizedTypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-        var labels = (argumentLabels ?? Array.Empty<string?>())
-            .Select(label => GameEventScriptExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels)))
-            .OrderBy(label => label, StringComparer.Ordinal);
-        return $"{normalizedTypeName}({string.Join(",", labels)})";
+        var labels = NormalizeAndSortLabels(argumentLabels);
+        var builder = new StringBuilder();
+        builder.Append(normalizedTypeName).Append('(');
+        for (var index = 0; index < labels.Length; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(',');
+            }
+
+            builder.Append(labels[index]);
+        }
+
+        return builder.Append(')').ToString();
+    }
+
+    private static string[] NormalizeAndSortLabels(IEnumerable<string?>? argumentLabels)
+    {
+        if (argumentLabels is null)
+        {
+            return [];
+        }
+
+        string[] values;
+        if (argumentLabels is IReadOnlyCollection<string?> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return [];
+            }
+
+            values = new string[collection.Count];
+            var index = 0;
+            foreach (var label in collection)
+            {
+                values[index++] = GameEventScriptExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels));
+            }
+        }
+        else
+        {
+            var list = new List<string>();
+            foreach (var label in argumentLabels)
+            {
+                list.Add(GameEventScriptExternalTypeNames.NormalizeIdentifier(label, nameof(argumentLabels)));
+            }
+
+            if (list.Count == 0)
+            {
+                return [];
+            }
+
+            values = new string[list.Count];
+            for (var index = 0; index < list.Count; index++)
+            {
+                values[index] = list[index];
+            }
+        }
+
+        Array.Sort(values, StringComparer.Ordinal);
+        return values;
     }
 }
 

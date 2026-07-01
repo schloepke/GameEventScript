@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Compiler;
@@ -58,16 +57,16 @@ internal sealed class GesValidationErrors
 
         return symbolKind switch
         {
-            GameEventScriptSymbolKind.Type => module.TypeDefinitions.FirstOrDefault(type => string.Equals(type.Name, symbol, StringComparison.Ordinal)),
-            GameEventScriptSymbolKind.Predicate => module.PredicateDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, symbol, StringComparison.Ordinal)),
-            GameEventScriptSymbolKind.Function => module.FunctionDefinitions.FirstOrDefault(select => string.Equals(select.Name, symbol, StringComparison.Ordinal)),
-            GameEventScriptSymbolKind.Handler => module.Handlers.FirstOrDefault(handler => string.Equals(handler.Message, symbol, StringComparison.Ordinal)) ??
+            GameEventScriptSymbolKind.Type => FindTypeDefinition(module.TypeDefinitions, symbol),
+            GameEventScriptSymbolKind.Predicate => FindPredicateDefinition(module.PredicateDefinitions, symbol),
+            GameEventScriptSymbolKind.Function => FindFunctionDefinition(module.FunctionDefinitions, symbol),
+            GameEventScriptSymbolKind.Handler => FindHandler(module.Handlers, symbol) ??
                                                  FindNodeInModule(module, symbol),
-            GameEventScriptSymbolKind.Message => module.Handlers.FirstOrDefault(handler => string.Equals(handler.Message, symbol, StringComparison.Ordinal)) ??
+            GameEventScriptSymbolKind.Message => FindHandler(module.Handlers, symbol) ??
                                                  FindNodeInModule(module, symbol),
             GameEventScriptSymbolKind.Variable => FindVariableNode(module, symbol),
-            GameEventScriptSymbolKind.GlobalDefinition => module.PredicateDefinitions.FirstOrDefault(rule => string.Equals(rule.Name, symbol, StringComparison.Ordinal)) ??
-                                                          module.FunctionDefinitions.FirstOrDefault(select => string.Equals(select.Name, symbol, StringComparison.Ordinal)) ??
+            GameEventScriptSymbolKind.GlobalDefinition => FindPredicateDefinition(module.PredicateDefinitions, symbol) ??
+                                                          FindFunctionDefinition(module.FunctionDefinitions, symbol) ??
                                                           FindNodeInModule(module, symbol),
             _ => FindNodeInModule(module, symbol)
         };
@@ -77,7 +76,7 @@ internal sealed class GesValidationErrors
     {
         foreach (var type in parsedScript.TypeDefinitions)
         {
-            var field = type.Fields.FirstOrDefault(candidate => string.Equals(candidate.Name, symbol, StringComparison.Ordinal));
+            var field = FindField(type.Fields, symbol);
             if (field is not null)
             {
                 return field;
@@ -86,7 +85,7 @@ internal sealed class GesValidationErrors
 
         foreach (var rule in parsedScript.PredicateDefinitions)
         {
-            var parameter = rule.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
+            var parameter = FindParameter(rule.ParameterList, symbol);
             if (parameter is not null)
             {
                 return parameter;
@@ -101,7 +100,7 @@ internal sealed class GesValidationErrors
 
         foreach (var select in parsedScript.FunctionDefinitions)
         {
-            var parameter = select.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
+            var parameter = FindParameter(select.ParameterList, symbol);
             if (parameter is not null)
             {
                 return parameter;
@@ -116,7 +115,7 @@ internal sealed class GesValidationErrors
 
         foreach (var handler in parsedScript.Handlers)
         {
-            var parameter = handler.ParameterList.FirstOrDefault(candidate => string.Equals(candidate.LocalName, symbol, StringComparison.Ordinal));
+            var parameter = FindParameter(handler.ParameterList, symbol);
             if (parameter is not null)
             {
                 return parameter;
@@ -244,15 +243,9 @@ internal sealed class GesValidationErrors
             GeneratedCollectionExpressionNode generated => FindNodeInIterationSource(generated.Source, symbol) ??
                                                            (generated.Predicate is null ? null : FindNodeInExpression(generated.Predicate, symbol)) ??
                                                            FindNodeInExpression(generated.Projection, symbol),
-            GuardedChoiceExpressionNode guarded => guarded.Branches
-                                                       .Select(branch => FindNodeInExpression(branch.ValueExpression, symbol) ??
-                                                                         FindNodeInExpression(branch.ConditionExpression, symbol))
-                                                       .FirstOrDefault(node => node is not null) ??
-                                                   FindNodeInExpression(guarded.OtherwiseExpression, symbol),
+            GuardedChoiceExpressionNode guarded => FindNodeInGuardedChoice(guarded, symbol),
             ListLiteralExpressionNode list => FindNodeInExpressions(list.Items, symbol),
-            MapLiteralExpressionNode dictionary => dictionary.Entries
-                .Select(entry => FindNodeInExpression(entry.Value, symbol))
-                .FirstOrDefault(node => node is not null),
+            MapLiteralExpressionNode dictionary => FindNodeInMapEntries(dictionary.Entries, symbol),
             MessageLiteralExpressionNode message => FindNodeInArguments(message.Arguments, symbol),
             CallExpressionNode call => FindNodeInArguments(call.ArgumentList.Arguments, symbol),
             ExtensionCallExpressionNode extension => FindNodeInArguments(extension.Arguments, symbol),
@@ -262,7 +255,18 @@ internal sealed class GesValidationErrors
     }
 
     private static ScriptNode? FindNodeInExpressions(IEnumerable<ExpressionNode> expressions, string symbol)
-        => expressions.Select(expression => FindNodeInExpression(expression, symbol)).FirstOrDefault(node => node is not null);
+    {
+        foreach (var expression in expressions)
+        {
+            var node = FindNodeInExpression(expression, symbol);
+            if (node is not null)
+            {
+                return node;
+            }
+        }
+
+        return null;
+    }
 
     private static ScriptNode? FindNodeInArguments(IEnumerable<ArgumentNode> arguments, string symbol)
     {
@@ -306,4 +310,118 @@ internal sealed class GesValidationErrors
                                                  (chooseSelector.WeightExpression is null ? null : FindNodeInExpression(chooseSelector.WeightExpression, symbol)),
             _ => null
         };
+
+    private static TypeDefinitionNode? FindTypeDefinition(IReadOnlyList<TypeDefinitionNode> definitions, string symbol)
+    {
+        for (var index = 0; index < definitions.Count; index++)
+        {
+            var definition = definitions[index];
+            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal))
+            {
+                return definition;
+            }
+        }
+
+        return null;
+    }
+
+    private static PredicateDefinitionNode? FindPredicateDefinition(IReadOnlyList<PredicateDefinitionNode> definitions, string symbol)
+    {
+        for (var index = 0; index < definitions.Count; index++)
+        {
+            var definition = definitions[index];
+            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal))
+            {
+                return definition;
+            }
+        }
+
+        return null;
+    }
+
+    private static FunctionDefinitionNode? FindFunctionDefinition(IReadOnlyList<FunctionDefinitionNode> definitions, string symbol)
+    {
+        for (var index = 0; index < definitions.Count; index++)
+        {
+            var definition = definitions[index];
+            if (string.Equals(definition.Name, symbol, StringComparison.Ordinal))
+            {
+                return definition;
+            }
+        }
+
+        return null;
+    }
+
+    private static EventHandlerNode? FindHandler(IReadOnlyList<EventHandlerNode> handlers, string symbol)
+    {
+        for (var index = 0; index < handlers.Count; index++)
+        {
+            var handler = handlers[index];
+            if (string.Equals(handler.Message, symbol, StringComparison.Ordinal))
+            {
+                return handler;
+            }
+        }
+
+        return null;
+    }
+
+    private static TypeFieldDefinitionNode? FindField(IReadOnlyList<TypeFieldDefinitionNode> fields, string symbol)
+    {
+        for (var index = 0; index < fields.Count; index++)
+        {
+            var field = fields[index];
+            if (string.Equals(field.Name, symbol, StringComparison.Ordinal))
+            {
+                return field;
+            }
+        }
+
+        return null;
+    }
+
+    private static ParameterNode? FindParameter(IReadOnlyList<ParameterNode> parameters, string symbol)
+    {
+        for (var index = 0; index < parameters.Count; index++)
+        {
+            var parameter = parameters[index];
+            if (string.Equals(parameter.LocalName, symbol, StringComparison.Ordinal))
+            {
+                return parameter;
+            }
+        }
+
+        return null;
+    }
+
+    private static ScriptNode? FindNodeInGuardedChoice(GuardedChoiceExpressionNode guarded, string symbol)
+    {
+        for (var index = 0; index < guarded.Branches.Count; index++)
+        {
+            var branch = guarded.Branches[index];
+            var node = FindNodeInExpression(branch.ValueExpression, symbol) ??
+                       FindNodeInExpression(branch.ConditionExpression, symbol);
+            if (node is not null)
+            {
+                return node;
+            }
+        }
+
+        return FindNodeInExpression(guarded.OtherwiseExpression, symbol);
+    }
+
+    private static ScriptNode? FindNodeInMapEntries(IReadOnlyList<MapEntryNode> entries, string symbol)
+    {
+        for (var index = 0; index < entries.Count; index++)
+        {
+            var node = FindNodeInExpression(entries[index].Value, symbol);
+            if (node is not null)
+            {
+                return node;
+            }
+        }
+
+        return null;
+    }
 }

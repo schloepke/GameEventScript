@@ -148,12 +148,12 @@ internal static class GesVmRegisterShuffleReverse
     }
     private static void ReverseIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator)
     {
-        var item = new GesValue();
         var values = new GesValue[16];
         var count = 0;
         try
         {
-            while (iterator.TryNext(ref item))
+            GesIteratorResult item;
+            while ((item = iterator.Next()).HasValue)
             {
                 if (count == values.Length)
                 {
@@ -162,7 +162,7 @@ internal static class GesVmRegisterShuffleReverse
                     values = resized;
                 }
 
-                values[count++] = item;
+                values[count++] = item.Value;
             }
         }
         finally
@@ -176,12 +176,12 @@ internal static class GesVmRegisterShuffleReverse
     }
     private static void ShuffleIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, GameEventScriptRandomGenerator randomGenerator)
     {
-        var item = new GesValue();
         var values = new GesValue[16];
         var count = 0;
         try
         {
-            while (iterator.TryNext(ref item))
+            GesIteratorResult item;
+            while ((item = iterator.Next()).HasValue)
             {
                 if (count == values.Length)
                 {
@@ -190,7 +190,7 @@ internal static class GesVmRegisterShuffleReverse
                     values = resized;
                 }
 
-                values[count++] = item;
+                values[count++] = item.Value;
             }
         }
         finally

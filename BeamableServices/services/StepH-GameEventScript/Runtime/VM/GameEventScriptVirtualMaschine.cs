@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
@@ -18,9 +17,10 @@ internal class GameEventScriptVmException(string message) : GameEventScriptFatal
 internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEventScriptDebugDumpModule
 {
     private readonly GesVmState _vmState;
+    private readonly GameEventScriptMessageHandlerDescriptor[] _handlers;
 
     public string ModuleName { get; }
-    public IEnumerable<GameEventScriptMessageHandlerDescriptor> Handlers { get; }
+    public IEnumerable<GameEventScriptMessageHandlerDescriptor> Handlers => _handlers;
     public string? DebugScriptSource { get; set; }
 
     public string DumpState(string? scriptSource = null, bool includeInstructionAddresses = true)
@@ -42,14 +42,69 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
     {
         ModuleName = binary.ModuleName;
         _vmState = new GesVmState(binary, registerSize, stackSize);
-        Handlers = (from bind in _vmState.Binary.BindTable.Entries.Where(x => x.Kind is MessageHandler or MessageNameHandler)
-            let signature = GameEventScriptMessageSignature.Create(_vmState.FetchStringByPointer(bind.Name), bind.ArgumentNames.Select(_vmState.FetchStringByPointer))
-            let matchArguments = bind.Kind == MessageHandler
-            select new GameEventScriptMessageHandlerDescriptor(signature,
-                (msg, session) => Invoke(msg, matchArguments, bind.EntryAddress, session),
-                bind.RequiredTags.Select(_vmState.FetchStringByPointer).ToArray(),
-                bind.ExcludedTags.Select(_vmState.FetchStringByPointer).ToArray(),
-                matchArguments)).ToList();
+        _handlers = CreateHandlers();
+    }
+
+    private GameEventScriptMessageHandlerDescriptor[] CreateHandlers()
+    {
+        var entries = _vmState.Binary.BindTable.Entries;
+        var handlerCount = 0;
+        for (var index = 0; index < entries.Count; index++)
+        {
+            var kind = entries[index].Kind;
+            if (kind is MessageHandler or MessageNameHandler)
+            {
+                handlerCount++;
+            }
+        }
+
+        if (handlerCount == 0)
+        {
+            return [];
+        }
+
+        var handlers = new GameEventScriptMessageHandlerDescriptor[handlerCount];
+        var handlerIndex = 0;
+        for (var index = 0; index < entries.Count; index++)
+        {
+            var bind = entries[index];
+            if (bind.Kind is not (MessageHandler or MessageNameHandler))
+            {
+                continue;
+            }
+
+            var name = _vmState.FetchStringByPointer(bind.Name);
+            var argumentNames = ReadTextPointers(bind.ArgumentNames);
+            var requiredTags = ReadTextPointers(bind.RequiredTags);
+            var excludedTags = ReadTextPointers(bind.ExcludedTags);
+            var matchArguments = bind.Kind == MessageHandler;
+            var entryAddress = bind.EntryAddress;
+            var signature = GameEventScriptMessageSignature.Create(name, argumentNames);
+            handlers[handlerIndex++] = new GameEventScriptMessageHandlerDescriptor(
+                signature,
+                (msg, session) => Invoke(msg, matchArguments, entryAddress, session),
+                requiredTags,
+                excludedTags,
+                matchArguments);
+        }
+
+        return handlers;
+    }
+
+    private string[] ReadTextPointers(IReadOnlyList<ushort> pointers)
+    {
+        if (pointers.Count == 0)
+        {
+            return [];
+        }
+
+        var values = new string[pointers.Count];
+        for (var index = 0; index < pointers.Count; index++)
+        {
+            values[index] = _vmState.FetchStringByPointer(pointers[index]);
+        }
+
+        return values;
     }
 
     private IGameEventScriptMessageInvocation Invoke(GameEventScriptMessage message, bool matchArguments, ushort entryAddress, GameEventScriptSession session)
@@ -62,8 +117,20 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
 
     public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession session)
     {
-        var handler = Handlers.FirstOrDefault(x => x.MatchArguments ? x.Signature.SignatureId == message.SignatureId : message.Name == x.Signature.Name);
-        if (handler == null) return false;
+        GameEventScriptMessageHandlerDescriptor? handler = null;
+        for (var index = 0; index < _handlers.Length; index++)
+        {
+            var candidate = _handlers[index];
+            if (candidate.MatchArguments
+                    ? candidate.Signature.SignatureId == message.SignatureId
+                    : message.Name == candidate.Signature.Name)
+            {
+                handler = candidate;
+                break;
+            }
+        }
+
+        if (handler is null) return false;
         var init = handler.Invoke(message, session);
         while (!init.IsCompleted) init.RunSlice(int.MaxValue);
         return true;

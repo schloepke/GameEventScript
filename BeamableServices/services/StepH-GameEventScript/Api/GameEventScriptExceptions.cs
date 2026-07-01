@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 
 // ReSharper disable UnusedMember.Global
 
@@ -52,9 +52,27 @@ public class GameEventScriptCompileException : Exception
     public IReadOnlyList<GameEventScriptCompileError> Errors { get; }
 
     private static string BuildMessage(IReadOnlyList<GameEventScriptCompileError>? errors)
-        => errors is null || errors.Count == 0
-            ? "GameEventScript compilation failed."
-            : $"GameEventScript compilation failed with {errors.Count} error(s):{Environment.NewLine}- {string.Join($"{Environment.NewLine}- ", errors.Select(it => it.ToString()))}";
+    {
+        if (errors is null || errors.Count == 0)
+        {
+            return "GameEventScript compilation failed.";
+        }
+
+        var builder = new StringBuilder();
+        builder
+            .Append("GameEventScript compilation failed with ")
+            .Append(errors.Count)
+            .Append(" error(s):");
+        for (var index = 0; index < errors.Count; index++)
+        {
+            builder
+                .Append(Environment.NewLine)
+                .Append("- ")
+                .Append(errors[index]);
+        }
+
+        return builder.ToString();
+    }
 }
 
 /// <summary>

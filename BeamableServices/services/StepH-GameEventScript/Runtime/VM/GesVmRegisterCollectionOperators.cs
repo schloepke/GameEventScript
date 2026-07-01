@@ -265,12 +265,12 @@ internal static class GesVmRegisterCollectionOperators
                 vmState.SetBoolean(dst, false);
                 return;
             case Iterator when b.ObjectValue is IGesIterator iterator:
-                var item = new GesValue();
                 try
                 {
-                    while (iterator.TryNext(ref item))
+                    GesIteratorResult item;
+                    while ((item = iterator.Next()).HasValue)
                     {
-                        if (!item.EqualsValue(a)) continue;
+                        if (!item.Value.EqualsValue(a)) continue;
                         vmState.SetBoolean(dst, true);
                         return;
                     }
@@ -386,12 +386,12 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             case Iterator when source.ObjectValue is IGesIterator iterator:
             {
-                var item = new GesValue();
                 try
                 {
-                    while (iterator.TryNext(ref item))
+                    GesIteratorResult item;
+                    while ((item = iterator.Next()).HasValue)
                     {
-                        if (item.IsTrue)
+                        if (item.Value.IsTrue)
                         {
                             if (!requireAll)
                             {
@@ -851,14 +851,14 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             }
 
-            var item = new GesValue();
             if (!requireAll)
             {
-                while (iterator.TryNext(ref item))
+                GesIteratorResult item;
+                while ((item = iterator.Next()).HasValue)
                 {
                     for (var i = 0; i < candidateCount; i++)
                     {
-                        if (!item.EqualsValue(candidates[i])) continue;
+                        if (!item.Value.EqualsValue(candidates[i])) continue;
                         vmState.SetBoolean(dst, true);
                         return;
                     }
@@ -870,11 +870,12 @@ internal static class GesVmRegisterCollectionOperators
 
             var found = new bool[candidateCount];
             var foundCount = 0;
-            while (iterator.TryNext(ref item))
+            GesIteratorResult allItem;
+            while ((allItem = iterator.Next()).HasValue)
             {
                 for (var i = 0; i < candidateCount; i++)
                 {
-                    if (found[i] || !item.EqualsValue(candidates[i])) continue;
+                    if (found[i] || !allItem.Value.EqualsValue(candidates[i])) continue;
                     found[i] = true;
                     foundCount++;
                 }
@@ -1391,12 +1392,12 @@ internal static class GesVmRegisterCollectionOperators
 
                 return false;
             case Iterator when b.ObjectValue is IGesIterator iterator:
-                var item = new GesValue();
                 try
                 {
-                    while (iterator.TryNext(ref item))
+                    GesIteratorResult item;
+                    while ((item = iterator.Next()).HasValue)
                     {
-                        if (!item.EqualsValue(a)) continue;
+                        if (!item.Value.EqualsValue(a)) continue;
                         return true;
                     }
 

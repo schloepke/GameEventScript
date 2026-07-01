@@ -163,7 +163,7 @@ internal static class GesVmRegisterTypeCastCheck
 
         if (xValue.Kind is Series && xValue.ObjectValue is GesSeries series)
         {
-            series.TryGetTerm(0, ref dst);
+            dst = series.GetTerm(0);
             GesVmCastNumeric(ref dst, in dst, state);
             return;
         }

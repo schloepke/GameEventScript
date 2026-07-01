@@ -32,6 +32,22 @@ internal class GesVmState
         internal bool NormalizeResultAsPredicate;
     }
 
+    internal readonly struct OutboundMessageSignature
+    {
+        internal OutboundMessageSignature(string name, string[] argumentNames, string signatureId)
+        {
+            Name = name;
+            ArgumentNames = argumentNames;
+            SignatureId = signatureId;
+            IsValid = true;
+        }
+
+        internal bool IsValid { get; }
+        internal string Name { get; }
+        internal string[] ArgumentNames { get; }
+        internal string SignatureId { get; }
+    }
+
     internal GesValue[] EmptyList { get; init; }
 
     internal GameEventScriptBinary Binary { get; init; }
@@ -55,7 +71,7 @@ internal class GesVmState
     internal ushort StageLength { get; private set; }
 
     internal string? ErrorMessage { get; private set; }
-    internal GameEventScriptBinaryBindEntry[] OutboundMessageSignatures { get; init; }
+    internal OutboundMessageSignature[] OutboundMessageSignatures { get; init; }
     internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; init; }
     internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds { get; init; }
     internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; init; }
@@ -80,7 +96,7 @@ internal class GesVmState
         RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = GameEventScriptRandomGenerator.FromSeed(0L);
-        OutboundMessageSignatures = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
+        OutboundMessageSignatures = BuildOutboundMessageSignatures(binary);
         RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
         ExtensionCallBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExtensionCall);
         ExternalTypeBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExternalType);
@@ -427,6 +443,39 @@ internal class GesVmState
         }
 
         return result;
+    }
+
+    private OutboundMessageSignature[] BuildOutboundMessageSignatures(GameEventScriptBinary binary)
+    {
+        var binds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
+        if (binds.Length == 0)
+        {
+            return [];
+        }
+
+        var signatures = new OutboundMessageSignature[binds.Length];
+        for (var bindIndex = 0; bindIndex < binds.Length; bindIndex++)
+        {
+            var bind = binds[bindIndex];
+            if (bind.Kind != GameEventScriptBinaryBindKind.OutboundMessage || bind.Id != bindIndex)
+            {
+                continue;
+            }
+
+            var name = FetchStringByPointer(bind.Name);
+            var argumentNames = new string[bind.ArgumentNames.Count];
+            for (var argumentIndex = 0; argumentIndex < argumentNames.Length; argumentIndex++)
+            {
+                argumentNames[argumentIndex] = FetchStringByPointer(bind.ArgumentNames[argumentIndex]);
+            }
+
+            signatures[bindIndex] = new OutboundMessageSignature(
+                name,
+                argumentNames,
+                GameEventScriptMessageSignature.CreateSignatureId(name, argumentNames));
+        }
+
+        return signatures;
     }
 
     private static string[] BuildStringPool(GameEventScriptTextTable textTable)

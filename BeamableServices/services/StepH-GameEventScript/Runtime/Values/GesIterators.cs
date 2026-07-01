@@ -4,8 +4,20 @@ namespace StepH.GameEventScript.Runtime.Values;
 
 internal interface IGesIterator
 {
-    public bool TryNext(ref GesValue value);
+    public GesIteratorResult Next();
     public bool IsPatternSequence => false;
+}
+
+internal readonly struct GesIteratorResult
+{
+    internal GesIteratorResult(in GesValue value)
+    {
+        HasValue = true;
+        Value = value;
+    }
+
+    internal readonly bool HasValue;
+    internal readonly GesValue Value;
 }
 
 internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIterator, IDisposable
@@ -13,23 +25,20 @@ internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIter
     private long _current = from;
     private bool _disposed = false;
 
-    public bool TryNext(ref GesValue value)
+    public GesIteratorResult Next()
     {
-        if (_disposed)
-        {
-            value.SetNothing();
-            return false;
-        }
+        if (_disposed) return default;
 
         if (!(step switch
             {
                 > 0 => _current <= to,
                 < 0 => _current >= to,
                 _ => false
-            })) return false;
+            })) return default;
+        var value = default(GesValue);
         value.SetInteger(_current);
         _current += step;
-        return true;
+        return new GesIteratorResult(in value);
     }
 
     public void Dispose()
@@ -43,23 +52,20 @@ internal class GesFloatRangeIterator(double from, double to, double step) : IGes
     private double _current = from;
     private bool _disposed;
 
-    public bool TryNext(ref GesValue value)
+    public GesIteratorResult Next()
     {
-        if (_disposed)
-        {
-            value.SetNothing();
-            return false;
-        }
+        if (_disposed) return default;
 
         if (!(step switch
             {
                 > 0 => _current <= to,
                 < 0 => _current >= to,
                 _ => false
-            })) return false;
+            })) return default;
+        var value = default(GesValue);
         value.SetFloat(_current);
         _current += step;
-        return true;
+        return new GesIteratorResult(in value);
     }
 
     public void Dispose()
@@ -74,17 +80,15 @@ internal class GesListIterator(GesValue[] list) : IGesIterator, IDisposable
     private GesValue[]? _list = list;
     public bool IsPatternSequence => true;
 
-    public bool TryNext(ref GesValue value)
+    public GesIteratorResult Next()
     {
         if (_list == null || _current >= _list.Length)
         {
             _list = null;
-            value.SetNothing();
-            return false;
+            return default;
         }
 
-        value = _list[_current++];
-        return true;
+        return new GesIteratorResult(in _list[_current++]);
     }
 
     public void Dispose()
@@ -99,17 +103,17 @@ internal class GesIntIterator(int[] values) : IGesIterator, IDisposable
     private int[]? _values = values;
     public bool IsPatternSequence => true;
 
-    public bool TryNext(ref GesValue value)
+    public GesIteratorResult Next()
     {
         if (_values == null || _current >= _values.Length)
         {
             _values = null;
-            value.SetNothing();
-            return false;
+            return default;
         }
 
+        var value = default(GesValue);
         value.SetInteger(_values[_current++]);
-        return true;
+        return new GesIteratorResult(in value);
     }
 
     public void Dispose()
@@ -123,17 +127,17 @@ internal class GesStringIterator(string stringValue) : IGesIterator, IDisposable
     private int _current;
     private string? _stringValue = stringValue;
 
-    public bool TryNext(ref GesValue value)
+    public GesIteratorResult Next()
     {
         if (_stringValue == null || _current >= _stringValue.Length)
         {
             _stringValue = null;
-            value.SetNothing();
-            return false;
+            return default;
         }
 
+        var value = default(GesValue);
         value.SetText(_stringValue[_current++].ToString());
-        return true;
+        return new GesIteratorResult(in value);
     }
 
     public void Dispose()
@@ -147,22 +151,22 @@ internal class GesTripletIterator(GesValueVectorPoint triplet) : IGesIterator, I
     private int _current;
     private GesValueVectorPoint? _triplet = triplet;
 
-    public bool TryNext(ref GesValue value)
+    public GesIteratorResult Next()
     {
         if (_triplet == null || _current >= 3)
         {
             _triplet = null;
-            value.SetNothing();
-            return false;
+            return default;
         }
 
+        var value = default(GesValue);
         value.SetFloat(_current++ switch
         {
             0 => _triplet.X,
             1 => _triplet.Y,
             _ => _triplet.Z
         });
-        return true;
+        return new GesIteratorResult(in value);
     }
 
     public void Dispose()

@@ -21,9 +21,9 @@ internal interface IGesForwardIntegerSeries
 {
     string SignatureId { get; }
 
-    bool TryCreateCursor(long index, ref GesSeriesCursor cursor);
+    GesSeriesCursor? CreateCursor(long index);
 
-    bool TryMoveNext(ref GesSeriesCursor cursor);
+    bool MoveNext(ref GesSeriesCursor cursor);
 
     long? ReadCursor(in GesSeriesCursor cursor);
 }
@@ -32,9 +32,9 @@ internal interface IGesForwardDoubleSeries
 {
     string SignatureId { get; }
 
-    bool TryCreateCursor(long index, ref GesSeriesCursor cursor);
+    GesSeriesCursor? CreateCursor(long index);
 
-    bool TryMoveNext(ref GesSeriesCursor cursor);
+    bool MoveNext(ref GesSeriesCursor cursor);
 
     double? ReadCursor(in GesSeriesCursor cursor);
 }
@@ -70,17 +70,16 @@ internal sealed class GesSeries
         return new GesSeries(_definition, offset, _hasCheckpoint, _checkpointIndex, in _checkpoint);
     }
 
-    internal bool TryGetTerm(long index, ref GesValue value)
+    internal GesValue GetTerm(long index)
     {
         if (index < 0 || AddIndex(Offset, index) is not { } absoluteIndex)
         {
-            value.SetNothing();
-            return false;
+            return default;
         }
 
         if (_definition.IsRandomAccess)
         {
-            return _definition.TryGetRandomTerm(absoluteIndex, ref value);
+            return _definition.GetRandomTerm(absoluteIndex);
         }
 
         GesSeriesCursor cursor;
@@ -92,26 +91,25 @@ internal sealed class GesSeries
         }
         else
         {
-            cursor = default;
-            if (!_definition.TryCreateCursor(0, ref cursor))
+            if (_definition.CreateCursor(0) is not { } createdCursor)
             {
-                value.SetNothing();
-                return false;
+                return default;
             }
+
+            cursor = createdCursor;
         }
 
         while (cursorIndex < absoluteIndex)
         {
-            if (!_definition.TryMoveNext(ref cursor))
+            if (!_definition.MoveNext(ref cursor))
             {
-                value.SetNothing();
-                return false;
+                return default;
             }
 
             cursorIndex++;
         }
 
-        return _definition.TryReadCursor(in cursor, ref value);
+        return _definition.ReadCursorValue(in cursor);
     }
 
     internal static GesSeries Natural(long start = 0, long step = 1)
@@ -124,7 +122,7 @@ internal sealed class GesSeries
     {
         var definition = FibonacciSeriesDefinition.Instance;
         var checkpoint = default(GesSeriesCursor);
-        definition.TryCreateCursor(0, ref checkpoint);
+        if (definition.CreateCursor(0) is { } cursor) checkpoint = cursor;
         return new GesSeries(definition, 0, true, 0, in checkpoint);
     }
 
@@ -132,7 +130,7 @@ internal sealed class GesSeries
     {
         var definition = FactorialSeriesDefinition.Instance;
         var checkpoint = default(GesSeriesCursor);
-        definition.TryCreateCursor(0, ref checkpoint);
+        if (definition.CreateCursor(0) is { } cursor) checkpoint = cursor;
         return new GesSeries(definition, 0, true, 0, in checkpoint);
     }
 
@@ -155,29 +153,24 @@ internal sealed class GesSeries
 
         internal abstract bool IsRandomAccess { get; }
 
-        internal virtual bool TryGetRandomTerm(long index, ref GesValue value)
-        {
-            value.SetNothing();
-            return false;
-        }
+        internal virtual GesValue GetRandomTerm(long index) => default;
 
-        internal virtual bool TryCreateCursor(long index, ref GesSeriesCursor cursor)
+        internal virtual GesSeriesCursor? CreateCursor(long index)
         {
-            cursor = default;
             _ = index;
-            return false;
+            return null;
         }
 
-        internal virtual bool TryMoveNext(ref GesSeriesCursor cursor)
+        internal virtual bool MoveNext(ref GesSeriesCursor cursor)
         {
             _ = cursor;
             return false;
         }
 
-        internal virtual bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
+        internal virtual GesValue ReadCursorValue(in GesSeriesCursor cursor)
         {
-            value.SetNothing();
-            return false;
+            _ = cursor;
+            return default;
         }
     }
 
@@ -191,28 +184,27 @@ internal sealed class GesSeries
 
         internal override bool IsRandomAccess => true;
 
-        internal override bool TryGetRandomTerm(long index, ref GesValue value)
+        internal override GesValue GetRandomTerm(long index)
         {
             if (index < 0)
             {
-                value.SetNothing();
-                return false;
+                return default;
             }
 
+            var value = default(GesValue);
             if (((IGesRandomIntegerSeries)this).Calc(index) is { } integerValue)
             {
                 value.SetInteger(integerValue);
-                return true;
+                return value;
             }
 
             if (((IGesRandomDoubleSeries)this).Calc(index) is { } doubleValue)
             {
                 value.SetFloat(doubleValue);
-                return true;
+                return value;
             }
 
-            value.SetNothing();
-            return false;
+            return default;
         }
 
         long? IGesRandomIntegerSeries.Calc(long index)
@@ -243,20 +235,21 @@ internal sealed class GesSeries
 
         internal override bool IsRandomAccess => false;
 
-        internal override bool TryCreateCursor(long index, ref GesSeriesCursor cursor)
+        internal override GesSeriesCursor? CreateCursor(long index)
         {
             if (index != 0)
             {
-                return false;
+                return null;
             }
 
+            var cursor = default(GesSeriesCursor);
             cursor.Index = 0;
             cursor.Previous = 0d;
             cursor.Current = 0d;
-            return true;
+            return cursor;
         }
 
-        internal override bool TryMoveNext(ref GesSeriesCursor cursor)
+        internal override bool MoveNext(ref GesSeriesCursor cursor)
         {
             if (cursor.Index == 0)
             {
@@ -273,21 +266,21 @@ internal sealed class GesSeries
             return true;
         }
 
-        internal override bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
+        internal override GesValue ReadCursorValue(in GesSeriesCursor cursor)
         {
+            var value = default(GesValue);
             if (((IGesForwardDoubleSeries)this).ReadCursor(in cursor) is not { } number)
             {
-                value.SetNothing();
-                return false;
+                return default;
             }
 
             value.SetFloat(number);
-            return true;
+            return value;
         }
 
-        bool IGesForwardDoubleSeries.TryCreateCursor(long index, ref GesSeriesCursor cursor) => TryCreateCursor(index, ref cursor);
+        GesSeriesCursor? IGesForwardDoubleSeries.CreateCursor(long index) => CreateCursor(index);
 
-        bool IGesForwardDoubleSeries.TryMoveNext(ref GesSeriesCursor cursor) => TryMoveNext(ref cursor);
+        bool IGesForwardDoubleSeries.MoveNext(ref GesSeriesCursor cursor) => MoveNext(ref cursor);
 
         double? IGesForwardDoubleSeries.ReadCursor(in GesSeriesCursor cursor)
             => cursor.Index > 1476 ? double.PositiveInfinity : cursor.Current;
@@ -303,40 +296,41 @@ internal sealed class GesSeries
 
         internal override bool IsRandomAccess => false;
 
-        internal override bool TryCreateCursor(long index, ref GesSeriesCursor cursor)
+        internal override GesSeriesCursor? CreateCursor(long index)
         {
             if (index != 0)
             {
-                return false;
+                return null;
             }
 
+            var cursor = default(GesSeriesCursor);
             cursor.Index = 0;
             cursor.Current = 1d;
-            return true;
+            return cursor;
         }
 
-        internal override bool TryMoveNext(ref GesSeriesCursor cursor)
+        internal override bool MoveNext(ref GesSeriesCursor cursor)
         {
             cursor.Index++;
             cursor.Current *= cursor.Index;
             return true;
         }
 
-        internal override bool TryReadCursor(in GesSeriesCursor cursor, ref GesValue value)
+        internal override GesValue ReadCursorValue(in GesSeriesCursor cursor)
         {
+            var value = default(GesValue);
             if (((IGesForwardDoubleSeries)this).ReadCursor(in cursor) is not { } number)
             {
-                value.SetNothing();
-                return false;
+                return default;
             }
 
             value.SetFloat(number);
-            return true;
+            return value;
         }
 
-        bool IGesForwardDoubleSeries.TryCreateCursor(long index, ref GesSeriesCursor cursor) => TryCreateCursor(index, ref cursor);
+        GesSeriesCursor? IGesForwardDoubleSeries.CreateCursor(long index) => CreateCursor(index);
 
-        bool IGesForwardDoubleSeries.TryMoveNext(ref GesSeriesCursor cursor) => TryMoveNext(ref cursor);
+        bool IGesForwardDoubleSeries.MoveNext(ref GesSeriesCursor cursor) => MoveNext(ref cursor);
 
         double? IGesForwardDoubleSeries.ReadCursor(in GesSeriesCursor cursor)
             => cursor.Index > 170 ? double.PositiveInfinity : cursor.Current;

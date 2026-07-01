@@ -2,7 +2,7 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
@@ -33,8 +33,8 @@ public sealed class GameEventScriptExtensionReference
     {
         ExtensionName = NormalizeName(extensionName);
         FunctionName = NormalizeName(functionName);
-        ArgumentLabels = (argumentLabels ?? Array.Empty<string?>()).Select(GameEventScriptMessageSignature.NormalizeParameterName).ToArray();
-        SignatureId = $"{ExtensionName}.{FunctionName}({string.Join(",", ArgumentLabels)})";
+        ArgumentLabels = NormalizeArgumentLabels(argumentLabels);
+        SignatureId = CreateSignatureId(ExtensionName, FunctionName, ArgumentLabels);
     }
 
     public string ExtensionName { get; }
@@ -46,6 +46,67 @@ public sealed class GameEventScriptExtensionReference
     public string SignatureId { get; }
 
     private static string NormalizeName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+
+    private static string[] NormalizeArgumentLabels(IEnumerable<string?>? argumentLabels)
+    {
+        if (argumentLabels is null)
+        {
+            return [];
+        }
+
+        if (argumentLabels is IReadOnlyCollection<string?> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return [];
+            }
+
+            var values = new string[collection.Count];
+            var index = 0;
+            foreach (var label in collection)
+            {
+                values[index++] = GameEventScriptMessageSignature.NormalizeParameterName(label);
+            }
+
+            return values;
+        }
+
+        var list = new List<string>();
+        foreach (var label in argumentLabels)
+        {
+            list.Add(GameEventScriptMessageSignature.NormalizeParameterName(label));
+        }
+
+        if (list.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new string[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            result[index] = list[index];
+        }
+
+        return result;
+    }
+
+    private static string CreateSignatureId(string extensionName, string functionName, IReadOnlyList<string> argumentLabels)
+    {
+        var builder = new StringBuilder();
+        builder.Append(extensionName).Append('.').Append(functionName).Append('(');
+        for (var index = 0; index < argumentLabels.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(',');
+            }
+
+            builder.Append(argumentLabels[index]);
+        }
+
+        return builder.Append(')').ToString();
+    }
 }
 
 public sealed class GameEventScriptExtensionContext(GameEventScriptSession runtimeSession)

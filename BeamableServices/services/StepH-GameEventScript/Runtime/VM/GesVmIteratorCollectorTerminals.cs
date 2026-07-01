@@ -136,10 +136,10 @@ internal static class GesVmIteratorCollectorTerminals
     }
     private static void FirstFromIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
     {
-        var item = new GesValue();
         try
         {
-            if (iterator.TryNext(ref item)) vmState.SetValue(destinationRegister, in item);
+            var item = iterator.Next();
+            if (item.HasValue) vmState.SetValue(destinationRegister, in item.Value);
             else vmState.SetNothing(destinationRegister);
         }
         finally
@@ -149,14 +149,14 @@ internal static class GesVmIteratorCollectorTerminals
     }
     private static void LastFromIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
     {
-        var item = new GesValue();
         var last = new GesValue();
         var found = false;
         try
         {
-            while (iterator.TryNext(ref item))
+            GesIteratorResult item;
+            while ((item = iterator.Next()).HasValue)
             {
-                last = item;
+                last = item.Value;
                 found = true;
             }
 
@@ -170,18 +170,18 @@ internal static class GesVmIteratorCollectorTerminals
     }
     private static void SingleFromIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
     {
-        var item = new GesValue();
         try
         {
-            if (!iterator.TryNext(ref item))
+            var item = iterator.Next();
+            if (!item.HasValue)
             {
                 vmState.SetNothing(destinationRegister);
                 return;
             }
 
-            var second = new GesValue();
-            if (iterator.TryNext(ref second)) vmState.SetNothing(destinationRegister);
-            else vmState.SetValue(destinationRegister, in item);
+            var second = iterator.Next();
+            if (second.HasValue) vmState.SetNothing(destinationRegister);
+            else vmState.SetValue(destinationRegister, in item.Value);
         }
         finally
         {

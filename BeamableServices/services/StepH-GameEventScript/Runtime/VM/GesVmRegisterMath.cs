@@ -2100,6 +2100,6 @@ internal static class GesVmRegisterMath
         }
 
         if (source.Kind is not Series || source.ObjectValue is not GesSeries series || !ret) dst.SetNothing();
-        else series.TryGetTerm(index, ref dst);
+        else dst = series.GetTerm(index);
     }
 }

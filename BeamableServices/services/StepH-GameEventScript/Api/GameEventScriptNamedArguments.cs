@@ -1,7 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 namespace StepH.GameEventScript.Api;
 
 /// <summary>
@@ -50,9 +50,20 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
     /// <returns>A normalized read-only dictionary where null values are replaced with "Nothing".
     /// If the input collection is null or empty, an empty collection is returned.</returns>
     public static IReadOnlyDictionary<string, GameEventScriptValue> Normalize(IReadOnlyDictionary<string, GameEventScriptValue>? values)
-        => values is null || values.Count == 0
-            ? new Dictionary<string, GameEventScriptValue>(StringComparer.Ordinal)
-            : values.ToDictionary(pair => pair.Key, pair => pair.Value ?? GameEventScriptValueFactory.GesNothing(), StringComparer.Ordinal);
+    {
+        var normalized = new Dictionary<string, GameEventScriptValue>(values?.Count ?? 0, StringComparer.Ordinal);
+        if (values is null || values.Count == 0)
+        {
+            return normalized;
+        }
+
+        foreach (var pair in values)
+        {
+            normalized[pair.Key] = pair.Value ?? GameEventScriptValueFactory.GesNothing();
+        }
+
+        return normalized;
+    }
 
     /// <summary>
     /// Retrieves the value associated with the specified key from the collection of named arguments.
@@ -71,7 +82,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
 
     /// Represents a collection of keys from the ordered pairs of named arguments in a game event script.
     /// Provides an enumerable sequence of keys, maintaining the order in which the arguments were defined.
-    public IEnumerable<string> Keys => _orderedPairs.Select(pair => pair.Key);
+    public IEnumerable<string> Keys => new KeyEnumerable(_orderedPairs);
 
     /// Provides a collection of labels associated with the signature of the arguments.
     /// The labels represent the normalized keys used to construct the signature of a
@@ -81,7 +92,7 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
 
     /// Provides an enumerable collection of values associated with the named arguments in a game event script.
     /// Each value corresponds to the argument at a specific position, maintaining the order of the argument collection.
-    public IEnumerable<GameEventScriptValue> Values => _orderedPairs.Select(pair => pair.Value);
+    public IEnumerable<GameEventScriptValue> Values => new ValueEnumerable(_orderedPairs);
 
     /// Gets the total number of key-value pairs contained in the instance.
     /// This property reflects the combined count of all ordered named arguments,
@@ -113,7 +124,27 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
     /// </summary>
     /// <returns>A string representing the named arguments in the collection, or an empty
     /// string if the collection contains no elements.</returns>
-    public override string ToString() => _orderedPairs.Count == 0 ? "" : _orderedPairs.Select(pair => $"{pair.Key}: {pair.Value}").Aggregate((a, b) => a + ", " + b);
+    public override string ToString()
+    {
+        if (_orderedPairs.Count == 0)
+        {
+            return "";
+        }
+
+        var builder = new StringBuilder();
+        for (var index = 0; index < _orderedPairs.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            var pair = _orderedPairs[index];
+            builder.Append(pair.Key).Append(": ").Append(pair.Value);
+        }
+
+        return builder.ToString();
+    }
 
     private GameEventScriptNamedArguments(IReadOnlyList<KeyValuePair<string, GameEventScriptValue>> orderedPairs, IReadOnlyList<string> signatureLabels,
         IReadOnlyDictionary<string, GameEventScriptValue> values)
@@ -127,7 +158,15 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
     private readonly IReadOnlyDictionary<string, GameEventScriptValue> _values;
 
     internal static GameEventScriptNamedArguments CreateOrdered(KeyValuePair<string, GameEventScriptValue>[] orderedPairs)
-        => CreateOrdered(orderedPairs, orderedPairs.Select(pair => GameEventScriptMessageSignature.NormalizeParameterName(pair.Key)).ToArray());
+    {
+        var signatureLabels = new string[orderedPairs.Length];
+        for (var index = 0; index < orderedPairs.Length; index++)
+        {
+            signatureLabels[index] = GameEventScriptMessageSignature.NormalizeParameterName(orderedPairs[index].Key);
+        }
+
+        return CreateOrdered(orderedPairs, signatureLabels);
+    }
 
     internal static GameEventScriptNamedArguments CreateOrdered(KeyValuePair<string, GameEventScriptValue>[] orderedPairs, IReadOnlyList<string> signatureLabels)
     {
@@ -142,7 +181,18 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
         }
 
         var values = new Dictionary<string, GameEventScriptValue>(orderedPairs.Length, StringComparer.Ordinal);
-        var normalizedSignatureLabels = new string[signatureLabels.Count];
+        var reuseSignatureLabels = signatureLabels is string[];
+        string[]? copiedSignatureLabels = null;
+        IReadOnlyList<string> normalizedSignatureLabels;
+        if (reuseSignatureLabels)
+        {
+            normalizedSignatureLabels = signatureLabels;
+        }
+        else
+        {
+            copiedSignatureLabels = new string[signatureLabels.Count];
+            normalizedSignatureLabels = copiedSignatureLabels;
+        }
         for (var index = 0; index < orderedPairs.Length; index++)
         {
             var pair = orderedPairs[index];
@@ -161,7 +211,11 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
                 orderedPairs[index] = pair;
             }
 
-            normalizedSignatureLabels[index] = GameEventScriptMessageSignature.NormalizeParameterName(signatureLabels[index]);
+            if (!reuseSignatureLabels)
+            {
+                copiedSignatureLabels![index] = GameEventScriptMessageSignature.NormalizeParameterName(signatureLabels[index]);
+            }
+
             if (!string.Equals(normalizedName, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
             {
                 values[normalizedName] = value;
@@ -169,6 +223,76 @@ public sealed class GameEventScriptNamedArguments : IReadOnlyCollection<KeyValue
         }
 
         return new GameEventScriptNamedArguments(orderedPairs, normalizedSignatureLabels, values);
+    }
+
+    private sealed class KeyEnumerable(IReadOnlyList<KeyValuePair<string, GameEventScriptValue>> pairs) : IEnumerable<string>, IEnumerator<string>
+    {
+        private int _index = -1;
+
+        public string Current => pairs[_index].Key;
+
+        object IEnumerator.Current => Current;
+
+        public IEnumerator<string> GetEnumerator()
+        {
+            _index = -1;
+            return this;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public bool MoveNext()
+        {
+            var next = _index + 1;
+            if (next >= pairs.Count)
+            {
+                return false;
+            }
+
+            _index = next;
+            return true;
+        }
+
+        public void Reset() => _index = -1;
+
+        public void Dispose()
+        {
+        }
+    }
+
+    private sealed class ValueEnumerable(IReadOnlyList<KeyValuePair<string, GameEventScriptValue>> pairs) : IEnumerable<GameEventScriptValue>, IEnumerator<GameEventScriptValue>
+    {
+        private int _index = -1;
+
+        public GameEventScriptValue Current => pairs[_index].Value;
+
+        object IEnumerator.Current => Current;
+
+        public IEnumerator<GameEventScriptValue> GetEnumerator()
+        {
+            _index = -1;
+            return this;
+        }
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public bool MoveNext()
+        {
+            var next = _index + 1;
+            if (next >= pairs.Count)
+            {
+                return false;
+            }
+
+            _index = next;
+            return true;
+        }
+
+        public void Reset() => _index = -1;
+
+        public void Dispose()
+        {
+        }
     }
 
 }

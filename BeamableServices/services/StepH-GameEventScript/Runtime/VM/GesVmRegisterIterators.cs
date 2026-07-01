@@ -14,13 +14,17 @@ internal static class GesVmRegisterIterators
 
     internal static void GesVmIteratorNext(this GesVmState vmState, ushort destinationRegister, in GesValue iterator, ushort noMoreAddress)
     {
-        var result = new GesValue();
-        if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it } && it.TryNext(ref result))
+        if (iterator is { Kind: Iterator, ObjectValue: IGesIterator it })
         {
-            vmState.SetValue(destinationRegister, in result);
-            return;
+            var next = it.Next();
+            if (next.HasValue)
+            {
+                vmState.SetValue(destinationRegister, in next.Value);
+                return;
+            }
         }
 
+        var result = default(GesValue);
         vmState.SetValue(destinationRegister, in result);
         vmState.JumpAddress(noMoreAddress);
     }

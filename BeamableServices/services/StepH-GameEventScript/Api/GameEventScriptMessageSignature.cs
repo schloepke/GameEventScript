@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
-using System.Linq;
+using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
@@ -71,8 +71,24 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     public static string CreateSignatureId(string name, IEnumerable<string>? parameterNames)
     {
         var normalizedName = NormalizeMessageName(name);
-        IReadOnlyList<string> normalizedParameters = parameterNames is null ? [] : parameterNames.Select(NormalizeParameterName).ToArray();
-        return $"{normalizedName}({string.Join(",", normalizedParameters)})";
+        var builder = new StringBuilder();
+        builder.Append(normalizedName).Append('(');
+        if (parameterNames is not null)
+        {
+            var index = 0;
+            foreach (var parameterName in parameterNames)
+            {
+                if (index > 0)
+                {
+                    builder.Append(',');
+                }
+
+                builder.Append(NormalizeParameterName(parameterName));
+                index++;
+            }
+        }
+
+        return builder.Append(')').ToString();
     }
 
     /// <summary>
@@ -152,7 +168,51 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)
     {
         Name = NormalizeMessageName(name);
-        Parameters = parameters is not null ? parameters.Select(NormalizeParameterName).ToArray() : [];
+        Parameters = NormalizeParameterNames(parameters);
         SignatureId = CreateSignatureId(Name, Parameters);
+    }
+
+    private static string[] NormalizeParameterNames(IEnumerable<string>? parameters)
+    {
+        if (parameters is null)
+        {
+            return [];
+        }
+
+        if (parameters is IReadOnlyCollection<string> collection)
+        {
+            if (collection.Count == 0)
+            {
+                return [];
+            }
+
+            var values = new string[collection.Count];
+            var index = 0;
+            foreach (var parameter in collection)
+            {
+                values[index++] = NormalizeParameterName(parameter);
+            }
+
+            return values;
+        }
+
+        var list = new List<string>();
+        foreach (var parameter in parameters)
+        {
+            list.Add(NormalizeParameterName(parameter));
+        }
+
+        if (list.Count == 0)
+        {
+            return [];
+        }
+
+        var result = new string[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            result[index] = list[index];
+        }
+
+        return result;
     }
 }

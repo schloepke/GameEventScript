@@ -168,7 +168,13 @@ public static class GameEventScriptValueFactory
 
         var list = new List<GameEventScriptValue>();
         foreach (var value in values) list.Add(value);
-        return list.ToArray();
+        var listResult = new GameEventScriptValue[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            listResult[index] = list[index];
+        }
+
+        return listResult;
     }
 
     private static int[] ToArray(IEnumerable<int> values)
@@ -191,7 +197,13 @@ public static class GameEventScriptValueFactory
 
         var list = new List<int>();
         foreach (var value in values) list.Add(value);
-        return list.ToArray();
+        var listResult = new int[list.Count];
+        for (var index = 0; index < list.Count; index++)
+        {
+            listResult[index] = list[index];
+        }
+
+        return listResult;
     }
 
     private static GesValueMap CreateMap(IEnumerable<KeyValuePair<string, GameEventScriptValue>>? entries)

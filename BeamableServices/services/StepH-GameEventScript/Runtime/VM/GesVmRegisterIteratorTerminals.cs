@@ -51,10 +51,9 @@ internal static class GesVmRegisterIteratorTerminals
         }
 
         long count = 0;
-        var item = new GesValue();
         try
         {
-            while (iterator.TryNext(ref item)) count++;
+            while (iterator.Next().HasValue) count++;
             vmState.SetInteger(destinationRegister, count);
         }
         finally

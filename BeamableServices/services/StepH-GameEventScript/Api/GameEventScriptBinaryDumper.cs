@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using System.Text;
 using static StepH.GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 
@@ -107,18 +106,24 @@ public static class GameEventScriptBinaryDumper
         for (var i = 0; i < table.Slices.Length; i++)
         {
             var label = context.ListLabel(i);
-            var values = table.Resolve(checked((ushort)i)).ToArray();
+            var values = table.Resolve(checked((ushort)i));
             AppendAlignedLabel(builder, label);
             switch (context.GetListRole(i))
             {
                 case ListRole.Registers:
-                    builder.Append(".registers [").Append(string.Join(", ", values.Select(Register))).Append(']');
+                    builder.Append(".registers [");
+                    AppendRegisters(builder, values);
+                    builder.Append(']');
                     break;
                 case ListRole.Texts:
-                    builder.Append(".texts [").Append(string.Join(", ", values.Select(value => context.TextLabel(value)))).Append(']');
+                    builder.Append(".texts [");
+                    AppendTextLabels(builder, context, values);
+                    builder.Append(']');
                     break;
                 default:
-                    builder.Append(".u16 [").Append(string.Join(", ", values.Select(value => value.ToString(CultureInfo.InvariantCulture)))).Append(']');
+                    builder.Append(".u16 [");
+                    AppendU16Values(builder, values);
+                    builder.Append(']');
                     break;
             }
 
@@ -141,9 +146,9 @@ public static class GameEventScriptBinaryDumper
                 .Append(entry.Id == NoAddress ? "none" : entry.Id.ToString(CultureInfo.InvariantCulture))
                 .Append(" name=")
                 .Append(context.TextLabel(entry.Name))
-                .Append(" args=[")
-                .Append(string.Join(", ", entry.ArgumentNames.Select(value => context.TextLabel(value))))
-                .Append(']');
+                .Append(" args=[");
+            AppendTextLabels(builder, context, entry.ArgumentNames);
+            builder.Append(']');
 
             if (entry.EntryAddress != NoAddress)
             {
@@ -153,17 +158,17 @@ public static class GameEventScriptBinaryDumper
             if (entry.RequiredTags.Count > 0)
             {
                 builder
-                    .Append(" requiredTags=[")
-                    .Append(string.Join(", ", entry.RequiredTags.Select(value => context.TextLabel(value))))
-                    .Append(']');
+                    .Append(" requiredTags=[");
+                AppendTextLabels(builder, context, entry.RequiredTags);
+                builder.Append(']');
             }
 
             if (entry.ExcludedTags.Count > 0)
             {
                 builder
-                    .Append(" excludedTags=[")
-                    .Append(string.Join(", ", entry.ExcludedTags.Select(value => context.TextLabel(value))))
-                    .Append(']');
+                    .Append(" excludedTags=[");
+                AppendTextLabels(builder, context, entry.ExcludedTags);
+                builder.Append(']');
             }
 
             builder
@@ -400,7 +405,99 @@ public static class GameEventScriptBinaryDumper
 
         if (comments.Count > 0)
         {
-            builder.Append(" // ").Append(string.Join(", ", comments));
+            builder.Append(" // ");
+            AppendComments(builder, comments);
+        }
+    }
+
+    private static void AppendRegisters(StringBuilder builder, ReadOnlySpan<ushort> values)
+    {
+        for (var index = 0; index < values.Length; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(Register(values[index]));
+        }
+    }
+
+    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, ReadOnlySpan<ushort> values)
+    {
+        for (var index = 0; index < values.Length; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(context.TextLabel(values[index]));
+        }
+    }
+
+    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, IReadOnlyList<ushort> values)
+    {
+        for (var index = 0; index < values.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(context.TextLabel(values[index]));
+        }
+    }
+
+    private static void AppendU16Values(StringBuilder builder, ReadOnlySpan<ushort> values)
+    {
+        for (var index = 0; index < values.Length; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(values[index].ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    private static void AppendComments(StringBuilder builder, IReadOnlyList<string> comments)
+    {
+        for (var index = 0; index < comments.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(comments[index]);
+        }
+    }
+
+    private static void AppendEscapedResolvedTexts(StringBuilder builder, DisassemblyContext context, IReadOnlyList<ushort> values)
+    {
+        for (var index = 0; index < values.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append(Escape(context.ResolveText(values[index])));
+        }
+    }
+
+    private static void AppendEscapedTags(StringBuilder builder, DisassemblyContext context, IReadOnlyList<ushort> values)
+    {
+        for (var index = 0; index < values.Count; index++)
+        {
+            if (index > 0)
+            {
+                builder.Append(", ");
+            }
+
+            builder.Append('#').Append(Escape(context.ResolveText(values[index])));
         }
     }
 
@@ -436,7 +533,9 @@ public static class GameEventScriptBinaryDumper
 
         if (text.Count > 0)
         {
-            comments.Add(string.Join(", ", text));
+            var builder = new StringBuilder();
+            AppendComments(builder, text);
+            comments.Add(builder.ToString());
         }
     }
 
@@ -475,9 +574,19 @@ public static class GameEventScriptBinaryDumper
     private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
     {
         var name = Escape(context.ResolveText(entry.Name));
-        var signature = entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler
-            ? "\"" + name + " as message\""
-            : "\"" + name + "(" + Escape(string.Join(", ", entry.ArgumentNames.Select(context.ResolveText))) + ")\"";
+        string signature;
+        if (entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler)
+        {
+            signature = "\"" + name + " as message\"";
+        }
+        else
+        {
+            var signatureBuilder = new StringBuilder();
+            signatureBuilder.Append('"').Append(name).Append('(');
+            AppendEscapedResolvedTexts(signatureBuilder, context, entry.ArgumentNames);
+            signature = signatureBuilder.Append(")\"").ToString();
+        }
+
         if (entry.RequiredTags.Count == 0 && entry.ExcludedTags.Count == 0)
         {
             return signature;
@@ -486,14 +595,14 @@ public static class GameEventScriptBinaryDumper
         var builder = new StringBuilder(signature[..^1]);
         if (entry.RequiredTags.Count > 0)
         {
-            builder.Append(" matching ")
-                .Append(string.Join(", ", entry.RequiredTags.Select(tag => "#" + Escape(context.ResolveText(tag)))));
+            builder.Append(" matching ");
+            AppendEscapedTags(builder, context, entry.RequiredTags);
         }
 
         if (entry.ExcludedTags.Count > 0)
         {
-            builder.Append(" without ")
-                .Append(string.Join(", ", entry.ExcludedTags.Select(tag => "#" + Escape(context.ResolveText(tag)))));
+            builder.Append(" without ");
+            AppendEscapedTags(builder, context, entry.ExcludedTags);
         }
 
         return builder.Append('"').ToString();
@@ -507,17 +616,18 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, IReadOnlyList<ushort> values, ListRole role)
+    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, ReadOnlySpan<ushort> values, ListRole role)
     {
-        if (values.Count == 0 || role != ListRole.Texts)
+        if (values.Length == 0 || role != ListRole.Texts)
         {
             return;
         }
 
         var anyText = false;
         var comment = new StringBuilder();
-        foreach (var value in values)
+        for (var index = 0; index < values.Length; index++)
         {
+            var value = values[index];
             if (value >= context.Binary.TextConstantTable.Slices.Length)
             {
                 continue;
@@ -893,8 +1003,21 @@ public static class GameEventScriptBinaryDumper
                 return;
             }
 
-            var namedAddresses = codeLabelNames.Keys.OrderBy(address => address).ToArray();
-            var usedNames = new HashSet<string>(codeLabelNames.Values, StringComparer.Ordinal);
+            var namedAddresses = new int[codeLabelNames.Count];
+            var namedAddressIndex = 0;
+            foreach (var address in codeLabelNames.Keys)
+            {
+                namedAddresses[namedAddressIndex++] = address;
+            }
+
+            Array.Sort(namedAddresses);
+
+            var usedNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var name in codeLabelNames.Values)
+            {
+                usedNames.Add(name);
+            }
+
             foreach (var address in codeLabels)
             {
                 if (codeLabelNames.ContainsKey(address))
@@ -950,16 +1073,27 @@ public static class GameEventScriptBinaryDumper
             var name = entry.Name < binary.TextConstantTable.Slices.Length
                 ? binary.TextConstantTable.Resolve(entry.Name)
                 : "#" + entry.Name.ToString(CultureInfo.InvariantCulture);
-            var args = entry.ArgumentNames
-                .Select(index => index < binary.TextConstantTable.Slices.Length
-                    ? binary.TextConstantTable.Resolve(index)
-                    : "#" + index.ToString(CultureInfo.InvariantCulture));
             if (entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler)
             {
                 return kind + " " + name + " as message";
             }
 
-            return kind + " " + name + "(" + string.Join(", ", args) + ")";
+            var builder = new StringBuilder();
+            builder.Append(kind).Append(' ').Append(name).Append('(');
+            for (var index = 0; index < entry.ArgumentNames.Count; index++)
+            {
+                if (index > 0)
+                {
+                    builder.Append(", ");
+                }
+
+                var argumentName = entry.ArgumentNames[index];
+                builder.Append(argumentName < binary.TextConstantTable.Slices.Length
+                    ? binary.TextConstantTable.Resolve(argumentName)
+                    : "#" + argumentName.ToString(CultureInfo.InvariantCulture));
+            }
+
+            return builder.Append(')').ToString();
         }
 
         private static string CodeLabelPrefix(GameEventScriptBinaryBindKind kind)

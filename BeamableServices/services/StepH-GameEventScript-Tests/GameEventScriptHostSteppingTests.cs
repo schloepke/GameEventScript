@@ -368,6 +368,58 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
+    public void AutomaticDispatchSerializesCallerPublishWithWorkerDispatch()
+    {
+        var handlerEntered = new ManualResetEventSlim(false);
+        var releaseHandler = new ManualResetEventSlim(false);
+        var handlerTimedOut = new ManualResetEventSlim(false);
+        var publishStarted = new ManualResetEventSlim(false);
+        var publishReturned = new ManualResetEventSlim(false);
+        var otherHandled = new ManualResetEventSlim(false);
+        var accepted = false;
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithAutomaticDispatch()
+            .Build();
+        host.Subscribe("Block", [], (_, _) =>
+        {
+            handlerEntered.Set();
+            if (!releaseHandler.Wait(TimeSpan.FromSeconds(2)))
+            {
+                handlerTimedOut.Set();
+            }
+        });
+        host.Subscribe("Other", [], (_, _) => otherHandled.Set());
+
+        try
+        {
+            Assert.IsTrue(host.Publish(Create("Block")));
+            Assert.IsTrue(handlerEntered.Wait(TimeSpan.FromSeconds(2)));
+
+            var publishTask = Task.Run(() =>
+            {
+                publishStarted.Set();
+                accepted = host.Publish(Create("Other"));
+                publishReturned.Set();
+            });
+
+            Assert.IsTrue(publishStarted.Wait(TimeSpan.FromSeconds(2)));
+            Assert.IsFalse(publishReturned.Wait(TimeSpan.FromMilliseconds(100)));
+
+            releaseHandler.Set();
+
+            Assert.IsTrue(publishTask.Wait(TimeSpan.FromSeconds(2)));
+            Assert.IsTrue(accepted);
+            Assert.IsTrue(publishReturned.IsSet);
+            Assert.IsFalse(handlerTimedOut.IsSet);
+            Assert.IsTrue(otherHandled.Wait(TimeSpan.FromSeconds(2)));
+        }
+        finally
+        {
+            releaseHandler.Set();
+        }
+    }
+
+    [TestMethod]
     public void SubscribeDuringDispatchUpdatesFutureDispatchSnapshots()
     {
         var calls = new List<string>();
@@ -390,7 +442,7 @@ public sealed class GameEventScriptHostSteppingTests
     }
 
     [TestMethod]
-    public void ManualHostIgnoresProcessedEventLimitBecauseOpcodeBudgetControlsProgress()
+    public void ManualHostStopsDispatchWhenProcessedEventLimitIsReached()
     {
         var bytecode = GameEventScriptBuilder.Create()
             .AddScript(
@@ -413,14 +465,10 @@ public sealed class GameEventScriptHostSteppingTests
 
         host.Publish(Create("Start"));
 
-        GameEventScriptRunStepResult step;
-        do
-        {
-            step = host.Update(8);
-        }
-        while (step.State != GameEventScriptRunState.Completed);
+        var step = host.Update(8);
 
-        CollectionAssert.AreEqual(new[] { "Middle", "Done" }, published);
+        Assert.AreEqual(GameEventScriptRunState.Paused, step.State);
+        CollectionAssert.AreEqual(new[] { "Middle" }, published);
     }
 
     [TestMethod]

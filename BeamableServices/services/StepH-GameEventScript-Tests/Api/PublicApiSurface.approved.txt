@@ -427,6 +427,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptHost Subscribe(StepH.GameEventScript.Api.IGameEventScriptModule module, System.Int32 priority)
   method StepH.GameEventScript.Api.GameEventScriptHost Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Int32 priority)
   method StepH.GameEventScript.Api.GameEventScriptRun BeginRun(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method StepH.GameEventScript.Api.GameEventScriptRun Dispatch()
   method StepH.GameEventScript.Api.GameEventScriptRunStepResult Update(System.Int32 maxOpcodes)
   method StepH.GameEventScript.Api.GameEventScriptSession StartSession()
   method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
@@ -440,6 +441,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishHook(System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, System.Boolean> publishHook)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandom(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRegistry(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry registry)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeGate(StepH.GameEventScript.Api.IGameEventScriptRuntimeGate runtimeGate)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeLimits(StepH.GameEventScript.Api.GameEventScriptRuntimeLimits runtimeLimits)
   method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeObserver(StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver runtimeObserver)
 enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
@@ -511,6 +513,8 @@ sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int64 seed)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSequence(System.Double[] values)
 sealed class StepH.GameEventScript.Api.GameEventScriptRun
+  method StepH.GameEventScript.Api.GameEventScriptRunStepResult Execute(System.Int32 maxOpcodes)
+  method StepH.GameEventScript.Api.GameEventScriptRunStepResult ExecuteAll()
   method StepH.GameEventScript.Api.GameEventScriptRunStepResult Step(System.Int32 maxOpcodes)
   method System.Void Cancel()
   method System.Void Dispose()
@@ -683,6 +687,9 @@ interface StepH.GameEventScript.Api.IGameEventScriptModule
   method System.Void Bind(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry typeRegistry)
   property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor> Handlers { get }
   property System.String ModuleName { get }
+interface StepH.GameEventScript.Api.IGameEventScriptRuntimeGate
+  method System.Void Enter()
+  method System.Void Exit()
 interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
   method System.Void DispatchCompleted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
   method System.Void DispatchStarted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)

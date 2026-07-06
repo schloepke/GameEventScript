@@ -14,6 +14,7 @@ public sealed class GameEventScriptHostBuilder
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
     private GameEventScriptRuntimeLimits _runtimeLimits = GameEventScriptRuntimeLimits.Default;
     private IGameEventScriptDispatcher? _dispatcher;
+    private IGameEventScriptRuntimeGate? _runtimeGate;
     private Func<GameEventScriptMessage, bool>? _publishHook;
 
     /// <summary>
@@ -127,6 +128,17 @@ public sealed class GameEventScriptHostBuilder
     }
 
     /// <summary>
+    /// Configures the bridge-provided gate that serializes access to the single-threaded runtime core.
+    /// </summary>
+    /// <param name="runtimeGate">The runtime gate to use for public host/session/run access.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptHostBuilder WithRuntimeGate(IGameEventScriptRuntimeGate runtimeGate)
+    {
+        _runtimeGate = runtimeGate ?? throw new ArgumentNullException(nameof(runtimeGate));
+        return this;
+    }
+
+    /// <summary>
     /// Builds an instance of <see cref="GameEventScriptHost"/> using the current configuration of the
     /// <see cref="GameEventScriptHostBuilder"/>.
     /// </summary>
@@ -141,5 +153,6 @@ public sealed class GameEventScriptHostBuilder
         _externalTypeRegistry,
         _runtimeLimits,
         dispatcher: _dispatcher,
+        runtimeGate: _runtimeGate,
         _publishHook);
 }

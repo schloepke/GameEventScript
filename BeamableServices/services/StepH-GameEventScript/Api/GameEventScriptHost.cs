@@ -11,6 +11,7 @@ public sealed class GameEventScriptHost
     private const int NormalPriority = 0;
 
     private readonly GameEventScriptRuntimeHost _runtime;
+    private readonly IGameEventScriptRuntimeGate? _runtimeGate;
 
     internal GameEventScriptHost(
         GameEventScriptRandomGenerator random,
@@ -19,8 +20,10 @@ public sealed class GameEventScriptHost
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry,
         GameEventScriptRuntimeLimits? runtimeLimits,
         IGameEventScriptDispatcher? dispatcher = null,
+        IGameEventScriptRuntimeGate? runtimeGate = null,
         Func<GameEventScriptMessage, bool>? publishHook = null)
     {
+        _runtimeGate = runtimeGate;
         _runtime = new GameEventScriptRuntimeHost(
             random,
             runtimeObserver,
@@ -28,6 +31,7 @@ public sealed class GameEventScriptHost
             externalTypeRegistry,
             runtimeLimits,
             dispatcher,
+            runtimeGate,
             publishHook);
     }
 
@@ -35,25 +39,33 @@ public sealed class GameEventScriptHost
 
     public GameEventScriptHost Load(IGameEventScriptModule module, int priority = NormalPriority)
     {
-        _runtime.Load(module, priority);
+        EnterCore();
+        try { _runtime.Load(module, priority); }
+        finally { ExitCore(); }
         return this;
     }
 
     public GameEventScriptHost Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
     {
-        _runtime.Subscribe(message, parameterNames, handler, priority);
+        EnterCore();
+        try { _runtime.Subscribe(message, parameterNames, handler, priority); }
+        finally { ExitCore(); }
         return this;
     }
 
     public GameEventScriptHost Subscribe(GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptSession> handler, int priority = NormalPriority)
     {
-        _runtime.Subscribe(signature, handler, priority);
+        EnterCore();
+        try { _runtime.Subscribe(signature, handler, priority); }
+        finally { ExitCore(); }
         return this;
     }
 
     public GameEventScriptHost Subscribe(GameEventScriptMessageHandlerDescriptor handler, int priority = NormalPriority)
     {
-        _runtime.Subscribe(handler, priority);
+        EnterCore();
+        try { _runtime.Subscribe(handler, priority); }
+        finally { ExitCore(); }
         return this;
     }
 
@@ -64,28 +76,40 @@ public sealed class GameEventScriptHost
         IReadOnlyCollection<string>? withoutTags = null,
         int priority = NormalPriority)
     {
-        _runtime.Subscribe(signature, handler, matchingTags, withoutTags, priority);
+        EnterCore();
+        try { _runtime.Subscribe(signature, handler, matchingTags, withoutTags, priority); }
+        finally { ExitCore(); }
         return this;
     }
 
     public GameEventScriptHost Subscribe(IGameEventScriptModule module, int priority = NormalPriority)
     {
-        _runtime.Subscribe(module, priority);
+        EnterCore();
+        try { _runtime.Subscribe(module, priority); }
+        finally { ExitCore(); }
         return this;
     }
 
-    public GameEventScriptSession StartSession()
-        => _runtime.StartSession();
+    public GameEventScriptSession StartSession() => RunCore(_runtime.StartSession);
 
-    public bool Publish(GameEventScriptMessage message)
-        => _runtime.Publish(message);
+    public bool Publish(GameEventScriptMessage message) => RunCore(() => _runtime.Publish(message));
 
-    public bool PublishToCompletion(GameEventScriptMessage message)
-        => _runtime.PublishToCompletion(message);
+    public bool PublishToCompletion(GameEventScriptMessage message) => RunCore(() => _runtime.PublishToCompletion(message));
 
-    public GameEventScriptRunStepResult Update(int maxOpcodes)
-        => _runtime.Update(maxOpcodes);
+    public GameEventScriptRun? Dispatch() => RunCore(_runtime.Dispatch);
 
-    public GameEventScriptRun BeginRun(GameEventScriptMessage message)
-        => _runtime.BeginRun(message);
+    public GameEventScriptRunStepResult Update(int maxOpcodes) => RunCore(() => _runtime.Update(maxOpcodes));
+
+    public GameEventScriptRun BeginRun(GameEventScriptMessage message) => RunCore(() => _runtime.BeginRun(message));
+
+    private T RunCore<T>(Func<T> action)
+    {
+        EnterCore();
+        try { return action(); }
+        finally { ExitCore(); }
+    }
+
+    private void EnterCore() => _runtimeGate?.Enter();
+
+    private void ExitCore() => _runtimeGate?.Exit();
 }

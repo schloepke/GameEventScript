@@ -12,6 +12,9 @@ public static class GameEventScriptCSharpHostBuilderExtensions
     public static GameEventScriptHostBuilder WithAutomaticDispatch(this GameEventScriptHostBuilder builder)
     {
         _ = builder ?? throw new ArgumentNullException(nameof(builder));
-        return builder.WithAutomaticDispatch(GameEventScriptCSharpDispatcher.Shared);
+        var dispatcher = GameEventScriptCSharpDispatcher.Shared;
+        return builder
+            .WithAutomaticDispatch(dispatcher)
+            .WithRuntimeGate(dispatcher);
     }
 }

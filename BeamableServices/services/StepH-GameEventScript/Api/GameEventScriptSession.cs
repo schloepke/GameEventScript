@@ -10,10 +10,10 @@ public sealed class GameEventScriptSession
 {
     private readonly GameEventScriptRuntimeHost? _host;
     private readonly IGameEventScriptDispatcher? _dispatcher;
+    private readonly IGameEventScriptRuntimeGate? _runtimeGate;
     private readonly Func<GameEventScriptMessage, bool> _emit;
     private readonly Func<GameEventScriptMessage, bool> _publish;
     private readonly IGameEventScriptRuntimeObserver? _runtimeObserver;
-    private readonly object _pumpGate = new();
     private bool _automaticDispatchScheduled;
 
     private GameEventScriptSession(GameEventScriptRandomGenerator random, Func<GameEventScriptMessage, bool> emit,
@@ -28,13 +28,14 @@ public sealed class GameEventScriptSession
         ExtensionRegistry = extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance;
     }
 
-    internal GameEventScriptSession(GameEventScriptRuntimeHost host, GameEventScriptHostRunState state, IGameEventScriptDispatcher? dispatcher, GameEventScriptRandomGenerator random,
+    internal GameEventScriptSession(GameEventScriptRuntimeHost host, GameEventScriptHostRunState state, IGameEventScriptDispatcher? dispatcher, IGameEventScriptRuntimeGate? runtimeGate, GameEventScriptRandomGenerator random,
         Func<GameEventScriptMessage, bool> emit, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry,
         Func<GameEventScriptMessage, bool>? publish, IGameEventScriptRuntimeObserver? runtimeObserver) : this(random, emit, runtimeLimits, extensionRegistry, publish, runtimeObserver)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         State = state ?? throw new ArgumentNullException(nameof(state));
         _dispatcher = dispatcher;
+        _runtimeGate = runtimeGate;
     }
 
     public GameEventScriptRandomGenerator Random { get; }
@@ -53,7 +54,8 @@ public sealed class GameEventScriptSession
 
     internal GesRuntimeBudget RuntimeBudget { get; }
 
-    public bool Emit(GameEventScriptMessage message) => !string.IsNullOrWhiteSpace(message.Name) && _emit(message);
+    public bool Emit(GameEventScriptMessage message)
+        => ExecuteCore(() => !string.IsNullOrWhiteSpace(message.Name) && _emit(message));
 
     public bool Emit(string message) => Emit(GameEventScriptMessage.Create(message));
 
@@ -61,7 +63,8 @@ public sealed class GameEventScriptSession
 
     public bool Emit(string message, params (string name, GameEventScriptValue value)[] args) => Emit(GameEventScriptMessage.Create(message, args));
 
-    public bool Publish(GameEventScriptMessage message) => !string.IsNullOrWhiteSpace(message.Name) && _publish(message);
+    public bool Publish(GameEventScriptMessage message)
+        => ExecuteCore(() => !string.IsNullOrWhiteSpace(message.Name) && _publish(message));
 
     public bool Publish(string message) => Publish(GameEventScriptMessage.Create(message));
 
@@ -72,48 +75,32 @@ public sealed class GameEventScriptSession
     internal void RecordRuntimeLimitReached(string limitName, string detail, int limit) => _runtimeObserver?.RuntimeLimitReached(limitName, detail, limit);
 
     public bool Dispatch(GameEventScriptMessage message)
+        => ExecuteCore(() => DispatchCore(message));
+
+    private bool DispatchCore(GameEventScriptMessage message)
     {
         EnsureHostBacked();
         if (string.IsNullOrWhiteSpace(message.Name)) return false;
-        var shouldScheduleAutomaticDispatch = false;
-        lock (_pumpGate)
+        if (!_host!.TryEnqueueSessionInvocations(State!, message)) return false;
+        if (_dispatcher is not null && !_automaticDispatchScheduled)
         {
-            if (!_host!.TryEnqueueSessionInvocations(State!, message)) return false;
-            if (_dispatcher is not null && !_automaticDispatchScheduled)
-            {
-                _automaticDispatchScheduled = true;
-                shouldScheduleAutomaticDispatch = true;
-            }
-        }
-
-        if (!shouldScheduleAutomaticDispatch) return true;
-        try
-        {
-            _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
-        }
-        catch
-        {
-            lock (_pumpGate)
-            {
-                _automaticDispatchScheduled = false;
-            }
-
-            throw;
+            _automaticDispatchScheduled = true;
+            EnqueueAutomaticDispatchSlice();
         }
 
         return true;
     }
 
     public bool DispatchToCompletion(GameEventScriptMessage message)
+        => ExecuteCore(() => DispatchToCompletionCore(message));
+
+    private bool DispatchToCompletionCore(GameEventScriptMessage message)
     {
         EnsureHostBacked();
         if (string.IsNullOrWhiteSpace(message.Name)) return false;
-        lock (_pumpGate)
+        if (!_host!.TryEnqueueSessionInvocations(State!, message))
         {
-            if (!_host!.TryEnqueueSessionInvocations(State!, message))
-            {
-                return false;
-            }
+            return false;
         }
 
         _host!.DrainSessionToCompletion(State!);
@@ -121,6 +108,9 @@ public sealed class GameEventScriptSession
     }
 
     public GameEventScriptRunStepResult Update(int maxOpcodes)
+        => ExecuteCore(() => UpdateCore(maxOpcodes));
+
+    private GameEventScriptRunStepResult UpdateCore(int maxOpcodes)
     {
         EnsureHostBacked();
         if (_dispatcher is not null) throw new InvalidOperationException("GameEventScript automatic dispatch sessions cannot be stepped manually.");
@@ -128,74 +118,58 @@ public sealed class GameEventScriptSession
     }
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
+        => ExecuteCore(() => BeginRunCore(message));
+
+    private GameEventScriptRun BeginRunCore(GameEventScriptMessage message)
     {
         EnsureHostBacked();
         var accepted = _host!.TryEnqueueSessionInvocations(State!, message);
-        return new GameEventScriptRun(_host.DrainSessionSlice, State!, accepted);
+        return new GameEventScriptRun(_host.DrainSessionSlice, State!, accepted, _runtimeGate);
     }
 
     internal void ScheduleAutomaticDispatchIfNeeded()
     {
         EnsureHostBacked();
         if (_dispatcher is null || State!.IsCompletedAndIdle) return;
-        var shouldSchedule = false;
-        lock (_pumpGate)
+        if (_automaticDispatchScheduled)
         {
-            if (!_automaticDispatchScheduled)
-            {
-                _automaticDispatchScheduled = true;
-                shouldSchedule = true;
-            }
+            return;
         }
 
-        if (!shouldSchedule) return;
-        try
-        {
-            _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
-        }
-        catch
-        {
-            lock (_pumpGate)
-            {
-                _automaticDispatchScheduled = false;
-            }
-
-            throw;
-        }
+        _automaticDispatchScheduled = true;
+        EnqueueAutomaticDispatchSlice();
     }
 
     private void RunAutomaticDispatchSlice()
     {
         try
         {
-            _host!.DrainSessionOneToCompletion(State!);
+            _host!.DrainSessionToCompletion(State!);
         }
         finally
         {
-            var shouldRestart = false;
-            lock (_pumpGate)
-            {
-                shouldRestart = _dispatcher is not null && !State!.IsCompletedAndIdle;
-                _automaticDispatchScheduled = shouldRestart;
-            }
-
-            if (shouldRestart)
-            {
-                try
-                {
-                    _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
-                }
-                catch
-                {
-                    lock (_pumpGate)
-                    {
-                        _automaticDispatchScheduled = false;
-                    }
-
-                    throw;
-                }
-            }
+            _automaticDispatchScheduled = false;
         }
+    }
+
+    private void EnqueueAutomaticDispatchSlice()
+    {
+        try
+        {
+            _dispatcher!.Enqueue(RunAutomaticDispatchSlice);
+        }
+        catch
+        {
+            _automaticDispatchScheduled = false;
+            throw;
+        }
+    }
+
+    private T ExecuteCore<T>(Func<T> workItem)
+    {
+        _runtimeGate?.Enter();
+        try { return workItem(); }
+        finally { _runtimeGate?.Exit(); }
     }
 
     private void EnsureHostBacked()

@@ -19,9 +19,9 @@ moduleLoad.allocatedKb=6.555
 compile.elapsedMs=0.7725
 compile.allocatedKb=298.375
 run.elapsedMs=5.6713
-run.allocatedKb=2953.164
+run.allocatedKb=3070.352
 run.perInvokeElapsedMs=0.005671
-run.perInvokeAllocatedKb=2.953
+run.perInvokeAllocatedKb=3.07
 run.emittedMessages=1000
 run.outboundPublishedMessages=0
 
@@ -39,9 +39,9 @@ moduleLoad.allocatedKb=6.242
 compile.elapsedMs=0.4366
 compile.allocatedKb=319.938
 run.elapsedMs=38.1325
-run.allocatedKb=13390.664
+run.allocatedKb=13554.727
 run.perInvokeElapsedMs=0.038133
-run.perInvokeAllocatedKb=13.391
+run.perInvokeAllocatedKb=13.555
 run.emittedMessages=1000
 run.outboundPublishedMessages=0
 
@@ -59,9 +59,9 @@ moduleLoad.allocatedKb=6.594
 compile.elapsedMs=0.544
 compile.allocatedKb=255.063
 run.elapsedMs=4.5105
-run.allocatedKb=2945.352
+run.allocatedKb=2976.602
 run.perInvokeElapsedMs=0.004511
-run.perInvokeAllocatedKb=2.945
+run.perInvokeAllocatedKb=2.977
 run.emittedMessages=1000
 run.outboundPublishedMessages=0
 
@@ -79,9 +79,9 @@ moduleLoad.allocatedKb=6.328
 compile.elapsedMs=1.1544
 compile.allocatedKb=915.336
 run.elapsedMs=18.2217
-run.allocatedKb=3375.039
+run.allocatedKb=3421.914
 run.perInvokeElapsedMs=0.018222
-run.perInvokeAllocatedKb=3.375
+run.perInvokeAllocatedKb=3.422
 run.emittedMessages=1000
 run.outboundPublishedMessages=0
 

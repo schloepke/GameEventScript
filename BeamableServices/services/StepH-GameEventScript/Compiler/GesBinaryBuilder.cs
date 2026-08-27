@@ -836,8 +836,9 @@ internal sealed partial class GesBinaryBuilder
     private IReadOnlyDictionary<int, ushort> AllocateRegisters(IReadOnlyList<PlanItem> items)
     {
         var intervals = BuildRegisterIntervals(items);
+        if (_routines.Count > 0) return AllocateScopedRegisters(intervals);
+
         var result = new Dictionary<int, ushort>();
-        if (_routines.Count > 0) return AllocateScopedRegisters(items);
 
         ushort nextPinned = 0;
         for (var index = 0; index < _registers.Count; index++)
@@ -1001,9 +1002,8 @@ internal sealed partial class GesBinaryBuilder
     private static ushort ToUShort(int value, string operand)
         => value is < 0 or > ushort.MaxValue ? throw new InvalidOperationException($"{operand} '{value}' does not fit into UInt16.") : checked((ushort)value);
 
-    private IReadOnlyDictionary<int, ushort> AllocateScopedRegisters(IReadOnlyList<PlanItem> items)
+    private IReadOnlyDictionary<int, ushort> AllocateScopedRegisters(IReadOnlyList<RegisterInterval> intervals)
     {
-        var intervals = BuildRegisterIntervals(items);
         var result = new Dictionary<int, ushort>();
 
         for (var routineIndex = 0; routineIndex < _routines.Count; routineIndex++)

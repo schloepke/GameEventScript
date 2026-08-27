@@ -67,6 +67,8 @@ internal sealed partial class GesBinaryBuilder
 
         public int Count => _items.Count;
 
+        internal int RegisterCount => _builder._registers.Count;
+
         public GesRegisterRef AddRegister(string name) => _builder.AddRegister(name);
 
         public GesRegisterRef AddTemporaryRegister(string? name = null) => _builder.AddTemporaryRegister(name);
@@ -359,6 +361,10 @@ internal sealed partial class GesBinaryBuilder
         public bool Rewrite(RewriteContext context)
         {
             var changed = false;
+            var readCounts = new int[context.RegisterCount];
+            var writeCounts = new int[context.RegisterCount];
+            CountRegisterUsage(context, readCounts, writeCounts);
+
             for (var index = 0; index + 1 < context.Count; index++)
             {
                 if (context.GetInstruction(index) is not { } instruction ||
@@ -370,18 +376,59 @@ internal sealed partial class GesBinaryBuilder
                     instruction.Destination.RegisterRef.Id != move.X.RegisterRef.Id ||
                     !context.IsTemporary(instruction.Destination.RegisterRef) ||
                     instruction.ReadsRegister(move.Destination.RegisterRef) ||
-                    context.CountRegisterReads(instruction.Destination.RegisterRef) != 1 ||
-                    context.CountRegisterWrites(instruction.Destination.RegisterRef) != 1)
+                    readCounts[instruction.Destination.RegisterRef.Id] != 1 ||
+                    writeCounts[instruction.Destination.RegisterRef.Id] != 1)
                 {
                     continue;
                 }
 
+                var tempRegisterId = instruction.Destination.RegisterRef.Id;
                 context.ReplaceInstruction(index, instruction.WithDestination(move.Destination));
                 context.RemoveAt(index + 1);
+                readCounts[tempRegisterId]--;
+                writeCounts[tempRegisterId]--;
                 changed = true;
             }
 
             return changed;
+        }
+
+        private static void CountRegisterUsage(RewriteContext context, int[] readCounts, int[] writeCounts)
+        {
+            var items = context.Items;
+            for (var index = 0; index < items.Count; index++)
+            {
+                if (items[index].Instruction is not { } instruction) continue;
+                if (instruction.Destination.Kind == GesOperandKind.Register)
+                {
+                    writeCounts[instruction.Destination.RegisterRef.Id]++;
+                }
+
+                CountOperandReads(readCounts, instruction.X);
+                CountOperandReads(readCounts, instruction.Y);
+                CountOperandReads(readCounts, instruction.A);
+                CountOperandReads(readCounts, instruction.B);
+                CountOperandReads(readCounts, instruction.C);
+                CountOperandReads(readCounts, instruction.D);
+                CountOperandReads(readCounts, instruction.SecondaryList);
+            }
+        }
+
+        private static void CountOperandReads(int[] readCounts, GesOperand operand)
+        {
+            switch (operand.Kind)
+            {
+                case GesOperandKind.Register:
+                    readCounts[operand.RegisterRef.Id]++;
+                    return;
+                case GesOperandKind.RegisterList when operand.RegisterListValue is not null:
+                    for (var index = 0; index < operand.RegisterListValue.Count; index++)
+                    {
+                        readCounts[operand.RegisterListValue[index].Id]++;
+                    }
+
+                    return;
+            }
         }
     }
 }

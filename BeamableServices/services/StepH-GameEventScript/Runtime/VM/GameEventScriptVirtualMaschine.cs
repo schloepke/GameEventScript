@@ -177,8 +177,8 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                         case Call:
                             vmState.CallAddress(instruction.TargetAddress, instruction.DestinationRegister, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
-                        case CallStandard:
-                            vmState.GesVmCallStandard(instruction.DestinationRegister, instruction.SecondaryListIndex, instruction.ListIndex, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                        case CreateSeries:
+                            vmState.GesVmCreateSeries(instruction.DestinationRegister, (GameEventScriptBytecodeSeriesKind)instruction.TypeOperand);
                             break;
                         case CallExternal:
                             vmState.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));

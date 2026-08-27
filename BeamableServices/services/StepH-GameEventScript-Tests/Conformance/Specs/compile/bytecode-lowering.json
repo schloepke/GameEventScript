@@ -133,7 +133,7 @@
           "AngleBetween3D"
         ],
         "notContains": [
-          "CallStandard"
+          "CallExternal"
         ]
       }
     },
@@ -225,9 +225,10 @@
     {
       "kind": "bytecode",
       "name": "series term take drop lower without iterator collection opcodes",
-      "script": "module SeriesAtomicShape\n\non Start {\n  let naturals be :series.natural()\n  let term be naturals[:term 3]\n  let firstValues be naturals[:take first 4]\n  let dropped be naturals[:drop first 2]\n  let lastValues be naturals[:take last 2]\n  let droppedLast be naturals[:drop last 1]\n  let highestValues be naturals[:take highest 2]\n  let lowestValues be naturals[:take lowest 2]\n  let droppedHighest be naturals[:drop highest 1]\n  let droppedLowest be naturals[:drop lowest 1]\n  emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)\n}\n",
+      "script": "module SeriesAtomicShape\n\non Start {\n  let naturals be series fibonacci\n  let term be naturals[:term 3]\n  let firstValues be naturals[:take first 4]\n  let dropped be naturals[:drop first 2]\n  let lastValues be naturals[:take last 2]\n  let droppedLast be naturals[:drop last 1]\n  let highestValues be naturals[:take highest 2]\n  let lowestValues be naturals[:take lowest 2]\n  let droppedHighest be naturals[:drop highest 1]\n  let droppedLowest be naturals[:drop lowest 1]\n  emit Done(term: term, firstValues: firstValues, droppedIsSeries: dropped is :series, lastValues: lastValues, droppedLast: droppedLast, highestValues: highestValues, lowestValues: lowestValues, droppedHighest: droppedHighest, droppedLowest: droppedLowest)\n}\n",
       "expectedOpcodes": {
         "contains": [
+          "CreateSeries",
           "Term",
           "TakeFirst",
           "DropFirst",

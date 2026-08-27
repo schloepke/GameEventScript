@@ -107,7 +107,7 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
   enum-field JumpIfNotTrue = 5
   enum-field JumpIfNothing = 6
   enum-field Call = 7
-  enum-field CallStandard = 8
+  enum-field CreateSeries = 8
   enum-field CallExternal = 9
   enum-field ReturnVoid = 10
   enum-field ReturnValue = 11
@@ -303,6 +303,9 @@ enum StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind
   enum-field CountFace = 1
   enum-field FullHouse = 2
   enum-field Straight = 3
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeSeriesKind
+  enum-field Fibonacci = 1
+  enum-field Factorial = 2
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
   enum-field Nothing = 0
   enum-field Boolean = 2

@@ -218,6 +218,12 @@ public enum GameEventScriptBytecodePatternKind : ushort
     Straight = 0x03,
 }
 
+public enum GameEventScriptBytecodeSeriesKind : ushort
+{
+    Fibonacci = 0x01,
+    Factorial = 0x02,
+}
+
 [StructLayout(LayoutKind.Explicit, Size = 16)]
 public struct GameEventScriptBytecodeInstruction
 {
@@ -325,7 +331,7 @@ public enum GameEventScriptBytecodeOpCode : byte
     JumpIfNothing = 0x06,
 
     Call = 0x07,
-    CallStandard = 0x08,
+    CreateSeries = 0x08,
     CallExternal = 0x09,
 
     ReturnVoid = 0x0A,

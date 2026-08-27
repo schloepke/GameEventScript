@@ -19,11 +19,11 @@ instructions or to explicit opcodes that reference normalized tables. Function
 and predicate calls use public callable entry addresses in VM-owned frames.
 Helper expressions run through linear entry addresses and isolate their
 temporary registers from handler locals with temporary frame extensions. Predicate
-calls use `Call`, `CallStandard`, or `CallExternal` with
+calls use `Call` or `CallExternal` with
 `GameEventScriptInstructionFlag.NormalizeResultAsPredicate` set in
 `UnitAndFlags`. Local calls use direct `Call` instructions with target entry
 addresses and contiguous staged argument sequences. Extension calls use direct
-`CallStandard` or `CallExternal` instructions with argument register lists.
+`CallExternal` instructions with argument register lists.
 Extrema reduce operators, type constructors, local builders, message literals,
 handler binding, casts, type checks, member access, and seeded-random
 expressions are layout-free direct instructions.
@@ -1089,10 +1089,10 @@ or `EmitMessageValue`. Tagged dynamic values use
 `PublishMessageValueWithTags messageRegister tagRegisterList` or
 `EmitMessageValueWithTags messageRegister tagRegisterList`.
 
-### Extensions, Intrinsics, and External Types
+### Extensions, Intrinsics, Series, and External Types
 
-- `CallStandard dst extensionShapeIndex argumentRegisterListIndex`
 - `CallExternal dst externalReferenceIndex argumentRegisterListIndex`
+- `CreateSeries dst seriesKind`
 
 Predicate extension calls use the same opcode with
 `NormalizeResultAsPredicate` set in `UnitAndFlags`.
@@ -1103,12 +1103,9 @@ serialized into portable bytecode.
 
 Core language intrinsics are non-overridable and do not appear in
 `ExternalReferences`. Math, navigation, collection, and iterator terminals lower
-to direct opcodes. Remaining built-in namespace calls that have not yet been
-promoted to direct opcodes, currently series helpers, use `CallStandard` with an
-extension shape stored in `UShortListPool` as
-`[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`.
-All extension call arguments, including zero-argument calls, are represented by
-a concrete argument register-list entry in `UShortListPool`.
+to direct opcodes. Series creation is also a direct opcode. All extension call
+arguments, including zero-argument calls, are represented by a concrete argument
+register-list entry in `UShortListPool`.
 
 External type constructors are collected separately in
 `ExternalTypeConstructorReferences` and dynamically bound against the host's

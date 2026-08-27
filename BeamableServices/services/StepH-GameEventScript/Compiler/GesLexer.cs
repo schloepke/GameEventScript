@@ -52,6 +52,9 @@ internal enum GesTokenKind
     IntrinsicCross,
     IntrinsicAngle,
     KeywordRandom,
+    Series,
+    Fibonacci,
+    Factorial,
     Clamp,
     Min,
     Max,
@@ -357,6 +360,9 @@ internal sealed class GesLexer
         if (IsWordAt(start, length, "cross")) return new GesToken(GesTokenKind.IntrinsicCross, "cross", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "angle")) return new GesToken(GesTokenKind.IntrinsicAngle, "angle", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "random")) return new GesToken(GesTokenKind.KeywordRandom, "random", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "series")) return new GesToken(GesTokenKind.Series, "series", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "fibonacci")) return new GesToken(GesTokenKind.Fibonacci, "fibonacci", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "factorial")) return new GesToken(GesTokenKind.Factorial, "factorial", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "clamp")) return new GesToken(GesTokenKind.Clamp, "clamp", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "min")) return new GesToken(GesTokenKind.Min, "min", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "max")) return new GesToken(GesTokenKind.Max, "max", line, column, endLine, endColumn);

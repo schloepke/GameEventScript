@@ -198,7 +198,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x05 | `JumpIfNotTrue` | - | - | `ConditionRegister` | `TargetAddress` | - | Branches when `!X.IsTrue()`, including `nothing`. |
 | 0x06 | `JumpIfNothing` | - | - | `ConditionRegister` | `TargetAddress` | - | Branches when `X.Kind` is `Nothing`. |
 | 0x07 | `Call` | optional `NormalizeResultAsPredicate` | result register | - | `EntryAddress`=callable/predicate | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. With `NormalizeResultAsPredicate`, the returned value is normalized to boolean or `nothing`. |
-| 0x08 | `CallStandard` | optional `NormalizeResultAsPredicate` | result register | `SecondaryListIndex`=extension shape | `ListIndex`=argument register-list index | - | Calls a built-in standard extension. Shape is `[extensionNameStringIndex, functionNameStringIndex, argumentNameStringIndex...]`. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
+| 0x08 | `CreateSeries` | - | result register | - | `TypeOperand`=series kind | - | Creates a built-in mathematical series. Supported kinds are `Fibonacci` and `Factorial`. |
 | 0x09 | `CallExternal` | optional `NormalizeResultAsPredicate` | result register | `ExternalReferenceIndex` | `ListIndex`=argument register-list index | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
 | 0x0A | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
 | 0x0B | `ReturnValue` | - | - | `XRegister`=return | - | - | Returns the value in `X` from the current frame. |
@@ -441,7 +441,7 @@ separate approximate-equality opcode.
 | Pool / table | Used by |
 | --- | --- |
 | `StringPool` | `LoadText`, `LoadTag`, `MemberAccess`; indirectly through message/name lists in `UShortListPool` |
-| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateExternalType`, `CreateMap`, `BindHandler`, `CallStandard*`, `CallExternal*` |
+| `UShortListPool` | `LoadHandler`, `EmitMessage*`, `PublishMessage*`, `CreateExternalType`, `CreateMap`, `BindHandler`, `CallExternal*` |
 | `OutboundMessageSignatures` / binary `OutboundMessage` binds | Statically shaped `emit`/`publish` message signatures, used by loaders without scanning code |
 
 Local calls, predicate calls, construction, extension calls, and collection/message

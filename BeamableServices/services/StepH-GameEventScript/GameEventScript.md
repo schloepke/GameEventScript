@@ -384,7 +384,7 @@ tau     // alias: τ
 
 Tags use `#name`. `#true`, `#false`, `#pi`, and `#infinity` are ordinary tag
 values without boolean or numeric meaning. `:name` is reserved for selectors,
-types, and namespace-like extension references such as `:series.fibonacci`.
+types, and namespace-like extension references.
 
 ## Types and Values
 
@@ -641,7 +641,7 @@ and forward `:take first` / `:drop first` selectors. Because series are not
 finite, `:take last` and `:drop last` evaluate to `nothing` for series.
 
 ```ges
-let fib be :series.fibonacci
+let fib be series fibonacci
 let fifth be fib[:term 5]
 let later be fib[:drop first 3]
 let sample be fib[:take first 5]
@@ -652,13 +652,10 @@ return `nothing` for `[:term n]`. Direct `:take first`, `:drop first`, `:take
 last`, and `:drop last` selectors are defined for finite lists, dice, and
 ranges; range slices stay ranges instead of being materialized as lists.
 
-Standard series:
+Built-in series:
 
-- `:series.fibonacci`
-- `:series.factorial`
-- `:series.natural`
-- `:series.natural(start: n)`
-- `:series.natural(start: n, step: s)`
+- `series fibonacci`
+- `series factorial`
 
 ### Message and Handler Values
 
@@ -1039,21 +1036,14 @@ samples from them.
 
 Extension references use `:extension.function`.
 
-Supported call forms:
-
-```ges
-:series.natural(start: 1, step: 2)
-```
-
 Built-in math intrinsics are opcodes rather than standard extensions:
 
 - `floor`, `ceil`, `truncate`
 - `round half even`, `round half up`, `round half down`
 - `rad`, `deg`, `wrap degree`
 - `abs`, `ln`, `exp`, `sqrt`, `cbrt`, `chance`
-- `:series.fibonacci`
-- `:series.factorial`
-- `:series.natural`
+- `series fibonacci`
+- `series factorial`
 
 Host-provided extensions can be linked by the host extension registry.
 

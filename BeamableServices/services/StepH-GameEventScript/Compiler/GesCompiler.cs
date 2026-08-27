@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.VM;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 
@@ -580,6 +579,10 @@ internal static class GesCompiler
 
                 case DiceExpressionNode dice:
                     _builder.CreateDice(destination, ToShort(dice.DiceCount, "dice count"), ToShort(dice.SideCount, "dice side count"));
+                    return destination;
+
+                case SeriesExpressionNode series:
+                    _builder.CreateSeries(destination, series.SeriesKind);
                     return destination;
 
                 case ClampExpressionNode clamp:
@@ -2106,12 +2109,6 @@ internal static class GesCompiler
 
         private void EmitExtensionReferenceInto(GameEventScriptExtensionReference reference, GesRegisterRef destination, IReadOnlyList<GesRegisterRef> arguments, bool isPredicate)
         {
-            if (GesStandardExtensions.IsStandardReference(reference))
-            {
-                _builder.CallStandard(destination, ExtensionShape(reference), arguments, isPredicate ? GameEventScriptInstructionFlag.NormalizeResultAsPredicate : GameEventScriptInstructionFlag.None);
-                return;
-            }
-
             _builder.CallExternal(destination, ResolveExtensionCall(reference), arguments, isPredicate ? GameEventScriptInstructionFlag.NormalizeResultAsPredicate : GameEventScriptInstructionFlag.None);
         }
 
@@ -2503,15 +2500,6 @@ internal static class GesCompiler
             }
 
             return true;
-        }
-
-        private static IReadOnlyList<string> ExtensionShape(GameEventScriptExtensionReference reference)
-        {
-            var shape = new string[reference.ArgumentLabels.Count + 2];
-            shape[0] = reference.ExtensionName;
-            shape[1] = reference.FunctionName;
-            for (var index = 0; index < reference.ArgumentLabels.Count; index++) shape[index + 2] = reference.ArgumentLabels[index];
-            return shape;
         }
 
         private static long? ReadUnitlessIntegerLiteralSeed(ExpressionNode expression)

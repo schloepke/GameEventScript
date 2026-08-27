@@ -307,9 +307,14 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>:(?:series\.[A-Za-z_][A-Za-z0-9_]*)\b</string>
+					<string>\b(series)([ \t]+)(fibonacci|factorial)\b</string>
 					<key>name</key>
-					<string>support.function.standard.gameeventscript</string>
+					<string>meta.keyword-phrase.gameeventscript</string>
+					<key>captures</key>
+					<dict>
+						<key>1</key><dict><key>name</key><string>keyword.operator.word.gameeventscript</string></dict>
+						<key>3</key><dict><key>name</key><string>keyword.operator.word.gameeventscript</string></dict>
+					</dict>
 				</dict>
 				<dict>
 					<key>match</key>

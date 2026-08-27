@@ -1354,6 +1354,11 @@ internal sealed class GesParser
 
     private ExpressionNode ParsePowerBaseExpression()
     {
+        if (Match(Series))
+        {
+            return ParseSeriesExpression(Previous);
+        }
+
         if (IsExtensionCallStart())
         {
             return ParseExtensionCallExpression();
@@ -1377,6 +1382,23 @@ internal sealed class GesParser
         }
 
         return ParsePostfixExpression();
+    }
+
+    private ExpressionNode ParseSeriesExpression(GesToken startToken)
+    {
+        SkipNewLines();
+        if (Match(Fibonacci))
+        {
+            return WithRange(new SeriesExpressionNode(GameEventScriptBytecodeSeriesKind.Fibonacci), startToken, Previous);
+        }
+
+        if (Match(Factorial))
+        {
+            return WithRange(new SeriesExpressionNode(GameEventScriptBytecodeSeriesKind.Factorial), startToken, Previous);
+        }
+
+        var token = Current;
+        throw new GameEventScriptParseException("Expected series kind 'fibonacci' or 'factorial'.", token);
     }
 
     private (GesUnaryOperator Operator, double? RootExponent, GesToken StartToken)? ParseKeywordUnaryOperator()
@@ -2781,7 +2803,7 @@ internal sealed class GesParser
             IntrinsicFloor or IntrinsicCeil or IntrinsicTruncate or IntrinsicRad or IntrinsicDeg or IntrinsicWrap or IntrinsicRound or
             IntrinsicSin or IntrinsicCos or IntrinsicTan or IntrinsicAsin or IntrinsicAcos or IntrinsicAtan or IntrinsicAtan2 or
             IntrinsicHypot or IntrinsicDistance or IntrinsicSquared or IntrinsicLength or IntrinsicNormalize or IntrinsicDot or IntrinsicCross or IntrinsicAngle or
-            KeywordRandom or Clamp or Min or Max or Roll or
+            KeywordRandom or Series or Clamp or Min or Max or Roll or
             LeftBracket or LeftParen or OperatorMinus or Has or Empty or OperatorNot;
 
     private bool IsArgumentLabelStart()

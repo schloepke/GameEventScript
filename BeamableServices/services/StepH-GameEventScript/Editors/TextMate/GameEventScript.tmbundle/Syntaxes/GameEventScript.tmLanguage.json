@@ -409,12 +409,20 @@
           }
         },
         {
-          "match": ":(?:text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])",
-          "name": "support.type.primitive.gameeventscript"
+          "match": "\\b(series)([ \\t]+)(fibonacci|factorial)\\b",
+          "name": "meta.keyword-phrase.gameeventscript",
+          "captures": {
+            "1": {
+              "name": "keyword.operator.word.gameeventscript"
+            },
+            "3": {
+              "name": "keyword.operator.word.gameeventscript"
+            }
+          }
         },
         {
-          "match": ":(?:series\\.[A-Za-z_][A-Za-z0-9_]*)\\b",
-          "name": "support.function.standard.gameeventscript"
+          "match": ":(?:text|boolean|number|percentage|vector|point|series|range|message|handler|list|map|dice)(?=$|[^A-Za-z0-9_])",
+          "name": "support.type.primitive.gameeventscript"
         },
         {
           "match": ":[a-z][A-Za-z]*(?=$|[^A-Za-z0-9_])",

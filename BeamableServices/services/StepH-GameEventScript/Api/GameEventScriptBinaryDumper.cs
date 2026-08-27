@@ -310,11 +310,11 @@ public static class GameEventScriptBinaryDumper
             MemberName => FormatTextReference(context, instruction.StringIndex),
             TypeKind => instruction.TypeKind.ToString(),
             PatternKind => ((GameEventScriptBytecodePatternKind)instruction.AU).ToString(),
+            SeriesKind => ((GameEventScriptBytecodeSeriesKind)instruction.TypeOperand).ToString(),
             CustomTypeName => FormatTextReference(context, instruction.SecondaryStringIndex),
             TypeName => FormatTextReference(context, instruction.StringIndex),
 
             MessageShapeList => context.ListLabel(instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex),
-            StandardExtensionShapeList => context.ListLabel(instruction.SecondaryListIndex),
             ArgumentNameList => context.ListLabel(instruction.ListIndex),
             ArgumentRegisterList => context.ListLabel(instruction.ListIndex),
             ItemRegisterList => context.ListLabel(instruction.ListIndex),
@@ -365,9 +365,6 @@ public static class GameEventScriptBinaryDumper
                     break;
                 case MessageShapeList:
                     AddListTextComment(comments, context, instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex);
-                    break;
-                case StandardExtensionShapeList:
-                    AddListTextComment(comments, context, instruction.SecondaryListIndex);
                     break;
                 case ArgumentNameList:
                     AddListTextComment(comments, context, instruction.ListIndex);
@@ -1165,8 +1162,6 @@ public static class GameEventScriptBinaryDumper
             {
                 case MessageShapeList:
                     return (instruction.OpCode == GameEventScriptBytecodeOpCode.LoadMessage ? instruction.SecondaryListIndex : instruction.ListIndex, "Shape", ListRole.Texts);
-                case StandardExtensionShapeList:
-                    return (instruction.SecondaryListIndex, "StdExt", ListRole.Texts);
                 case ArgumentNameList:
                     return (instruction.ListIndex, "Names", ListRole.Texts);
                 case KeyNameList:

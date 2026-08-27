@@ -345,12 +345,6 @@ internal static class GesAstOptimizer
             return constantFolded with { SourceRange = optimized.SourceRange };
         }
 
-        if (optimized is ExtensionCallExpressionNode extensionCallExpression &&
-            FoldConstantStandardExtension(extensionCallExpression) is { } extensionFolded)
-        {
-            return extensionFolded with { SourceRange = optimized.SourceRange };
-        }
-
         return optimized;
     }
 
@@ -481,53 +475,6 @@ internal static class GesAstOptimizer
         }
 
         return optimized;
-    }
-
-    private static ExpressionNode? FoldConstantStandardExtension(ExtensionCallExpressionNode extensionCall)
-    {
-        var reference = new GameEventScriptExtensionReference(
-            extensionCall.ExtensionName,
-            extensionCall.FunctionName,
-            ReadArgumentNames(extensionCall.Arguments));
-        if (!GesStandardExtensions.IsStandardReference(reference))
-        {
-            return null;
-        }
-
-        var arguments = new GameEventScriptValue[extensionCall.Arguments.Count];
-        for (var index = 0; index < extensionCall.Arguments.Count; index++)
-        {
-            if (EvaluateConstantValue(extensionCall.Arguments[index].Expression) is not { } argument)
-            {
-                return null;
-            }
-
-            arguments[index] = argument;
-        }
-
-        var value = GesStandardExtensions.Invoke(reference, arguments);
-        if (value is null)
-        {
-            return null;
-        }
-
-        return ConvertValueToLiteral(value);
-    }
-
-    private static IReadOnlyList<string?> ReadArgumentNames(IReadOnlyList<ArgumentNode> arguments)
-    {
-        if (arguments.Count == 0)
-        {
-            return [];
-        }
-
-        var names = new string?[arguments.Count];
-        for (var index = 0; index < names.Length; index++)
-        {
-            names[index] = arguments[index].Name;
-        }
-
-        return names;
     }
 
     private static GameEventScriptValue? EvaluateConstantValue(ExpressionNode expression)

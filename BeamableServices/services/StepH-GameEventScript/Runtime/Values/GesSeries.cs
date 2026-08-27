@@ -1,21 +1,6 @@
 using System;
-using System.Globalization;
 
 namespace StepH.GameEventScript.Runtime.Values;
-
-internal interface IGesRandomIntegerSeries
-{
-    string SignatureId { get; }
-
-    long? Calc(long index);
-}
-
-internal interface IGesRandomDoubleSeries
-{
-    string SignatureId { get; }
-
-    double? Calc(long index);
-}
 
 internal interface IGesForwardIntegerSeries
 {
@@ -112,12 +97,6 @@ internal sealed class GesSeries
         return _definition.ReadCursorValue(in cursor);
     }
 
-    internal static GesSeries Natural(long start = 0, long step = 1)
-    {
-        var checkpoint = default(GesSeriesCursor);
-        return new GesSeries(new NaturalSeriesDefinition(start, step), 0, false, 0, in checkpoint);
-    }
-
     internal static GesSeries Fibonacci()
     {
         var definition = FibonacciSeriesDefinition.Instance;
@@ -171,57 +150,6 @@ internal sealed class GesSeries
         {
             _ = cursor;
             return default;
-        }
-    }
-
-    private sealed class NaturalSeriesDefinition(long start, long step) : GesSeriesDefinition, IGesRandomIntegerSeries, IGesRandomDoubleSeries
-    {
-        internal override string SignatureId { get; } = $"natural({start.ToString(CultureInfo.InvariantCulture)},{step.ToString(CultureInfo.InvariantCulture)})";
-
-        string IGesRandomIntegerSeries.SignatureId => SignatureId;
-
-        string IGesRandomDoubleSeries.SignatureId => SignatureId;
-
-        internal override bool IsRandomAccess => true;
-
-        internal override GesValue GetRandomTerm(long index)
-        {
-            if (index < 0)
-            {
-                return default;
-            }
-
-            var value = default(GesValue);
-            if (((IGesRandomIntegerSeries)this).Calc(index) is { } integerValue)
-            {
-                value.SetInteger(integerValue);
-                return value;
-            }
-
-            if (((IGesRandomDoubleSeries)this).Calc(index) is { } doubleValue)
-            {
-                value.SetFloat(doubleValue);
-                return value;
-            }
-
-            return default;
-        }
-
-        long? IGesRandomIntegerSeries.Calc(long index)
-        {
-            try
-            {
-                return checked(start + checked(step * index));
-            }
-            catch (OverflowException)
-            {
-                return null;
-            }
-        }
-
-        double? IGesRandomDoubleSeries.Calc(long index)
-        {
-            return index >= 0 ? start + (step * (double)index) : null;
         }
     }
 

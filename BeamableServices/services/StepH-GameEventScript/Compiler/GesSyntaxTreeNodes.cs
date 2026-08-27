@@ -357,6 +357,7 @@ internal sealed record RangeExpressionNode(ExpressionNode FromExpression, Expres
 internal sealed record RandomExpressionNode(ExpressionNode FromExpression, ExpressionNode ToExpression) : ExpressionNode;
 internal sealed record SeededRandomExpressionNode(ExpressionNode SeedExpression, ExpressionNode BodyExpression) : ExpressionNode;
 internal sealed record DiceExpressionNode(int DiceCount, int SideCount) : ExpressionNode;
+internal sealed record SeriesExpressionNode(GameEventScriptBytecodeSeriesKind SeriesKind) : ExpressionNode;
 internal sealed record GeneratedCollectionExpressionNode(string CollectionType, string Identifier, IterationSourceNode Source, ExpressionNode? Predicate, ExpressionNode Projection) : ExpressionNode;
 internal sealed record GuardedChoiceExpressionNode(IReadOnlyList<GuardedChoiceBranchNode> Branches, ExpressionNode OtherwiseExpression) : ExpressionNode;
 internal sealed record GuardedChoiceBranchNode(ExpressionNode ValueExpression, ExpressionNode ConditionExpression) : ScriptNode;

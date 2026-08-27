@@ -33,8 +33,8 @@ internal sealed partial class GesBinaryBuilder
     public GesBinaryBuilder Call(GesRegisterRef destination, GesLabelRef entryAddress, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
         => AddOpcode(GameEventScriptBytecodeOpCode.Call, flags: flags, dst: GesOperand.Register(destination), y: GesOperand.Label(entryAddress));
 
-    public GesBinaryBuilder CallStandard(GesRegisterRef destination, IReadOnlyList<string> shape, IReadOnlyList<GesRegisterRef> arguments, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
-        => AddOpcode(GameEventScriptBytecodeOpCode.CallStandard, flags: flags, dst: GesOperand.Register(destination), x: GesOperand.TextList(shape), y: GesOperand.RegisterList(arguments));
+    public GesBinaryBuilder CreateSeries(GesRegisterRef destination, GameEventScriptBytecodeSeriesKind seriesKind)
+        => AddOpcode(GameEventScriptBytecodeOpCode.CreateSeries, dst: GesOperand.Register(destination), y: GesOperand.U16((ushort)seriesKind));
 
     public GesBinaryBuilder CallExternal(GesRegisterRef destination, GesBindRef bind, IReadOnlyList<GesRegisterRef> arguments, GameEventScriptInstructionFlag flags = GameEventScriptInstructionFlag.None)
         => AddOpcode(GameEventScriptBytecodeOpCode.CallExternal, flags: flags, dst: GesOperand.Register(destination), x: GesOperand.Bind(bind), y: GesOperand.RegisterList(arguments));

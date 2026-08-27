@@ -97,6 +97,7 @@ NotOperator ::= "!" | "~" | "¬" | "not"
 
 PowerExpression ::= PowerBaseExpression [ ( "^" UnaryExpression ) | SuperscriptPower ]
 PowerBaseExpression ::= ExtensionCallExpression
+                      | SeriesExpression
                       | ClampExpression
                       | VariadicExpression
                       | PostfixExpression
@@ -159,6 +160,7 @@ RangeExpression ::= RangeIterationSource
 RangeIterationSource ::= "from" Expression "to" Expression [ "step" Expression ]
 DiceExpression ::= "roll" "dice" Number DiceSeparator Number
 DiceSeparator ::= "d"
+SeriesExpression ::= "series" ( "fibonacci" | "factorial" )
 
 CollectionSelector ::= StructuredCollectionSelector | Expression
 StructuredCollectionSelector ::= QuantifiedCollectionSelector

@@ -252,7 +252,7 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             break;
 
                         case Move:
-                            vmState.Register(instruction.DestinationRegister) = vmState.Register(instruction.XRegister);
+                            vmState.SetValue(instruction.DestinationRegister, in vmState.Register(instruction.XRegister));
                             break;
                         case MemberAccess:
                             vmState.GesVmMemberAccess(instruction.DestinationRegister, vmState.FetchStringByPointer(instruction.StringIndex), vmState.Register(instruction.YRegister));
@@ -268,22 +268,22 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             break;
 
                         case LoadNothing:
-                            vmState.Register(instruction.DestinationRegister).SetNothing();
+                            vmState.SetNothing(instruction.DestinationRegister);
                             break;
                         case LoadTrue:
-                            vmState.Register(instruction.DestinationRegister).SetBoolean(true);
+                            vmState.SetBoolean(instruction.DestinationRegister, true);
                             break;
                         case LoadFalse:
-                            vmState.Register(instruction.DestinationRegister).SetBoolean(false);
+                            vmState.SetBoolean(instruction.DestinationRegister, false);
                             break;
                         case LoadInteger:
-                            vmState.Register(instruction.DestinationRegister).SetInteger(instruction.I64, instruction.Unit);
+                            vmState.SetInteger(instruction.DestinationRegister, instruction.I64, instruction.Unit);
                             break;
                         case LoadFloat:
-                            vmState.Register(instruction.DestinationRegister).SetFloat(instruction.F64, instruction.Unit);
+                            vmState.SetFloat(instruction.DestinationRegister, instruction.F64, instruction.Unit);
                             break;
                         case LoadPercentage:
-                            vmState.Register(instruction.DestinationRegister).SetPercentage(instruction.F64);
+                            vmState.SetPercentage(instruction.DestinationRegister, instruction.F64);
                             break;
                         case LoadText:
                             vmState.SetTextPointer(instruction.DestinationRegister, instruction.StringIndex);
@@ -360,11 +360,11 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                         case CreateRangeIteratorShort:
                             if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                             {
-                                vmState.Register(instruction.DestinationRegister).SetIterator(new GesIntegerRangeIterator(0, 0, 0));
+                                vmState.SetIterator(instruction.DestinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                                 break;
                             }
 
-                            vmState.Register(instruction.DestinationRegister).SetIterator(new GesIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
+                            vmState.SetIterator(instruction.DestinationRegister, new GesIntegerRangeIterator(instruction.ImmediateX, instruction.ImmediateY, instruction.AS));
                             break;
                         case CreateRecord:
                             vmState.CallRecordConstructor(instruction.BindId, instruction.DestinationRegister);
@@ -378,14 +378,21 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             break;
 
                         case HasValue:
-                            vmState.Register(instruction.DestinationRegister).SetBoolean(vmState.Register(instruction.XRegister).HasValue);
+                            vmState.SetBoolean(instruction.DestinationRegister, vmState.Register(instruction.XRegister).HasValue);
                             break;
                         case IsEmpty:
-                            vmState.Register(instruction.DestinationRegister).SetBoolean(!vmState.Register(instruction.XRegister).HasValue);
+                            vmState.SetBoolean(instruction.DestinationRegister, !vmState.Register(instruction.XRegister).HasValue);
                             break;
                         case Default:
                             var a = vmState.Register(instruction.XRegister);
-                            vmState.Register(instruction.DestinationRegister) = a.HasValue ? a : vmState.Register(instruction.YRegister);
+                            if (a.HasValue)
+                            {
+                                vmState.SetValue(instruction.DestinationRegister, in a);
+                            }
+                            else
+                            {
+                                vmState.SetValue(instruction.DestinationRegister, in vmState.Register(instruction.YRegister));
+                            }
                             break;
 
                         #endregion

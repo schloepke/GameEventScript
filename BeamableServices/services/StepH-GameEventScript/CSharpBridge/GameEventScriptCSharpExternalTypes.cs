@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
@@ -424,7 +425,7 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
             return checked((byte)value.AsInteger());
         }
 
-        var externalObject = value.GetExternalObject(targetType);
+        var externalObject = ToClrExternalObjectValue(value, targetType);
         if (externalObject is not null)
         {
             return externalObject;
@@ -436,5 +437,12 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
         }
 
         throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.Kind}' to CLR type '{targetType.FullName}'.");
+    }
+
+    public static object? ToClrExternalObjectValue(GameEventScriptValue value, Type objectType)
+    {
+        _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
+        if (value.GetVmValue().ObjectValue is GesExternalObject externalObject && objectType.IsInstanceOfType(externalObject.Instance)) return externalObject.Instance;
+        return null;
     }
 }

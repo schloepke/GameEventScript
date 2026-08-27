@@ -495,7 +495,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>
     {
         public bool TryRead(GameEventScriptValue input, out T value)
-            => (value = input.GetExternalObject<T>()!) is not null;
+            => (value = (GameEventScriptCSharpExternalTypeValueConverter.ToClrExternalObjectValue(input, typeof(T)) is T typed ? typed : default)!) is not null;
     }
 
     private sealed class ValueReturnConverter : IExtensionReturnConverter<GameEventScriptValue>

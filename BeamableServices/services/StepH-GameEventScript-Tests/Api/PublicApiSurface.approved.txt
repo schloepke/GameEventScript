@@ -626,10 +626,8 @@ sealed class StepH.GameEventScript.Api.GameEventScriptValue
   method System.Double AsNumeric()
   method System.Int32 GetHashCode()
   method System.Int64 AsInteger()
-  method System.Object GetExternalObject(System.Type objectType)
   method System.String AsText()
   method System.String ToString()
-  method T GetExternalObject<T>()
   property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
   property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind Kind { get }
   property StepH.GameEventScript.Api.GameEventScriptFloatRange FloatRange { get }

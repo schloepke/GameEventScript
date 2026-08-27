@@ -227,21 +227,6 @@ public sealed class GameEventScriptValue : IEquatable<GameEventScriptValue>
         ? new GameEventScriptFloatRange(range.From, range.To, range.Step)
         : null;
 
-    public T? GetExternalObject<T>()
-        => GetExternalObject(typeof(T)) is T typed ? typed : default;
-
-    public object? GetExternalObject(Type objectType)
-    {
-        _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
-        if (_value.ObjectValue is GesExternalObject externalObject &&
-            objectType.IsInstanceOfType(externalObject.Instance))
-        {
-            return externalObject.Instance;
-        }
-
-        return null;
-    }
-
     internal ref readonly GesValue GetVmValue() => ref _value;
 
     public bool Equals(GameEventScriptValue? other)

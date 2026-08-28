@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime.Values;
@@ -41,16 +40,16 @@ internal static class GesVmStatePublisher
             values[index] = vmState.Register(argumentRegisters[index]);
         }
 
-        var tags = new List<string>(tagRegisters.Length);
+        var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
         {
-            AddTagsToList(tags, in vmState.Register(tagRegisters[index]));
+            AddTagsToBuffer(tags, in vmState.Register(tagRegisters[index]));
         }
 
         try
         {
             var arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
-            var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId, tags);
+            var message = GameEventScriptMessage.CreatePrecomputedWithNormalizedTags(signature.Name, arguments, signature.SignatureId, tags.ToArrayOrEmpty());
             return publish ? session.Publish(message) : session.Emit(message);
         }
         catch (ArgumentException)
@@ -69,21 +68,22 @@ internal static class GesVmStatePublisher
     internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, in GesValue messageValue, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptSession session)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
-        var tags = new List<string>(tagRegisters.Length);
+        var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
         {
-            AddTagsToList(tags, in vmState.Register(tagRegisters[index]));
+            AddTagsToBuffer(tags, in vmState.Register(tagRegisters[index]));
         }
-        return publish ? session.Publish(msg.WithTags(tags)) : session.Emit(msg.WithTags(tags));
+        var message = msg.WithNormalizedTags(tags.ToArrayOrEmpty());
+        return publish ? session.Publish(message) : session.Emit(message);
     }
 
-    private static void AddTagsToList(List<string> tags, in GesValue value)
+    private static void AddTagsToBuffer(GameEventScriptTagBuffer tags, in GesValue value)
     {
         if (value.Kind is List && value.ObjectValue is GesValue[] values)
         {
             for (var index = 0; index < values.Length; index++)
             {
-                AddTagsToList(tags, in values[index]);
+                AddTagsToBuffer(tags, in values[index]);
             }
         }
         else

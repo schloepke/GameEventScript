@@ -219,6 +219,8 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// <returns>A message copy with the merged tags.</returns>
     public GameEventScriptMessage WithTags(params string[] tags) => WithTags((IEnumerable<string>?)tags);
 
+    internal GameEventScriptMessage WithNormalizedTags(IReadOnlyList<string>? tags) => new(Name, Arguments, SignatureId, MergeNormalizedTags(Tags, tags));
+
     private GameEventScriptMessage(string name, GameEventScriptMessageArguments? arguments = null, IEnumerable<string>? tags = null)
     {
         Name = GameEventScriptMessageSignature.NormalizeMessageName(name);
@@ -248,6 +250,9 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     internal static GameEventScriptMessage CreatePrecomputed(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, IEnumerable<string>? tags = null)
         => new(normalizedName, arguments, signatureId, NormalizeTags(tags));
 
+    internal static GameEventScriptMessage CreatePrecomputedWithNormalizedTags(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, IReadOnlyList<string>? tags = null)
+        => new(normalizedName, arguments, signatureId, tags ?? []);
+
     internal static string NormalizeTagName(string? tag)
     {
         if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
@@ -258,27 +263,14 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     internal static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)
     {
         if (tags is null) return [];
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var normalizedTags = new List<string>();
+
+        var buffer = new GameEventScriptTagBuffer(GetKnownCount(tags));
         foreach (var tag in tags)
         {
-            var normalized = NormalizeTagName(tag);
-            if (normalized.Length == 0 || !seen.Add(normalized)) continue;
-            normalizedTags.Add(normalized);
+            buffer.Add(tag);
         }
 
-        if (normalizedTags.Count == 0)
-        {
-            return [];
-        }
-
-        var result = new string[normalizedTags.Count];
-        for (var index = 0; index < normalizedTags.Count; index++)
-        {
-            result[index] = normalizedTags[index];
-        }
-
-        return result;
+        return buffer.ToArrayOrEmpty();
     }
 
     private static IReadOnlyList<string> MergeTags(IReadOnlyList<string> existingTags, IEnumerable<string>? newTags)
@@ -288,41 +280,102 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
             return existingTags;
         }
 
-        var seen = new HashSet<string>(StringComparer.Ordinal);
-        var mergedTags = new List<string>(existingTags.Count);
+        var buffer = new GameEventScriptTagBuffer(existingTags.Count + GetKnownCount(newTags));
         for (var index = 0; index < existingTags.Count; index++)
         {
-            var existingTag = existingTags[index];
-            if (existingTag.Length == 0 || !seen.Add(existingTag))
-            {
-                continue;
-            }
-
-            mergedTags.Add(existingTag);
+            buffer.Add(existingTags[index]);
         }
 
+        var existingCount = buffer.Count;
         foreach (var tag in newTags)
         {
-            var normalized = NormalizeTagName(tag);
-            if (normalized.Length == 0 || !seen.Add(normalized))
-            {
-                continue;
-            }
-
-            mergedTags.Add(normalized);
+            buffer.Add(tag);
         }
 
-        if (mergedTags.Count == existingTags.Count)
+        if (buffer.Count == existingCount)
         {
             return existingTags;
         }
 
-        var result = new string[mergedTags.Count];
-        for (var index = 0; index < mergedTags.Count; index++)
+        return buffer.ToArrayOrEmpty();
+    }
+
+    private static IReadOnlyList<string> MergeNormalizedTags(IReadOnlyList<string> existingTags, IReadOnlyList<string>? newTags)
+    {
+        if (newTags is null || newTags.Count == 0)
         {
-            result[index] = mergedTags[index];
+            return existingTags;
         }
 
-        return result;
+        string[]? result = null;
+        var count = existingTags.Count;
+        for (var tagIndex = 0; tagIndex < newTags.Count; tagIndex++)
+        {
+            var tag = newTags[tagIndex];
+            if (string.IsNullOrEmpty(tag))
+            {
+                continue;
+            }
+
+            var exists = false;
+            for (var index = 0; index < count; index++)
+            {
+                var existingTag = result is null ? existingTags[index] : result[index];
+                if (!string.Equals(existingTag, tag, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                exists = true;
+                break;
+            }
+
+            if (exists)
+            {
+                continue;
+            }
+
+            if (result is null)
+            {
+                result = new string[existingTags.Count + newTags.Count - tagIndex];
+                for (var index = 0; index < existingTags.Count; index++)
+                {
+                    result[index] = existingTags[index];
+                }
+            }
+
+            if (count == result.Length)
+            {
+                var next = new string[result.Length << 1];
+                Array.Copy(result, next, result.Length);
+                result = next;
+            }
+
+            result[count++] = tag;
+        }
+
+        if (result is null)
+        {
+            return existingTags;
+        }
+
+        if (count == result.Length)
+        {
+            return result;
+        }
+
+        var compact = new string[count];
+        Array.Copy(result, compact, count);
+        return compact;
+    }
+
+    private static int GetKnownCount(IEnumerable<string> values)
+    {
+        if (values is ICollection<string> collection)
+        {
+            return collection.Count;
+        }
+
+        return values is IReadOnlyCollection<string> readOnlyCollection ? readOnlyCollection.Count : 4;
     }
 }

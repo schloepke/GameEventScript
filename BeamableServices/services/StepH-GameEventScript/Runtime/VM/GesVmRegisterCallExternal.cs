@@ -35,12 +35,25 @@ internal static class GesVmRegisterCallExternal
         var arguments = argumentRegisters.Length == 0
             ? GesValueArguments.Empty
             : new GesValueArguments(state, argumentRegisters);
-        var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments);
-        state.SetValue(destinationRegister, in result);
-        ref readonly var dst = ref state.Register(destinationRegister);
-        if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
+        var call = state.ExtensionCall;
+        call.BeginCall(state, destinationRegister, session, arguments);
+        try
         {
-            state.SetNothing(destinationRegister);
+            function.Invoke(call);
+            if (!call.HasResult)
+            {
+                state.SetNothing(destinationRegister);
+            }
+
+            ref readonly var dst = ref state.Register(destinationRegister);
+            if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
+            {
+                state.SetNothing(destinationRegister);
+            }
+        }
+        finally
+        {
+            call.EndCall();
         }
     }
 }

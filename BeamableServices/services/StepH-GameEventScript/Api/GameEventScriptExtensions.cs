@@ -14,7 +14,7 @@ public interface IGameEventScriptExtensionRegistry
 
 public interface IGameEventScriptExtensionFunction
 {
-    GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments);
+    void Invoke(GesExtensionCall call);
 }
 
 internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry
@@ -110,11 +110,103 @@ public sealed class GameEventScriptExtensionReference
     }
 }
 
-public sealed class GameEventScriptExtensionContext(GameEventScriptSession runtimeSession)
+public sealed class GesExtensionCall
 {
-    public GameEventScriptSession RuntimeSession { get; } = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
+    private GameEventScriptSession? _runtimeSession;
+    private GesValueArguments _arguments = GesValueArguments.Empty;
+    private Runtime.VM.GesVmState? _vmState;
+    private ushort _destinationRegister;
+    private GesValue _result;
+    private bool _hasResult;
+
+    public GesExtensionCall()
+    {
+    }
+
+    public GesExtensionCall(GameEventScriptSession runtimeSession)
+    {
+        _runtimeSession = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
+    }
+
+    public GameEventScriptSession RuntimeSession => _runtimeSession ?? throw new InvalidOperationException("Extension context is not initialized.");
 
     public GameEventScriptRandomGenerator Random => RuntimeSession.Random;
 
     public GameEventScriptRuntimeLimits RuntimeLimits => RuntimeSession.RuntimeLimits;
+
+    public GesValueArguments Arguments => _arguments;
+
+    public GesValue Result => _hasResult ? _result : GesValue.GesNothing();
+
+    internal bool HasResult => _hasResult;
+
+    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GameEventScriptSession runtimeSession, GesValueArguments arguments)
+    {
+        _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));
+        _destinationRegister = destinationRegister;
+        _runtimeSession = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
+        _arguments = arguments;
+        _result = default;
+        _hasResult = false;
+    }
+
+    internal void EndCall()
+    {
+        _vmState = null;
+        _destinationRegister = 0;
+        _arguments = GesValueArguments.Empty;
+        _result = default;
+        _hasResult = false;
+    }
+
+    public void SetNothing() => SetValue(GesValue.GesNothing());
+
+    public void SetValue(GesValue value)
+    {
+        _hasResult = true;
+        _result = value;
+        _vmState?.SetValue(_destinationRegister, in value);
+    }
+
+    public void SetBoolean(bool value)
+    {
+        _hasResult = true;
+        _result = GesValue.GesBoolean(value);
+        _vmState?.SetBoolean(_destinationRegister, value);
+    }
+
+    public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
+    {
+        _hasResult = true;
+        _result = GesValue.GesInteger(value, unit);
+        _vmState?.SetInteger(_destinationRegister, value, unit);
+    }
+
+    public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
+    {
+        _hasResult = true;
+        _result = GesValue.GesFloat(value, unit);
+        _vmState?.SetFloat(_destinationRegister, value, unit);
+    }
+
+    public void SetPercentage(double ratio)
+    {
+        _hasResult = true;
+        _result = GesValue.GesPercentage(ratio);
+        _vmState?.SetPercentage(_destinationRegister, ratio);
+    }
+
+    public void SetText(string text)
+    {
+        _hasResult = true;
+        _result = GesValue.GesText(text);
+        _vmState?.SetText(_destinationRegister, text);
+    }
+
+    public void SetTag(string tag)
+    {
+        _hasResult = true;
+        _result = GesValue.GesTag(tag);
+        _vmState?.SetTag(_destinationRegister, tag);
+    }
 }

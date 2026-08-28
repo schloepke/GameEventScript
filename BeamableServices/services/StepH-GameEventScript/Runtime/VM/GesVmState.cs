@@ -76,6 +76,7 @@ internal class GesVmState
     internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; init; }
     internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls { get; private set; }
     internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; private set; }
+    internal GesExtensionCall ExtensionCall { get; }
 
     internal readonly ushort CodeSegmentSize;
     internal readonly int MaxRegisterCount;
@@ -101,6 +102,7 @@ internal class GesVmState
         ExternalTypeBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExternalType);
         BoundExtensionCalls = [];
         BoundExternalTypeConstructors = [];
+        ExtensionCall = new GesExtensionCall();
     }
 
     internal void BindDynamicReferences(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)

@@ -373,11 +373,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
   property System.Boolean Optimize { get set }
 sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException
   ctor GameEventScriptDynamicLinkException(System.String message)
-sealed class StepH.GameEventScript.Api.GameEventScriptExtensionContext
-  ctor GameEventScriptExtensionContext(StepH.GameEventScript.Api.GameEventScriptSession runtimeSession)
-  property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
-  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
-  property StepH.GameEventScript.Api.GameEventScriptSession RuntimeSession { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptExtensionReference
   ctor GameEventScriptExtensionReference(System.String extensionName, System.String functionName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
   property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
@@ -632,10 +627,26 @@ struct StepH.GameEventScript.Api.GameEventScriptUInt16Table
 struct StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry
   property System.UInt16 Length { get set }
   property System.UInt16 Start { get set }
+sealed class StepH.GameEventScript.Api.GesExtensionCall
+  ctor GesExtensionCall()
+  ctor GesExtensionCall(StepH.GameEventScript.Api.GameEventScriptSession runtimeSession)
+  method System.Void SetBoolean(System.Boolean value)
+  method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetNothing()
+  method System.Void SetPercentage(System.Double ratio)
+  method System.Void SetTag(System.String tag)
+  method System.Void SetText(System.String text)
+  method System.Void SetValue(StepH.GameEventScript.Runtime.Values.GesValue value)
+  property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
+  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
+  property StepH.GameEventScript.Api.GameEventScriptSession RuntimeSession { get }
+  property StepH.GameEventScript.Runtime.Values.GesValue Result { get }
+  property StepH.GameEventScript.Runtime.Values.GesValueArguments Arguments { get }
 interface StepH.GameEventScript.Api.IGameEventScriptDispatcher
   method System.Void Enqueue(System.Action workItem)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
-  method StepH.GameEventScript.Runtime.Values.GesValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, StepH.GameEventScript.Runtime.Values.GesValueArguments arguments)
+  method System.Void Invoke(StepH.GameEventScript.Api.GesExtensionCall call)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
   method StepH.GameEventScript.Api.IGameEventScriptExtensionFunction Resolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference)
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor

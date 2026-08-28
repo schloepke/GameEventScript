@@ -580,7 +580,6 @@ internal sealed partial class GesBinaryBuilder
 
     private static int CompareRegisterInterval(RegisterInterval left, RegisterInterval right)
     {
-        if (ReferenceEquals(left, right)) return 0;
         var startCompare = left.Start.CompareTo(right.Start);
         return startCompare != 0 ? startCompare : left.RegisterId.CompareTo(right.RegisterId);
     }

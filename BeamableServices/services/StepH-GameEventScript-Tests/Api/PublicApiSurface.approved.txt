@@ -635,7 +635,7 @@ struct StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry
 interface StepH.GameEventScript.Api.IGameEventScriptDispatcher
   method System.Void Enqueue(System.Action workItem)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
-  method StepH.GameEventScript.Runtime.Values.GesValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, StepH.GameEventScript.Runtime.Values.GesValueSlice arguments)
+  method StepH.GameEventScript.Runtime.Values.GesValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, StepH.GameEventScript.Runtime.Values.GesValueArguments arguments)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
   method StepH.GameEventScript.Api.IGameEventScriptExtensionFunction Resolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference)
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor
@@ -761,6 +761,24 @@ struct StepH.GameEventScript.Runtime.Values.GesValue
   property System.Double Z { get }
   property System.Int32 Length { get }
   property System.String CustomTypeName { get }
+struct StepH.GameEventScript.Runtime.Values.GesValueArguments
+  ctor GesValueArguments(StepH.GameEventScript.Runtime.Values.GesValue[] values)
+  field static StepH.GameEventScript.Runtime.Values.GesValueArguments Empty
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit UnitAt(System.Int32 index)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind KindAt(System.Int32 index)
+  method StepH.GameEventScript.Runtime.Values.GesValue& ValueAt(System.Int32 index)
+  method System.Boolean GetAsBoolean(System.Int32 index)
+  method System.Boolean HasValueAt(System.Int32 index)
+  method System.Boolean IsNothingAt(System.Int32 index)
+  method System.Boolean IsNumericAt(System.Int32 index)
+  method System.Double GetAsNumber(System.Int32 index)
+  method System.Double GetX(System.Int32 index)
+  method System.Double GetY(System.Int32 index)
+  method System.Double GetZ(System.Int32 index)
+  method System.Int64 GetAsInteger(System.Int32 index)
+  method System.String GetAsText(System.Int32 index)
+  property StepH.GameEventScript.Runtime.Values.GesValue& Item { get }
+  property System.Int32 Length { get }
 sealed class StepH.GameEventScript.Runtime.Values.GesValueMap
   method StepH.GameEventScript.Runtime.Values.GesValue ValueAt(System.Int32 index)
   method StepH.GameEventScript.Runtime.Values.GesValue? Get(System.String key)

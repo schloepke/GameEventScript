@@ -1,5 +1,4 @@
 using System;
-using System.Buffers;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
@@ -33,31 +32,15 @@ internal static class GesVmRegisterCallExternal
             return;
         }
 
-        var argumentCount = argumentRegisters.Length;
-        var arguments = argumentCount == 0 ? [] : ArrayPool<GesValue>.Shared.Rent(argumentCount);
-
-        try
+        var arguments = argumentRegisters.Length == 0
+            ? GesValueArguments.Empty
+            : new GesValueArguments(state, argumentRegisters);
+        var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments);
+        state.SetValue(destinationRegister, in result);
+        ref readonly var dst = ref state.Register(destinationRegister);
+        if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
         {
-            for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
-            {
-                arguments[argumentIndex] = state.Register(argumentRegisters[argumentIndex]);
-            }
-
-            var result = function.Invoke(new GameEventScriptExtensionContext(session), new GesValueSlice(arguments, 0, argumentCount));
-            state.SetValue(destinationRegister, in result);
-            ref readonly var dst = ref state.Register(destinationRegister);
-            if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
-            {
-                state.SetNothing(destinationRegister);
-            }
-        }
-        finally
-        {
-            if (argumentCount > 0)
-            {
-                Array.Clear(arguments, 0, argumentCount);
-                ArrayPool<GesValue>.Shared.Return(arguments);
-            }
+            state.SetNothing(destinationRegister);
         }
     }
 }

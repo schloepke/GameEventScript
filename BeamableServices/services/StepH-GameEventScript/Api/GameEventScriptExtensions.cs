@@ -14,7 +14,7 @@ public interface IGameEventScriptExtensionRegistry
 
 public interface IGameEventScriptExtensionFunction
 {
-    GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments);
+    GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments);
 }
 
 internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry

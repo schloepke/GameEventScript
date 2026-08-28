@@ -746,11 +746,11 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
     private static bool IsUnlabeled(string label)
         => string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
 
-    private delegate GesValue ExtensionInvoke(GameEventScriptExtensionContext context, GesValueSlice arguments);
+    private delegate GesValue ExtensionInvoke(GameEventScriptExtensionContext context, GesValueArguments arguments);
 
     private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => invoke(context, arguments);
     }
 }

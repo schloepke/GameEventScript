@@ -371,7 +371,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
     private interface IExtensionArgumentReader<T>
     {
-        bool Read(GesValueSlice arguments, int index, out T value);
+        bool Read(GesValueArguments arguments, int index, out T value);
     }
 
     private interface IExtensionReturnConverter<T>
@@ -383,7 +383,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     {
         public static readonly GesValueArgumentReader Instance = new();
 
-        public bool Read(GesValueSlice arguments, int index, out GesValue value)
+        public bool Read(GesValueArguments arguments, int index, out GesValue value)
         {
             value = arguments[index];
             return true;
@@ -427,7 +427,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     {
         public static readonly FloatArgumentReader Instance = new();
 
-        public bool Read(GesValueSlice arguments, int index, out double value)
+        public bool Read(GesValueArguments arguments, int index, out double value)
         {
             if (arguments.KindAt(index) is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage)
             {
@@ -444,7 +444,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     {
         public static readonly LongArgumentReader Instance = new();
 
-        public bool Read(GesValueSlice arguments, int index, out long value)
+        public bool Read(GesValueArguments arguments, int index, out long value)
         {
             if (arguments.KindAt(index) is GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage or GameEventScriptBytecodeTypeKind.Boolean)
             {
@@ -461,7 +461,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     {
         public static readonly IntArgumentReader Instance = new();
 
-        public bool Read(GesValueSlice arguments, int index, out int value)
+        public bool Read(GesValueArguments arguments, int index, out int value)
         {
             if (LongArgumentReader.Instance.Read(arguments, index, out var integer) &&
                 integer is >= int.MinValue and <= int.MaxValue)
@@ -479,7 +479,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     {
         public static readonly BoolArgumentReader Instance = new();
 
-        public bool Read(GesValueSlice arguments, int index, out bool value)
+        public bool Read(GesValueArguments arguments, int index, out bool value)
         {
             if (arguments.KindAt(index) is GameEventScriptBytecodeTypeKind.Boolean or GameEventScriptBytecodeTypeKind.Integer or GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage
                 or GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point)
@@ -495,7 +495,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
     private sealed class ExternalObjectArgumentReader<T> : IExtensionArgumentReader<T>
     {
-        public bool Read(GesValueSlice arguments, int index, out T value)
+        public bool Read(GesValueArguments arguments, int index, out T value)
             => (value = (GameEventScriptCSharpExternalTypeValueConverter.ToClrExternalObjectValue(in arguments[index], typeof(T)) is T typed ? typed : default)!) is not null;
     }
 
@@ -546,13 +546,13 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
     private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 0 ? returnConverter.Convert(invoke()) : GesValue.GesNothing();
     }
 
     private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 1 && reader1.Read(arguments, 0, out var value1)
                 ? returnConverter.Convert(invoke(value1))
                 : GesValue.GesNothing();
@@ -561,7 +561,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     private sealed class AnnotatedExtensionFunction2<T1, T2, R>(Func<T1, T2, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionArgumentReader<T2> reader2, IExtensionReturnConverter<R> returnConverter)
         : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 2 &&
                reader1.Read(arguments, 0, out var value1) &&
                reader2.Read(arguments, 1, out var value2)
@@ -576,7 +576,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T3> reader3,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 3 &&
                reader1.Read(arguments, 0, out var value1) &&
                reader2.Read(arguments, 1, out var value2) &&
@@ -593,7 +593,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T4> reader4,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 4 &&
                reader1.Read(arguments, 0, out var value1) &&
                reader2.Read(arguments, 1, out var value2) &&
@@ -605,14 +605,14 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
     private sealed class AnnotatedContextExtensionFunction0<R>(Func<GameEventScriptExtensionContext, R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 0 ? returnConverter.Convert(invoke(context)) : GesValue.GesNothing();
     }
 
     private sealed class AnnotatedContextExtensionFunction1<T1, R>(Func<GameEventScriptExtensionContext, T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter)
         : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 1 && reader1.Read(arguments, 0, out var value1)
                 ? returnConverter.Convert(invoke(context, value1))
                 : GesValue.GesNothing();
@@ -624,7 +624,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T2> reader2,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 2 &&
                reader1.Read(arguments, 0, out var value1) &&
                reader2.Read(arguments, 1, out var value2)
@@ -639,7 +639,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T3> reader3,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 3 &&
                reader1.Read(arguments, 0, out var value1) &&
                reader2.Read(arguments, 1, out var value2) &&
@@ -656,7 +656,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T4> reader4,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueArguments arguments)
             => arguments.Length == 4 &&
                reader1.Read(arguments, 0, out var value1) &&
                reader2.Read(arguments, 1, out var value2) &&

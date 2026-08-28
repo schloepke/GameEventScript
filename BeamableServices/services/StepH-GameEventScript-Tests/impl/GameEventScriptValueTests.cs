@@ -1,4 +1,5 @@
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH_GameEventScript_Tests.impl;
 
@@ -118,7 +119,7 @@ public sealed class GameEventScriptValueTests
     {
         var intRange = GameEventScriptValueFactory.GesRange(1, 5, 2);
         var floatRange = GameEventScriptValueFactory.GesRange(1.5d, 2.5d, 0.5d);
-        var message = GameEventScriptMessage.Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)));
+        var message = GameEventScriptMessage.Create("Ping", ("amount", GesValue.GesInteger(7)));
         var messageValue = GameEventScriptValueFactory.GesMessage(message);
         var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
         var handler = GameEventScriptValueFactory.GesHandler(signature);

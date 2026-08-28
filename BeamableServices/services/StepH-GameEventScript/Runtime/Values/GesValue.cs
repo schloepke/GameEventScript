@@ -1,6 +1,7 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
@@ -101,20 +102,139 @@ public struct GesValue
         return value;
     }
 
+    public static GesValue GesList(GesValue[] items)
+    {
+        GesValue[] copy = items.Length == 0 ? [] : new GesValue[items.Length];
+        if (items.Length > 0)
+        {
+            Array.Copy(items, copy, items.Length);
+        }
+
+        var value = new GesValue();
+        value.SetList(copy);
+        return value;
+    }
+
+    public static GesValue GesMap(string[] keys, GesValue[] values)
+    {
+        var value = new GesValue();
+        value.SetMap(new GesValueMap(keys, values, keys.Length < values.Length ? keys.Length : values.Length));
+        return value;
+    }
+
+    public static GesValue GesMap(IReadOnlyDictionary<string, GesValue>? entries)
+    {
+        if (entries is null || entries.Count == 0)
+        {
+            var empty = new GesValue();
+            empty.SetMap(new GesValueMap([], [], 0));
+            return empty;
+        }
+
+        var keys = new string[entries.Count];
+        var values = new GesValue[entries.Count];
+        var index = 0;
+        foreach (var entry in entries)
+        {
+            keys[index] = entry.Key;
+            values[index] = entry.Value;
+            index++;
+        }
+
+        return GesMap(keys, values);
+    }
+
+    public static GesValue GesRecord(string typeName, string[] keys, GesValue[] values)
+    {
+        var value = new GesValue();
+        value.SetRecord(typeName ?? string.Empty, new GesValueMap(keys, values, keys.Length < values.Length ? keys.Length : values.Length));
+        return value;
+    }
+
+    public static GesValue GesRecord(string typeName, IReadOnlyDictionary<string, GesValue>? fields)
+    {
+        if (fields is null || fields.Count == 0)
+        {
+            var empty = new GesValue();
+            empty.SetRecord(typeName ?? string.Empty, new GesValueMap([], [], 0));
+            return empty;
+        }
+
+        var keys = new string[fields.Count];
+        var values = new GesValue[fields.Count];
+        var index = 0;
+        foreach (var field in fields)
+        {
+            keys[index] = field.Key;
+            values[index] = field.Value;
+            index++;
+        }
+
+        return GesRecord(typeName, keys, values);
+    }
+
+    public static GesValue GesDice(int[] rolls)
+    {
+        int[] copy = rolls.Length == 0 ? [] : new int[rolls.Length];
+        if (rolls.Length > 0)
+        {
+            Array.Copy(rolls, copy, rolls.Length);
+        }
+
+        var value = new GesValue();
+        value.SetDice(copy);
+        return value;
+    }
+
+    public static GesValue GesRange(long from, long to, long step = 1)
+    {
+        var value = new GesValue();
+        value.SetRange(from, to, step);
+        return value;
+    }
+
+    public static GesValue GesRange(double from, double to, double step = 1d)
+    {
+        var value = new GesValue();
+        value.SetRange(from, to, step);
+        return value;
+    }
+
+    public static GesValue GesMessage(GameEventScriptMessage message)
+    {
+        var value = new GesValue();
+        value.SetMessage(message);
+        return value;
+    }
+
+    public static GesValue GesHandler(GameEventScriptMessageSignature signature)
+    {
+        var value = new GesValue();
+        value.SetMessageHandler(signature);
+        return value;
+    }
+
+    internal static GesValue GesSeries(GesSeries series)
+    {
+        var value = new GesValue();
+        value.SetSeries(series);
+        return value;
+    }
+
     internal readonly bool IsTrue => (Flags & IsTrueFlag) != 0;
     internal readonly bool IsFalse => (Flags & IsFalseFlag) != 0;
     internal readonly bool IsNotTrue => (Flags & IsTrueFlag) == 0;
     internal readonly bool IsTruthDeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) != 0;
     internal readonly bool IsTruthIndeterminate => (Flags & (IsTrueFlag | IsFalseFlag)) == 0;
 
-    internal readonly bool IsNumeric => (Flags & IsNumericFlag) != 0;
-    internal readonly bool HasValue => (Flags & HasValueFlag) != 0;
+    public readonly bool IsNumeric => (Flags & IsNumericFlag) != 0;
+    public readonly bool HasValue => (Flags & HasValueFlag) != 0;
 
-    internal readonly bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
+    public readonly bool IsNothing => Kind is Nothing || (Kind is Float or Percentage && double.IsNaN(FloatValue));
     internal readonly bool IsNotNothing => Kind is not Nothing && Kind is not Float and not Percentage || Kind is Float or Percentage && !double.IsNaN(FloatValue);
 
     internal readonly bool IsUnit(GameEventScriptBytecodeInstructionUnit requiredUnit) => Unit == requiredUnit;
-    internal readonly bool HasUnit => Unit.IsNumericUnit();
+    public readonly bool HasUnit => Unit.IsNumericUnit();
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
     internal readonly string TextValue => ObjectValue as string ?? string.Empty;
@@ -155,6 +275,50 @@ public struct GesValue
     public readonly double Y => ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
 
     public readonly double Z => ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
+
+    public readonly int Length => IntegerValue < 0 ? 0 : IntegerValue > int.MaxValue ? int.MaxValue : (int)IntegerValue;
+
+    public readonly GameEventScriptMessage? Message => ObjectValue as GameEventScriptMessage;
+
+    public readonly GameEventScriptMessageSignature? Handler => ObjectValue as GameEventScriptMessageSignature;
+
+    public readonly string? CustomTypeName => ObjectValue switch
+    {
+        GesExternalObject externalObject => externalObject.CustomTypeName,
+        GesCustomObject customObject => customObject.TypeName,
+        _ => null
+    };
+
+    public readonly GesValueSlice AsList()
+        => ObjectValue is GesValue[] source ? new GesValueSlice(source) : GesValueSlice.Empty;
+
+    public readonly GesValueMap? AsMap() => ObjectValue switch
+    {
+        GesValueMap map => map,
+        GesCustomObject customObject => customObject.Map,
+        GesExternalObject externalObject => externalObject.ToMap(),
+        _ => null
+    };
+
+    public readonly int[] AsDice()
+    {
+        if (ObjectValue is not int[] rolls)
+        {
+            return [];
+        }
+
+        var result = new int[rolls.Length];
+        Array.Copy(rolls, result, rolls.Length);
+        return result;
+    }
+
+    public readonly GameEventScriptIntegerRange? IntegerRange => ObjectValue is GesValueRangeInteger range
+        ? new GameEventScriptIntegerRange(range.From, range.To, range.Step)
+        : null;
+
+    public readonly GameEventScriptFloatRange? FloatRange => ObjectValue is GesValueRangeFloat range
+        ? new GameEventScriptFloatRange(range.From, range.To, range.Step)
+        : null;
 
     internal void SetNothing()
     {
@@ -385,7 +549,7 @@ public struct GesValue
 
     internal void SetMessageHandler(GameEventScriptMessageSignature handler)
     {
-        Kind = Handler;
+        Kind = GameEventScriptBytecodeTypeKind.Handler;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = 0;
@@ -394,7 +558,7 @@ public struct GesValue
 
     internal void SetMessage(GameEventScriptMessage message)
     {
-        Kind = Message;
+        Kind = GameEventScriptBytecodeTypeKind.Message;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
         IntegerValue = 0;
@@ -556,9 +720,9 @@ public struct GesValue
                 return left.From == right.From && left.To == right.To && left.Step == right.Step;
             case GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat left && other.ObjectValue is GesValueRangeFloat right:
                 return left.From.Equals(right.From) && left.To.Equals(right.To) && left.Step.Equals(right.Step);
-            case Handler when ObjectValue is GameEventScriptMessageSignature left && other.ObjectValue is GameEventScriptMessageSignature right:
+            case GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature left && other.ObjectValue is GameEventScriptMessageSignature right:
                 return left.Equals(right);
-            case Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
+            case GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage left && other.ObjectValue is GameEventScriptMessage right:
                 return left.Equals(right);
             case Series when ObjectValue is GesSeries left && other.ObjectValue is GesSeries right:
                 return string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal) && left.Offset == right.Offset;
@@ -629,10 +793,10 @@ public struct GesValue
                 hash.Add(range.To);
                 hash.Add(range.Step);
                 break;
-            case Handler when ObjectValue is GameEventScriptMessageSignature signature:
+            case GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature signature:
                 hash.Add(signature);
                 break;
-            case Message when ObjectValue is GameEventScriptMessage message:
+            case GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message:
                 hash.Add(message);
                 break;
             case Series when ObjectValue is GesSeries series:
@@ -691,8 +855,8 @@ public struct GesValue
         GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeInteger range => FormatRange(range.From, range.To, range.Step),
         GameEventScriptBytecodeTypeKind.Range when ObjectValue is GesValueRangeFloat range => FormatRange(range.From, range.To, range.Step),
         Series when ObjectValue is GesSeries series => $"series[{series.SignatureId} offset {series.Offset}]",
-        Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
-        Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
+        GameEventScriptBytecodeTypeKind.Handler when ObjectValue is GameEventScriptMessageSignature signature => $"handler {signature.SignatureId}",
+        GameEventScriptBytecodeTypeKind.Message when ObjectValue is GameEventScriptMessage message => message.ToString(),
         _ => Kind.ToString()
     };
 

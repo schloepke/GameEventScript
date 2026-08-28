@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
@@ -12,28 +13,25 @@ namespace StepH.GameEventScript.Api;
 /// Ordered message arguments. Argument names are part of the message signature
 /// and therefore preserve source order.
 /// </summary>
-public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyValuePair<string, GameEventScriptValue>>
+public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyValuePair<string, GesValue>>
 {
-    public static GameEventScriptMessageArguments Empty { get; } = new([], [], [], null, null);
+    public static GameEventScriptMessageArguments Empty { get; } = new([], [], [], null);
 
     private readonly string[] _names;
     private readonly GesValue[] _values;
     private readonly IReadOnlyList<string> _signatureLabels;
     private Dictionary<string, int>? _lookup;
-    private GameEventScriptValue[]? _boxedValues;
 
     private GameEventScriptMessageArguments(
         string[] names,
         GesValue[] values,
         IReadOnlyList<string> signatureLabels,
-        Dictionary<string, int>? lookup,
-        GameEventScriptValue[]? boxedValues)
+        Dictionary<string, int>? lookup)
     {
         _names = names;
         _values = values;
         _signatureLabels = signatureLabels;
         _lookup = lookup;
-        _boxedValues = boxedValues;
     }
 
     public int Count => _values.Length;
@@ -42,11 +40,11 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
 
     public IEnumerable<string> Keys => new KeyEnumerable(_names);
 
-    public IEnumerable<GameEventScriptValue> Values => new ValueEnumerable(this);
+    public IEnumerable<GesValue> Values => new ValueEnumerable(this);
 
-    public GameEventScriptValue this[int index] => ValueAt(index);
+    public GesValue this[int index] => ValueAt(index);
 
-    public GameEventScriptValue this[string name] => ValueAt(IndexOfRequired(name));
+    public GesValue this[string name] => ValueAt(IndexOfRequired(name));
 
     public string NameAt(int index) => _names[index];
 
@@ -66,7 +64,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return value.Kind switch
         {
             GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => ToIntegerSaturated(value.FloatValue),
+            Float or Percentage => ToIntegerSaturated(value.FloatValue),
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
             _ => ToIntegerSaturated(value.AsNumeric)
         };
@@ -80,7 +78,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return value.Kind switch
         {
             GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue,
+            Float or Percentage => value.FloatValue,
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1d : 0d,
             _ => value.AsNumeric
         };
@@ -95,8 +93,8 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         {
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue,
             GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue != 0,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => value.FloatValue != 0d,
-            GameEventScriptBytecodeTypeKind.Vector or GameEventScriptBytecodeTypeKind.Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+            Float or Percentage => value.FloatValue != 0d,
+            Vector or Point when value.ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
             _ => value.IsTrue
         };
     }
@@ -109,17 +107,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
 
     public string GetAsText(string name) => GetAsText(IndexOfRequired(name));
 
-    public GameEventScriptValue ValueAt(int index)
-    {
-        var boxedValues = _boxedValues;
-        if (boxedValues is null)
-        {
-            boxedValues = new GameEventScriptValue[_values.Length];
-            _boxedValues = boxedValues;
-        }
-
-        return boxedValues[index] ??= GameEventScriptValueFactory.FromVmValue(in _values[index]);
-    }
+    public GesValue ValueAt(int index) => _values[index];
 
     public bool ContainsKey(string name) => IndexOf(name) >= 0;
 
@@ -130,7 +118,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return lookup.TryGetValue(normalizedName, out var index) ? index : -1;
     }
 
-    public IEnumerator<KeyValuePair<string, GameEventScriptValue>> GetEnumerator() => new PairEnumerator(this);
+    public IEnumerator<KeyValuePair<string, GesValue>> GetEnumerator() => new PairEnumerator(this);
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -155,7 +143,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return builder.ToString();
     }
 
-    public static GameEventScriptMessageArguments Create(IReadOnlyDictionary<string, GameEventScriptValue>? values)
+    public static GameEventScriptMessageArguments Create(IReadOnlyDictionary<string, GesValue>? values)
     {
         if (values is null || values.Count == 0)
         {
@@ -164,36 +152,25 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
 
         var names = new string[values.Count];
         var vmValues = new GesValue[values.Count];
-        var boxedValues = new GameEventScriptValue[values.Count];
         var index = 0;
         foreach (var pair in values)
         {
             names[index] = pair.Key;
-            var value = pair.Value ?? GameEventScriptValueFactory.GesNothing();
-            boxedValues[index] = value;
-            vmValues[index] = value.GetVmValue();
+            vmValues[index] = pair.Value;
             index++;
         }
 
-        return CreateOrdered(names, vmValues, boxedValues);
+        return CreateOrdered(names, vmValues);
     }
 
-    internal static GameEventScriptMessageArguments CreateOrdered(string[] names, GameEventScriptValue[] values)
+    internal static GameEventScriptMessageArguments CreateOrdered(string[] names, GesValue[] values)
     {
         if (values.Length == 0)
         {
             return Empty;
         }
 
-        var vmValues = new GesValue[values.Length];
-        for (var index = 0; index < values.Length; index++)
-        {
-            var value = values[index] ?? GameEventScriptValueFactory.GesNothing();
-            values[index] = value;
-            vmValues[index] = value.GetVmValue();
-        }
-
-        return CreateOrdered(names, vmValues, values);
+        return CreateOrderedCore(names, values);
     }
 
     internal static GameEventScriptMessageArguments CreatePrecomputed(string[] normalizedNames, GesValue[] values)
@@ -203,7 +180,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
             return Empty;
         }
 
-        return new GameEventScriptMessageArguments(normalizedNames, values, normalizedNames, null, null);
+        return new GameEventScriptMessageArguments(normalizedNames, values, normalizedNames, null);
     }
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values[index];
@@ -217,7 +194,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return (long)truncated;
     }
 
-    private static GameEventScriptMessageArguments CreateOrdered(string[] names, GesValue[] values, GameEventScriptValue[]? boxedValues)
+    private static GameEventScriptMessageArguments CreateOrderedCore(string[] names, GesValue[] values)
     {
         if (values.Length == 0)
         {
@@ -240,7 +217,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
             }
         }
 
-        return new GameEventScriptMessageArguments(names, values, signatureLabels, null, boxedValues);
+        return new GameEventScriptMessageArguments(names, values, signatureLabels, null);
     }
 
     private Dictionary<string, int> GetLookup()
@@ -310,15 +287,15 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         }
     }
 
-    private sealed class ValueEnumerable(GameEventScriptMessageArguments arguments) : IEnumerable<GameEventScriptValue>, IEnumerator<GameEventScriptValue>
+    private sealed class ValueEnumerable(GameEventScriptMessageArguments arguments) : IEnumerable<GesValue>, IEnumerator<GesValue>
     {
         private int _index = -1;
 
-        public GameEventScriptValue Current => arguments.ValueAt(_index);
+        public GesValue Current => arguments.ValueAt(_index);
 
         object IEnumerator.Current => Current;
 
-        public IEnumerator<GameEventScriptValue> GetEnumerator()
+        public IEnumerator<GesValue> GetEnumerator()
         {
             _index = -1;
             return this;
@@ -345,11 +322,11 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         }
     }
 
-    private sealed class PairEnumerator(GameEventScriptMessageArguments arguments) : IEnumerator<KeyValuePair<string, GameEventScriptValue>>
+    private sealed class PairEnumerator(GameEventScriptMessageArguments arguments) : IEnumerator<KeyValuePair<string, GesValue>>
     {
         private int _index = -1;
 
-        public KeyValuePair<string, GameEventScriptValue> Current => new(arguments.NameAt(_index), arguments.ValueAt(_index));
+        public KeyValuePair<string, GesValue> Current => new(arguments.NameAt(_index), arguments.ValueAt(_index));
 
         object IEnumerator.Current => Current;
 

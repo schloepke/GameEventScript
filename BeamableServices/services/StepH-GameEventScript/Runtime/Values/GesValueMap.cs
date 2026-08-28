@@ -2,7 +2,7 @@ using System;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal sealed class GesValueMap
+public sealed class GesValueMap
 {
     private static readonly string[] EntryKeys = ["key", "value"];
 
@@ -32,8 +32,8 @@ internal sealed class GesValueMap
     }
     
     public int Length => _length;
-    internal int StorageLength => _keys.Length;
-    internal bool HasHiddenEntries => _length != _keys.Length;
+    public int StorageLength => _keys.Length;
+    public bool HasHiddenEntries => _length != _keys.Length;
     
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
     internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
@@ -50,10 +50,10 @@ internal sealed class GesValueMap
         return null;
     }
 
-    internal bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
-    internal string KeyAt(int index) => _keys[index];
-    internal GesValue ValueAt(int index) => _values[index];
-    internal bool IsVisibleAt(int index) => !_keys[index].StartsWith("_", StringComparison.Ordinal);
+    public bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
+    public string KeyAt(int index) => _keys[index];
+    public GesValue ValueAt(int index) => _values[index];
+    public bool IsVisibleAt(int index) => !_keys[index].StartsWith("_", StringComparison.Ordinal);
 
     private int FindKeyIndex(string key)
     {

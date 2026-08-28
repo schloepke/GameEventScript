@@ -96,7 +96,7 @@ internal static class GameEventScriptVmStateDumper
         var index = 0;
         foreach (var argument in message.Arguments)
         {
-            var value = argument.Value ?? GameEventScriptValueFactory.GesNothing();
+            var value = argument.Value;
             builder
                 .Append("  #").Append(index.ToString(CultureInfo.InvariantCulture))
                 .Append(' ')

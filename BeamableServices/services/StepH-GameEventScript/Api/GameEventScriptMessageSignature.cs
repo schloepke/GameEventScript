@@ -138,7 +138,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <returns>A message with this signature's name and parameter names.</returns>
-    public GameEventScriptMessage WithArguments(params GameEventScriptValue[] arguments)
+    public GameEventScriptMessage WithArguments(params GesValue[] arguments)
     {
         var message = CreateMessage(arguments);
         return message ?? throw new ArgumentException($"Message signature '{SignatureId}' expects {Parameters.Count} argument(s) but received {arguments.Length}.", nameof(arguments));
@@ -149,7 +149,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// </summary>
     /// <param name="arguments">The ordered argument values to bind to the signature parameters.</param>
     /// <returns>The created message when the argument count matches; otherwise <c>null</c>.</returns>
-    public GameEventScriptMessage? CreateMessage(IReadOnlyList<GameEventScriptValue> arguments)
+    public GameEventScriptMessage? CreateMessage(IReadOnlyList<GesValue> arguments)
     {
         if (Name.Length == 0) return null;
         if (arguments.Count != Parameters.Count) return null;
@@ -157,10 +157,10 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         {
             return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.Empty, SignatureId);
         }
-        var values = new GameEventScriptValue[arguments.Count];
+        var values = new GesValue[arguments.Count];
         for (var index = 0; index < arguments.Count; index++)
         {
-            values[index] = arguments[index] ?? GameEventScriptValueFactory.GesNothing();
+            values[index] = arguments[index];
         }
 
         return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreateOrdered((string[])Parameters, values), SignatureId);

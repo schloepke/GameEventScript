@@ -2,6 +2,7 @@ using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
 namespace StepH_GameEventScript_Tests;
@@ -63,7 +64,7 @@ public sealed class GameEventScriptHostSteppingTests
 
         var session = host.StartSession();
 
-        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GameEventScriptValueFactory.GesInteger(7)))));
+        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GesValue.GesInteger(7)))));
         CollectionAssert.AreEqual(new[] { "Ping(amount)" }, calls);
     }
 
@@ -523,8 +524,8 @@ public sealed class GameEventScriptHostSteppingTests
 
         host.Publish(Create(
             "Start",
-            ("values", GameEventScriptValueFactory.GesList(Enumerable.Range(1, 3).Select(value => GameEventScriptValueFactory.GesInteger(value)))),
-            ("seed", GameEventScriptValueFactory.GesInteger(7))));
+            ("values", GesValue.GesList([GesValue.GesInteger(1), GesValue.GesInteger(2), GesValue.GesInteger(3)])),
+            ("seed", GesValue.GesInteger(7))));
 
         var steps = DrainWithTinyBudget(host);
 

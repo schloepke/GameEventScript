@@ -199,7 +199,7 @@ internal static class GesVmRegisterTypeCastCheck
                     if (map.Get(argumentName) is { } argument)
                     {
                         var stagedArgument = argument;
-                        vmState.StageValue(ref stagedArgument);
+                        vmState.StageValue(in stagedArgument);
                     }
                     else vmState.StageNothing();
                 }

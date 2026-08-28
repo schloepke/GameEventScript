@@ -31,7 +31,7 @@ internal static class GesVmRegisterIterators
 
     internal static void GesVmIteratorClose(this GesVmState vmState, ushort iteratorRegister)
     {
-        ref var iterator = ref vmState.Register(iteratorRegister);
+        var iterator = vmState.Register(iteratorRegister);
         if (iterator is not { Kind: Iterator, ObjectValue: IDisposable it }) return;
         it.Dispose();
         vmState.SetNothing(iteratorRegister);

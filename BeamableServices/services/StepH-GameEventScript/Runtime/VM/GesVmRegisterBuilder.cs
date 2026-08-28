@@ -276,7 +276,7 @@ internal sealed class GesVmGroupBuilder
         _counts[groupIndex] = itemCount + 1;
     }
 
-    internal void WriteTo(ref GesValue destination)
+    internal GesValue ToMapValue()
     {
         var map = new GesVmMapBuilder(_count);
         for (var groupIndex = 0; groupIndex < _count; groupIndex++)
@@ -289,7 +289,9 @@ internal sealed class GesVmGroupBuilder
             map.Set(_keys[groupIndex], groupedValue);
         }
 
-        destination.SetMap(map.ToMap());
+        var result = new GesValue();
+        result.SetMap(map.ToMap());
+        return result;
     }
 }
 

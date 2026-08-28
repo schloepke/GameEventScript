@@ -10,89 +10,88 @@ internal static class GesVmRegisterTakeDrop
 {
     internal static void GesVmTakeFirst(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case Series when source.ObjectValue is GesSeries series:
-                TakeFirstSeries(vmState, ref dst, series, count);
+                result = TakeFirstSeries(vmState, series, count);
                 break;
             case List when source.ObjectValue is GesValue[] list:
-                TakeFirstList(vmState, ref dst, list, count);
+                result = TakeFirstList(vmState, list, count);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                TakeFirstDice(vmState, ref dst, dice, count);
+                result = TakeFirstDice(vmState, dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                TakeFirstRange(vmState, ref dst, range, count);
+                result = TakeFirstRange(vmState, range, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                TakeFirstRange(vmState, ref dst, range, count);
+                result = TakeFirstRange(vmState, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                TakeFirstIterator(vmState, ref dst, iterator, count);
+                result = TakeFirstIterator(vmState, iterator, count);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmOneRandom(this GesVmState vmState, ushort destinationRegister, in GesValue source, GameEventScriptRandomGenerator randomGenerator)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                if (list.Length > 0) dst = list[randomGenerator.NextInclusiveInteger(0, list.Length - 1)];
-                else dst.SetNothing();
+                result = list.Length > 0 ? list[randomGenerator.NextInclusiveInteger(0, list.Length - 1)] : new GesValue();
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                if (dice.Length > 0) dst.SetInteger(dice[randomGenerator.NextInclusiveInteger(0, dice.Length - 1)]);
-                else dst.SetNothing();
+                result = new GesValue();
+                if (dice.Length > 0) result.SetInteger(dice[randomGenerator.NextInclusiveInteger(0, dice.Length - 1)]);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                OneRandomRange(vmState, ref dst, range, randomGenerator);
+                result = OneRandomRange(range, randomGenerator);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                OneRandomRange(vmState, ref dst, range, randomGenerator);
+                result = OneRandomRange(range, randomGenerator);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                OneRandomIterator(vmState, ref dst, iterator, randomGenerator);
+                result = OneRandomIterator(iterator, randomGenerator);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmTakeRandom(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                TakeRandomList(vmState, ref dst, list, count, randomGenerator);
+                result = TakeRandomList(vmState, list, count, randomGenerator);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                TakeRandomDice(vmState, ref dst, dice, count, randomGenerator);
+                result = TakeRandomDice(dice, count, randomGenerator);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                TakeRandomRange(vmState, ref dst, range, count, randomGenerator);
+                result = TakeRandomRange(vmState, range, count, randomGenerator);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                TakeRandomRange(vmState, ref dst, range, count, randomGenerator);
+                result = TakeRandomRange(vmState, range, count, randomGenerator);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                TakeRandomIterator(vmState, ref dst, iterator, count, randomGenerator);
+                result = TakeRandomIterator(vmState, iterator, count, randomGenerator);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
 
     internal static void GesVmOneWeighted(this GesVmState vmState, ushort destinationRegister, in GesValue itemsValue, in GesValue weightsValue, GameEventScriptRandomGenerator randomGenerator)
@@ -215,227 +214,233 @@ internal static class GesVmRegisterTakeDrop
 
     internal static void GesVmDropFirst(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case Series when source.ObjectValue is GesSeries series:
-                dst.SetSeries(count <= 0 ? series : series.Drop(count));
+                result = new GesValue();
+                result.SetSeries(count <= 0 ? series : series.Drop(count));
                 break;
             case List when source.ObjectValue is GesValue[] list:
-                DropFirstList(vmState, ref dst, list, count);
+                result = DropFirstList(list, count);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                DropFirstDice(vmState, ref dst, dice, count);
+                result = DropFirstDice(dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                DropFirstRange(vmState, ref dst, in source, range, count);
+                result = DropFirstRange(in source, range, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                DropFirstRange(vmState, ref dst, in source, range, count);
+                result = DropFirstRange(in source, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                DropFirstIterator(vmState, ref dst, iterator, count);
+                result = DropFirstIterator(vmState, iterator, count);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmTakeLast(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                TakeLastList(vmState, ref dst, list, count);
+                result = TakeLastList(vmState, list, count);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                TakeLastDice(vmState, ref dst, dice, count);
+                result = TakeLastDice(dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                TakeLastRange(vmState, ref dst, range, count);
+                result = TakeLastRange(vmState, range, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                TakeLastRange(vmState, ref dst, range, count);
+                result = TakeLastRange(vmState, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                TakeLastIterator(vmState, ref dst, iterator, count);
+                result = TakeLastIterator(vmState, iterator, count);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmDropLast(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                DropLastList(vmState, ref dst, list, count);
+                result = DropLastList(list, count);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                DropLastDice(vmState, ref dst, dice, count);
+                result = DropLastDice(dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                DropLastRange(vmState, ref dst, in source, range, count);
+                result = DropLastRange(in source, range, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                DropLastRange(vmState, ref dst, in source, range, count);
+                result = DropLastRange(in source, range, count);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                DropLastIterator(vmState, ref dst, iterator, count);
+                result = DropLastIterator(vmState, iterator, count);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmTakeHighest(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                TakeExtremeList(vmState, ref dst, list, count, true);
+                result = TakeExtremeList(vmState, list, count, true);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                TakeFirstDice(vmState, ref dst, dice, count);
+                result = TakeFirstDice(vmState, dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                TakeExtremeRange(vmState, ref dst, range, count, true);
+                result = TakeExtremeRange(vmState, range, count, true);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                TakeExtremeRange(vmState, ref dst, range, count, true);
+                result = TakeExtremeRange(vmState, range, count, true);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                TakeExtremeIterator(vmState, ref dst, iterator, count, true);
+                result = TakeExtremeIterator(vmState, iterator, count, true);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmTakeLowest(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                TakeExtremeList(vmState, ref dst, list, count, false);
+                result = TakeExtremeList(vmState, list, count, false);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                TakeLastDice(vmState, ref dst, dice, count);
+                result = TakeLastDice(dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                TakeExtremeRange(vmState, ref dst, range, count, false);
+                result = TakeExtremeRange(vmState, range, count, false);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                TakeExtremeRange(vmState, ref dst, range, count, false);
+                result = TakeExtremeRange(vmState, range, count, false);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                TakeExtremeIterator(vmState, ref dst, iterator, count, false);
+                result = TakeExtremeIterator(vmState, iterator, count, false);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmDropHighest(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                DropExtremeList(vmState, ref dst, list, count, true);
+                result = DropExtremeList(vmState, list, count, true);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                DropFirstDice(vmState, ref dst, dice, count);
+                result = DropFirstDice(dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                DropExtremeRange(vmState, ref dst, in source, range, count, true);
+                result = DropExtremeRange(in source, range, count, true);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                DropExtremeRange(vmState, ref dst, in source, range, count, true);
+                result = DropExtremeRange(in source, range, count, true);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                DropExtremeIterator(vmState, ref dst, iterator, count, true);
+                result = DropExtremeIterator(vmState, iterator, count, true);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
     internal static void GesVmDropLowest(this GesVmState vmState, ushort destinationRegister, in GesValue source, short count)
     {
-        var dst = new GesValue();
+        GesValue result;
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
-                DropExtremeList(vmState, ref dst, list, count, false);
+                result = DropExtremeList(vmState, list, count, false);
                 break;
             case Dice when source.ObjectValue is int[] dice:
-                DropLastDice(vmState, ref dst, dice, count);
+                result = DropLastDice(dice, count);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
-                DropExtremeRange(vmState, ref dst, in source, range, count, false);
+                result = DropExtremeRange(in source, range, count, false);
                 break;
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
-                DropExtremeRange(vmState, ref dst, in source, range, count, false);
+                result = DropExtremeRange(in source, range, count, false);
                 break;
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                DropExtremeIterator(vmState, ref dst, iterator, count, false);
+                result = DropExtremeIterator(vmState, iterator, count, false);
                 break;
             default:
-                dst.SetNothing();
+                result = new GesValue();
                 break;
         }
 
-        vmState.SetValue(destinationRegister, in dst);
+        vmState.SetValue(destinationRegister, in result);
     }
-    private static void TakeFirstSeries(GesVmState vmState, ref GesValue dst, GesSeries series, short count)
+    private static GesValue TakeFirstSeries(GesVmState vmState, GesSeries series, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var list = new GesValue[count];
         for (var i = 0; i < count; i++) list[i] = series.GetTerm(i);
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeFirstList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count)
+    private static GesValue TakeFirstList(GesVmState vmState, GesValue[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
         var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = source[i];
         dst.SetList(list);
+        return dst;
     }
-    private static void DropFirstList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count)
+    private static GesValue DropFirstList(GesValue[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetList(source);
-            return;
+            return dst;
         }
 
         var start = count < source.Length ? count : source.Length;
@@ -443,13 +448,15 @@ internal static class GesVmRegisterTakeDrop
         var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = source[start + i];
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeLastList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count)
+    private static GesValue TakeLastList(GesVmState vmState, GesValue[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
@@ -457,39 +464,45 @@ internal static class GesVmRegisterTakeDrop
         var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = source[start + i];
         dst.SetList(list);
+        return dst;
     }
-    private static void DropLastList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count)
+    private static GesValue DropLastList(GesValue[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetList(source);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? source.Length - count : 0;
         var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = source[i];
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeFirstDice(GesVmState vmState, ref GesValue dst, int[] source, short count)
+    private static GesValue TakeFirstDice(GesVmState vmState, int[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetDice([]);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
         var dice = new int[length];
         for (var i = 0; i < length; i++) dice[i] = source[i];
         dst.SetDice(dice);
+        return dst;
     }
-    private static void DropFirstDice(GesVmState vmState, ref GesValue dst, int[] source, short count)
+    private static GesValue DropFirstDice(int[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetDice(source);
-            return;
+            return dst;
         }
 
         var start = count < source.Length ? count : source.Length;
@@ -497,13 +510,15 @@ internal static class GesVmRegisterTakeDrop
         var dice = new int[length];
         for (var i = 0; i < length; i++) dice[i] = source[start + i];
         dst.SetDice(dice);
+        return dst;
     }
-    private static void TakeLastDice(GesVmState vmState, ref GesValue dst, int[] source, short count)
+    private static GesValue TakeLastDice(int[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetDice([]);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
@@ -511,26 +526,30 @@ internal static class GesVmRegisterTakeDrop
         var dice = new int[length];
         for (var i = 0; i < length; i++) dice[i] = source[start + i];
         dst.SetDice(dice);
+        return dst;
     }
-    private static void DropLastDice(GesVmState vmState, ref GesValue dst, int[] source, short count)
+    private static GesValue DropLastDice(int[] source, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetDice(source);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? source.Length - count : 0;
         var dice = new int[length];
         for (var i = 0; i < length; i++) dice[i] = source[i];
         dst.SetDice(dice);
+        return dst;
     }
-    private static void TakeExtremeList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count, bool highest)
+    private static GesValue TakeExtremeList(GesVmState vmState, GesValue[] source, short count, bool highest)
     {
+        var dst = new GesValue();
         if (count <= 0 || source.Length == 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
@@ -557,20 +576,22 @@ internal static class GesVmRegisterTakeDrop
         }
 
         dst.SetList(list);
+        return dst;
     }
-    private static void DropExtremeList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count, bool highest)
+    private static GesValue DropExtremeList(GesVmState vmState, GesValue[] source, short count, bool highest)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             dst.SetList(source);
-            return;
+            return dst;
         }
 
         var selectedCount = count < source.Length ? count : source.Length;
         if (selectedCount == source.Length)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var selected = new bool[source.Length];
@@ -584,6 +605,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         dst.SetList(list);
+        return dst;
     }
     private static void SelectExtremeItems(GesValue[] items, int length, bool[] selected, int selectedCount, bool highest)
     {
@@ -606,13 +628,14 @@ internal static class GesVmRegisterTakeDrop
             selected[best] = true;
         }
     }
-    private static void TakeFirstIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count)
+    private static GesValue TakeFirstIterator(GesVmState vmState, IGesIterator iterator, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var buffer = new GesValue[count < 16 ? count : 16];
@@ -626,14 +649,14 @@ internal static class GesVmRegisterTakeDrop
                 buffer[itemCount++] = item.Value;
             }
 
-            SetListFromBuffer(vmState, ref dst, buffer, itemCount);
+            return ListFromBuffer(vmState, buffer, itemCount);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void DropFirstIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count)
+    private static GesValue DropFirstIterator(GesVmState vmState, IGesIterator iterator, short count)
     {
         var skipped = 0;
         var buffer = new GesValue[16];
@@ -648,20 +671,21 @@ internal static class GesVmRegisterTakeDrop
                 buffer[itemCount++] = item.Value;
             }
 
-            SetListFromBuffer(vmState, ref dst, buffer, itemCount);
+            return ListFromBuffer(vmState, buffer, itemCount);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeLastIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count)
+    private static GesValue TakeLastIterator(GesVmState vmState, IGesIterator iterator, short count)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var buffer = new GesValue[16];
@@ -680,19 +704,20 @@ internal static class GesVmRegisterTakeDrop
             if (length == 0)
             {
                 dst.SetList(vmState.EmptyList);
-                return;
+                return dst;
             }
 
             var list = new GesValue[length];
             Array.Copy(buffer, start, list, 0, length);
             dst.SetList(list);
+            return dst;
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void DropLastIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count)
+    private static GesValue DropLastIterator(GesVmState vmState, IGesIterator iterator, short count)
     {
         var buffer = new GesValue[16];
         var itemCount = 0;
@@ -706,20 +731,21 @@ internal static class GesVmRegisterTakeDrop
             }
 
             var length = count <= 0 ? itemCount : count < itemCount ? itemCount - count : 0;
-            SetListFromBuffer(vmState, ref dst, buffer, length);
+            return ListFromBuffer(vmState, buffer, length);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeExtremeIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count, bool highest)
+    private static GesValue TakeExtremeIterator(GesVmState vmState, IGesIterator iterator, short count, bool highest)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var buffer = new GesValue[count];
@@ -743,15 +769,16 @@ internal static class GesVmRegisterTakeDrop
                 }
             }
 
-            SetListFromBuffer(vmState, ref dst, buffer, itemCount);
+            return ListFromBuffer(vmState, buffer, itemCount);
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void DropExtremeIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count, bool highest)
+    private static GesValue DropExtremeIterator(GesVmState vmState, IGesIterator iterator, short count, bool highest)
     {
+        var dst = new GesValue();
         var buffer = new GesValue[16];
         var itemCount = 0;
         try
@@ -765,15 +792,14 @@ internal static class GesVmRegisterTakeDrop
 
             if (count <= 0)
             {
-                SetListFromBuffer(vmState, ref dst, buffer, itemCount);
-                return;
+                return ListFromBuffer(vmState, buffer, itemCount);
             }
 
             var selectedCount = count < itemCount ? count : itemCount;
             if (selectedCount == itemCount)
             {
                 dst.SetList(vmState.EmptyList);
-                return;
+                return dst;
             }
 
             var selected = new bool[itemCount];
@@ -787,39 +813,44 @@ internal static class GesVmRegisterTakeDrop
             }
 
             dst.SetList(list);
+            return dst;
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void OneRandomRange(GesVmState vmState, ref GesValue dst, GesValueRangeInteger valueRangeInteger, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue OneRandomRange(GesValueRangeInteger valueRangeInteger, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (length <= 0)
         {
             dst.SetNothing();
-            return;
+            return dst;
         }
 
         var index = randomGenerator.NextInclusiveInteger(0, length - 1L);
         if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, index + 1L) is { } value) dst.SetInteger(value);
         else dst.SetNothing();
+        return dst;
     }
-    private static void OneRandomRange(GesVmState vmState, ref GesValue dst, GesValueRangeFloat range, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue OneRandomRange(GesValueRangeFloat range, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (length <= 0)
         {
             dst.SetNothing();
-            return;
+            return dst;
         }
 
         var index = randomGenerator.NextInclusiveInteger(0, length - 1L);
         if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, index + 1L) is { } value) dst.SetFloat(value);
         else dst.SetNothing();
+        return dst;
     }
-    private static void OneRandomIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue OneRandomIterator(IGesIterator iterator, GameEventScriptRandomGenerator randomGenerator)
     {
         var chosen = new GesValue();
         var count = 0;
@@ -832,20 +863,20 @@ internal static class GesVmRegisterTakeDrop
                 if (randomGenerator.NextInclusiveInteger(1, count) == 1) chosen = item.Value;
             }
 
-            if (count > 0) dst = chosen;
-            else dst.SetNothing();
+            return count > 0 ? chosen : new GesValue();
         }
         finally
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
     }
-    private static void TakeRandomList(GesVmState vmState, ref GesValue dst, GesValue[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomList(GesVmState vmState, GesValue[] source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         if (count <= 0 || source.Length == 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
@@ -853,13 +884,15 @@ internal static class GesVmRegisterTakeDrop
         var list = new GesValue[length];
         for (var i = 0; i < length; i++) list[i] = source[indices[i]];
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeRandomDice(GesVmState vmState, ref GesValue dst, int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomDice(int[] source, short count, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         if (count <= 0 || source.Length == 0)
         {
             dst.SetDice([]);
-            return;
+            return dst;
         }
 
         var length = count < source.Length ? count : source.Length;
@@ -867,14 +900,16 @@ internal static class GesVmRegisterTakeDrop
         var dice = new int[length];
         for (var i = 0; i < length; i++) dice[i] = source[indices[i]];
         dst.SetDice(dice);
+        return dst;
     }
-    private static void TakeRandomRange(GesVmState vmState, ref GesValue dst, GesValueRangeInteger valueRangeInteger, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomRange(GesVmState vmState, GesValueRangeInteger valueRangeInteger, short count, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         var sourceLength = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || sourceLength <= 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var length = count < sourceLength ? count : checked((int)sourceLength);
@@ -889,7 +924,7 @@ internal static class GesVmRegisterTakeDrop
             }
 
             dst.SetList(list);
-            return;
+            return dst;
         }
 
         var terms = new long[length];
@@ -917,14 +952,16 @@ internal static class GesVmRegisterTakeDrop
         }
 
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeRandomRange(GesVmState vmState, ref GesValue dst, GesValueRangeFloat range, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomRange(GesVmState vmState, GesValueRangeFloat range, short count, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         var sourceLength = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || sourceLength <= 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var length = count < sourceLength ? count : checked((int)sourceLength);
@@ -939,7 +976,7 @@ internal static class GesVmRegisterTakeDrop
             }
 
             dst.SetList(list);
-            return;
+            return dst;
         }
 
         var terms = new long[length];
@@ -967,14 +1004,16 @@ internal static class GesVmRegisterTakeDrop
         }
 
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeRandomIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, short count, GameEventScriptRandomGenerator randomGenerator)
+    private static GesValue TakeRandomIterator(GesVmState vmState, IGesIterator iterator, short count, GameEventScriptRandomGenerator randomGenerator)
     {
+        var dst = new GesValue();
         if (count <= 0)
         {
             if (iterator is IDisposable disposable) disposable.Dispose();
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var buffer = new GesValue[16];
@@ -991,7 +1030,7 @@ internal static class GesVmRegisterTakeDrop
             if (itemCount == 0)
             {
                 dst.SetList(vmState.EmptyList);
-                return;
+                return dst;
             }
 
             var length = count < itemCount ? count : itemCount;
@@ -999,6 +1038,7 @@ internal static class GesVmRegisterTakeDrop
             var list = new GesValue[length];
             for (var i = 0; i < length; i++) list[i] = buffer[indices[i]];
             dst.SetList(list);
+            return dst;
         }
         finally
         {
@@ -1040,176 +1080,191 @@ internal static class GesVmRegisterTakeDrop
         buffer[index] = item;
         itemCount++;
     }
-    private static void SetListFromBuffer(GesVmState vmState, ref GesValue dst, GesValue[] buffer, int length)
+    private static GesValue ListFromBuffer(GesVmState vmState, GesValue[] buffer, int length)
     {
+        var dst = new GesValue();
         if (length == 0)
         {
             dst.SetList(vmState.EmptyList);
-            return;
+            return dst;
         }
 
         var list = new GesValue[length];
         Array.Copy(buffer, list, length);
         dst.SetList(list);
+        return dst;
     }
-    private static void TakeFirstRange(GesVmState vmState, ref GesValue dst, GesValueRangeInteger valueRangeInteger, short count)
+    private static GesValue TakeFirstRange(GesVmState vmState, GesValueRangeInteger valueRangeInteger, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (count >= length)
         {
             dst.SetRange(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void DropFirstRange(GesVmState vmState, ref GesValue dst, in GesValue source, GesValueRangeInteger valueRangeInteger, short count)
+    private static GesValue DropFirstRange(in GesValue source, GesValueRangeInteger valueRangeInteger, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0)
         {
-            dst = source;
-            return;
+            return source;
         }
 
         if (count >= length)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void TakeLastRange(GesVmState vmState, ref GesValue dst, GesValueRangeInteger valueRangeInteger, short count)
+    private static GesValue TakeLastRange(GesVmState vmState, GesValueRangeInteger valueRangeInteger, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (count >= length)
         {
             dst.SetRange(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count + 1L) is { } from) dst.SetRange(from, valueRangeInteger.To, valueRangeInteger.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void DropLastRange(GesVmState vmState, ref GesValue dst, in GesValue source, GesValueRangeInteger valueRangeInteger, short count)
+    private static GesValue DropLastRange(in GesValue source, GesValueRangeInteger valueRangeInteger, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0)
         {
-            dst = source;
-            return;
+            return source;
         }
 
         if (count >= length)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length - count) is { } to) dst.SetRange(valueRangeInteger.From, to, valueRangeInteger.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void TakeFirstRange(GesVmState vmState, ref GesValue dst, GesValueRangeFloat range, short count)
+    private static GesValue TakeFirstRange(GesVmState vmState, GesValueRangeFloat range, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (count >= length)
         {
             dst.SetRange(range.From, range.To, range.Step);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, count) is { } to) dst.SetRange(range.From, to, range.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void DropFirstRange(GesVmState vmState, ref GesValue dst, in GesValue source, GesValueRangeFloat range, short count)
+    private static GesValue DropFirstRange(in GesValue source, GesValueRangeFloat range, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0)
         {
-            dst = source;
-            return;
+            return source;
         }
 
         if (count >= length)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void TakeLastRange(GesVmState vmState, ref GesValue dst, GesValueRangeFloat range, short count)
+    private static GesValue TakeLastRange(GesVmState vmState, GesValueRangeFloat range, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (count >= length)
         {
             dst.SetRange(range.From, range.To, range.Step);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length - count + 1L) is { } from) dst.SetRange(from, range.To, range.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void DropLastRange(GesVmState vmState, ref GesValue dst, in GesValue source, GesValueRangeFloat range, short count)
+    private static GesValue DropLastRange(in GesValue source, GesValueRangeFloat range, short count)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0)
         {
-            dst = source;
-            return;
+            return source;
         }
 
         if (count >= length)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length - count) is { } to) dst.SetRange(range.From, to, range.Step);
         else dst.SetNothing();
+        return dst;
     }
-    private static void TakeExtremeRange(GesVmState vmState, ref GesValue dst, GesValueRangeInteger valueRangeInteger, short count, bool highest)
+    private static GesValue TakeExtremeRange(GesVmState vmState, GesValueRangeInteger valueRangeInteger, short count, bool highest)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step);
         if (count <= 0 || length <= 0 || valueRangeInteger.Step == 0)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         var takeLength = count < length ? count : length;
         if (GameEventScriptRangeMath.GetTerm(valueRangeInteger.From, valueRangeInteger.To, valueRangeInteger.Step, length) is not { } last)
         {
             dst.SetNothing();
-            return;
+            return dst;
         }
 
         var ascending = valueRangeInteger.Step > 0;
@@ -1239,33 +1294,36 @@ internal static class GesVmRegisterTakeDrop
                 else dst.SetNothing();
             }
         }
+        return dst;
     }
-    private static void DropExtremeRange(GesVmState vmState, ref GesValue dst, in GesValue source, GesValueRangeInteger valueRangeInteger, short count, bool highest)
+    private static GesValue DropExtremeRange(in GesValue source, GesValueRangeInteger valueRangeInteger, short count, bool highest)
     {
         if (valueRangeInteger.Step > 0)
         {
-            if (highest) DropLastRange(vmState, ref dst, in source, valueRangeInteger, count);
-            else DropFirstRange(vmState, ref dst, in source, valueRangeInteger, count);
-            return;
+            return highest
+                ? DropLastRange(in source, valueRangeInteger, count)
+                : DropFirstRange(in source, valueRangeInteger, count);
         }
 
-        if (highest) DropFirstRange(vmState, ref dst, in source, valueRangeInteger, count);
-        else DropLastRange(vmState, ref dst, in source, valueRangeInteger, count);
+        return highest
+            ? DropFirstRange(in source, valueRangeInteger, count)
+            : DropLastRange(in source, valueRangeInteger, count);
     }
-    private static void TakeExtremeRange(GesVmState vmState, ref GesValue dst, GesValueRangeFloat range, short count, bool highest)
+    private static GesValue TakeExtremeRange(GesVmState vmState, GesValueRangeFloat range, short count, bool highest)
     {
+        var dst = new GesValue();
         var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
         if (count <= 0 || length <= 0 || range.Step == 0d)
         {
             dst.SetRange(0, 0, 0);
-            return;
+            return dst;
         }
 
         var takeLength = count < length ? count : length;
         if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is not { } last)
         {
             dst.SetNothing();
-            return;
+            return dst;
         }
 
         var ascending = range.Step > 0d;
@@ -1295,18 +1353,20 @@ internal static class GesVmRegisterTakeDrop
                 else dst.SetNothing();
             }
         }
+        return dst;
     }
-    private static void DropExtremeRange(GesVmState vmState, ref GesValue dst, in GesValue source, GesValueRangeFloat range, short count, bool highest)
+    private static GesValue DropExtremeRange(in GesValue source, GesValueRangeFloat range, short count, bool highest)
     {
         if (range.Step > 0d)
         {
-            if (highest) DropLastRange(vmState, ref dst, in source, range, count);
-            else DropFirstRange(vmState, ref dst, in source, range, count);
-            return;
+            return highest
+                ? DropLastRange(in source, range, count)
+                : DropFirstRange(in source, range, count);
         }
 
-        if (highest) DropFirstRange(vmState, ref dst, in source, range, count);
-        else DropLastRange(vmState, ref dst, in source, range, count);
+        return highest
+            ? DropFirstRange(in source, range, count)
+            : DropLastRange(in source, range, count);
     }
     private static int CompareForOrdering(in GesValue left, in GesValue right)
     {

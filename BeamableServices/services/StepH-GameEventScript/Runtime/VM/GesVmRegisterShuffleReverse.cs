@@ -10,21 +10,20 @@ internal static class GesVmRegisterShuffleReverse
 {
     internal static void GesVmReverse(this GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var dst = new GesValue();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
             {
                 var result = new GesValue[list.Length];
                 for (var i = 0; i < list.Length; i++) result[i] = list[list.Length - i - 1];
-                dst.SetList(result);
+                vmState.SetList(destinationRegister, result);
                 break;
             }
             case Dice when source.ObjectValue is int[] dice:
             {
                 var result = new GesValue[dice.Length];
                 for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[dice.Length - i - 1]);
-                dst.SetList(result);
+                vmState.SetList(destinationRegister, result);
                 break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
@@ -32,12 +31,12 @@ internal static class GesVmRegisterShuffleReverse
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    dst.SetRange(0, 0, 0);
+                    vmState.SetRange(destinationRegister, 0, 0, 0);
                     break;
                 }
 
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) dst.SetRange(last, range.From, -range.Step);
-                else dst.SetNothing();
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) vmState.SetRange(destinationRegister, last, range.From, -range.Step);
+                else vmState.SetNothing(destinationRegister);
                 break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
@@ -45,27 +44,24 @@ internal static class GesVmRegisterShuffleReverse
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    dst.SetRange(0d, 0d, 0d);
+                    vmState.SetRange(destinationRegister, 0d, 0d, 0d);
                     break;
                 }
 
-                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) dst.SetRange(last, range.From, -range.Step);
-                else dst.SetNothing();
+                if (GameEventScriptRangeMath.GetTerm(range.From, range.To, range.Step, length) is { } last) vmState.SetRange(destinationRegister, last, range.From, -range.Step);
+                else vmState.SetNothing(destinationRegister);
                 break;
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                ReverseIterator(vmState, ref dst, iterator);
+                ReverseIterator(vmState, destinationRegister, iterator);
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(destinationRegister);
                 break;
         }
-
-        vmState.SetValue(destinationRegister, in dst);
     }
     internal static void GesVmShuffle(this GesVmState vmState, ushort destinationRegister, in GesValue source, GameEventScriptRandomGenerator randomGenerator)
     {
-        var dst = new GesValue();
         switch (source.Kind)
         {
             case List when source.ObjectValue is GesValue[] list:
@@ -73,7 +69,7 @@ internal static class GesVmRegisterShuffleReverse
                 var result = new GesValue[list.Length];
                 for (var i = 0; i < list.Length; i++) result[i] = list[i];
                 ShuffleList(result, randomGenerator);
-                dst.SetList(result);
+                vmState.SetList(destinationRegister, result);
                 break;
             }
             case Dice when source.ObjectValue is int[] dice:
@@ -81,7 +77,7 @@ internal static class GesVmRegisterShuffleReverse
                 var result = new GesValue[dice.Length];
                 for (var i = 0; i < dice.Length; i++) result[i].SetInteger(dice[i]);
                 ShuffleList(result, randomGenerator);
-                dst.SetList(result);
+                vmState.SetList(destinationRegister, result);
                 break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeInteger range:
@@ -89,13 +85,13 @@ internal static class GesVmRegisterShuffleReverse
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    dst.SetList(vmState.EmptyList);
+                    vmState.SetList(destinationRegister, vmState.EmptyList);
                     break;
                 }
 
                 if (length > int.MaxValue)
                 {
-                    dst.SetNothing();
+                    vmState.SetNothing(destinationRegister);
                     break;
                 }
 
@@ -107,7 +103,7 @@ internal static class GesVmRegisterShuffleReverse
                 }
 
                 ShuffleList(result, randomGenerator);
-                dst.SetList(result);
+                vmState.SetList(destinationRegister, result);
                 break;
             }
             case GameEventScriptBytecodeTypeKind.Range when source.ObjectValue is GesValueRangeFloat range:
@@ -115,13 +111,13 @@ internal static class GesVmRegisterShuffleReverse
                 var length = GameEventScriptRangeMath.GetLength(range.From, range.To, range.Step);
                 if (length <= 0)
                 {
-                    dst.SetList(vmState.EmptyList);
+                    vmState.SetList(destinationRegister, vmState.EmptyList);
                     break;
                 }
 
                 if (length > int.MaxValue)
                 {
-                    dst.SetNothing();
+                    vmState.SetNothing(destinationRegister);
                     break;
                 }
 
@@ -133,20 +129,18 @@ internal static class GesVmRegisterShuffleReverse
                 }
 
                 ShuffleList(result, randomGenerator);
-                dst.SetList(result);
+                vmState.SetList(destinationRegister, result);
                 break;
             }
             case Iterator when source.ObjectValue is IGesIterator iterator:
-                ShuffleIterator(vmState, ref dst, iterator, randomGenerator);
+                ShuffleIterator(vmState, destinationRegister, iterator, randomGenerator);
                 break;
             default:
-                dst.SetNothing();
+                vmState.SetNothing(destinationRegister);
                 break;
         }
-
-        vmState.SetValue(destinationRegister, in dst);
     }
-    private static void ReverseIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator)
+    private static void ReverseIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator)
     {
         var values = new GesValue[16];
         var count = 0;
@@ -172,9 +166,9 @@ internal static class GesVmRegisterShuffleReverse
 
         var result = new GesValue[count];
         for (var i = 0; i < count; i++) result[i] = values[count - i - 1];
-        dst.SetList(result);
+        vmState.SetList(destinationRegister, result);
     }
-    private static void ShuffleIterator(GesVmState vmState, ref GesValue dst, IGesIterator iterator, GameEventScriptRandomGenerator randomGenerator)
+    private static void ShuffleIterator(GesVmState vmState, ushort destinationRegister, IGesIterator iterator, GameEventScriptRandomGenerator randomGenerator)
     {
         var values = new GesValue[16];
         var count = 0;
@@ -201,7 +195,7 @@ internal static class GesVmRegisterShuffleReverse
         var result = new GesValue[count];
         for (var i = 0; i < count; i++) result[i] = values[i];
         ShuffleList(result, randomGenerator);
-        dst.SetList(result);
+        vmState.SetList(destinationRegister, result);
     }
     private static void ShuffleList(GesValue[] list, GameEventScriptRandomGenerator randomGenerator)
     {

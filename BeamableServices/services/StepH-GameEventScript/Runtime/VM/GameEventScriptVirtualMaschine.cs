@@ -199,10 +199,10 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                                 vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
                             break;
                         case EmitMessageValue:
-                            vmState.GesVmPublishMessageValue(ref vmState.Register(instruction.XRegister), false, session);
+                            vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), false, session);
                             break;
                         case EmitMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(ref vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
+                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
                             break;
 
                         case PublishMessage:
@@ -213,10 +213,10 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                                 vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), true, session);
                             break;
                         case PublishMessageValue:
-                            vmState.GesVmPublishMessageValue(ref vmState.Register(instruction.XRegister), true, session);
+                            vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), true, session);
                             break;
                         case PublishMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(ref vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
+                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
                             break;
 
                         case Cast:

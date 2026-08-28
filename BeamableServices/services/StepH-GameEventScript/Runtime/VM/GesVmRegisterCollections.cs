@@ -117,8 +117,7 @@ internal static class GesVmRegisterCollections
     {
         if (groupBuilder.Kind is GroupBuilder && groupBuilder.ObjectValue is GesVmGroupBuilder builder)
         {
-            var result = new GesValue();
-            builder.WriteTo(ref result);
+            var result = builder.ToMapValue();
             vmState.SetValue(destinationRegister, in result);
             return;
         }

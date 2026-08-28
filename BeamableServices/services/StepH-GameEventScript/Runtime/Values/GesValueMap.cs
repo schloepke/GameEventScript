@@ -53,7 +53,6 @@ internal sealed class GesValueMap
     internal bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
     internal string KeyAt(int index) => _keys[index];
     internal GesValue ValueAt(int index) => _values[index];
-    internal ref GesValue ValueRefAt(int index) => ref _values[index];
     internal bool IsVisibleAt(int index) => !_keys[index].StartsWith("_", StringComparison.Ordinal);
 
     private int FindKeyIndex(string key)

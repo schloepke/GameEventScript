@@ -8,7 +8,7 @@ internal interface IGesForwardIntegerSeries
 
     GesSeriesCursor? CreateCursor(long index);
 
-    bool MoveNext(ref GesSeriesCursor cursor);
+    GesSeriesStep MoveNext(in GesSeriesCursor cursor);
 
     long? ReadCursor(in GesSeriesCursor cursor);
 }
@@ -19,7 +19,7 @@ internal interface IGesForwardDoubleSeries
 
     GesSeriesCursor? CreateCursor(long index);
 
-    bool MoveNext(ref GesSeriesCursor cursor);
+    GesSeriesStep MoveNext(in GesSeriesCursor cursor);
 
     double? ReadCursor(in GesSeriesCursor cursor);
 }
@@ -86,11 +86,13 @@ internal sealed class GesSeries
 
         while (cursorIndex < absoluteIndex)
         {
-            if (!_definition.MoveNext(ref cursor))
+            var step = _definition.MoveNext(in cursor);
+            if (!step.HasValue)
             {
                 return default;
             }
 
+            cursor = step.Cursor;
             cursorIndex++;
         }
 
@@ -140,10 +142,10 @@ internal sealed class GesSeries
             return null;
         }
 
-        internal virtual bool MoveNext(ref GesSeriesCursor cursor)
+        internal virtual GesSeriesStep MoveNext(in GesSeriesCursor cursor)
         {
             _ = cursor;
-            return false;
+            return default;
         }
 
         internal virtual GesValue ReadCursorValue(in GesSeriesCursor cursor)
@@ -177,21 +179,22 @@ internal sealed class GesSeries
             return cursor;
         }
 
-        internal override bool MoveNext(ref GesSeriesCursor cursor)
+        internal override GesSeriesStep MoveNext(in GesSeriesCursor cursor)
         {
+            var nextCursor = cursor;
             if (cursor.Index == 0)
             {
-                cursor.Index = 1;
-                cursor.Previous = 0d;
-                cursor.Current = 1d;
-                return true;
+                nextCursor.Index = 1;
+                nextCursor.Previous = 0d;
+                nextCursor.Current = 1d;
+                return new GesSeriesStep(in nextCursor);
             }
 
-            var next = cursor.Previous + cursor.Current;
-            cursor.Previous = cursor.Current;
-            cursor.Current = next;
-            cursor.Index++;
-            return true;
+            var next = nextCursor.Previous + nextCursor.Current;
+            nextCursor.Previous = nextCursor.Current;
+            nextCursor.Current = next;
+            nextCursor.Index++;
+            return new GesSeriesStep(in nextCursor);
         }
 
         internal override GesValue ReadCursorValue(in GesSeriesCursor cursor)
@@ -208,7 +211,7 @@ internal sealed class GesSeries
 
         GesSeriesCursor? IGesForwardDoubleSeries.CreateCursor(long index) => CreateCursor(index);
 
-        bool IGesForwardDoubleSeries.MoveNext(ref GesSeriesCursor cursor) => MoveNext(ref cursor);
+        GesSeriesStep IGesForwardDoubleSeries.MoveNext(in GesSeriesCursor cursor) => MoveNext(in cursor);
 
         double? IGesForwardDoubleSeries.ReadCursor(in GesSeriesCursor cursor)
             => cursor.Index > 1476 ? double.PositiveInfinity : cursor.Current;
@@ -237,11 +240,12 @@ internal sealed class GesSeries
             return cursor;
         }
 
-        internal override bool MoveNext(ref GesSeriesCursor cursor)
+        internal override GesSeriesStep MoveNext(in GesSeriesCursor cursor)
         {
-            cursor.Index++;
-            cursor.Current *= cursor.Index;
-            return true;
+            var nextCursor = cursor;
+            nextCursor.Index++;
+            nextCursor.Current *= nextCursor.Index;
+            return new GesSeriesStep(in nextCursor);
         }
 
         internal override GesValue ReadCursorValue(in GesSeriesCursor cursor)
@@ -258,12 +262,24 @@ internal sealed class GesSeries
 
         GesSeriesCursor? IGesForwardDoubleSeries.CreateCursor(long index) => CreateCursor(index);
 
-        bool IGesForwardDoubleSeries.MoveNext(ref GesSeriesCursor cursor) => MoveNext(ref cursor);
+        GesSeriesStep IGesForwardDoubleSeries.MoveNext(in GesSeriesCursor cursor) => MoveNext(in cursor);
 
         double? IGesForwardDoubleSeries.ReadCursor(in GesSeriesCursor cursor)
             => cursor.Index > 170 ? double.PositiveInfinity : cursor.Current;
     }
 
+}
+
+internal readonly struct GesSeriesStep
+{
+    internal readonly bool HasValue;
+    internal readonly GesSeriesCursor Cursor;
+
+    internal GesSeriesStep(in GesSeriesCursor cursor)
+    {
+        HasValue = true;
+        Cursor = cursor;
+    }
 }
 
 internal struct GesSeriesCursor

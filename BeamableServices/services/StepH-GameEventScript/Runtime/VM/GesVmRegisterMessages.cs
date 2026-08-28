@@ -32,15 +32,15 @@ internal static class GesVmRegisterMessages
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
         var argumentNames = new string[argumentRegisters.Length];
-        var values = new GameEventScriptValue[argumentRegisters.Length];
+        var values = new GesValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
             argumentNames[index] = vmState.FetchStringByPointer(shape[index + 1]);
-            values[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
+            values[index] = vmState.Register(argumentRegisters[index]);
         }
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreatePrecomputed(argumentNames, values);
+            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(argumentNames, values);
             var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, argumentNames);
             vmState.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId));
         }
@@ -57,10 +57,10 @@ internal static class GesVmRegisterMessages
             return;
         }
 
-        var arguments = new GameEventScriptValue[argumentRegisters.Length];
+        var arguments = new GesValue[argumentRegisters.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
-            arguments[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
+            arguments[index] = vmState.Register(argumentRegisters[index]);
         }
         var message = signature.CreateMessage(arguments);
         if (message is not null)

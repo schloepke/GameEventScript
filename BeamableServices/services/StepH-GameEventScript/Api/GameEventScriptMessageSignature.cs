@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
@@ -154,7 +155,7 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         if (arguments.Count != Parameters.Count) return null;
         if (arguments.Count == 0)
         {
-            return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.Empty, SignatureId);
+            return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.Empty, SignatureId);
         }
         var values = new GameEventScriptValue[arguments.Count];
         for (var index = 0; index < arguments.Count; index++)
@@ -162,7 +163,19 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             values[index] = arguments[index] ?? GameEventScriptValueFactory.GesNothing();
         }
 
-        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.CreatePrecomputed((string[])Parameters, values), SignatureId);
+        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreateOrdered((string[])Parameters, values), SignatureId);
+    }
+
+    internal GameEventScriptMessage? CreateMessage(GesValue[] arguments)
+    {
+        if (Name.Length == 0) return null;
+        if (arguments.Length != Parameters.Count) return null;
+        if (arguments.Length == 0)
+        {
+            return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.Empty, SignatureId);
+        }
+
+        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptMessageArguments.CreatePrecomputed((string[])Parameters, arguments), SignatureId);
     }
 
     private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)

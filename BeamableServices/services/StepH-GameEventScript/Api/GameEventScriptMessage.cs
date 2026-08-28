@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
@@ -26,7 +27,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// represent argument names, and values are the corresponding <see cref="GameEventScriptValue"/> instances.
     /// This parameter can be null if no arguments are provided.</param>
     /// <returns>Returns a <see cref="GameEventScriptMessage"/> object encapsulating the specified name and arguments.</returns>
-    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments) => new(name, GameEventScriptNamedArguments.Create(arguments));
+    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments) => new(name, GameEventScriptMessageArguments.Create(arguments));
 
     /// <summary>
     /// Creates a new message with the provided arguments and delivery tags. Tags are metadata and are not part of the message signature.
@@ -35,7 +36,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// <param name="arguments">The named message arguments.</param>
     /// <param name="tags">Delivery tags associated with the message.</param>
     /// <returns>A new message instance.</returns>
-    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags) => new(name, GameEventScriptNamedArguments.Create(arguments), tags);
+    public static GameEventScriptMessage Create(string name, IReadOnlyDictionary<string, GameEventScriptValue>? arguments, IEnumerable<string>? tags) => new(name, GameEventScriptMessageArguments.Create(arguments), tags);
 
     /// <summary>
     /// Constructs a <see cref="GameEventScriptMessage"/> instance with a specified name and associated arguments.
@@ -52,17 +53,19 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     {
         if (arguments.Length == 0)
         {
-            return new GameEventScriptMessage(name, GameEventScriptNamedArguments.Empty);
+            return new GameEventScriptMessage(name, GameEventScriptMessageArguments.Empty);
         }
 
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[arguments.Length];
+        var names = new string[arguments.Length];
+        var values = new GameEventScriptValue[arguments.Length];
         for (var index = 0; index < arguments.Length; index++)
         {
             var argument = arguments[index];
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(argument.name, argument.value);
+            names[index] = argument.name;
+            values[index] = argument.value;
         }
 
-        return new GameEventScriptMessage(name, GameEventScriptNamedArguments.CreateOrdered(pairs));
+        return new GameEventScriptMessage(name, GameEventScriptMessageArguments.CreateOrdered(names, values));
     }
 
     /// <summary>
@@ -84,7 +87,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// The arguments are immutable and are used to construct the message's unique
     /// signature for identification and dispatch purposes.
     /// </remarks>
-    public GameEventScriptNamedArguments Arguments { get; }
+    public GameEventScriptMessageArguments Arguments { get; }
 
     /// <summary>
     /// Gets the normalized delivery tags associated with this message. Tags do not affect the message signature.
@@ -169,7 +172,9 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
 
         for (var index = 0; index < Arguments.Count; index++)
         {
-            if (!Arguments[index].Equals(other.Arguments[index]))
+            ref readonly var left = ref Arguments.VmValueAt(index);
+            ref readonly var right = ref other.Arguments.VmValueAt(index);
+            if (!left.EqualsValue(in right))
             {
                 return false;
             }
@@ -189,7 +194,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
         hash.Add(SignatureId, StringComparer.Ordinal);
         for (var index = 0; index < Arguments.Count; index++)
         {
-            hash.Add(Arguments[index]);
+            hash.Add(Arguments.VmValueAt(index).GetValueHashCode());
         }
 
         for (var index = 0; index < Tags.Count; index++)
@@ -214,7 +219,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
     /// <returns>A message copy with the merged tags.</returns>
     public GameEventScriptMessage WithTags(params string[] tags) => WithTags((IEnumerable<string>?)tags);
 
-    private GameEventScriptMessage(string name, GameEventScriptNamedArguments? arguments = null, IEnumerable<string>? tags = null)
+    private GameEventScriptMessage(string name, GameEventScriptMessageArguments? arguments = null, IEnumerable<string>? tags = null)
     {
         Name = GameEventScriptMessageSignature.NormalizeMessageName(name);
         if (Name.Length == 0)
@@ -222,12 +227,12 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
             throw new ArgumentException("Message name must not be null, empty, or whitespace.", nameof(name));
         }
 
-        Arguments = arguments ?? GameEventScriptNamedArguments.Empty;
+        Arguments = arguments ?? GameEventScriptMessageArguments.Empty;
         SignatureId = GameEventScriptMessageSignature.CreateSignatureId(Name, Arguments.SignatureLabels);
         Tags = NormalizeTags(tags);
     }
 
-    private GameEventScriptMessage(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId, IReadOnlyList<string>? tags = null)
+    private GameEventScriptMessage(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, IReadOnlyList<string>? tags = null)
     {
         if (string.IsNullOrWhiteSpace(normalizedName))
         {
@@ -240,7 +245,7 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
         Tags = tags ?? [];
     }
 
-    internal static GameEventScriptMessage CreatePrecomputed(string normalizedName, GameEventScriptNamedArguments arguments, string signatureId, IEnumerable<string>? tags = null)
+    internal static GameEventScriptMessage CreatePrecomputed(string normalizedName, GameEventScriptMessageArguments arguments, string signatureId, IEnumerable<string>? tags = null)
         => new(normalizedName, arguments, signatureId, NormalizeTags(tags));
 
     internal static string NormalizeTagName(string? tag)

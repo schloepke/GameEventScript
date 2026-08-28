@@ -13,15 +13,15 @@ internal static class GesVmStatePublisher
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
-        var values = new GameEventScriptValue[argumentRegisters.Length];
+        var values = new GesValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            values[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
+            values[index] = vmState.Register(argumentRegisters[index]);
         }
 
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreatePrecomputed(signature.ArgumentNames, values);
+            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
             return publish ? session.Publish(message) : session.Emit(message);
         }
@@ -35,10 +35,10 @@ internal static class GesVmStatePublisher
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
-        var values = new GameEventScriptValue[argumentRegisters.Length];
+        var values = new GesValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            values[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
+            values[index] = vmState.Register(argumentRegisters[index]);
         }
 
         var tags = new List<string>(tagRegisters.Length);
@@ -49,7 +49,7 @@ internal static class GesVmStatePublisher
 
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreatePrecomputed(signature.ArgumentNames, values);
+            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId, tags);
             return publish ? session.Publish(message) : session.Emit(message);
         }

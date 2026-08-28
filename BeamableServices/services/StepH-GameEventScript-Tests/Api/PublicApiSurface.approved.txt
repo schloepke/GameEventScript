@@ -466,10 +466,38 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> arguments)
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Api.GameEventScriptValue>[] arguments)
-  property StepH.GameEventScript.Api.GameEventScriptNamedArguments Arguments { get }
+  property StepH.GameEventScript.Api.GameEventScriptMessageArguments Arguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
   property System.String Name { get }
   property System.String SignatureId { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptMessageArguments
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit UnitAt(System.Int32 index)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind KindAt(System.Int32 index)
+  method StepH.GameEventScript.Api.GameEventScriptValue ValueAt(System.Int32 index)
+  method System.Boolean ContainsKey(System.String name)
+  method System.Boolean GetAsBoolean(System.Int32 index)
+  method System.Boolean GetAsBoolean(System.String name)
+  method System.Boolean HasValueAt(System.Int32 index)
+  method System.Boolean IsNothingAt(System.Int32 index)
+  method System.Boolean IsNumericAt(System.Int32 index)
+  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Api.GameEventScriptValue>> GetEnumerator()
+  method System.Double GetAsNumber(System.Int32 index)
+  method System.Double GetAsNumber(System.String name)
+  method System.Int32 IndexOf(System.String name)
+  method System.Int64 GetAsInteger(System.Int32 index)
+  method System.Int64 GetAsInteger(System.String name)
+  method System.String GetAsText(System.Int32 index)
+  method System.String GetAsText(System.String name)
+  method System.String NameAt(System.Int32 index)
+  method System.String ToString()
+  method static StepH.GameEventScript.Api.GameEventScriptMessageArguments Create(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> values)
+  property StepH.GameEventScript.Api.GameEventScriptMessageArguments Empty { get }
+  property StepH.GameEventScript.Api.GameEventScriptValue Item { get }
+  property StepH.GameEventScript.Api.GameEventScriptValue Item { get }
+  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptValue> Values { get }
+  property System.Collections.Generic.IEnumerable<System.String> Keys { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
+  property System.Int32 Count { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptMessageHandlerDescriptor
   ctor GameEventScriptMessageHandlerDescriptor(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession> handler, System.Collections.Generic.IReadOnlyCollection<System.String> requiredTags, System.Collections.Generic.IReadOnlyCollection<System.String> excludedTags, System.Boolean matchArguments)
   ctor GameEventScriptMessageHandlerDescriptor(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Func<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptSession, StepH.GameEventScript.Api.IGameEventScriptMessageInvocation> invoke, System.Collections.Generic.IReadOnlyCollection<System.String> requiredTags, System.Collections.Generic.IReadOnlyCollection<System.String> excludedTags, System.Boolean matchArguments)
@@ -495,19 +523,6 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.String Name { get }
   property System.String SignatureId { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptNamedArguments
-  method System.Boolean ContainsKey(System.String key)
-  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Api.GameEventScriptValue>> GetEnumerator()
-  method System.String ToString()
-  method static StepH.GameEventScript.Api.GameEventScriptNamedArguments Create(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> values)
-  method static System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> Normalize(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> values)
-  property StepH.GameEventScript.Api.GameEventScriptNamedArguments Empty { get }
-  property StepH.GameEventScript.Api.GameEventScriptValue Item { get }
-  property StepH.GameEventScript.Api.GameEventScriptValue Item { get }
-  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptValue> Values { get }
-  property System.Collections.Generic.IEnumerable<System.String> Keys { get }
-  property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
-  property System.Int32 Count { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
   method System.Double NextInclusiveFloat(System.Double minInclusive, System.Double maxInclusive)
   method System.Int64 NextInclusiveInteger(System.Int64 minInclusive, System.Int64 maxInclusive)

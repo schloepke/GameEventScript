@@ -362,39 +362,10 @@ internal static class GesVmRegisterTypeCastCheck
         switch (xValue.Kind)
         {
             case Map when xValue.ObjectValue is GesValueMap map:
-            {
-                if (!map.HasHiddenEntries)
-                {
-                    return xValue;
-                }
-
-                var visibleEntries = new GesVmMapBuilder(map.Length);
-                for (var i = 0; i < map.StorageLength; i++)
-                {
-                    if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
-                }
-
-                dst.SetMap(visibleEntries.ToMap());
-                return dst;
-            }
+                return xValue;
             case Custom when xValue.ObjectValue is GesCustomObject customObject:
-            {
-                var map = customObject.Map;
-                if (!map.HasHiddenEntries)
-                {
-                    dst.SetMap(map);
-                    return dst;
-                }
-
-                var visibleEntries = new GesVmMapBuilder(map.Length);
-                for (var i = 0; i < map.StorageLength; i++)
-                {
-                    if (map.IsVisibleAt(i)) visibleEntries.Set(map.KeyAt(i), map.ValueAt(i));
-                }
-
-                dst.SetMap(visibleEntries.ToMap());
+                dst.SetMap(customObject.Map);
                 return dst;
-            }
             case Custom when xValue.ObjectValue is GesExternalObject externalObject:
             {
                 var sourceEntries = externalObject.ToMap();
@@ -402,7 +373,6 @@ internal static class GesVmRegisterTypeCastCheck
                 for (var i = 0; i < sourceEntries.StorageLength; i++)
                 {
                     var key = sourceEntries.KeyAt(i);
-                    if (key.StartsWith("_", StringComparison.Ordinal)) continue;
                     entries.Set(key, sourceEntries.ValueAt(i));
                 }
 

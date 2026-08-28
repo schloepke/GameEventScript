@@ -543,9 +543,7 @@ tags and text compare ordinal text, vectors and points compare `x`, `y`, `z`,
 and unit, ranges compare `from`, `to`, and `step`, series compare signature and
 offset, messages compare signature id, arguments, and tag sequence, handlers
 compare signature id, lists compare ordered items, dice compare ordered rolls,
-and maps/records/custom map-like values compare their visible key/value pairs.
-Hidden map fields such as record type markers do not participate in map
-equality.
+and maps/records/custom map-like values compare their key/value pairs.
 
 `abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their
@@ -755,16 +753,15 @@ let containsUnit be unit in values of units
 matching over their raw text, without the leading `#` for tags. Lists and dice
 check whether one item equals `x`. Ranges check whether numeric `x` is one of
 the range terms. Maps and map-like values check whether text/tag `x` is a
-visible key; non-text keys are false. Vector and point values check their
+key; non-text keys are false. Vector and point values check their
 numeric components.
 
-`x in values of y` checks visible values of map-like `y`. It is defined for maps,
+`x in values of y` checks values of map-like `y`. It is defined for maps,
 records/custom values, external map-like values, vectors, and points. For maps
-and records it compares only visible, non-hidden fields. For vectors and points
-it compares the `x`, `y`, and `z` components. `nothing in values of y` follows the
-same comparison rule; `x in values of nothing` is `nothing`. Lists, dice, ranges,
-text, tags, and scalar values are not value-membership containers and return
-`false`.
+and records it compares all stored fields. For vectors and points it compares
+the `x`, `y`, and `z` components. `nothing in values of y` follows the same
+comparison rule; `x in values of nothing` is `nothing`. Lists, dice, ranges, text,
+tags, and scalar values are not value-membership containers and return `false`.
 
 `x starts with y` and `x ends with y` are boundary checks. Text and tags compare
 raw text with ordinal rules. Lists, dice, and ranges compare sequence prefixes

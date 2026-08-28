@@ -8,7 +8,6 @@ public sealed class GesValueMap
 
     private readonly string[] _keys;
     private readonly GesValue[] _values;
-    private readonly int _length;
     private GesValue[]? _keyList;
     private GesValue[]? _valueList;
     private GesValue[]? _entries;
@@ -21,19 +20,10 @@ public sealed class GesValueMap
         Array.Copy(keys, _keys, count);
         Array.Copy(values, _values, count);
         Array.Sort(_keys, _values, StringComparer.Ordinal);
-
-        var visibleLength = 0;
-        for (var i = 0; i < _keys.Length; i++)
-        {
-            if (!_keys[i].StartsWith("_", StringComparison.Ordinal)) visibleLength++;
-        }
-
-        _length = visibleLength;
     }
     
-    public int Length => _length;
+    public int Length => _keys.Length;
     public int StorageLength => _keys.Length;
-    public bool HasHiddenEntries => _length != _keys.Length;
     
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
     internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
@@ -41,11 +31,6 @@ public sealed class GesValueMap
 
     public GesValue? Get(string key)
     {
-        if (key.StartsWith("_", StringComparison.Ordinal))
-        {
-            return null;
-        }
-
         var index = FindKeyIndex(key);
         if (index >= 0)
         {
@@ -55,10 +40,9 @@ public sealed class GesValueMap
         return null;
     }
 
-    public bool ContainsKey(string key) => !key.StartsWith("_", StringComparison.Ordinal) && FindKeyIndex(key) >= 0;
+    public bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
     public string KeyAt(int index) => _keys[index];
     public GesValue ValueAt(int index) => _values[index];
-    public bool IsVisibleAt(int index) => !_keys[index].StartsWith("_", StringComparison.Ordinal);
 
     private int FindKeyIndex(string key)
     {
@@ -78,41 +62,34 @@ public sealed class GesValueMap
 
     private GesValue[] CreateListOfKeys()
     {
-        var list = new GesValue[_length];
-        var i = 0;
+        var list = new GesValue[_keys.Length];
         for (var index = 0; index < _keys.Length; index++)
         {
-            var key = _keys[index];
-            if (key.StartsWith("_", StringComparison.Ordinal)) continue;
-            list[i++].SetTag(key);
+            list[index].SetTag(_keys[index]);
         }
         return list;
     }
 
     private GesValue[] CreateListOfValues()
     {
-        var list = new GesValue[_length];
-        var i = 0;
+        var list = new GesValue[_values.Length];
         for (var index = 0; index < _keys.Length; index++)
         {
-            if (_keys[index].StartsWith("_", StringComparison.Ordinal)) continue;
-            list[i++] = _values[index];
+            list[index] = _values[index];
         }
         return list;
     }
 
     private GesValue[] CreateListOfEntries()
     {
-        var list = new GesValue[_length];
-        var i = 0;
+        var list = new GesValue[_keys.Length];
         for (var index = 0; index < _keys.Length; index++)
         {
             var key = _keys[index];
-            if (key.StartsWith("_", StringComparison.Ordinal)) continue;
             var entryValues = new GesValue[2];
             entryValues[0].SetTag(key);
             entryValues[1] = _values[index];
-            list[i++].SetMap(new GesValueMap(EntryKeys, entryValues, 2));
+            list[index].SetMap(new GesValueMap(EntryKeys, entryValues, 2));
         }
 
         return list;

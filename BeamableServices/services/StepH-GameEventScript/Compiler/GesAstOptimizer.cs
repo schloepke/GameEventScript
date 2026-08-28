@@ -1070,21 +1070,15 @@ internal static class GesAstOptimizer
                 }
 
                 var entries = new MapEntryNode[map.Length];
-                var visibleIndex = 0;
                 for (var index = 0; index < map.StorageLength; index++)
                 {
-                    if (!map.IsVisibleAt(index))
-                    {
-                        continue;
-                    }
-
                     var mapValue = map.ValueAt(index);
                     if (ConvertValueToLiteral(mapValue) is not { } itemLiteral)
                     {
                         return null;
                     }
 
-                    entries[visibleIndex++] = new MapEntryNode(map.KeyAt(index), itemLiteral);
+                    entries[index] = new MapEntryNode(map.KeyAt(index), itemLiteral);
                 }
 
                 return new MapLiteralExpressionNode(entries);

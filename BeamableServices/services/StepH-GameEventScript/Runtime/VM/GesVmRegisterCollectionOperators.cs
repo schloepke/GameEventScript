@@ -305,8 +305,7 @@ internal static class GesVmRegisterCollectionOperators
                     return;
                 }
 
-                var key = a.TextValue;
-                vmState.SetBoolean(dst, !key.StartsWith("_", StringComparison.Ordinal) && map.ContainsKey(key));
+                vmState.SetBoolean(dst, map.ContainsKey(a.TextValue));
                 return;
             case Vector or Point when b.ObjectValue is GesValueVectorPoint triplet:
                 if (!a.IsNumeric)
@@ -893,7 +892,6 @@ internal static class GesVmRegisterCollectionOperators
             case Map when b.ObjectValue is GesValueMap map:
                 for (var i = 0; i < map.StorageLength; i++)
                 {
-                    if (!map.IsVisibleAt(i)) continue;
                     var mapValue = map.ValueAt(i);
                     if (!mapValue.EqualsValue(a)) continue;
                     vmState.SetBoolean(dst, true);
@@ -906,7 +904,6 @@ internal static class GesVmRegisterCollectionOperators
                 var customMap = customObject.Map;
                 for (var i = 0; i < customMap.StorageLength; i++)
                 {
-                    if (!customMap.IsVisibleAt(i)) continue;
                     var mapValue = customMap.ValueAt(i);
                     if (!mapValue.EqualsValue(a)) continue;
                     vmState.SetBoolean(dst, true);
@@ -1411,8 +1408,7 @@ internal static class GesVmRegisterCollectionOperators
                 return false;
             case Map when b.ObjectValue is GesValueMap map:
                 if (a.Kind is not (Text or Tag)) return false;
-                var key = a.TextValue;
-                return !key.StartsWith("_", StringComparison.Ordinal) && map.ContainsKey(key);
+                return map.ContainsKey(a.TextValue);
             case Vector or Point when b.ObjectValue is GesValueVectorPoint triplet:
                 if (!a.IsNumeric) return false;
                 var value = new GesValue();

@@ -88,7 +88,7 @@ public sealed class GesValueTests
     }
 
     [TestMethod]
-    public void MapAndRecordExposeVisibleSortedData()
+    public void MapAndRecordExposeSortedData()
     {
         var map = GesValue.GesMap(
             ["z", "a"],
@@ -108,14 +108,17 @@ public sealed class GesValueTests
         Assert.AreEqual("a", mapView.KeyAt(0));
         Assert.AreEqual("z", mapView.KeyAt(1));
         Assert.AreEqual(GameEventScriptBytecodeTypeKind.Custom, record.ValueKind);
-        Assert.AreEqual(1, record.Length);
+        Assert.AreEqual(2, record.Length);
         Assert.AreEqual("unit", record.CustomTypeName);
         var recordView = record.AsMap();
         Assert.IsNotNull(recordView);
         var hp = recordView.Get("hp");
         Assert.IsNotNull(hp);
         Assert.AreEqual(10, hp.Value.AsInteger());
-        Assert.IsFalse(recordView.ContainsKey("_hidden"));
+        var hidden = recordView.Get("_hidden");
+        Assert.IsNotNull(hidden);
+        Assert.AreEqual("secret", hidden.Value.AsText());
+        Assert.IsTrue(recordView.ContainsKey("_hidden"));
     }
 
     [TestMethod]

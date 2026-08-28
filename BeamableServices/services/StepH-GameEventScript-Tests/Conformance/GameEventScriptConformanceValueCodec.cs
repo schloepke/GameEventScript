@@ -354,11 +354,6 @@ internal static class GameEventScriptConformanceValueCodec
 
         for (var index = 0; index < entries.StorageLength; index++)
         {
-            if (!entries.IsVisibleAt(index))
-            {
-                continue;
-            }
-
             node[entries.KeyAt(index)] = ToValueJson(entries.ValueAt(index));
         }
 

@@ -603,7 +603,7 @@ right operands, `left` must also be text/tag and the operation performs an
 ordinal raw-text substring check. For `List`, it checks item equality. For
 `Dice`, `left` must be a unitless integer roll. For `Range`, `left` must be
 numeric and equal to one range term. For `Map`/record/custom values, `left`
-must be text/tag and is checked as a visible key. For `Vector` and `Point`,
+must be text/tag and is checked as a key. For `Vector` and `Point`,
 `left` must be numeric and is compared with the three components. `right`
 `Nothing` writes `Nothing`; unsupported shapes write boolean `false`.
 
@@ -618,8 +618,8 @@ exhausted. `right` `Nothing` writes `Nothing`.
 
 `ContainsValue left, right` writes value membership of map-like `right`.
 It is defined for `Map`, record/custom/external map-like values, `Vector`, and
-`Point`. Map-like values compare only visible, non-hidden values. Vectors and
-points compare their `x`, `y`, and `z` components. `right` `Nothing` writes
+`Point`. Map-like values compare all stored values. Vectors and points compare
+their `x`, `y`, and `z` components. `right` `Nothing` writes
 `Nothing`; lists, dice, ranges, text, tags, and scalar values write boolean
 `false`.
 
@@ -710,7 +710,7 @@ kind and uses kind-specific value equality:
 | `Message` | Same signature id, recursively equal arguments, and same tag sequence. |
 | `Handler` | Same handler signature id. |
 | `List` | Same length and ordered recursively equal items. |
-| `Map`/record/custom map-like | Same visible key set and recursively equal values; hidden fields do not participate. |
+| `Map`/record/custom map-like | Same key set and recursively equal values. |
 
 Numeric operations must preserve the language distinction between absent input
 and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and

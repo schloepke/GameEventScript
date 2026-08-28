@@ -765,9 +765,7 @@ sealed class StepH.GameEventScript.Runtime.Values.GesValueMap
   method StepH.GameEventScript.Runtime.Values.GesValue ValueAt(System.Int32 index)
   method StepH.GameEventScript.Runtime.Values.GesValue? Get(System.String key)
   method System.Boolean ContainsKey(System.String key)
-  method System.Boolean IsVisibleAt(System.Int32 index)
   method System.String KeyAt(System.Int32 index)
-  property System.Boolean HasHiddenEntries { get }
   property System.Int32 Length { get }
   property System.Int32 StorageLength { get }
 struct StepH.GameEventScript.Runtime.Values.GesValueSlice

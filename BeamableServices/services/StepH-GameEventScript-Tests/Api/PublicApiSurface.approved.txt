@@ -643,6 +643,19 @@ sealed class StepH.GameEventScript.Api.GesExtensionCall
   property StepH.GameEventScript.Api.GameEventScriptSession RuntimeSession { get }
   property StepH.GameEventScript.Runtime.Values.GesValue Result { get }
   property StepH.GameEventScript.Runtime.Values.GesValueArguments Arguments { get }
+sealed class StepH.GameEventScript.Api.GesExternalTypeConstructorCall
+  ctor GesExternalTypeConstructorCall()
+  ctor GesExternalTypeConstructorCall(StepH.GameEventScript.Runtime.Values.GesValueArguments arguments)
+  method System.Void SetBoolean(System.Boolean value)
+  method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetNothing()
+  method System.Void SetPercentage(System.Double ratio)
+  method System.Void SetTag(System.String tag)
+  method System.Void SetText(System.String text)
+  method System.Void SetValue(StepH.GameEventScript.Runtime.Values.GesValue value)
+  property StepH.GameEventScript.Runtime.Values.GesValue Result { get }
+  property StepH.GameEventScript.Runtime.Values.GesValueArguments Arguments { get }
 interface StepH.GameEventScript.Api.IGameEventScriptDispatcher
   method System.Void Enqueue(System.Action workItem)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
@@ -650,7 +663,7 @@ interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
   method StepH.GameEventScript.Api.IGameEventScriptExtensionFunction Resolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference)
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor
-  method StepH.GameEventScript.Runtime.Values.GesValue Invoke(StepH.GameEventScript.Runtime.Values.GesValueSlice arguments)
+  method System.Void Invoke(StepH.GameEventScript.Api.GesExternalTypeConstructorCall call)
   property StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition Definition { get }
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry
   method StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor Resolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference)

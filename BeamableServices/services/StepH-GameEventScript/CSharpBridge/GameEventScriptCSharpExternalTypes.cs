@@ -295,11 +295,13 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
 
-        public GesValue Invoke(GesValueSlice arguments)
+        public void Invoke(GesExternalTypeConstructorCall call)
         {
+            var arguments = call.Arguments;
             if (arguments.Length != parameters.Count)
             {
-                return GesValue.GesNothing();
+                call.SetNothing();
+                return;
             }
 
             var converted = new object?[arguments.Length];
@@ -309,17 +311,25 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
             }
 
             var result = invoke(converted);
-            if (result is null) return GesValue.GesNothing();
-            if (result is GesValue vmValue) return vmValue;
+            if (result is null)
+            {
+                call.SetNothing();
+                return;
+            }
+
+            if (result is GesValue vmValue)
+            {
+                call.SetValue(vmValue);
+                return;
+            }
 
             if (GameEventScriptCSharpExternalTypeRuntime.TryGetDefinitionForInstance(result, out var externalDefinition))
             {
-                var value = new GesValue();
-                value.SetExternalCustomType(new GesExternalObject(result, externalDefinition));
-                return value;
+                call.SetExternalCustomType(new GesExternalObject(result, externalDefinition));
+                return;
             }
 
-            return GameEventScriptCSharpExternalTypeValueConverter.ToValue(result);
+            call.SetValue(GameEventScriptCSharpExternalTypeValueConverter.ToValue(result));
         }
     }
 }
@@ -455,7 +465,7 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
         throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.ValueKind}' to CLR type '{targetType.FullName}'.");
     }
 
-    public static object? ToClrValue(GesValueSlice values, int index, Type targetType)
+    public static object? ToClrValue(GesValueArguments values, int index, Type targetType)
     {
         if (targetType == typeof(GesValue))
         {

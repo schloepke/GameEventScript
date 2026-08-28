@@ -77,6 +77,7 @@ internal class GesVmState
     internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls { get; private set; }
     internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; private set; }
     internal GesExtensionCall ExtensionCall { get; }
+    internal GesExternalTypeConstructorCall ExternalTypeConstructorCall { get; }
 
     internal readonly ushort CodeSegmentSize;
     internal readonly int MaxRegisterCount;
@@ -103,6 +104,7 @@ internal class GesVmState
         BoundExtensionCalls = [];
         BoundExternalTypeConstructors = [];
         ExtensionCall = new GesExtensionCall();
+        ExternalTypeConstructorCall = new GesExternalTypeConstructorCall();
     }
 
     internal void BindDynamicReferences(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)

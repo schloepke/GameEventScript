@@ -150,7 +150,19 @@ internal static class GesVmRegisterCustomType
             arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
         }
 
-        var constructed = constructor.Invoke(new GesValueSlice(arguments, 0, arguments.Length));
-        vmState.SetValue(destinationRegister, in constructed);
+        var call = vmState.ExternalTypeConstructorCall;
+        call.BeginCall(vmState, destinationRegister, new GesValueArguments(arguments));
+        try
+        {
+            constructor.Invoke(call);
+            if (!call.HasResult)
+            {
+                vmState.SetNothing(destinationRegister);
+            }
+        }
+        finally
+        {
+            call.EndCall();
+        }
     }
 }

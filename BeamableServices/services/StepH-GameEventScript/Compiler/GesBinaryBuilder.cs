@@ -209,8 +209,9 @@ internal sealed partial class GesBinaryBuilder
         var planItems = _rewrittenItems ?? LinearizePlanItems();
         var optimizedItems = _optimize ? RunDefaultOptimizationPasses(planItems) : CopyPlanItems(planItems);
         var labelAddresses = ResolveLabelAddresses(optimizedItems);
-        var registerMap = AllocateRegisters(optimizedItems);
-        var items = PatchRoutineRegisterLocals(optimizedItems, registerMap);
+        var registerAllocation = AllocateRegisters(optimizedItems);
+        var registerMap = registerAllocation.RegisterMap;
+        var items = PatchRoutineRegisterLocals(optimizedItems, registerAllocation);
         var builder = new BinaryMaterializer()
             .WithVersion(_version)
             .WithModuleName(_moduleName)
@@ -851,7 +852,7 @@ internal sealed partial class GesBinaryBuilder
             ? registerIndex
             : throw new InvalidOperationException($"Register '{register.Id}' was not allocated.");
 
-    private IReadOnlyDictionary<int, ushort> AllocateRegisters(IReadOnlyList<PlanItem> items)
+    private RegisterAllocationResult AllocateRegisters(IReadOnlyList<PlanItem> items)
     {
         var intervals = BuildRegisterIntervals(items);
         if (_routines.Count > 0) return AllocateScopedRegisters(intervals);
@@ -869,10 +870,11 @@ internal sealed partial class GesBinaryBuilder
         var active = new List<(int RegisterId, int End, ushort Register)>();
         var freeRegisters = new Stack<ushort>();
         var nextTempRegister = nextPinned;
-        var tempIntervals = CollectIntervals(intervals, NoRoutineId, temporary: true);
+        var tempIntervals = BuildSortedTemporaryIntervals(intervals);
         for (var intervalIndex = 0; intervalIndex < tempIntervals.Length; intervalIndex++)
         {
             var interval = tempIntervals[intervalIndex];
+            if (_registers[interval.RegisterId].RoutineId != NoRoutineId) continue;
             for (var index = active.Count - 1; index >= 0; index--)
             {
                 if (active[index].End >= interval.Start) continue;
@@ -885,19 +887,20 @@ internal sealed partial class GesBinaryBuilder
             active.Add((interval.RegisterId, interval.End, register));
         }
 
-        for (var index = 0; index < intervals.Count; index++)
+        for (var index = 0; index < intervals.Length; index++)
         {
             var interval = intervals[index];
+            if (!interval.HasValue) continue;
             if (_registers[interval.RegisterId].IsTemporary) continue;
             if (!result.ContainsKey(interval.RegisterId)) result[interval.RegisterId] = nextPinned++;
         }
 
-        return result;
+        return new RegisterAllocationResult(result, []);
     }
 
-    private List<RegisterInterval> BuildRegisterIntervals(IReadOnlyList<PlanItem> items)
+    private RegisterInterval[] BuildRegisterIntervals(IReadOnlyList<PlanItem> items)
     {
-        var intervals = new List<RegisterInterval>();
+        var intervals = new RegisterInterval[_registers.Count];
         for (var index = 0; index < items.Count; index++)
         {
             if (items[index].Instruction is not { } instruction) continue;
@@ -914,7 +917,7 @@ internal sealed partial class GesBinaryBuilder
         return intervals;
     }
 
-    private void AddOperandRegisterIntervals(List<RegisterInterval> intervals, GesOperand operand, int instructionIndex)
+    private void AddOperandRegisterIntervals(RegisterInterval[] intervals, GesOperand operand, int instructionIndex)
     {
         if (operand.Kind == GesOperandKind.Register)
         {
@@ -929,19 +932,17 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    private void AddRegisterInterval(List<RegisterInterval> intervals, GesRegisterRef register, int instructionIndex)
+    private void AddRegisterInterval(RegisterInterval[] intervals, GesRegisterRef register, int instructionIndex)
     {
         RequireRegister(register);
-        for (var index = 0; index < intervals.Count; index++)
+        ref var interval = ref intervals[register.Id];
+        if (interval.HasValue)
         {
-            var interval = intervals[index];
-            if (interval.RegisterId != register.Id) continue;
             interval.End = instructionIndex;
-            intervals[index] = interval;
             return;
         }
 
-        intervals.Add(new RegisterInterval(register.Id, instructionIndex, instructionIndex));
+        interval = new RegisterInterval(register.Id, instructionIndex, instructionIndex);
     }
 
     private IReadOnlyDictionary<int, ushort> ResolveLabelAddresses(IReadOnlyList<PlanItem> items)
@@ -1020,9 +1021,18 @@ internal sealed partial class GesBinaryBuilder
     private static ushort ToUShort(int value, string operand)
         => value is < 0 or > ushort.MaxValue ? throw new InvalidOperationException($"{operand} '{value}' does not fit into UInt16.") : checked((ushort)value);
 
-    private IReadOnlyDictionary<int, ushort> AllocateScopedRegisters(IReadOnlyList<RegisterInterval> intervals)
+    private RegisterAllocationResult AllocateScopedRegisters(RegisterInterval[] intervals)
     {
         var result = new Dictionary<int, ushort>();
+        var routineLocalCounts = new short[_routines.Count];
+        var routineMaxRegisterIndexes = new int[_routines.Count];
+        for (var index = 0; index < routineMaxRegisterIndexes.Length; index++)
+        {
+            routineMaxRegisterIndexes[index] = -1;
+        }
+
+        var temporaryIntervals = BuildSortedTemporaryIntervals(intervals);
+        var temporaryIntervalOffset = 0;
 
         for (var routineIndex = 0; routineIndex < _routines.Count; routineIndex++)
         {
@@ -1031,23 +1041,35 @@ internal sealed partial class GesBinaryBuilder
             for (var argumentIndex = 0; argumentIndex < routine.ArgumentRegisters.Count; argumentIndex++)
             {
                 var argument = routine.ArgumentRegisters[argumentIndex];
-                result[argument.Id] = nextPinned++;
+                result[argument.Id] = nextPinned;
+                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, nextPinned);
+                nextPinned++;
             }
 
             for (var registerIndex = 0; registerIndex < _registers.Count; registerIndex++)
             {
                 var register = _registers[registerIndex];
                 if (register.RoutineId != routine.Id || register.IsTemporary) continue;
-                if (!result.ContainsKey(register.Id)) result[register.Id] = nextPinned++;
+                if (result.ContainsKey(register.Id)) continue;
+                result[register.Id] = nextPinned;
+                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, nextPinned);
+                nextPinned++;
             }
 
             var active = new List<(int RegisterId, int End, ushort Register)>();
             var freeRegisters = new Stack<ushort>();
             var nextTempRegister = nextPinned;
-            var routineIntervals = CollectIntervals(intervals, routine.Id, temporary: true);
-            for (var intervalIndex = 0; intervalIndex < routineIntervals.Length; intervalIndex++)
+            while (temporaryIntervalOffset < temporaryIntervals.Length && _registers[temporaryIntervals[temporaryIntervalOffset].RegisterId].RoutineId < routine.Id)
             {
-                var interval = routineIntervals[intervalIndex];
+                temporaryIntervalOffset++;
+            }
+
+            var intervalIndex = temporaryIntervalOffset;
+            while (intervalIndex < temporaryIntervals.Length)
+            {
+                var interval = temporaryIntervals[intervalIndex];
+                var intervalRoutineId = _registers[interval.RegisterId].RoutineId;
+                if (intervalRoutineId != routine.Id) break;
                 for (var index = active.Count - 1; index >= 0; index--)
                 {
                     if (active[index].End >= interval.Start) continue;
@@ -1057,12 +1079,33 @@ internal sealed partial class GesBinaryBuilder
 
                 var register = freeRegisters.Count > 0 ? freeRegisters.Pop() : nextTempRegister++;
                 result[interval.RegisterId] = register;
+                UpdateRoutineMaxRegisterIndex(routineMaxRegisterIndexes, routine.Id, register);
                 active.Add((interval.RegisterId, interval.End, register));
+                intervalIndex++;
+            }
+
+            temporaryIntervalOffset = intervalIndex;
+
+            var localCount = Math.Max(0, routineMaxRegisterIndexes[routine.Id] + 1 - routine.ArgumentRegisters.Count);
+            if (localCount > short.MaxValue)
+            {
+                throw new InvalidOperationException($"Routine '{routine.Name}' requires too many local registers: {localCount}.");
+            }
+
+            routineLocalCounts[routine.Id] = (short)localCount;
+        }
+
+        var hasGlobalIntervals = false;
+        for (var index = 0; index < temporaryIntervals.Length; index++)
+        {
+            if (_registers[temporaryIntervals[index].RegisterId].RoutineId == NoRoutineId)
+            {
+                hasGlobalIntervals = true;
+                break;
             }
         }
 
-        var globalIntervals = CollectIntervals(intervals, NoRoutineId, temporary: true);
-        if (globalIntervals.Length > 0)
+        if (hasGlobalIntervals)
         {
             ushort nextPinned = 0;
             for (var registerIndex = 0; registerIndex < _registers.Count; registerIndex++)
@@ -1075,9 +1118,10 @@ internal sealed partial class GesBinaryBuilder
             var active = new List<(int RegisterId, int End, ushort Register)>();
             var freeRegisters = new Stack<ushort>();
             var nextTempRegister = nextPinned;
-            for (var intervalIndex = 0; intervalIndex < globalIntervals.Length; intervalIndex++)
+            for (var intervalIndex = 0; intervalIndex < temporaryIntervals.Length; intervalIndex++)
             {
-                var interval = globalIntervals[intervalIndex];
+                var interval = temporaryIntervals[intervalIndex];
+                if (_registers[interval.RegisterId].RoutineId != NoRoutineId) continue;
                 for (var index = active.Count - 1; index >= 0; index--)
                 {
                     if (active[index].End >= interval.Start) continue;
@@ -1091,41 +1135,64 @@ internal sealed partial class GesBinaryBuilder
             }
         }
 
-        for (var index = 0; index < intervals.Count; index++)
+        for (var index = 0; index < intervals.Length; index++)
         {
             var interval = intervals[index];
+            if (!interval.HasValue) continue;
             if (!result.ContainsKey(interval.RegisterId))
             {
                 throw new InvalidOperationException($"Register '{interval.RegisterId}' was not allocated.");
             }
         }
 
-        return result;
+        return new RegisterAllocationResult(result, routineLocalCounts);
     }
 
-    private RegisterInterval[] CollectIntervals(IReadOnlyList<RegisterInterval> intervals, int routineId, bool temporary)
+    private RegisterInterval[] BuildSortedTemporaryIntervals(RegisterInterval[] intervals)
     {
         var count = 0;
-        for (var index = 0; index < intervals.Count; index++)
+        for (var index = 0; index < intervals.Length; index++)
         {
-            var register = _registers[intervals[index].RegisterId];
-            if (register.RoutineId == routineId && register.IsTemporary == temporary) count++;
+            var interval = intervals[index];
+            if (!interval.HasValue) continue;
+            if (_registers[interval.RegisterId].IsTemporary) count++;
         }
 
         if (count == 0) return [];
         var result = new RegisterInterval[count];
         var offset = 0;
-        for (var index = 0; index < intervals.Count; index++)
+        for (var index = 0; index < intervals.Length; index++)
         {
             var interval = intervals[index];
-            var register = _registers[interval.RegisterId];
-            if (register.RoutineId != routineId || register.IsTemporary != temporary) continue;
+            if (!interval.HasValue) continue;
+            if (!_registers[interval.RegisterId].IsTemporary) continue;
             result[offset++] = interval;
         }
 
-        Array.Sort(result, CompareRegisterInterval);
+        Array.Sort(result, CompareRegisterIntervalByRoutineThenStart);
         return result;
     }
+
+    private void UpdateRoutineMaxRegisterIndex(int[] routineMaxRegisterIndexes, int routineId, ushort registerIndex)
+    {
+        if (routineId == NoRoutineId) return;
+        if (registerIndex > routineMaxRegisterIndexes[routineId])
+        {
+            routineMaxRegisterIndexes[routineId] = registerIndex;
+        }
+    }
+
+    private int CompareRegisterIntervalByRoutineThenStart(RegisterInterval left, RegisterInterval right)
+    {
+        var leftRoutineId = _registers[left.RegisterId].RoutineId;
+        var rightRoutineId = _registers[right.RegisterId].RoutineId;
+        var routineCompare = leftRoutineId.CompareTo(rightRoutineId);
+        return routineCompare != 0 ? routineCompare : CompareRegisterInterval(left, right);
+    }
+
+    private sealed record RegisterAllocationResult(
+        IReadOnlyDictionary<int, ushort> RegisterMap,
+        IReadOnlyList<short> RoutineLocalCounts);
 
     private readonly record struct RegisterSymbol(int Id, string? Name, bool IsTemporary, int RoutineId);
 
@@ -1149,6 +1216,7 @@ internal sealed partial class GesBinaryBuilder
         public int RegisterId { get; } = registerId;
         public int Start { get; } = start;
         public int End { get; set; } = end;
+        public bool HasValue { get; } = true;
     }
 
     internal readonly record struct PlanItem(GesLabelRef? Label, InstructionPlan? Instruction, GameEventScriptSourceLocation? SourceRange)

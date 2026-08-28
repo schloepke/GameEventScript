@@ -13,15 +13,15 @@ internal static class GesVmStatePublisher
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
+        var values = new GameEventScriptValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(signature.ArgumentNames[index], GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
+            values[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
         }
 
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, signature.ArgumentNames);
+            var arguments = GameEventScriptNamedArguments.CreatePrecomputed(signature.ArgumentNames, values);
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
             return publish ? session.Publish(message) : session.Emit(message);
         }
@@ -35,21 +35,21 @@ internal static class GesVmStatePublisher
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
+        var values = new GameEventScriptValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(signature.ArgumentNames[index], GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
+            values[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
         }
 
         var tags = new List<string>(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
         {
-            AddTagsToList(tags, GameEventScriptValueFactory.FromVmValue(in vmState.Register(tagRegisters[index])));
+            AddTagsToList(tags, in vmState.Register(tagRegisters[index]));
         }
 
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs, signature.ArgumentNames);
+            var arguments = GameEventScriptNamedArguments.CreatePrecomputed(signature.ArgumentNames, values);
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId, tags);
             return publish ? session.Publish(message) : session.Emit(message);
         }
@@ -72,19 +72,23 @@ internal static class GesVmStatePublisher
         var tags = new List<string>(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
         {
-            AddTagsToList(tags, GameEventScriptValueFactory.FromVmValue(in vmState.Register(tagRegisters[index])));
+            AddTagsToList(tags, in vmState.Register(tagRegisters[index]));
         }
         return publish ? session.Publish(msg.WithTags(tags)) : session.Emit(msg.WithTags(tags));
     }
-    private static void AddTagsToList(List<string> tags, GameEventScriptValue value)
+
+    private static void AddTagsToList(List<string> tags, in GesValue value)
     {
-        if (value.Kind is List)
+        if (value.Kind is List && value.ObjectValue is GesValue[] values)
         {
-            foreach (var j in value.AsList()) AddTagsToList(tags, j);
+            for (var index = 0; index < values.Length; index++)
+            {
+                AddTagsToList(tags, in values[index]);
+            }
         }
         else
         {
-            tags.Add(value.Text);
+            tags.Add(value.TextValue.Length > 0 || value.Kind is Text or Tag ? value.TextValue : value.ToText);
         }
     }
 }

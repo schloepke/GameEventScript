@@ -16,10 +16,10 @@ internal static class GesVmRegisterMessages
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
-        var argumentNames = new List<string>(shape.Length - 1);
+        var argumentNames = new string[shape.Length - 1];
         for (var index = 1; index < shape.Length; index++)
         {
-            argumentNames.Add(vmState.FetchStringByPointer(shape[index]));
+            argumentNames[index - 1] = vmState.FetchStringByPointer(shape[index]);
         }
         vmState.SetMessageHandler(destinationRegister, GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
@@ -31,15 +31,17 @@ internal static class GesVmRegisterMessages
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[argumentRegisters.Length];
+        var argumentNames = new string[argumentRegisters.Length];
+        var values = new GameEventScriptValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(vmState.FetchStringByPointer(shape[index + 1]), GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index])));
+            argumentNames[index] = vmState.FetchStringByPointer(shape[index + 1]);
+            values[index] = GameEventScriptValueFactory.FromVmValue(in vmState.Register(argumentRegisters[index]));
         }
         try
         {
-            var arguments = GameEventScriptNamedArguments.CreateOrdered(pairs);
-            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, arguments.SignatureLabels);
+            var arguments = GameEventScriptNamedArguments.CreatePrecomputed(argumentNames, values);
+            var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, argumentNames);
             vmState.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, arguments, signatureId));
         }
         catch (ArgumentException)

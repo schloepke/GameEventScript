@@ -156,13 +156,13 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         {
             return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.Empty, SignatureId);
         }
-        var pairs = new KeyValuePair<string, GameEventScriptValue>[arguments.Count];
+        var values = new GameEventScriptValue[arguments.Count];
         for (var index = 0; index < arguments.Count; index++)
         {
-            pairs[index] = new KeyValuePair<string, GameEventScriptValue>(Parameters[index], arguments[index] ?? GameEventScriptValueFactory.GesNothing());
+            values[index] = arguments[index] ?? GameEventScriptValueFactory.GesNothing();
         }
 
-        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.CreateOrdered(pairs, Parameters), SignatureId);
+        return GameEventScriptMessage.CreatePrecomputed(Name, GameEventScriptNamedArguments.CreatePrecomputed((string[])Parameters, values), SignatureId);
     }
 
     private GameEventScriptMessageSignature(string name, IEnumerable<string>? parameters)

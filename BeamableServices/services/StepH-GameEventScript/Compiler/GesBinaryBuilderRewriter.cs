@@ -264,6 +264,35 @@ internal sealed partial class GesBinaryBuilder
             _items.RemoveAt(index);
         }
 
+        internal void RemoveMarked(bool[] remove)
+        {
+            if (remove.Length != _items.Count)
+            {
+                throw new ArgumentException("Removal marker length must match the current rewrite item count.", nameof(remove));
+            }
+
+            var writeIndex = 0;
+            for (var readIndex = 0; readIndex < _items.Count; readIndex++)
+            {
+                if (remove[readIndex])
+                {
+                    continue;
+                }
+
+                if (writeIndex != readIndex)
+                {
+                    _items[writeIndex] = _items[readIndex];
+                }
+
+                writeIndex++;
+            }
+
+            if (writeIndex < _items.Count)
+            {
+                _items.RemoveRange(writeIndex, _items.Count - writeIndex);
+            }
+        }
+
         internal PlanItem[] CopyItems()
         {
             if (_items.Count == 0) return [];
@@ -364,10 +393,13 @@ internal sealed partial class GesBinaryBuilder
             var readCounts = new int[context.RegisterCount];
             var writeCounts = new int[context.RegisterCount];
             CountRegisterUsage(context, readCounts, writeCounts);
+            var remove = new bool[context.Count];
 
             for (var index = 0; index + 1 < context.Count; index++)
             {
-                if (context.GetInstruction(index) is not { } instruction ||
+                if (remove[index] ||
+                    remove[index + 1] ||
+                    context.GetInstruction(index) is not { } instruction ||
                     context.GetInstruction(index + 1) is not { } move ||
                     move.OpCode != GameEventScriptBytecodeOpCode.Move ||
                     instruction.Destination.Kind != GesOperandKind.Register ||
@@ -384,10 +416,15 @@ internal sealed partial class GesBinaryBuilder
 
                 var tempRegisterId = instruction.Destination.RegisterRef.Id;
                 context.ReplaceInstruction(index, instruction.WithDestination(move.Destination));
-                context.RemoveAt(index + 1);
+                remove[index + 1] = true;
                 readCounts[tempRegisterId]--;
                 writeCounts[tempRegisterId]--;
                 changed = true;
+            }
+
+            if (changed)
+            {
+                context.RemoveMarked(remove);
             }
 
             return changed;

@@ -39,6 +39,35 @@ public sealed class GesBinaryBuilderTests
     }
 
     [TestMethod]
+    public void BuildEliminatesManySingleUseTemporaryMoves()
+    {
+        var builder = new GesBinaryBuilder().WithModuleName("BuilderMovePeepholeMany");
+        const int Count = 256;
+        var destinations = new GesRegisterRef[Count];
+
+        for (var index = 0; index < Count; index++)
+        {
+            var destination = builder.AddRegister("value_" + index);
+            var temporary = builder.AddTemporaryRegister();
+            destinations[index] = destination;
+
+            builder.LoadInteger(temporary, index);
+            builder.Move(destination, temporary);
+        }
+
+        var binary = builder.Build();
+
+        Assert.HasCount(Count, binary.InstructionTable);
+        for (var index = 0; index < Count; index++)
+        {
+            var instruction = binary.InstructionTable[index];
+            Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, instruction.OpCode);
+            Assert.AreEqual(index, instruction.I64);
+            Assert.AreEqual((ushort)index, instruction.DestinationRegister);
+        }
+    }
+
+    [TestMethod]
     public void BuildScopesCreateHandlerBindAndPatchRegisterLocals()
     {
         var builder = new GesBinaryBuilder().WithModuleName("BuilderScopes");

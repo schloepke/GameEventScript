@@ -41,6 +41,11 @@ public sealed class GesValueMap
 
     public GesValue? Get(string key)
     {
+        if (key.StartsWith("_", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
         var index = FindKeyIndex(key);
         if (index >= 0)
         {
@@ -50,7 +55,7 @@ public sealed class GesValueMap
         return null;
     }
 
-    public bool ContainsKey(string key) => FindKeyIndex(key) >= 0;
+    public bool ContainsKey(string key) => !key.StartsWith("_", StringComparison.Ordinal) && FindKeyIndex(key) >= 0;
     public string KeyAt(int index) => _keys[index];
     public GesValue ValueAt(int index) => _values[index];
     public bool IsVisibleAt(int index) => !_keys[index].StartsWith("_", StringComparison.Ordinal);

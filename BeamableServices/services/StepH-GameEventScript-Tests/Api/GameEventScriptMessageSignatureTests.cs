@@ -50,9 +50,9 @@ public sealed class GameEventScriptMessageSignatureTests
     [TestMethod]
     public void HandlerValuesCompareBySignature()
     {
-        var left = GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
-        var right = GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
-        var different = GameEventScriptValueFactory.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["value"]));
+        var left = GesValue.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
+        var right = GesValue.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["amount"]));
+        var different = GesValue.GesHandler(GameEventScriptMessageSignature.Create("Ping", ["value"]));
 
         Assert.AreEqual(left, right);
         Assert.AreEqual(left.GetHashCode(), right.GetHashCode());

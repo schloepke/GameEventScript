@@ -632,62 +632,6 @@ struct StepH.GameEventScript.Api.GameEventScriptUInt16Table
 struct StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry
   property System.UInt16 Length { get set }
   property System.UInt16 Start { get set }
-sealed class StepH.GameEventScript.Api.GameEventScriptValue
-  method StepH.GameEventScript.Api.GameEventScriptValue GetMapValue(System.String key)
-  method System.Boolean AsBoolean()
-  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptValue other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Api.GameEventScriptValue> AsMap()
-  method System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptValue> AsList()
-  method System.Collections.Generic.IReadOnlyList<System.Int32> AsDice()
-  method System.Double AsNumber()
-  method System.Double AsNumeric()
-  method System.Int32 GetHashCode()
-  method System.Int64 AsInteger()
-  method System.String AsText()
-  method System.String ToString()
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
-  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind Kind { get }
-  property StepH.GameEventScript.Api.GameEventScriptFloatRange FloatRange { get }
-  property StepH.GameEventScript.Api.GameEventScriptIntegerRange IntegerRange { get }
-  property StepH.GameEventScript.Api.GameEventScriptMessage Message { get }
-  property StepH.GameEventScript.Api.GameEventScriptMessageSignature Handler { get }
-  property System.Boolean Boolean { get }
-  property System.Boolean HasUnit { get }
-  property System.Boolean HasValue { get }
-  property System.Boolean IsFloatRange { get }
-  property System.Boolean IsIntegerNumber { get }
-  property System.Boolean IsIntegerRange { get }
-  property System.Boolean IsNothing { get }
-  property System.Boolean IsNumeric { get }
-  property System.Double Number { get }
-  property System.Double X { get }
-  property System.Double Y { get }
-  property System.Double Z { get }
-  property System.Int32 Length { get }
-  property System.Int64 Integer { get }
-  property System.String CustomTypeName { get }
-  property System.String Text { get }
-static class StepH.GameEventScript.Api.GameEventScriptValueFactory
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesBoolean(System.Boolean boolean)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesDice(System.Collections.Generic.IEnumerable<System.Int32> rolls)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesFloat(System.Double number, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesHandler(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesInteger(System.Int64 integer, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesList(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptValue> items)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesMap(System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Api.GameEventScriptValue>> entries)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesNothing()
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesNumber(System.Double number, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesPercentage(System.Double ratio)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesPoint(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesRange(System.Double from, System.Double to, System.Double step)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesRecord(System.String typeName, System.Collections.Generic.IEnumerable<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Api.GameEventScriptValue>> fields)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesTag(System.String tag)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesText(System.String text)
-  method static StepH.GameEventScript.Api.GameEventScriptValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
 interface StepH.GameEventScript.Api.IGameEventScriptDispatcher
   method System.Void Enqueue(System.Action workItem)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
@@ -773,10 +717,14 @@ struct StepH.GameEventScript.Runtime.Values.GesValue
   method StepH.GameEventScript.Runtime.Values.GesValueMap AsMap()
   method StepH.GameEventScript.Runtime.Values.GesValueSlice AsList()
   method System.Boolean AsBoolean()
+  method System.Boolean Equals(StepH.GameEventScript.Runtime.Values.GesValue other)
+  method System.Boolean Equals(System.Object obj)
   method System.Double AsNumber()
+  method System.Int32 GetHashCode()
   method System.Int32[] AsDice()
   method System.Int64 AsInteger()
   method System.String AsText()
+  method System.String ToString()
   method static StepH.GameEventScript.Runtime.Values.GesValue GesBoolean(System.Boolean boolean)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesDice(System.Int32[] rolls)
   method static StepH.GameEventScript.Runtime.Values.GesValue GesFloat(System.Double number, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)

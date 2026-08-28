@@ -18,7 +18,7 @@ internal readonly record struct GesNumericWithUnit(double Value, GameEventScript
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 32)]
-public struct GesValue
+public struct GesValue : IEquatable<GesValue>
 {
     [Flags]
     internal enum GesValueFlags : byte
@@ -319,6 +319,14 @@ public struct GesValue
     public readonly GameEventScriptFloatRange? FloatRange => ObjectValue is GesValueRangeFloat range
         ? new GameEventScriptFloatRange(range.From, range.To, range.Step)
         : null;
+
+    public readonly bool Equals(GesValue other) => EqualsValue(in other);
+
+    public override readonly bool Equals(object? obj) => obj is GesValue other && Equals(other);
+
+    public override readonly int GetHashCode() => GetValueHashCode();
+
+    public override readonly string ToString() => ToText;
 
     internal void SetNothing()
     {
@@ -654,7 +662,7 @@ public struct GesValue
     internal GesNumericWithUnit AsNumericWithUnit()
         => new(AsNumeric, Unit);
 
-    internal bool EqualsValue(in GesValue other)
+    internal readonly bool EqualsValue(in GesValue other)
     {
         if (Unit != other.Unit || Kind != other.Kind)
         {
@@ -731,7 +739,7 @@ public struct GesValue
         }
     }
 
-    internal int GetValueHashCode()
+    internal readonly int GetValueHashCode()
     {
         var hash = new HashCode();
         hash.Add(Kind);

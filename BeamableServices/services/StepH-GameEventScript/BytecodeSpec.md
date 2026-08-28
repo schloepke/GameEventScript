@@ -41,8 +41,7 @@ expressions are layout-free direct instructions.
   simpler than expanding them into many tiny instructions.
 - Preserve iterating and short-circuit behavior where the language requires it.
 - Keep the public artifact portable: no VM session state, no C# delegates, no
-  bound extension functions, no AST nodes, and no runtime `GameEventScriptValue`
-  constants.
+  bound extension functions, no AST nodes, and no runtime value constants.
 
 ## Non-Goals
 

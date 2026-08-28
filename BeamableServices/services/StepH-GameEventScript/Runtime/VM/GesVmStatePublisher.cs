@@ -12,15 +12,25 @@ internal static class GesVmStatePublisher
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
-        var values = new GesValue[argumentRegisters.Length];
-        for (var index = 0; index < argumentRegisters.Length; index++)
-        {
-            values[index] = vmState.Register(argumentRegisters[index]);
-        }
 
         try
         {
-            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
+            GameEventScriptMessageArguments arguments;
+            if (argumentRegisters.Length == 0)
+            {
+                arguments = GameEventScriptMessageArguments.Empty;
+            }
+            else
+            {
+                var values = new GesValue[argumentRegisters.Length];
+                for (var index = 0; index < argumentRegisters.Length; index++)
+                {
+                    values[index] = vmState.Register(argumentRegisters[index]);
+                }
+
+                arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
+            }
+
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
             return publish ? session.Publish(message) : session.Emit(message);
         }
@@ -34,11 +44,6 @@ internal static class GesVmStatePublisher
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
         if (!signature.IsValid || argumentRegisters.Length != signature.ArgumentNames.Length) return false;
-        var values = new GesValue[argumentRegisters.Length];
-        for (var index = 0; index < argumentRegisters.Length; index++)
-        {
-            values[index] = vmState.Register(argumentRegisters[index]);
-        }
 
         var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
         for (var index = 0; index < tagRegisters.Length; index++)
@@ -48,7 +53,22 @@ internal static class GesVmStatePublisher
 
         try
         {
-            var arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
+            GameEventScriptMessageArguments arguments;
+            if (argumentRegisters.Length == 0)
+            {
+                arguments = GameEventScriptMessageArguments.Empty;
+            }
+            else
+            {
+                var values = new GesValue[argumentRegisters.Length];
+                for (var index = 0; index < argumentRegisters.Length; index++)
+                {
+                    values[index] = vmState.Register(argumentRegisters[index]);
+                }
+
+                arguments = GameEventScriptMessageArguments.CreatePrecomputed(signature.ArgumentNames, values);
+            }
+
             var message = GameEventScriptMessage.CreatePrecomputedWithNormalizedTags(signature.Name, arguments, signature.SignatureId, tags.ToArrayOrEmpty());
             return publish ? session.Publish(message) : session.Emit(message);
         }

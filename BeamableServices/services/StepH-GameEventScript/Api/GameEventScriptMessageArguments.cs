@@ -15,23 +15,20 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyValuePair<string, GesValue>>
 {
-    public static GameEventScriptMessageArguments Empty { get; } = new([], [], [], null);
+    public static GameEventScriptMessageArguments Empty { get; } = new([], [], []);
 
     private readonly string[] _names;
     private readonly GesValue[] _values;
     private readonly IReadOnlyList<string> _signatureLabels;
-    private Dictionary<string, int>? _lookup;
 
     private GameEventScriptMessageArguments(
         string[] names,
         GesValue[] values,
-        IReadOnlyList<string> signatureLabels,
-        Dictionary<string, int>? lookup)
+        IReadOnlyList<string> signatureLabels)
     {
         _names = names;
         _values = values;
         _signatureLabels = signatureLabels;
-        _lookup = lookup;
     }
 
     public int Count => _values.Length;
@@ -114,8 +111,20 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
     public int IndexOf(string name)
     {
         var normalizedName = GameEventScriptMessageSignature.NormalizeParameterName(name);
-        var lookup = GetLookup();
-        return lookup.TryGetValue(normalizedName, out var index) ? index : -1;
+        if (string.Equals(normalizedName, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+        {
+            return -1;
+        }
+
+        for (var index = 0; index < _signatureLabels.Count; index++)
+        {
+            if (string.Equals(_signatureLabels[index], normalizedName, StringComparison.Ordinal))
+            {
+                return index;
+            }
+        }
+
+        return -1;
     }
 
     public IEnumerator<KeyValuePair<string, GesValue>> GetEnumerator() => new PairEnumerator(this);
@@ -180,7 +189,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
             return Empty;
         }
 
-        return new GameEventScriptMessageArguments(normalizedNames, values, normalizedNames, null);
+        return new GameEventScriptMessageArguments(normalizedNames, values, normalizedNames);
     }
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values[index];
@@ -217,28 +226,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
             }
         }
 
-        return new GameEventScriptMessageArguments(names, values, signatureLabels, null);
-    }
-
-    private Dictionary<string, int> GetLookup()
-    {
-        if (_lookup is { } lookup)
-        {
-            return lookup;
-        }
-
-        var created = new Dictionary<string, int>(_values.Length, StringComparer.Ordinal);
-        for (var index = 0; index < _values.Length; index++)
-        {
-            var normalizedName = _signatureLabels[index];
-            if (!string.Equals(normalizedName, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
-            {
-                created[normalizedName] = index;
-            }
-        }
-
-        _lookup = created;
-        return created;
+        return new GameEventScriptMessageArguments(names, values, signatureLabels);
     }
 
     private int IndexOfRequired(string name)

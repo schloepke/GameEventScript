@@ -31,6 +31,21 @@ internal static class GesVmRegisterMessages
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
+        if (argumentRegisters.Length == 0)
+        {
+            try
+            {
+                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(messageName, GameEventScriptMessageArguments.Empty.SignatureLabels);
+                vmState.SetMessage(destinationRegister, GameEventScriptMessage.CreatePrecomputed(messageName, GameEventScriptMessageArguments.Empty, signatureId));
+            }
+            catch (ArgumentException)
+            {
+                vmState.SetNothing(destinationRegister);
+            }
+
+            return;
+        }
+
         var argumentNames = new string[argumentRegisters.Length];
         var values = new GesValue[argumentRegisters.Length];
         for (var index = 0; index < argumentRegisters.Length; index++)
@@ -54,6 +69,21 @@ internal static class GesVmRegisterMessages
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
         {
             vmState.SetNothing(destinationRegister);
+            return;
+        }
+
+        if (argumentRegisters.Length == 0)
+        {
+            var emptyMessage = signature.CreateMessage(Array.Empty<GesValue>());
+            if (emptyMessage is not null)
+            {
+                vmState.SetMessage(destinationRegister, emptyMessage);
+            }
+            else
+            {
+                vmState.SetNothing(destinationRegister);
+            }
+
             return;
         }
 

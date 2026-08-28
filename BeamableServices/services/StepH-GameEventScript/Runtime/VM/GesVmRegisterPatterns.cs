@@ -479,15 +479,13 @@ internal static class GesVmRegisterPatterns
 
     private static IteratorBuffer ReadIterator(IGesIterator iterator)
     {
-        var buffer = Array.Empty<GesValue>();
-        var length = 0;
+        var buffer = new GesVmListBuilder(8);
         try
         {
             GesIteratorResult item;
             while ((item = iterator.Next()).HasValue)
             {
-                if (length == buffer.Length) Array.Resize(ref buffer, buffer.Length == 0 ? 8 : buffer.Length * 2);
-                buffer[length++] = item.Value;
+                buffer.Add(in item.Value);
             }
         }
         finally
@@ -495,7 +493,7 @@ internal static class GesVmRegisterPatterns
             if (iterator is IDisposable disposable) disposable.Dispose();
         }
 
-        return new IteratorBuffer(buffer, length);
+        return new IteratorBuffer(buffer.Items, buffer.Count);
     }
 
     private readonly record struct IteratorBuffer(GesValue[] Items, int Length);

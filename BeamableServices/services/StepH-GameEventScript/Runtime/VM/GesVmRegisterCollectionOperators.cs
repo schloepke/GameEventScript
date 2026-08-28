@@ -781,26 +781,19 @@ internal static class GesVmRegisterCollectionOperators
 
     private static void GesVmContainsAnyAllIterator(this GesVmState vmState, ushort dst, in GesValue a, IGesIterator iterator, bool requireAll)
     {
-        var candidates = new GesValue[8];
-        var candidateCount = 0;
-
-        void AddCandidate(GesValue value)
-        {
-            if (candidateCount == candidates.Length) Array.Resize(ref candidates, candidates.Length << 1);
-            candidates[candidateCount++] = value;
-        }
+        var candidates = new GesVmListBuilder(8);
 
         var candidate = new GesValue();
         switch (a.Kind)
         {
             case List when a.ObjectValue is GesValue[] list:
-                for (var i = 0; i < list.Length; i++) AddCandidate(list[i]);
+                for (var i = 0; i < list.Length; i++) candidates.Add(in list[i]);
                 break;
             case Dice when a.ObjectValue is int[] dice:
                 for (var i = 0; i < dice.Length; i++)
                 {
                     candidate.SetInteger(dice[i]);
-                    AddCandidate(candidate);
+                    candidates.Add(in candidate);
                 }
 
                 break;
@@ -810,7 +803,7 @@ internal static class GesVmRegisterCollectionOperators
                 for (var i = 0; i < text.Length; i++)
                 {
                     candidate.SetText(text[i].ToString());
-                    AddCandidate(candidate);
+                    candidates.Add(in candidate);
                 }
 
                 break;
@@ -823,7 +816,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     candidate.SetInteger(value);
                     value += range.Step;
-                    AddCandidate(candidate);
+                    candidates.Add(in candidate);
                 }
 
                 break;
@@ -836,7 +829,7 @@ internal static class GesVmRegisterCollectionOperators
                 {
                     candidate.SetFloat(value);
                     value += range.Step;
-                    AddCandidate(candidate);
+                    candidates.Add(in candidate);
                 }
 
                 break;
@@ -845,7 +838,7 @@ internal static class GesVmRegisterCollectionOperators
 
         try
         {
-            if (candidateCount == 0)
+            if (candidates.Count == 0)
             {
                 vmState.SetBoolean(dst, requireAll);
                 return;
@@ -856,7 +849,7 @@ internal static class GesVmRegisterCollectionOperators
                 GesIteratorResult item;
                 while ((item = iterator.Next()).HasValue)
                 {
-                    for (var i = 0; i < candidateCount; i++)
+                    for (var i = 0; i < candidates.Count; i++)
                     {
                         if (!item.Value.EqualsValue(candidates[i])) continue;
                         vmState.SetBoolean(dst, true);
@@ -868,19 +861,19 @@ internal static class GesVmRegisterCollectionOperators
                 return;
             }
 
-            var found = new bool[candidateCount];
+            var found = new bool[candidates.Count];
             var foundCount = 0;
             GesIteratorResult allItem;
             while ((allItem = iterator.Next()).HasValue)
             {
-                for (var i = 0; i < candidateCount; i++)
+                for (var i = 0; i < candidates.Count; i++)
                 {
                     if (found[i] || !allItem.Value.EqualsValue(candidates[i])) continue;
                     found[i] = true;
                     foundCount++;
                 }
 
-                if (foundCount != candidateCount) continue;
+                if (foundCount != candidates.Count) continue;
                 vmState.SetBoolean(dst, true);
                 return;
             }

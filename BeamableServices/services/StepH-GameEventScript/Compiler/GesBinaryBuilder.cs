@@ -86,13 +86,13 @@ internal sealed partial class GesBinaryBuilder
 
         var result = new PlanItem[count];
         var offset = 0;
-        CopyPlanItems(_rootItems, result, ref offset);
+        offset = CopyPlanItems(_rootItems, result, offset);
 
         var roots = CollectRootRoutines();
         Array.Sort(roots, CompareRoutinePlanForOutput);
         for (var index = 0; index < roots.Length; index++)
         {
-            AppendRoutineAndOwnedHelpers(result, ref offset, roots[index]);
+            offset = AppendRoutineAndOwnedHelpers(result, offset, roots[index]);
         }
 
         return result;
@@ -118,15 +118,17 @@ internal sealed partial class GesBinaryBuilder
         return result;
     }
 
-    private void AppendRoutineAndOwnedHelpers(PlanItem[] result, ref int offset, RoutinePlan routine)
+    private int AppendRoutineAndOwnedHelpers(PlanItem[] result, int offset, RoutinePlan routine)
     {
-        CopyPlanItems(routine.Items, result, ref offset);
+        offset = CopyPlanItems(routine.Items, result, offset);
         for (var index = 0; index < _routines.Count; index++)
         {
             var child = _routines[index];
             if (child.ParentRoutineId != routine.Id) continue;
-            AppendRoutineAndOwnedHelpers(result, ref offset, child);
+            offset = AppendRoutineAndOwnedHelpers(result, offset, child);
         }
+
+        return offset;
     }
 
     private void ValidateRoutineId(int routineId)
@@ -369,103 +371,115 @@ internal sealed partial class GesBinaryBuilder
                 ? FormattableString.Invariant($"AnonymousModule_{ComputeBinaryHash():X8}")
                 : _moduleName;
 
-        private uint ComputeBinaryHash()
+    private uint ComputeBinaryHash()
+    {
+        var hash = new BinaryHashBuilder(2166136261u);
+
+        hash.MixUShort(_version);
+        hash.MixUInt((uint)_flags);
+
+        for (var index = 0; index < _textConstants.Count; index++)
         {
-            var hash = 2166136261u;
-
-            MixUShort(ref hash, _version);
-            MixUInt(ref hash, (uint)_flags);
-
-            for (var index = 0; index < _textConstants.Count; index++)
-            {
-                MixString(ref hash, _textConstants[index]);
-            }
-
-            for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
-            {
-                var slice = _uint16Slices[sliceIndex];
-                MixInt(ref hash, slice.Length);
-                for (var index = 0; index < slice.Length; index++)
-                {
-                    MixUShort(ref hash, slice[index]);
-                }
-            }
-
-            for (var index = 0; index < _binds.Count; index++)
-            {
-                var bind = _binds[index];
-                MixUInt(ref hash, (uint)bind.Kind);
-                MixUShort(ref hash, bind.Name);
-                MixInt(ref hash, bind.ArgumentNames.Count);
-                for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
-                {
-                    MixUShort(ref hash, bind.ArgumentNames[argumentIndex]);
-                }
-
-                MixUShort(ref hash, bind.EntryAddress);
-                MixUShort(ref hash, bind.Id);
-                MixInt(ref hash, bind.RequiredTags.Count);
-                for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
-                {
-                    MixUShort(ref hash, bind.RequiredTags[tagIndex]);
-                }
-
-                MixInt(ref hash, bind.ExcludedTags.Count);
-                for (var tagIndex = 0; tagIndex < bind.ExcludedTags.Count; tagIndex++)
-                {
-                    MixUShort(ref hash, bind.ExcludedTags[tagIndex]);
-                }
-            }
-
-            for (var index = 0; index < _instructions.Count; index++)
-            {
-                var instruction = _instructions[index];
-                MixByte(ref hash, (byte)instruction.OpCode);
-                MixByte(ref hash, instruction.UnitAndFlags);
-                MixUShort(ref hash, instruction.DestinationRegister);
-                MixUShort(ref hash, (ushort)instruction.ImmediateX);
-                MixUShort(ref hash, (ushort)instruction.ImmediateY);
-                MixULong(ref hash, instruction.Payload);
-            }
-
-            return hash;
+            hash.MixString(_textConstants[index]);
         }
 
-        private static void MixString(ref uint hash, string value)
+        for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
         {
-            MixInt(ref hash, value.Length);
+            var slice = _uint16Slices[sliceIndex];
+            hash.MixInt(slice.Length);
+            for (var index = 0; index < slice.Length; index++)
+            {
+                hash.MixUShort(slice[index]);
+            }
+        }
+
+        for (var index = 0; index < _binds.Count; index++)
+        {
+            var bind = _binds[index];
+            hash.MixUInt((uint)bind.Kind);
+            hash.MixUShort(bind.Name);
+            hash.MixInt(bind.ArgumentNames.Count);
+            for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
+            {
+                hash.MixUShort(bind.ArgumentNames[argumentIndex]);
+            }
+
+            hash.MixUShort(bind.EntryAddress);
+            hash.MixUShort(bind.Id);
+            hash.MixInt(bind.RequiredTags.Count);
+            for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
+            {
+                hash.MixUShort(bind.RequiredTags[tagIndex]);
+            }
+
+            hash.MixInt(bind.ExcludedTags.Count);
+            for (var tagIndex = 0; tagIndex < bind.ExcludedTags.Count; tagIndex++)
+            {
+                hash.MixUShort(bind.ExcludedTags[tagIndex]);
+            }
+        }
+
+        for (var index = 0; index < _instructions.Count; index++)
+        {
+            var instruction = _instructions[index];
+            hash.MixByte((byte)instruction.OpCode);
+            hash.MixByte(instruction.UnitAndFlags);
+            hash.MixUShort(instruction.DestinationRegister);
+            hash.MixUShort((ushort)instruction.ImmediateX);
+            hash.MixUShort((ushort)instruction.ImmediateY);
+            hash.MixULong(instruction.Payload);
+        }
+
+        return hash.Value;
+    }
+
+    private struct BinaryHashBuilder
+    {
+        private uint _hash;
+
+        internal BinaryHashBuilder(uint hash)
+        {
+            _hash = hash;
+        }
+
+        internal readonly uint Value => _hash;
+
+        internal void MixString(string value)
+        {
+            MixInt(value.Length);
             for (var index = 0; index < value.Length; index++)
             {
-                MixUShort(ref hash, value[index]);
+                MixUShort(value[index]);
             }
         }
 
-        private static void MixInt(ref uint hash, int value)
-            => MixUInt(ref hash, unchecked((uint)value));
+        internal void MixInt(int value)
+            => MixUInt(unchecked((uint)value));
 
-        private static void MixUShort(ref uint hash, ushort value)
+        internal void MixUShort(ushort value)
         {
-            MixByte(ref hash, (byte)value);
-            MixByte(ref hash, (byte)(value >> 8));
+            MixByte((byte)value);
+            MixByte((byte)(value >> 8));
         }
 
-        private static void MixUInt(ref uint hash, uint value)
+        internal void MixUInt(uint value)
         {
-            MixUShort(ref hash, (ushort)value);
-            MixUShort(ref hash, (ushort)(value >> 16));
+            MixUShort((ushort)value);
+            MixUShort((ushort)(value >> 16));
         }
 
-        private static void MixULong(ref uint hash, ulong value)
+        internal void MixULong(ulong value)
         {
-            MixUInt(ref hash, (uint)value);
-            MixUInt(ref hash, (uint)(value >> 32));
+            MixUInt((uint)value);
+            MixUInt((uint)(value >> 32));
         }
 
-        private static void MixByte(ref uint hash, byte value)
+        internal void MixByte(byte value)
         {
-            hash ^= value;
-            hash *= 16777619u;
+            _hash ^= value;
+            _hash *= 16777619u;
         }
+    }
 
         private static GameEventScriptTextTable BuildTextTable(IReadOnlyList<string> values)
         {
@@ -594,12 +608,14 @@ internal sealed partial class GesBinaryBuilder
         return result;
     }
 
-    private static void CopyPlanItems(IReadOnlyList<PlanItem> source, PlanItem[] destination, ref int offset)
+    private static int CopyPlanItems(IReadOnlyList<PlanItem> source, PlanItem[] destination, int offset)
     {
         for (var index = 0; index < source.Count; index++)
         {
             destination[offset++] = source[index];
         }
+
+        return offset;
     }
 
     private static ushort[] ResolveTextList(IReadOnlyList<string> source, Func<string, ushort> resolveText)
@@ -647,14 +663,14 @@ internal sealed partial class GesBinaryBuilder
             UnitAndFlags = GameEventScriptBytecodeInstruction.EncodeUnitAndFlags(plan.Unit, plan.Flags)
         };
 
-        ApplyDestination(ref instruction, plan.Destination, registerMap, bindIds);
-        ApplyX(ref instruction, plan.X, registerMap, labelAddresses, bindIds, resolveText, resolveList, resolveTextList);
-        ApplyY(ref instruction, plan.Y, registerMap, labelAddresses, resolveText, resolveList, resolveTextList);
-        ApplySecondaryList(ref instruction, plan.SecondaryList, registerMap, resolveList, resolveTextList);
-        ApplyAux(ref instruction, plan.A, 0, registerMap, labelAddresses, resolveList);
-        ApplyAux(ref instruction, plan.B, 1, registerMap, labelAddresses, resolveList);
-        ApplyAux(ref instruction, plan.C, 2, registerMap, labelAddresses, resolveList);
-        ApplyAux(ref instruction, plan.D, 3, registerMap, labelAddresses, resolveList);
+        instruction = ApplyDestination(instruction, plan.Destination, registerMap, bindIds);
+        instruction = ApplyX(instruction, plan.X, registerMap, labelAddresses, bindIds, resolveText, resolveList, resolveTextList);
+        instruction = ApplyY(instruction, plan.Y, registerMap, labelAddresses, resolveText, resolveList, resolveTextList);
+        instruction = ApplySecondaryList(instruction, plan.SecondaryList, registerMap, resolveList, resolveTextList);
+        instruction = ApplyAux(instruction, plan.A, 0, registerMap, labelAddresses, resolveList);
+        instruction = ApplyAux(instruction, plan.B, 1, registerMap, labelAddresses, resolveList);
+        instruction = ApplyAux(instruction, plan.C, 2, registerMap, labelAddresses, resolveList);
+        instruction = ApplyAux(instruction, plan.D, 3, registerMap, labelAddresses, resolveList);
 
         if (plan.Count.HasValue) instruction.Count = plan.Count.Value;
         if (plan.I64.HasValue) instruction.I64 = plan.I64.Value;
@@ -662,28 +678,28 @@ internal sealed partial class GesBinaryBuilder
         return instruction;
     }
 
-    private static void ApplyDestination(
-        ref GameEventScriptBytecodeInstruction instruction,
+    private static GameEventScriptBytecodeInstruction ApplyDestination(
+        GameEventScriptBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyList<ushort> bindIds)
     {
-        if (operand.Kind == GesOperandKind.None) return;
+        if (operand.Kind == GesOperandKind.None) return instruction;
         switch (operand.Kind)
         {
             case GesOperandKind.Register:
                 instruction.DestinationRegister = ResolveRegister(operand.RegisterRef, registerMap);
-                return;
+                return instruction;
             case GesOperandKind.Bind:
                 instruction.MessageDestination = bindIds[operand.BindRef.Id];
-                return;
+                return instruction;
             default:
                 throw new InvalidOperationException($"Destination operand must be a register or bind but was '{operand.Kind}'.");
         }
     }
 
-    private static void ApplyX(
-        ref GameEventScriptBytecodeInstruction instruction,
+    private static GameEventScriptBytecodeInstruction ApplyX(
+        GameEventScriptBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
@@ -695,41 +711,41 @@ internal sealed partial class GesBinaryBuilder
         switch (operand.Kind)
         {
             case GesOperandKind.None:
-                return;
+                return instruction;
             case GesOperandKind.Register:
                 instruction.XRegister = ResolveRegister(operand.RegisterRef, registerMap);
-                return;
+                return instruction;
             case GesOperandKind.Text:
                 instruction.StringIndex = resolveText(operand.TextValue!);
-                return;
+                return instruction;
             case GesOperandKind.RegisterList:
                 instruction.SecondaryListIndex = resolveList(operand.RegisterListValue!);
-                return;
+                return instruction;
             case GesOperandKind.TextList:
                 instruction.SecondaryListIndex = resolveTextList(operand.TextListValue!);
-                return;
+                return instruction;
             case GesOperandKind.Bind:
                 instruction.BindId = bindIds[operand.BindRef.Id];
-                return;
+                return instruction;
             case GesOperandKind.Label:
                 instruction.XRegister = labelAddresses[operand.LabelRef.Id];
-                return;
+                return instruction;
             case GesOperandKind.Type:
                 instruction.TypeOperand = (ushort)operand.TypeKind;
-                return;
+                return instruction;
             case GesOperandKind.UShort:
                 instruction.XRegister = operand.UShort;
-                return;
+                return instruction;
             case GesOperandKind.Short:
                 instruction.ImmediateX = operand.Short;
-                return;
+                return instruction;
             default:
                 throw new InvalidOperationException($"Unsupported X operand '{operand.Kind}'.");
         }
     }
 
-    private static void ApplyY(
-        ref GameEventScriptBytecodeInstruction instruction,
+    private static GameEventScriptBytecodeInstruction ApplyY(
+        GameEventScriptBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
@@ -740,66 +756,66 @@ internal sealed partial class GesBinaryBuilder
         switch (operand.Kind)
         {
             case GesOperandKind.None:
-                return;
+                return instruction;
             case GesOperandKind.Register:
                 instruction.YRegister = ResolveRegister(operand.RegisterRef, registerMap);
-                return;
+                return instruction;
             case GesOperandKind.Label:
                 instruction.TargetAddress = labelAddresses[operand.LabelRef.Id];
-                return;
+                return instruction;
             case GesOperandKind.Text:
                 instruction.SecondaryStringIndex = resolveText(operand.TextValue!);
-                return;
+                return instruction;
             case GesOperandKind.RegisterList:
                 instruction.ListIndex = resolveList(operand.RegisterListValue!);
-                return;
+                return instruction;
             case GesOperandKind.TextList:
                 instruction.ListIndex = resolveTextList(operand.TextListValue!);
-                return;
+                return instruction;
             case GesOperandKind.Type:
                 instruction.TypeKind = operand.TypeKind;
-                return;
+                return instruction;
             case GesOperandKind.UShort:
                 instruction.ListIndex = operand.UShort;
-                return;
+                return instruction;
             case GesOperandKind.Short:
                 instruction.ImmediateY = operand.Short;
-                return;
+                return instruction;
             default:
                 throw new InvalidOperationException($"Unsupported Y operand '{operand.Kind}'.");
         }
     }
 
-    private static void ApplySecondaryList(
-        ref GameEventScriptBytecodeInstruction instruction,
+    private static GameEventScriptBytecodeInstruction ApplySecondaryList(
+        GameEventScriptBytecodeInstruction instruction,
         GesOperand operand,
         IReadOnlyDictionary<int, ushort> registerMap,
         Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList,
         Func<IReadOnlyList<string>, ushort> resolveTextList)
     {
-        if (operand.Kind == GesOperandKind.None) return;
+        if (operand.Kind == GesOperandKind.None) return instruction;
         switch (operand.Kind)
         {
             case GesOperandKind.RegisterList:
                 instruction.SecondaryListIndex = resolveList(operand.RegisterListValue!);
-                return;
+                return instruction;
             case GesOperandKind.TextList:
                 instruction.SecondaryListIndex = resolveTextList(operand.TextListValue!);
-                return;
+                return instruction;
             default:
                 throw new InvalidOperationException($"Secondary list operand must be a register or text list but was '{operand.Kind}'.");
         }
     }
 
-    private static void ApplyAux(
-        ref GameEventScriptBytecodeInstruction instruction,
+    private static GameEventScriptBytecodeInstruction ApplyAux(
+        GameEventScriptBytecodeInstruction instruction,
         GesOperand operand,
         int index,
         IReadOnlyDictionary<int, ushort> registerMap,
         IReadOnlyDictionary<int, ushort> labelAddresses,
         Func<IReadOnlyList<GesRegisterRef>, ushort> resolveList)
     {
-        if (operand.Kind == GesOperandKind.None) return;
+        if (operand.Kind == GesOperandKind.None) return instruction;
         var value = operand.Kind switch
         {
             GesOperandKind.Register => ResolveRegister(operand.RegisterRef, registerMap),
@@ -826,6 +842,8 @@ internal sealed partial class GesBinaryBuilder
                 instruction.DU = value;
                 break;
         }
+
+        return instruction;
     }
 
     private static ushort ResolveRegister(GesRegisterRef register, IReadOnlyDictionary<int, ushort> registerMap)

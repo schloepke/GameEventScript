@@ -638,18 +638,16 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        var buffer = new GesValue[count < 16 ? count : 16];
-        var itemCount = 0;
+        var buffer = new GesVmListBuilder(count < 16 ? count : 16);
         try
         {
             GesIteratorResult item;
-            while (itemCount < count && (item = iterator.Next()).HasValue)
+            while (buffer.Count < count && (item = iterator.Next()).HasValue)
             {
-                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[itemCount++] = item.Value;
+                buffer.Add(in item.Value);
             }
 
-            return ListFromBuffer(vmState, buffer, itemCount);
+            return ListFromBuffer(vmState, buffer.Items, buffer.Count);
         }
         finally
         {
@@ -659,19 +657,17 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue DropFirstIterator(GesVmState vmState, IGesIterator iterator, short count)
     {
         var skipped = 0;
-        var buffer = new GesValue[16];
-        var itemCount = 0;
+        var buffer = new GesVmListBuilder(16);
         try
         {
             GesIteratorResult item;
             while (count > 0 && skipped < count && (item = iterator.Next()).HasValue) skipped++;
             while ((item = iterator.Next()).HasValue)
             {
-                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[itemCount++] = item.Value;
+                buffer.Add(in item.Value);
             }
 
-            return ListFromBuffer(vmState, buffer, itemCount);
+            return ListFromBuffer(vmState, buffer.Items, buffer.Count);
         }
         finally
         {
@@ -688,27 +684,24 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        var buffer = new GesValue[16];
-        var itemCount = 0;
+        var buffer = new GesVmListBuilder(16);
         try
         {
             GesIteratorResult item;
             while ((item = iterator.Next()).HasValue)
             {
-                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[itemCount++] = item.Value;
+                buffer.Add(in item.Value);
             }
 
-            var length = count < itemCount ? count : itemCount;
-            var start = itemCount - length;
+            var length = count < buffer.Count ? count : buffer.Count;
+            var start = buffer.Count - length;
             if (length == 0)
             {
                 dst.SetList(vmState.EmptyList);
                 return dst;
             }
 
-            var list = new GesValue[length];
-            Array.Copy(buffer, start, list, 0, length);
+            var list = buffer.ToList(start, length);
             dst.SetList(list);
             return dst;
         }
@@ -719,19 +712,17 @@ internal static class GesVmRegisterTakeDrop
     }
     private static GesValue DropLastIterator(GesVmState vmState, IGesIterator iterator, short count)
     {
-        var buffer = new GesValue[16];
-        var itemCount = 0;
+        var buffer = new GesVmListBuilder(16);
         try
         {
             GesIteratorResult item;
             while ((item = iterator.Next()).HasValue)
             {
-                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[itemCount++] = item.Value;
+                buffer.Add(in item.Value);
             }
 
-            var length = count <= 0 ? itemCount : count < itemCount ? itemCount - count : 0;
-            return ListFromBuffer(vmState, buffer, length);
+            var length = count <= 0 ? buffer.Count : count < buffer.Count ? buffer.Count - count : 0;
+            return ListFromBuffer(vmState, buffer.Items, length);
         }
         finally
         {
@@ -757,7 +748,7 @@ internal static class GesVmRegisterTakeDrop
             {
                 if (itemCount < count)
                 {
-                    InsertExtreme(buffer, in item.Value, ref itemCount, highest);
+                    itemCount = InsertExtreme(buffer, in item.Value, itemCount, highest);
                     continue;
                 }
 
@@ -765,7 +756,7 @@ internal static class GesVmRegisterTakeDrop
                 if (highest ? comparison > 0 : comparison < 0)
                 {
                     itemCount--;
-                    InsertExtreme(buffer, in item.Value, ref itemCount, highest);
+                    itemCount = InsertExtreme(buffer, in item.Value, itemCount, highest);
                 }
             }
 
@@ -779,34 +770,32 @@ internal static class GesVmRegisterTakeDrop
     private static GesValue DropExtremeIterator(GesVmState vmState, IGesIterator iterator, short count, bool highest)
     {
         var dst = new GesValue();
-        var buffer = new GesValue[16];
-        var itemCount = 0;
+        var buffer = new GesVmListBuilder(16);
         try
         {
             GesIteratorResult item;
             while ((item = iterator.Next()).HasValue)
             {
-                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[itemCount++] = item.Value;
+                buffer.Add(in item.Value);
             }
 
             if (count <= 0)
             {
-                return ListFromBuffer(vmState, buffer, itemCount);
+                return ListFromBuffer(vmState, buffer.Items, buffer.Count);
             }
 
-            var selectedCount = count < itemCount ? count : itemCount;
-            if (selectedCount == itemCount)
+            var selectedCount = count < buffer.Count ? count : buffer.Count;
+            if (selectedCount == buffer.Count)
             {
                 dst.SetList(vmState.EmptyList);
                 return dst;
             }
 
-            var selected = new bool[itemCount];
-            SelectExtremeItems(buffer, itemCount, selected, selectedCount, highest);
-            var list = new GesValue[itemCount - selectedCount];
+            var selected = new bool[buffer.Count];
+            SelectExtremeItems(buffer.Items, buffer.Count, selected, selectedCount, highest);
+            var list = new GesValue[buffer.Count - selectedCount];
             var target = 0;
-            for (var i = 0; i < itemCount; i++)
+            for (var i = 0; i < buffer.Count; i++)
             {
                 if (selected[i]) continue;
                 list[target++] = buffer[i];
@@ -1016,25 +1005,23 @@ internal static class GesVmRegisterTakeDrop
             return dst;
         }
 
-        var buffer = new GesValue[16];
-        var itemCount = 0;
+        var buffer = new GesVmListBuilder(16);
         try
         {
             GesIteratorResult item;
             while ((item = iterator.Next()).HasValue)
             {
-                if (itemCount == buffer.Length) Array.Resize(ref buffer, buffer.Length << 1);
-                buffer[itemCount++] = item.Value;
+                buffer.Add(in item.Value);
             }
 
-            if (itemCount == 0)
+            if (buffer.Count == 0)
             {
                 dst.SetList(vmState.EmptyList);
                 return dst;
             }
 
-            var length = count < itemCount ? count : itemCount;
-            var indices = CreateShuffledPrefix(itemCount, length, randomGenerator);
+            var length = count < buffer.Count ? count : buffer.Count;
+            var indices = CreateShuffledPrefix(buffer.Count, length, randomGenerator);
             var list = new GesValue[length];
             for (var i = 0; i < length; i++) list[i] = buffer[indices[i]];
             dst.SetList(list);
@@ -1066,7 +1053,7 @@ internal static class GesVmRegisterTakeDrop
 
         return selectedIndices;
     }
-    private static void InsertExtreme(GesValue[] buffer, in GesValue item, ref int itemCount, bool highest)
+    private static int InsertExtreme(GesValue[] buffer, in GesValue item, int itemCount, bool highest)
     {
         var index = itemCount;
         while (index > 0)
@@ -1078,7 +1065,7 @@ internal static class GesVmRegisterTakeDrop
         }
 
         buffer[index] = item;
-        itemCount++;
+        return itemCount + 1;
     }
     private static GesValue ListFromBuffer(GesVmState vmState, GesValue[] buffer, int length)
     {

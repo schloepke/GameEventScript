@@ -99,9 +99,9 @@ moduleLoad.allocatedKb=7.141
 compile.elapsedMs=1.6215
 compile.allocatedKb=1307.055
 run.elapsedMs=566.1105
-run.allocatedKb=23265.664
+run.allocatedKb=22984.414
 run.perInvokeElapsedMs=0.566111
-run.perInvokeAllocatedKb=23.266
+run.perInvokeAllocatedKb=22.984
 run.emittedMessages=1000
 run.outboundPublishedMessages=0
 

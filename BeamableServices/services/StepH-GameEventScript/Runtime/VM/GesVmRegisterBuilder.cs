@@ -14,6 +14,9 @@ internal sealed class GesVmListBuilder
 
     internal int Count { get; private set; }
 
+    internal GesValue this[int index] => _items[index];
+    internal GesValue[] Items => _items;
+
     internal void Add(in GesValue value)
     {
         if (Count == _items.Length)
@@ -32,6 +35,15 @@ internal sealed class GesVmListBuilder
 
         var list = new GesValue[Count];
         Array.Copy(_items, list, Count);
+        return list;
+    }
+
+    internal GesValue[] ToList(int start, int length)
+    {
+        if (length <= 0) return [];
+
+        var list = new GesValue[length];
+        Array.Copy(_items, start, list, 0, length);
         return list;
     }
 }

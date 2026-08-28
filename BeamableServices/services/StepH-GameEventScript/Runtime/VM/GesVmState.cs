@@ -335,7 +335,7 @@ internal class GesVmState
     }
     internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
     internal string FetchStringByPointer(ushort index) => StringPool[index];
-    internal ReadOnlySpan<ushort> FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
+    internal GameEventScriptUInt16Slice FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
     internal void ModifyLocalRegisters(short registerCount)
     {
         switch (registerCount)

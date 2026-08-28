@@ -407,7 +407,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendRegisters(StringBuilder builder, ReadOnlySpan<ushort> values)
+    private static void AppendRegisters(StringBuilder builder, GameEventScriptUInt16Slice values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -420,7 +420,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, ReadOnlySpan<ushort> values)
+    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16Slice values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -446,7 +446,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendU16Values(StringBuilder builder, ReadOnlySpan<ushort> values)
+    private static void AppendU16Values(StringBuilder builder, GameEventScriptUInt16Slice values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -520,8 +520,9 @@ public static class GameEventScriptBinaryDumper
         }
 
         var text = new List<string>();
-        foreach (var value in values)
+        for (var index = 0; index < values.Length; index++)
         {
+            var value = values[index];
             if (value < context.Binary.TextConstantTable.Slices.Length)
             {
                 text.Add("\"" + Escape(context.ResolveText(value)) + "\"");
@@ -613,7 +614,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, ReadOnlySpan<ushort> values, ListRole role)
+    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16Slice values, ListRole role)
     {
         if (values.Length == 0 || role != ListRole.Texts)
         {

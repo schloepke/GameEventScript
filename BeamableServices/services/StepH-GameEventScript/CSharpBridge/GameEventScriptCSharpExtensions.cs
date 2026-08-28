@@ -545,13 +545,13 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
     private sealed class AnnotatedExtensionFunction0<R>(Func<R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 0 ? returnConverter.Convert(invoke()) : GameEventScriptValueFactory.GesNothing();
     }
 
     private sealed class AnnotatedExtensionFunction1<T1, R>(Func<T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 1 && reader1.TryRead(arguments[0], out var value1)
                 ? returnConverter.Convert(invoke(value1))
                 : GameEventScriptValueFactory.GesNothing();
@@ -560,7 +560,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
     private sealed class AnnotatedExtensionFunction2<T1, T2, R>(Func<T1, T2, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionArgumentReader<T2> reader2, IExtensionReturnConverter<R> returnConverter)
         : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 2 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2)
@@ -575,7 +575,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T3> reader3,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 3 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
@@ -592,7 +592,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T4> reader4,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 4 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
@@ -604,14 +604,14 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
 
     private sealed class AnnotatedContextExtensionFunction0<R>(Func<GameEventScriptExtensionContext, R> invoke, IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 0 ? returnConverter.Convert(invoke(context)) : GameEventScriptValueFactory.GesNothing();
     }
 
     private sealed class AnnotatedContextExtensionFunction1<T1, R>(Func<GameEventScriptExtensionContext, T1, R> invoke, IExtensionArgumentReader<T1> reader1, IExtensionReturnConverter<R> returnConverter)
         : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 1 && reader1.TryRead(arguments[0], out var value1)
                 ? returnConverter.Convert(invoke(context, value1))
                 : GameEventScriptValueFactory.GesNothing();
@@ -623,7 +623,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T2> reader2,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 2 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2)
@@ -638,7 +638,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T3> reader3,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 3 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&
@@ -655,7 +655,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         IExtensionArgumentReader<T4> reader4,
         IExtensionReturnConverter<R> returnConverter) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
             => arguments.Length == 4 &&
                reader1.TryRead(arguments[0], out var value1) &&
                reader2.TryRead(arguments[1], out var value2) &&

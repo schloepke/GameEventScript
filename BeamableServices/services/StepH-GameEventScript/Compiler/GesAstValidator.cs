@@ -1890,7 +1890,7 @@ internal static class GesAstValidator
         }
 
         return suffixStart > 0 &&
-               TryValidateNumericSuffix(name.AsSpan(suffixStart + 1));
+               IsValidNumericSuffix(name, suffixStart + 1);
     }
 
     private static bool IsMessageCase(string name)
@@ -1911,26 +1911,26 @@ internal static class GesAstValidator
         return true;
     }
 
-    private static bool TryValidateNumericSuffix(ReadOnlySpan<char> suffix)
+    private static bool IsValidNumericSuffix(string value, int start)
     {
-        if (suffix.Length == 0)
+        if (start >= value.Length)
         {
             return false;
         }
 
-        if (suffix[0] == '0')
+        if (value[start] == '0')
         {
-            return suffix.Length == 1;
+            return start + 1 == value.Length;
         }
 
-        if (suffix[0] is < '1' or > '9')
+        if (value[start] is < '1' or > '9')
         {
             return false;
         }
 
-        for (var index = 1; index < suffix.Length; index++)
+        for (var index = start + 1; index < value.Length; index++)
         {
-            if (!char.IsDigit(suffix[index]))
+            if (!char.IsDigit(value[index]))
             {
                 return false;
             }

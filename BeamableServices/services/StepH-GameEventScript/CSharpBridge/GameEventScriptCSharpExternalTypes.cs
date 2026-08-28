@@ -291,7 +291,7 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
 
-        public GameEventScriptValue Invoke(ReadOnlySpan<GameEventScriptValue> arguments)
+        public GameEventScriptValue Invoke(GameEventScriptValueSlice arguments)
         {
             if (arguments.Length != parameters.Count)
             {

@@ -139,7 +139,7 @@ internal sealed class GesVmTableBuilder
     public static GesVmTableBuilder Map(GesTableColumnKind keyKind, GesTableColumnKind valueKind, int capacity = 0, ushort keyNameIndex = 0, ushort valueNameIndex = 1) =>
         new(GesTableShape.Map(keyKind, valueKind, keyNameIndex, valueNameIndex), capacity);
 
-    public int? AddRow(ReadOnlySpan<GesTableCell> cells)
+    public int? AddRow(GesTableCell[] cells)
     {
         if (cells.Length != _shape.ColumnCount)
         {

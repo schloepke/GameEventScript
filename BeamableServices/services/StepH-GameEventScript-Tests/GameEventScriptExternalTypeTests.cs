@@ -161,10 +161,10 @@ public sealed class GameEventScriptExternalTypeTests
 
         var baseFunction = baseRegistry.Resolve(reference);
         Assert.IsNotNull(baseFunction);
-        Assert.AreEqual(1, baseFunction.Invoke(null!, ReadOnlySpan<GameEventScriptValue>.Empty).AsInteger());
+        Assert.AreEqual(1, baseFunction.Invoke(null!, GameEventScriptValueSlice.Empty).AsInteger());
         var extendedFunction = extendedRegistry.Resolve(reference);
         Assert.IsNotNull(extendedFunction);
-        Assert.AreEqual(2, extendedFunction.Invoke(null!, ReadOnlySpan<GameEventScriptValue>.Empty).AsInteger());
+        Assert.AreEqual(2, extendedFunction.Invoke(null!, GameEventScriptValueSlice.Empty).AsInteger());
     }
 
     [GesType("aim")]

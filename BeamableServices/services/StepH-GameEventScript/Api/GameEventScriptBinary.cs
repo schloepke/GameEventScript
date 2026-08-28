@@ -54,7 +54,25 @@ public readonly struct GameEventScriptTextTable
     public byte[] Data { get; init; }
 
     public int ResolveSize(ushort index) => Slices[index].Length;
-    public string Resolve(ushort index) => Encoding.UTF8.GetString(Data.AsSpan(Slices[index].Start, Slices[index].Length));
+    public string Resolve(ushort index) => Encoding.UTF8.GetString(Data, Slices[index].Start, Slices[index].Length);
+}
+
+public readonly struct GameEventScriptUInt16Slice
+{
+    private readonly ushort[]? _data;
+
+    internal GameEventScriptUInt16Slice(ushort[] data, int start, int length)
+    {
+        _data = data;
+        Start = start;
+        Length = length;
+    }
+
+    public int Start { get; }
+
+    public int Length { get; }
+
+    public ushort this[int index] => _data![Start + index];
 }
 
 public readonly struct GameEventScriptUInt16Table
@@ -68,7 +86,7 @@ public readonly struct GameEventScriptUInt16Table
     public SliceEntry[] Slices { get; init; }
     public ushort[] Data { get; init; }
 
-    public ReadOnlySpan<ushort> Resolve(ushort index) => Data.AsSpan(Slices[index].Start, Slices[index].Length);
+    public GameEventScriptUInt16Slice Resolve(ushort index) => new(Data, Slices[index].Start, Slices[index].Length);
 }
 
 public readonly struct GameEventScriptBinaryBindTable

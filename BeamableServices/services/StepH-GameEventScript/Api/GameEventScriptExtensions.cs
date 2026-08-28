@@ -13,7 +13,7 @@ public interface IGameEventScriptExtensionRegistry
 
 public interface IGameEventScriptExtensionFunction
 {
-    GameEventScriptValue Invoke(GameEventScriptExtensionContext context, ReadOnlySpan<GameEventScriptValue> arguments);
+    GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments);
 }
 
 internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry

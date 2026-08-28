@@ -152,6 +152,6 @@ internal static class GesVmRegisterCustomType
                 parameter);
         }
 
-        vmState.BindArguments(destinationRegister, constructor.Invoke(arguments));
+        vmState.BindArguments(destinationRegister, constructor.Invoke(new GameEventScriptValueSlice(arguments)));
     }
 }

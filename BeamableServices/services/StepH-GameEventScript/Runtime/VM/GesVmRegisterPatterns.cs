@@ -419,7 +419,7 @@ internal static class GesVmRegisterPatterns
     private static bool IsStraightDice(int[] dice)
     {
         if (dice.Length < 2) return false;
-        Span<int> unique = stackalloc int[dice.Length];
+        var unique = new int[dice.Length];
         var count = 0;
         for (var i = 0; i < dice.Length; i++)
         {
@@ -449,7 +449,7 @@ internal static class GesVmRegisterPatterns
     private static bool IsStraightItems(GesValue[] items, int length)
     {
         if (length < 2) return false;
-        Span<long> unique = stackalloc long[length];
+        var unique = new long[length];
         var count = 0;
         for (var i = 0; i < length; i++)
         {

@@ -43,7 +43,7 @@ internal static class GesVmRegisterCallExternal
                 arguments[argumentIndex] = GameEventScriptValueFactory.FromVmValue(in argument);
             }
 
-            var result = function.Invoke(new GameEventScriptExtensionContext(session), arguments.AsSpan(0, argumentCount));
+            var result = function.Invoke(new GameEventScriptExtensionContext(session), new GameEventScriptValueSlice(arguments, 0, argumentCount));
             state.SetValue(destinationRegister, in result.GetVmValue());
             ref readonly var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)

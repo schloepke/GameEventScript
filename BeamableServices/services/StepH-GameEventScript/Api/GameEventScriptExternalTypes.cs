@@ -17,7 +17,7 @@ public interface IGameEventScriptExternalTypeConstructor
 {
     GameEventScriptExternalTypeConstructorDefinition Definition { get; }
 
-    GameEventScriptValue Invoke(ReadOnlySpan<GameEventScriptValue> arguments);
+    GameEventScriptValue Invoke(GameEventScriptValueSlice arguments);
 }
 
 public sealed class GameEventScriptExternalTypeDefinition

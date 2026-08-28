@@ -606,8 +606,12 @@ struct StepH.GameEventScript.Api.GameEventScriptTextTable
 struct StepH.GameEventScript.Api.GameEventScriptTextTable.SliceEntry
   property System.UInt16 Length { get set }
   property System.UInt16 Start { get set }
+struct StepH.GameEventScript.Api.GameEventScriptUInt16Slice
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
+  property System.UInt16 Item { get }
 struct StepH.GameEventScript.Api.GameEventScriptUInt16Table
-  method System.ReadOnlySpan<System.UInt16> Resolve(System.UInt16 index)
+  method StepH.GameEventScript.Api.GameEventScriptUInt16Slice Resolve(System.UInt16 index)
   property StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry[] Slices { get set }
   property System.UInt16[] Data { get set }
 struct StepH.GameEventScript.Api.GameEventScriptUInt16Table.SliceEntry
@@ -669,14 +673,20 @@ static class StepH.GameEventScript.Api.GameEventScriptValueFactory
   method static StepH.GameEventScript.Api.GameEventScriptValue GesTag(System.String tag)
   method static StepH.GameEventScript.Api.GameEventScriptValue GesText(System.String text)
   method static StepH.GameEventScript.Api.GameEventScriptValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+struct StepH.GameEventScript.Api.GameEventScriptValueSlice
+  ctor GameEventScriptValueSlice(StepH.GameEventScript.Api.GameEventScriptValue[] values)
+  field static StepH.GameEventScript.Api.GameEventScriptValueSlice Empty
+  property StepH.GameEventScript.Api.GameEventScriptValue Item { get }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
 interface StepH.GameEventScript.Api.IGameEventScriptDispatcher
   method System.Void Enqueue(System.Action workItem)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
-  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
+  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(StepH.GameEventScript.Api.GameEventScriptExtensionContext context, StepH.GameEventScript.Api.GameEventScriptValueSlice arguments)
 interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
   method StepH.GameEventScript.Api.IGameEventScriptExtensionFunction Resolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference)
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor
-  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(System.ReadOnlySpan<StepH.GameEventScript.Api.GameEventScriptValue> arguments)
+  method StepH.GameEventScript.Api.GameEventScriptValue Invoke(StepH.GameEventScript.Api.GameEventScriptValueSlice arguments)
   property StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition Definition { get }
 interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry
   method StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor Resolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference)

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Compiler;
 using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
 using static StepH.GameEventScript.Api.GameEventScriptSymbolKind;
@@ -114,7 +113,7 @@ public sealed class GameEventScriptBuilder
     /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
     /// <returns>A bindable runtime module that exports the compiled message handlers.</returns>
     public IGameEventScriptModule CompileModule(GameEventScriptCompileOptions? options = null)
-        => GameEventScriptVirtualMaschine.Create(Compile(options), 512, 128);
+        => GameEventScriptManager.CreateModule(Compile(options));
 
     /// <summary>
     /// Builds and returns a new internal module model based on the configured sources.

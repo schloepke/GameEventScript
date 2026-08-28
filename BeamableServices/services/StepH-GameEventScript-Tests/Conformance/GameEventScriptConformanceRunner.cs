@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text.Json;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
@@ -461,7 +462,7 @@ internal static class GameEventScriptConformanceRunner
             [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
             [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
             [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GameEventScriptValue direction)
+            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GesValue direction)
         {
             Bearing = bearing;
             Range = range;
@@ -480,7 +481,7 @@ internal static class GameEventScriptConformanceRunner
         public int Steps { get; }
 
         [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public GameEventScriptValue Direction { get; }
+        public GesValue Direction { get; }
 
         [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
         public int Checksum { get; }
@@ -596,69 +597,69 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
 
     private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((_, args) =>
         args.Length == 1
-            ? GameEventScriptValueFactory.GesFloat(Math.Floor(args[0].Number), args[0].Unit)
-            : GameEventScriptValueFactory.GesNothing());
+            ? GesValue.GesFloat(Math.Floor(args.GetAsNumber(0)), args.UnitAt(0))
+            : GesValue.GesNothing());
 
     private static readonly IGameEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length == 0)
         {
-            return GameEventScriptValueFactory.GesNothing();
+            return GesValue.GesNothing();
         }
 
-        var max = args[0].Number;
+        var max = args.GetAsNumber(0);
         for (var index = 1; index < args.Length; index++)
         {
-            max = Math.Max(max, args[index].Number);
+            max = Math.Max(max, args.GetAsNumber(index));
         }
 
-        return GameEventScriptValueFactory.GesFloat(max);
+        return GesValue.GesFloat(max);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavShortestTurn = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 2)
         {
-            return GameEventScriptValueFactory.GesNothing();
+            return GesValue.GesNothing();
         }
 
-        var from = args[0].Number;
-        var to = args[1].Number;
+        var from = args.GetAsNumber(0);
+        var to = args.GetAsNumber(1);
         var delta = (to - from + 540d) % 360d - 180d;
-        return GameEventScriptValueFactory.GesFloat(delta, GameEventScriptBytecodeInstructionUnit.UnitDegree);
+        return GesValue.GesFloat(delta, GameEventScriptBytecodeInstructionUnit.UnitDegree);
     });
 
     private static readonly IGameEventScriptExtensionFunction NavIsNorth = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 1)
         {
-            return GameEventScriptValueFactory.GesBoolean(false);
+            return GesValue.GesBoolean(false);
         }
 
-        var value = args[0].Number;
+        var value = args.GetAsNumber(0);
         var wrapped = ((value % 360d) + 360d) % 360d;
-        return GameEventScriptValueFactory.GesBoolean(wrapped is <= 45d or >= 315d);
+        return GesValue.GesBoolean(wrapped is <= 45d or >= 315d);
     });
 
     private static readonly IGameEventScriptExtensionFunction TestVectorSum = new DelegateExtensionFunction((_, args) =>
     {
         if (args.Length != 1)
         {
-            return GameEventScriptValueFactory.GesNothing();
+            return GesValue.GesNothing();
         }
 
-        return args[0].Kind switch
+        return args.KindAt(0) switch
         {
-            GameEventScriptBytecodeTypeKind.Vector => GameEventScriptValueFactory.GesFloat(args[0].X + args[0].Y + args[0].Z, args[0].Unit),
-            _ => GameEventScriptValueFactory.GesNothing()
+            GameEventScriptBytecodeTypeKind.Vector => GesValue.GesFloat(args.GetX(0) + args.GetY(0) + args.GetZ(0), args.UnitAt(0)),
+            _ => GesValue.GesNothing()
         };
     });
 
     private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((_, args) =>
-        args.Length == 1 ? args[0] : GameEventScriptValueFactory.GesNothing());
+        args.Length == 1 ? args[0] : GesValue.GesNothing());
 
     private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((_, _) =>
-        GameEventScriptValueFactory.GesBoolean(true));
+        GesValue.GesBoolean(true));
 
     private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) =>
         throw new InvalidOperationException("Configured conformance extension failure."));
@@ -735,11 +736,11 @@ internal sealed class GameEventScriptConformanceExtensionRegistry : IGameEventSc
     private static bool IsUnlabeled(string label)
         => string.Equals(label, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal);
 
-    private delegate GameEventScriptValue ExtensionInvoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments);
+    private delegate GesValue ExtensionInvoke(GameEventScriptExtensionContext context, GesValueSlice arguments);
 
     private sealed class DelegateExtensionFunction(ExtensionInvoke invoke) : IGameEventScriptExtensionFunction
     {
-        public GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments)
+        public GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments)
             => invoke(context, arguments);
     }
 }

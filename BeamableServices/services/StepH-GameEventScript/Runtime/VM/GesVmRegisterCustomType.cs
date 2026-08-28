@@ -58,7 +58,7 @@ internal static class GesVmRegisterCustomType
             return;
         }
 
-        var arguments = labels.Length == 0 ? [] : new GameEventScriptValue[labels.Length];
+        var arguments = labels.Length == 0 ? [] : new GesValue[labels.Length];
         for (var parameterIndex = 0; parameterIndex < constructor.Definition.Parameters.Count; parameterIndex++)
         {
             var parameter = constructor.Definition.Parameters[parameterIndex];
@@ -147,11 +147,10 @@ internal static class GesVmRegisterCustomType
                 return;
             }
 
-            arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(
-                GameEventScriptValueFactory.FromVmValue(in converted),
-                parameter);
+            arguments[parameterIndex] = GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in converted, parameter);
         }
 
-        vmState.BindArguments(destinationRegister, constructor.Invoke(new GameEventScriptValueSlice(arguments)));
+        var constructed = constructor.Invoke(new GesValueSlice(arguments, 0, arguments.Length));
+        vmState.SetValue(destinationRegister, in constructed);
     }
 }

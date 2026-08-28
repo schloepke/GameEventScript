@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
@@ -13,7 +14,7 @@ public interface IGameEventScriptExtensionRegistry
 
 public interface IGameEventScriptExtensionFunction
 {
-    GameEventScriptValue Invoke(GameEventScriptExtensionContext context, GameEventScriptValueSlice arguments);
+    GesValue Invoke(GameEventScriptExtensionContext context, GesValueSlice arguments);
 }
 
 internal sealed class GameEventScriptEmptyExtensionRegistry : IGameEventScriptExtensionRegistry

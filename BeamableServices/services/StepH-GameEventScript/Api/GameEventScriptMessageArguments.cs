@@ -72,7 +72,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         };
     }
 
-    public long GetAsInteger(string name) => ValueAt(IndexOfRequired(name)).Integer;
+    public long GetAsInteger(string name) => GetAsInteger(IndexOfRequired(name));
 
     public double GetAsNumber(int index)
     {
@@ -86,7 +86,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         };
     }
 
-    public double GetAsNumber(string name) => ValueAt(IndexOfRequired(name)).Number;
+    public double GetAsNumber(string name) => GetAsNumber(IndexOfRequired(name));
 
     public bool GetAsBoolean(int index)
     {
@@ -101,7 +101,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         };
     }
 
-    public bool GetAsBoolean(string name) => ValueAt(IndexOfRequired(name)).Boolean;
+    public bool GetAsBoolean(string name) => GetAsBoolean(IndexOfRequired(name));
 
     public string GetAsText(int index) => _values[index].TextValue.Length > 0 || _values[index].Kind is GameEventScriptBytecodeTypeKind.Text or GameEventScriptBytecodeTypeKind.Tag
         ? _values[index].TextValue

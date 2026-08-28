@@ -204,7 +204,11 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
             : new GameEventScriptExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
         return new ExternalFieldBinding(
             definition,
-            instance => GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(GameEventScriptCSharpExternalTypeValueConverter.ToValue(reader(instance)), definition));
+            instance =>
+            {
+                var value = GameEventScriptCSharpExternalTypeValueConverter.ToValue(reader(instance));
+                return GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in value, definition);
+            });
     }
 
     private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames)
@@ -280,7 +284,7 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         return new ExternalParameterBinding(definition, parameter.ParameterType);
     }
 
-    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GameEventScriptValue> Reader);
+    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GesValue> Reader);
 
     private sealed record ExternalParameterBinding(GameEventScriptExternalTypeParameterDefinition Definition, Type ClrType);
 
@@ -291,26 +295,28 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
 
-        public GameEventScriptValue Invoke(GameEventScriptValueSlice arguments)
+        public GesValue Invoke(GesValueSlice arguments)
         {
             if (arguments.Length != parameters.Count)
             {
-                return GameEventScriptValueFactory.GesNothing();
+                return GesValue.GesNothing();
             }
 
             var converted = new object?[arguments.Length];
             for (var index = 0; index < converted.Length; index++)
             {
-                converted[index] = GameEventScriptCSharpExternalTypeValueConverter.ToClrValue(arguments[index], parameters[index].ClrType);
+                converted[index] = GameEventScriptCSharpExternalTypeValueConverter.ToClrValue(arguments, index, parameters[index].ClrType);
             }
 
             var result = invoke(converted);
-            if (result is null) return GameEventScriptValueFactory.GesNothing();
-            if (result is GameEventScriptValue scriptValue) return scriptValue;
+            if (result is null) return GesValue.GesNothing();
+            if (result is GesValue vmValue) return vmValue;
 
             if (GameEventScriptCSharpExternalTypeRuntime.TryGetDefinitionForInstance(result, out var externalDefinition))
             {
-                return GameEventScriptValueFactory.GesExternalObject(result, externalDefinition);
+                var value = new GesValue();
+                value.SetExternalCustomType(new GesExternalObject(result, externalDefinition));
+                return value;
             }
 
             return GameEventScriptCSharpExternalTypeValueConverter.ToValue(result);
@@ -343,49 +349,59 @@ internal static class GameEventScriptCSharpExternalTypeRuntime
 
 internal static class GameEventScriptCSharpExternalTypeValueConverter
 {
-    public static GameEventScriptValue ToValue(object? value)
+    public static GesValue ToValue(object? value)
     {
         switch (value)
         {
             case null:
-                return GameEventScriptValueFactory.GesNothing();
-            case GameEventScriptValue scriptValue:
-                return scriptValue;
+                return GesValue.GesNothing();
+            case GesValue vmValue:
+                return vmValue;
             case bool boolean:
-                return GameEventScriptValueFactory.GesBoolean(boolean);
+                return GesValue.GesBoolean(boolean);
             case string text:
-                return GameEventScriptValueFactory.GesText(text);
+                return GesValue.GesText(text);
             case double number:
-                return GameEventScriptValueFactory.GesFloat(number);
+                return GesValue.GesFloat(number);
             case float number:
-                return GameEventScriptValueFactory.GesFloat(number);
+                return GesValue.GesFloat(number);
             case decimal number:
-                return GameEventScriptValueFactory.GesFloat((double)number);
+                return GesValue.GesFloat((double)number);
             case long integer:
-                return GameEventScriptValueFactory.GesInteger(integer);
+                return GesValue.GesInteger(integer);
             case int integer:
-                return GameEventScriptValueFactory.GesInteger(integer);
+                return GesValue.GesInteger(integer);
             case short integer:
-                return GameEventScriptValueFactory.GesInteger(integer);
+                return GesValue.GesInteger(integer);
             case byte integer:
-                return GameEventScriptValueFactory.GesInteger(integer);
+                return GesValue.GesInteger(integer);
             case GameEventScriptMessage message:
-                return GameEventScriptValueFactory.GesMessage(message);
+            {
+                var result = new GesValue();
+                result.SetMessage(message);
+                return result;
+            }
             case GameEventScriptMessageSignature signature:
-                return GameEventScriptValueFactory.GesHandler(signature);
+            {
+                var result = new GesValue();
+                result.SetMessageHandler(signature);
+                return result;
+            }
         }
 
         if (GameEventScriptCSharpExternalTypeRuntime.TryGetDefinitionForInstance(value, out var externalDefinition))
         {
-            return GameEventScriptValueFactory.GesExternalObject(value, externalDefinition);
+            var result = new GesValue();
+            result.SetExternalCustomType(new GesExternalObject(value, externalDefinition));
+            return result;
         }
 
-        throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GameEventScriptValue.");
+        throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GesValue.");
     }
 
-    public static object? ToClrValue(GameEventScriptValue value, Type targetType)
+    public static object? ToClrValue(in GesValue value, Type targetType)
     {
-        if (targetType == typeof(GameEventScriptValue))
+        if (targetType == typeof(GesValue))
         {
             return value;
         }
@@ -436,13 +452,58 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
             return value;
         }
 
-        throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.Kind}' to CLR type '{targetType.FullName}'.");
+        throw new InvalidOperationException($"Cannot convert GameEventScript value kind '{value.ValueKind}' to CLR type '{targetType.FullName}'.");
     }
 
-    public static object? ToClrExternalObjectValue(GameEventScriptValue value, Type objectType)
+    public static object? ToClrValue(GesValueSlice values, int index, Type targetType)
+    {
+        if (targetType == typeof(GesValue))
+        {
+            return values[index];
+        }
+
+        if (targetType == typeof(string))
+        {
+            return values.GetAsText(index);
+        }
+
+        if (targetType == typeof(bool))
+        {
+            return values.GetAsBoolean(index);
+        }
+
+        if (targetType == typeof(double))
+        {
+            return values.GetAsNumber(index);
+        }
+
+        if (targetType == typeof(long))
+        {
+            return values.GetAsInteger(index);
+        }
+
+        if (targetType == typeof(int))
+        {
+            return checked((int)values.GetAsInteger(index));
+        }
+
+        if (targetType == typeof(short))
+        {
+            return checked((short)values.GetAsInteger(index));
+        }
+
+        if (targetType == typeof(byte))
+        {
+            return checked((byte)values.GetAsInteger(index));
+        }
+
+        return ToClrValue(in values[index], targetType);
+    }
+
+    public static object? ToClrExternalObjectValue(in GesValue value, Type objectType)
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
-        if (value.GetVmValue().ObjectValue is GesExternalObject externalObject && objectType.IsInstanceOfType(externalObject.Instance)) return externalObject.Instance;
+        if (value.ObjectValue is GesExternalObject externalObject && objectType.IsInstanceOfType(externalObject.Instance)) return externalObject.Instance;
         return null;
     }
 }

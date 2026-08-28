@@ -1,3 +1,5 @@
+#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
+
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -15,7 +17,7 @@ internal readonly record struct GesNumericWithUnit(double Value, GameEventScript
 [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
 [SuppressMessage("ReSharper", "ConvertToAutoPropertyWithPrivateSetter")]
 [StructLayout(LayoutKind.Explicit, Size = 32)]
-internal struct GesValue
+public struct GesValue
 {
     [Flags]
     internal enum GesValueFlags : byte
@@ -38,6 +40,67 @@ internal struct GesValue
     [FieldOffset(17)] internal GameEventScriptBytecodeInstructionUnit Unit;
     [FieldOffset(18)] internal GesValueFlags Flags;
 
+    public static GesValue GesNothing() => new();
+
+    public static GesValue GesBoolean(bool boolean)
+    {
+        var value = new GesValue();
+        value.SetBoolean(boolean);
+        return value;
+    }
+
+    public static GesValue GesInteger(long integer, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    {
+        var value = new GesValue();
+        value.SetInteger(integer, unit);
+        return value;
+    }
+
+    public static GesValue GesFloat(double number, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    {
+        var value = new GesValue();
+        value.SetFloat(number, unit);
+        return value;
+    }
+
+    public static GesValue GesNumber(double number, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+        => GesFloat(number, unit);
+
+    public static GesValue GesPercentage(double ratio)
+    {
+        var value = new GesValue();
+        value.SetPercentage(ratio);
+        return value;
+    }
+
+    public static GesValue GesText(string text)
+    {
+        var value = new GesValue();
+        value.SetText(text ?? string.Empty);
+        return value;
+    }
+
+    public static GesValue GesTag(string tag)
+    {
+        var value = new GesValue();
+        value.SetTag(tag ?? string.Empty);
+        return value;
+    }
+
+    public static GesValue GesVector(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    {
+        var value = new GesValue();
+        value.SetVector(x, y, z, unit);
+        return value;
+    }
+
+    public static GesValue GesPoint(double x, double y = 0d, double z = 0d, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
+    {
+        var value = new GesValue();
+        value.SetPoint(x, y, z, unit);
+        return value;
+    }
+
     internal readonly bool IsTrue => (Flags & IsTrueFlag) != 0;
     internal readonly bool IsFalse => (Flags & IsFalseFlag) != 0;
     internal readonly bool IsNotTrue => (Flags & IsTrueFlag) == 0;
@@ -55,6 +118,43 @@ internal struct GesValue
     internal readonly bool IsStorageObject => (Flags & StorageObjectFlag) != 0;
 
     internal readonly string TextValue => ObjectValue as string ?? string.Empty;
+
+    public readonly GameEventScriptBytecodeTypeKind ValueKind => Kind;
+
+    public readonly GameEventScriptBytecodeInstructionUnit ValueUnit => Unit;
+
+    public readonly long AsInteger() => Kind switch
+    {
+        GameEventScriptBytecodeTypeKind.Integer => IntegerValue,
+        Float or Percentage => ToIntegerSaturated(FloatValue),
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1 : 0,
+        _ => ToIntegerSaturated(AsNumeric)
+    };
+
+    public readonly double AsNumber() => Kind switch
+    {
+        GameEventScriptBytecodeTypeKind.Integer => IntegerValue,
+        Float or Percentage => FloatValue,
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? 1d : 0d,
+        _ => AsNumeric
+    };
+
+    public readonly bool AsBoolean() => Kind switch
+    {
+        GameEventScriptBytecodeTypeKind.Boolean => IsTrue,
+        GameEventScriptBytecodeTypeKind.Integer => IntegerValue != 0,
+        Float or Percentage => FloatValue != 0d,
+        Vector or Point when ObjectValue is GesValueVectorPoint vector => vector.X != 0d || vector.Y != 0d || vector.Z != 0d,
+        _ => IsTrue
+    };
+
+    public readonly string AsText() => TextValue.Length > 0 || Kind is GameEventScriptBytecodeTypeKind.Text or Tag ? TextValue : ToText;
+
+    public readonly double X => ObjectValue is GesValueVectorPoint vector ? vector.X : 0d;
+
+    public readonly double Y => ObjectValue is GesValueVectorPoint vector ? vector.Y : 0d;
+
+    public readonly double Z => ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
 
     internal void SetNothing()
     {
@@ -364,7 +464,7 @@ internal struct GesValue
         ObjectValue = orderBuilder;
     }
 
-    public double AsNumeric => Kind switch
+    public readonly double AsNumeric => Kind switch
     {
         Integer => IntegerValue,
         Float or Percentage => FloatValue,
@@ -377,6 +477,15 @@ internal struct GesValue
         long sum = 0;
         foreach (var value in values) sum += value;
         return sum;
+    }
+
+    private static long ToIntegerSaturated(double number)
+    {
+        if (double.IsNaN(number)) return 0;
+        var truncated = Math.Truncate(number);
+        if (truncated > long.MaxValue) return long.MaxValue;
+        if (truncated < long.MinValue) return long.MinValue;
+        return (long)truncated;
     }
     internal GesNumericWithUnit AsNumericWithUnit()
         => new(AsNumeric, Unit);
@@ -564,7 +673,7 @@ internal struct GesValue
         }
     }
     
-    internal string ToText => Kind switch
+    internal readonly string ToText => Kind switch
     {
         Nothing => string.Empty,
         Integer => FormatNumber(IntegerValue, Unit),

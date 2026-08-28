@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
@@ -17,7 +18,7 @@ public interface IGameEventScriptExternalTypeConstructor
 {
     GameEventScriptExternalTypeConstructorDefinition Definition { get; }
 
-    GameEventScriptValue Invoke(GameEventScriptValueSlice arguments);
+    GesValue Invoke(GesValueSlice arguments);
 }
 
 public sealed class GameEventScriptExternalTypeDefinition
@@ -30,7 +31,7 @@ public sealed class GameEventScriptExternalTypeDefinition
             name,
             CopyFields(fields ?? throw new ArgumentNullException(nameof(fields))),
             CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors))),
-            new Dictionary<string, Func<object, GameEventScriptValue>>(StringComparer.Ordinal),
+            new Dictionary<string, Func<object, GesValue>>(StringComparer.Ordinal),
             new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal))
     {
     }
@@ -39,7 +40,7 @@ public sealed class GameEventScriptExternalTypeDefinition
         string name,
         IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> fields,
         IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> constructors,
-        IReadOnlyDictionary<string, Func<object, GameEventScriptValue>> fieldReaders,
+        IReadOnlyDictionary<string, Func<object, GesValue>> fieldReaders,
         IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> constructorBindings)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
@@ -55,7 +56,7 @@ public sealed class GameEventScriptExternalTypeDefinition
 
     public IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> Constructors { get; }
 
-    internal IReadOnlyDictionary<string, Func<object, GameEventScriptValue>> FieldReaders { get; }
+    internal IReadOnlyDictionary<string, Func<object, GesValue>> FieldReaders { get; }
 
     internal IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> ConstructorBindings { get; }
 
@@ -78,7 +79,7 @@ public sealed class GameEventScriptExternalTypeDefinition
         return false;
     }
 
-    internal GameEventScriptValue? GetField(string fieldName, object instance)
+    internal GesValue? GetField(string fieldName, object instance)
     {
         return FieldReaders.TryGetValue(fieldName, out var reader) ? reader(instance) : null;
     }

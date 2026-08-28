@@ -1,6 +1,7 @@
 using System;
 using System.Buffers;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Runtime.VM;
@@ -33,18 +34,17 @@ internal static class GesVmRegisterCallExternal
         }
 
         var argumentCount = argumentRegisters.Length;
-        var arguments = argumentCount == 0 ? [] : ArrayPool<GameEventScriptValue>.Shared.Rent(argumentCount);
+        var arguments = argumentCount == 0 ? [] : ArrayPool<GesValue>.Shared.Rent(argumentCount);
 
         try
         {
             for (var argumentIndex = 0; argumentIndex < argumentCount; argumentIndex++)
             {
-                ref readonly var argument = ref state.Register(argumentRegisters[argumentIndex]);
-                arguments[argumentIndex] = GameEventScriptValueFactory.FromVmValue(in argument);
+                arguments[argumentIndex] = state.Register(argumentRegisters[argumentIndex]);
             }
 
-            var result = function.Invoke(new GameEventScriptExtensionContext(session), new GameEventScriptValueSlice(arguments, 0, argumentCount));
-            state.SetValue(destinationRegister, in result.GetVmValue());
+            var result = function.Invoke(new GameEventScriptExtensionContext(session), new GesValueSlice(arguments, 0, argumentCount));
+            state.SetValue(destinationRegister, in result);
             ref readonly var dst = ref state.Register(destinationRegister);
             if (isPredicate && dst.Kind is not GameEventScriptBytecodeTypeKind.Boolean && dst.IsNotNothing)
             {
@@ -56,11 +56,8 @@ internal static class GesVmRegisterCallExternal
             if (argumentCount > 0)
             {
                 Array.Clear(arguments, 0, argumentCount);
-                ArrayPool<GameEventScriptValue>.Shared.Return(arguments);
+                ArrayPool<GesValue>.Shared.Return(arguments);
             }
         }
     }
-
-    internal static void BindArguments(this GesVmState state, ushort destinationRegister, GameEventScriptValue argument)
-        => state.SetValue(destinationRegister, in argument.GetVmValue());
 }

@@ -183,7 +183,7 @@ public sealed class GameEventScriptHostSteppingTests
             .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(messages.Add))
             .Build()
             .Load(bytecode);
-        host.Subscribe("Seen", ["value"], (message, _) => seen.Add(message.Arguments["value"].AsInteger()));
+        host.Subscribe("Seen", ["value"], (message, _) => seen.Add(message.Arguments.GetAsInteger("value")));
 
         Assert.IsTrue(host.PublishToCompletion(Create("Start")));
 
@@ -486,7 +486,7 @@ public sealed class GameEventScriptHostSteppingTests
             .CompileModule();
         var published = new List<long>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Arguments["value"].AsInteger())))
+            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Arguments.GetAsInteger("value"))))
             .Build()
             .Load(bytecode);
 
@@ -530,8 +530,8 @@ public sealed class GameEventScriptHostSteppingTests
 
         Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
         Assert.HasCount(1, published);
-        Assert.AreEqual(7, published[0].Arguments["total"].AsInteger());
-        Assert.AreEqual("high", published[0].Arguments["label"].Text);
+        Assert.AreEqual(7, published[0].Arguments.GetAsInteger("total"));
+        Assert.AreEqual("high", published[0].Arguments.GetAsText("label"));
     }
 
     [TestMethod]

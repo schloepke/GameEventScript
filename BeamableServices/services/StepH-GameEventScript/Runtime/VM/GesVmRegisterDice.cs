@@ -8,7 +8,7 @@ internal static class GesVmRegisterDice
 
     internal static void GesVmCreateDice(this GesVmState vmState, ushort destinationRegister, short count, short sides, GameEventScriptSession session)
     {
-        if (count <= 0 || sides <= 0 || !session.RuntimeBudget.TryCheckDice(count, sides))
+        if (count <= 0 || sides <= 0 || !session.RuntimeBudget.CheckDiceWithinLimit(count, sides))
         {
             vmState.SetDice(destinationRegister, EmptyDice);
             return;

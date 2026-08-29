@@ -82,7 +82,7 @@ public sealed class GameEventScriptSession
     {
         EnsureHostBacked();
         if (string.IsNullOrWhiteSpace(message.Name)) return false;
-        if (!_host!.TryEnqueueSessionInvocations(State!, message)) return false;
+        if (!_host!.EnqueueSessionInvocations(State!, message)) return false;
         if (_dispatcher is not null && !_automaticDispatchScheduled)
         {
             _automaticDispatchScheduled = true;
@@ -99,7 +99,7 @@ public sealed class GameEventScriptSession
     {
         EnsureHostBacked();
         if (string.IsNullOrWhiteSpace(message.Name)) return false;
-        if (!_host!.TryEnqueueSessionInvocations(State!, message))
+        if (!_host!.EnqueueSessionInvocations(State!, message))
         {
             return false;
         }
@@ -124,7 +124,7 @@ public sealed class GameEventScriptSession
     private GameEventScriptRun BeginRunCore(GameEventScriptMessage message)
     {
         EnsureHostBacked();
-        var accepted = _host!.TryEnqueueSessionInvocations(State!, message);
+        var accepted = _host!.EnqueueSessionInvocations(State!, message);
         return new GameEventScriptRun(_host.DrainSessionSlice, State!, accepted, _runtimeGate);
     }
 

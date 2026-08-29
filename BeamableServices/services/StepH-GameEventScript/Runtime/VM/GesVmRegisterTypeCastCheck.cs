@@ -309,7 +309,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return dst;
                 }
 
-                if (session is not null && !session.RuntimeBudget.TryCheckRangeLength(xValue.IntegerValue, "Range length exceeds the configured limit."))
+                if (session is not null && !session.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
                 {
                     dst.SetList(vmState.EmptyList);
                     return dst;
@@ -334,7 +334,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return dst;
                 }
 
-                if (session is not null && !session.RuntimeBudget.TryCheckRangeLength(xValue.IntegerValue, "Range length exceeds the configured limit."))
+                if (session is not null && !session.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
                 {
                     dst.SetList(vmState.EmptyList);
                     return dst;

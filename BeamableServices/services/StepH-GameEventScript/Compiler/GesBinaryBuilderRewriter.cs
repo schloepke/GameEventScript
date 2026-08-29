@@ -15,12 +15,16 @@ internal sealed partial class GesBinaryBuilder
     [
         LocalConstantFoldingPass.Instance,
         DeadTempWriteEliminationPass.Instance,
+        RegisterPressureReductionPass.Instance,
         PeepholeMoveEliminationPass.Instance,
         BranchSimplificationPass.Instance,
         JumpCleanupPass.Instance,
         LocalConstantFoldingPass.Instance,
         DeadTempWriteEliminationPass.Instance,
-        PeepholeMoveEliminationPass.Instance
+        RegisterPressureReductionPass.Instance,
+        PeepholeMoveEliminationPass.Instance,
+        BranchSimplificationPass.Instance,
+        JumpCleanupPass.Instance
     ];
 
     public GesBinaryBuilder Optimize(IGesBinaryOptimizationPass pass)
@@ -463,7 +467,7 @@ internal sealed partial class GesBinaryBuilder
         return -1;
     }
 
-    private static bool TryGetJumpTarget(InstructionPlan instruction, out GesLabelRef target)
+    private static GesLabelRef? ReadJumpTarget(InstructionPlan instruction)
     {
         if ((instruction.OpCode is GameEventScriptBytecodeOpCode.Jump or
                 GameEventScriptBytecodeOpCode.JumpIfTrue or
@@ -472,12 +476,10 @@ internal sealed partial class GesBinaryBuilder
                 GameEventScriptBytecodeOpCode.JumpIfNothing) &&
             instruction.Y.Kind == GesOperandKind.Label)
         {
-            target = instruction.Y.LabelRef;
-            return true;
+            return instruction.Y.LabelRef;
         }
 
-        target = default;
-        return false;
+        return null;
     }
 
     private sealed class LocalConstantFoldingPass : IGesBinaryOptimizationPass
@@ -509,8 +511,9 @@ internal sealed partial class GesBinaryBuilder
                     continue;
                 }
 
-                if (TryFoldUnary(context, index, instruction, readCounts, writeCounts, writeIndexes, out var replacement) ||
-                    TryFoldBinary(context, index, instruction, readCounts, writeCounts, writeIndexes, out replacement))
+                var replacement = FoldUnary(context, index, instruction, readCounts, writeCounts, writeIndexes) ??
+                                  FoldBinary(context, index, instruction, readCounts, writeCounts, writeIndexes);
+                if (replacement is not null)
                 {
                     context.ReplaceInstruction(index, replacement);
                     changed = true;
@@ -520,98 +523,83 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static bool TryFoldUnary(
+        private static InstructionPlan? FoldUnary(
             RewriteContext context,
             int index,
             InstructionPlan instruction,
             int[] readCounts,
             int[] writeCounts,
-            int[] writeIndexes,
-            out InstructionPlan replacement)
+            int[] writeIndexes)
         {
-            replacement = instruction;
-            if (instruction.X.Kind != GesOperandKind.Register ||
-                !TryGetLocalConstant(context, index, instruction.X.RegisterRef, readCounts, writeCounts, writeIndexes, out var value))
+            if (instruction.X.Kind != GesOperandKind.Register)
             {
-                return false;
+                return null;
             }
+
+            var value = ReadLocalConstant(context, index, instruction.X.RegisterRef, readCounts, writeCounts, writeIndexes);
+            if (value.Kind == ConstantKind.None) return null;
 
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.Not when value.Kind == ConstantKind.Boolean:
-                    replacement = CreateLoadBoolean(instruction, !value.Boolean);
-                    return true;
+                    return CreateLoadBoolean(instruction, !value.Boolean);
                 case GameEventScriptBytecodeOpCode.HasValue:
-                    replacement = CreateLoadBoolean(instruction, value.Kind != ConstantKind.Nothing);
-                    return true;
+                    return CreateLoadBoolean(instruction, value.Kind != ConstantKind.Nothing);
                 case GameEventScriptBytecodeOpCode.Negate when value.Kind == ConstantKind.Integer && value.Integer != long.MinValue:
-                    replacement = CreateLoadInteger(instruction, -value.Integer);
-                    return true;
+                    return CreateLoadInteger(instruction, -value.Integer);
                 case GameEventScriptBytecodeOpCode.Abs when value.Kind == ConstantKind.Integer && value.Integer != long.MinValue:
-                    replacement = CreateLoadInteger(instruction, value.Integer < 0 ? -value.Integer : value.Integer);
-                    return true;
+                    return CreateLoadInteger(instruction, value.Integer < 0 ? -value.Integer : value.Integer);
                 default:
-                    return false;
+                    return null;
             }
         }
 
-        private static bool TryFoldBinary(
+        private static InstructionPlan? FoldBinary(
             RewriteContext context,
             int index,
             InstructionPlan instruction,
             int[] readCounts,
             int[] writeCounts,
-            int[] writeIndexes,
-            out InstructionPlan replacement)
+            int[] writeIndexes)
         {
-            replacement = instruction;
             if (instruction.X.Kind != GesOperandKind.Register ||
-                instruction.Y.Kind != GesOperandKind.Register ||
-                !TryGetLocalConstant(context, index, instruction.X.RegisterRef, readCounts, writeCounts, writeIndexes, out var left) ||
-                !TryGetLocalConstant(context, index, instruction.Y.RegisterRef, readCounts, writeCounts, writeIndexes, out var right))
+                instruction.Y.Kind != GesOperandKind.Register)
             {
-                return false;
+                return null;
             }
+
+            var left = ReadLocalConstant(context, index, instruction.X.RegisterRef, readCounts, writeCounts, writeIndexes);
+            var right = ReadLocalConstant(context, index, instruction.Y.RegisterRef, readCounts, writeCounts, writeIndexes);
+            if (left.Kind == ConstantKind.None || right.Kind == ConstantKind.None) return null;
 
             if (left.Kind == ConstantKind.Integer && right.Kind == ConstantKind.Integer)
             {
                 switch (instruction.OpCode)
                 {
                     case GameEventScriptBytecodeOpCode.Equal:
-                        replacement = CreateLoadBoolean(instruction, left.Integer == right.Integer);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Integer == right.Integer);
                     case GameEventScriptBytecodeOpCode.NotEqual:
-                        replacement = CreateLoadBoolean(instruction, left.Integer != right.Integer);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Integer != right.Integer);
                     case GameEventScriptBytecodeOpCode.Less:
-                        replacement = CreateLoadBoolean(instruction, left.Integer < right.Integer);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Integer < right.Integer);
                     case GameEventScriptBytecodeOpCode.Greater:
-                        replacement = CreateLoadBoolean(instruction, left.Integer > right.Integer);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Integer > right.Integer);
                     case GameEventScriptBytecodeOpCode.LessOrEqual:
-                        replacement = CreateLoadBoolean(instruction, left.Integer <= right.Integer);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Integer <= right.Integer);
                     case GameEventScriptBytecodeOpCode.GreaterOrEqual:
-                        replacement = CreateLoadBoolean(instruction, left.Integer >= right.Integer);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Integer >= right.Integer);
                     case GameEventScriptBytecodeOpCode.Add when CanAdd(left.Integer, right.Integer):
-                        replacement = CreateLoadInteger(instruction, left.Integer + right.Integer);
-                        return true;
+                        return CreateLoadInteger(instruction, left.Integer + right.Integer);
                     case GameEventScriptBytecodeOpCode.Subtract when CanSubtract(left.Integer, right.Integer):
-                        replacement = CreateLoadInteger(instruction, left.Integer - right.Integer);
-                        return true;
+                        return CreateLoadInteger(instruction, left.Integer - right.Integer);
                     case GameEventScriptBytecodeOpCode.Multiply when CanMultiply(left.Integer, right.Integer):
-                        replacement = CreateLoadInteger(instruction, left.Integer * right.Integer);
-                        return true;
+                        return CreateLoadInteger(instruction, left.Integer * right.Integer);
                     case GameEventScriptBytecodeOpCode.IntegerDivide when right.Integer != 0 && !(left.Integer == long.MinValue && right.Integer == -1):
-                        replacement = CreateLoadInteger(instruction, left.Integer / right.Integer);
-                        return true;
+                        return CreateLoadInteger(instruction, left.Integer / right.Integer);
                     case GameEventScriptBytecodeOpCode.Modulo when right.Integer != 0 && !(left.Integer == long.MinValue && right.Integer == -1):
                         var modulo = left.Integer % right.Integer;
                         if (modulo != 0 && (modulo < 0 && right.Integer > 0 || modulo > 0 && right.Integer < 0)) modulo += right.Integer;
-                        replacement = CreateLoadInteger(instruction, modulo);
-                        return true;
+                        return CreateLoadInteger(instruction, modulo);
                 }
             }
 
@@ -620,23 +608,17 @@ internal sealed partial class GesBinaryBuilder
                 switch (instruction.OpCode)
                 {
                     case GameEventScriptBytecodeOpCode.Equal:
-                        replacement = CreateLoadBoolean(instruction, left.Boolean == right.Boolean);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Boolean == right.Boolean);
                     case GameEventScriptBytecodeOpCode.NotEqual:
-                        replacement = CreateLoadBoolean(instruction, left.Boolean != right.Boolean);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Boolean != right.Boolean);
                     case GameEventScriptBytecodeOpCode.And:
-                        replacement = CreateLoadBoolean(instruction, left.Boolean && right.Boolean);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Boolean && right.Boolean);
                     case GameEventScriptBytecodeOpCode.Or:
-                        replacement = CreateLoadBoolean(instruction, left.Boolean || right.Boolean);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Boolean || right.Boolean);
                     case GameEventScriptBytecodeOpCode.Xor:
-                        replacement = CreateLoadBoolean(instruction, left.Boolean ^ right.Boolean);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Boolean ^ right.Boolean);
                     case GameEventScriptBytecodeOpCode.Implies:
-                        replacement = CreateLoadBoolean(instruction, !left.Boolean || right.Boolean);
-                        return true;
+                        return CreateLoadBoolean(instruction, !left.Boolean || right.Boolean);
                 }
             }
 
@@ -645,63 +627,55 @@ internal sealed partial class GesBinaryBuilder
                 switch (instruction.OpCode)
                 {
                     case GameEventScriptBytecodeOpCode.Equal:
-                        replacement = CreateLoadBoolean(instruction, left.Kind == ConstantKind.Nothing && right.Kind == ConstantKind.Nothing);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Kind == ConstantKind.Nothing && right.Kind == ConstantKind.Nothing);
                     case GameEventScriptBytecodeOpCode.NotEqual:
-                        replacement = CreateLoadBoolean(instruction, left.Kind != ConstantKind.Nothing || right.Kind != ConstantKind.Nothing);
-                        return true;
+                        return CreateLoadBoolean(instruction, left.Kind != ConstantKind.Nothing || right.Kind != ConstantKind.Nothing);
                 }
             }
 
-            return false;
+            return null;
         }
 
-        private static bool TryGetLocalConstant(
+        private static ConstantValue ReadLocalConstant(
             RewriteContext context,
             int consumerIndex,
             GesRegisterRef register,
             int[] readCounts,
             int[] writeCounts,
-            int[] writeIndexes,
-            out ConstantValue value)
+            int[] writeIndexes)
         {
-            value = default;
             if (!context.IsTemporary(register) ||
                 readCounts[register.Id] != 1 ||
                 writeCounts[register.Id] != 1)
             {
-                return false;
+                return default;
             }
 
             var writerIndex = writeIndexes[register.Id];
             if (writerIndex < 0 || writerIndex >= consumerIndex || !IsSameBasicBlock(context, writerIndex, consumerIndex))
             {
-                return false;
+                return default;
             }
 
             if (context.GetInstruction(writerIndex) is not { } writer ||
                 writer.Destination.Kind != GesOperandKind.Register ||
                 writer.Destination.RegisterRef.Id != register.Id)
             {
-                return false;
+                return default;
             }
 
             switch (writer.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.LoadInteger when writer.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone && writer.I64.HasValue:
-                    value = ConstantValue.IntegerValue(writer.I64.Value);
-                    return true;
+                    return ConstantValue.IntegerValue(writer.I64.Value);
                 case GameEventScriptBytecodeOpCode.LoadTrue:
-                    value = ConstantValue.BooleanValue(true);
-                    return true;
+                    return ConstantValue.BooleanValue(true);
                 case GameEventScriptBytecodeOpCode.LoadFalse:
-                    value = ConstantValue.BooleanValue(false);
-                    return true;
+                    return ConstantValue.BooleanValue(false);
                 case GameEventScriptBytecodeOpCode.LoadNothing:
-                    value = ConstantValue.NothingValue;
-                    return true;
+                    return ConstantValue.NothingValue;
                 default:
-                    return false;
+                    return default;
             }
         }
 
@@ -1024,7 +998,7 @@ internal sealed partial class GesBinaryBuilder
             for (var index = 0; index < context.Count; index++)
             {
                 if (context.GetInstruction(index) is not { } branch ||
-                    !TryInvertBranch(branch, out var invertedOpcode) ||
+                    ReadInvertedBranchOpcode(branch) is not { } invertedOpcode ||
                     branch.Y.Kind != GesOperandKind.Label ||
                     index + 1 >= context.Count ||
                     context.GetInstruction(index + 1) is not { } jump ||
@@ -1053,22 +1027,18 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static bool TryInvertBranch(InstructionPlan instruction, out GameEventScriptBytecodeOpCode invertedOpcode)
+        private static GameEventScriptBytecodeOpCode? ReadInvertedBranchOpcode(InstructionPlan instruction)
         {
             switch (instruction.OpCode)
             {
                 case GameEventScriptBytecodeOpCode.JumpIfTrue:
-                    invertedOpcode = GameEventScriptBytecodeOpCode.JumpIfFalse;
-                    return true;
+                    return GameEventScriptBytecodeOpCode.JumpIfFalse;
                 case GameEventScriptBytecodeOpCode.JumpIfFalse:
-                    invertedOpcode = GameEventScriptBytecodeOpCode.JumpIfTrue;
-                    return true;
+                    return GameEventScriptBytecodeOpCode.JumpIfTrue;
                 case GameEventScriptBytecodeOpCode.JumpIfNotTrue:
-                    invertedOpcode = GameEventScriptBytecodeOpCode.JumpIfTrue;
-                    return true;
+                    return GameEventScriptBytecodeOpCode.JumpIfTrue;
                 default:
-                    invertedOpcode = default;
-                    return false;
+                    return null;
             }
         }
     }
@@ -1090,7 +1060,7 @@ internal sealed partial class GesBinaryBuilder
             for (var index = 0; index < context.Count; index++)
             {
                 if (context.GetInstruction(index) is not { } instruction) continue;
-                if (TryGetJumpTarget(instruction, out var target))
+                if (ReadJumpTarget(instruction) is { } target)
                 {
                     var targetInstructionIndex = labelInstructionIndexes[target.Id];
                     var nextInstructionIndex = FindNextInstructionIndex(context, index);
@@ -1132,6 +1102,182 @@ internal sealed partial class GesBinaryBuilder
 
         private static bool IsUnconditionalControlStop(GameEventScriptBytecodeOpCode opcode)
             => opcode is GameEventScriptBytecodeOpCode.Jump or GameEventScriptBytecodeOpCode.ReturnVoid or GameEventScriptBytecodeOpCode.ReturnValue;
+    }
+
+    private sealed class RegisterPressureReductionPass : IGesBinaryOptimizationPass
+    {
+        public static readonly RegisterPressureReductionPass Instance = new();
+
+        private RegisterPressureReductionPass()
+        {
+        }
+
+        public bool Rewrite(RewriteContext context)
+        {
+            var readCounts = new int[context.RegisterCount];
+            var writeCounts = new int[context.RegisterCount];
+            var writeIndexes = new int[context.RegisterCount];
+            for (var index = 0; index < writeIndexes.Length; index++)
+            {
+                writeIndexes[index] = -1;
+            }
+
+            CountRegisterUsage(context, readCounts, writeCounts, writeIndexes);
+
+            var changed = false;
+            var remove = new bool[context.Count];
+            for (var moveIndex = 0; moveIndex < context.Count; moveIndex++)
+            {
+                if (context.GetInstruction(moveIndex) is not { OpCode: GameEventScriptBytecodeOpCode.Move } move ||
+                    move.X.Kind != GesOperandKind.Register ||
+                    move.Destination.Kind != GesOperandKind.Register ||
+                    !context.IsTemporary(move.X.RegisterRef))
+                {
+                    continue;
+                }
+
+                var temp = move.X.RegisterRef;
+                if (readCounts[temp.Id] != 1 || writeCounts[temp.Id] != 1)
+                {
+                    continue;
+                }
+
+                var writerIndex = writeIndexes[temp.Id];
+                if (writerIndex < 0 ||
+                    writerIndex >= moveIndex ||
+                    context.GetInstruction(writerIndex) is not { } writer ||
+                    writer.RoutineId != move.RoutineId ||
+                    writer.Destination.Kind != GesOperandKind.Register ||
+                    writer.Destination.RegisterRef.Id != temp.Id ||
+                    writer.ReadsRegister(move.Destination.RegisterRef) ||
+                    !CanRetargetDestination(writer.OpCode) ||
+                    !CanMoveDestinationWriteEarlier(context, writerIndex, moveIndex, move.Destination.RegisterRef))
+                {
+                    continue;
+                }
+
+                context.ReplaceInstruction(writerIndex, writer.WithDestination(move.Destination));
+                remove[moveIndex] = true;
+                changed = true;
+            }
+
+            if (changed)
+            {
+                context.RemoveMarked(remove);
+            }
+
+            return changed;
+        }
+
+        private static void CountRegisterUsage(RewriteContext context, int[] readCounts, int[] writeCounts, int[] writeIndexes)
+        {
+            var items = context.Items;
+            for (var index = 0; index < items.Count; index++)
+            {
+                if (items[index].Instruction is not { } instruction) continue;
+                if (instruction.Destination.Kind == GesOperandKind.Register)
+                {
+                    var registerId = instruction.Destination.RegisterRef.Id;
+                    writeCounts[registerId]++;
+                    writeIndexes[registerId] = index;
+                }
+
+                CountOperandReads(readCounts, instruction.X);
+                CountOperandReads(readCounts, instruction.Y);
+                CountOperandReads(readCounts, instruction.A);
+                CountOperandReads(readCounts, instruction.B);
+                CountOperandReads(readCounts, instruction.C);
+                CountOperandReads(readCounts, instruction.D);
+                CountOperandReads(readCounts, instruction.SecondaryList);
+            }
+        }
+
+        private static bool CanMoveDestinationWriteEarlier(RewriteContext context, int writerIndex, int moveIndex, GesRegisterRef destination)
+        {
+            for (var index = writerIndex + 1; index < moveIndex; index++)
+            {
+                if (context.GetLabel(index).HasValue)
+                {
+                    return false;
+                }
+
+                if (context.GetInstruction(index) is not { } instruction)
+                {
+                    continue;
+                }
+
+                if (IsControlFlowBoundary(instruction.OpCode) ||
+                    instruction.ReadsRegister(destination) ||
+                    instruction.Destination.Kind == GesOperandKind.Register &&
+                    instruction.Destination.RegisterRef.Id == destination.Id)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        private static bool IsControlFlowBoundary(GameEventScriptBytecodeOpCode opcode)
+            => opcode is GameEventScriptBytecodeOpCode.Jump or
+                GameEventScriptBytecodeOpCode.JumpIfTrue or
+                GameEventScriptBytecodeOpCode.JumpIfFalse or
+                GameEventScriptBytecodeOpCode.JumpIfNotTrue or
+                GameEventScriptBytecodeOpCode.JumpIfNothing or
+                GameEventScriptBytecodeOpCode.ReturnVoid or
+                GameEventScriptBytecodeOpCode.ReturnValue or
+                GameEventScriptBytecodeOpCode.RandomPush or
+                GameEventScriptBytecodeOpCode.RandomPushConstant or
+                GameEventScriptBytecodeOpCode.RandomPop or
+                GameEventScriptBytecodeOpCode.IteratorCreateOrJump or
+                GameEventScriptBytecodeOpCode.IteratorNext;
+
+        private static bool CanRetargetDestination(GameEventScriptBytecodeOpCode opcode)
+        {
+            return opcode switch
+            {
+                GameEventScriptBytecodeOpCode.RegisterLocals or
+                    GameEventScriptBytecodeOpCode.Jump or
+                    GameEventScriptBytecodeOpCode.JumpIfTrue or
+                    GameEventScriptBytecodeOpCode.JumpIfFalse or
+                    GameEventScriptBytecodeOpCode.JumpIfNotTrue or
+                    GameEventScriptBytecodeOpCode.JumpIfNothing or
+                    GameEventScriptBytecodeOpCode.Call or
+                    GameEventScriptBytecodeOpCode.CallExternal or
+                    GameEventScriptBytecodeOpCode.ReturnVoid or
+                    GameEventScriptBytecodeOpCode.ReturnValue or
+                    GameEventScriptBytecodeOpCode.EmitMessage or
+                    GameEventScriptBytecodeOpCode.EmitMessageWithTags or
+                    GameEventScriptBytecodeOpCode.EmitMessageValue or
+                    GameEventScriptBytecodeOpCode.EmitMessageValueWithTags or
+                    GameEventScriptBytecodeOpCode.PublishMessage or
+                    GameEventScriptBytecodeOpCode.PublishMessageWithTags or
+                    GameEventScriptBytecodeOpCode.PublishMessageValue or
+                    GameEventScriptBytecodeOpCode.PublishMessageValueWithTags or
+                    GameEventScriptBytecodeOpCode.StageRegister or
+                    GameEventScriptBytecodeOpCode.StageNothing or
+                    GameEventScriptBytecodeOpCode.StageTrue or
+                    GameEventScriptBytecodeOpCode.StageFalse or
+                    GameEventScriptBytecodeOpCode.StageInteger or
+                    GameEventScriptBytecodeOpCode.StageFloat or
+                    GameEventScriptBytecodeOpCode.StageText or
+                    GameEventScriptBytecodeOpCode.StageTag or
+                    GameEventScriptBytecodeOpCode.StagePercentage or
+                    GameEventScriptBytecodeOpCode.CreateRecord or
+                    GameEventScriptBytecodeOpCode.RandomPush or
+                    GameEventScriptBytecodeOpCode.RandomPushConstant or
+                    GameEventScriptBytecodeOpCode.RandomPop or
+                    GameEventScriptBytecodeOpCode.IteratorCreateOrJump or
+                    GameEventScriptBytecodeOpCode.IteratorNext or
+                    GameEventScriptBytecodeOpCode.IteratorClose or
+                    GameEventScriptBytecodeOpCode.ListBuilderAdd or
+                    GameEventScriptBytecodeOpCode.MapBuilderAdd or
+                    GameEventScriptBytecodeOpCode.DistinctBuilderAdd or
+                    GameEventScriptBytecodeOpCode.GroupBuilderAdd or
+                    GameEventScriptBytecodeOpCode.OrderBuilderAdd => false,
+                _ => true
+            };
+        }
     }
 
     private sealed class PeepholeMoveEliminationPass : IGesBinaryOptimizationPass

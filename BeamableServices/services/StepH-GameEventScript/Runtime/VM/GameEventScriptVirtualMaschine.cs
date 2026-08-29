@@ -358,7 +358,7 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), session);
                             break;
                         case CreateRangeIteratorShort:
-                            if (!session.RuntimeBudget.TryCheckRangeLength(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
+                            if (!session.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                             {
                                 vmState.SetIterator(instruction.DestinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                                 break;
@@ -717,7 +717,7 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress);
                             if (vmState.Register(instruction.DestinationRegister).Kind is not Nothing)
                             {
-                                session.RuntimeBudget.TryConsumeLoopIteration("For loop iteration exceeds the configured limit.");
+                                session.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
                             }
                             break;
                         }

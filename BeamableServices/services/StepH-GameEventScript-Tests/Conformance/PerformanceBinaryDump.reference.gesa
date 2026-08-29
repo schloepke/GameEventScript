@@ -149,18 +149,17 @@ Start_8:			IteratorClose r5
 					ListBuilderFinish r0, r4
 					IteratorCreateOrJump r4, r0, Start_21
 					IteratorNext r5, r4, Start_16
-					Move r6, r5
+					Move r2, r5
 Start_13:			IteratorNext r5, r4, Start_19
-					Add r6, r6, r5
+					Add r2, r2, r5
 					Jump Start_13
 Start_16:			IteratorClose r4
-					LoadInteger r6, #0
+					LoadInteger r2, #0
 					Jump Start_22
 Start_19:			IteratorClose r4
 					Jump Start_22
-Start_21:			LoadNothing r6
-Start_22:			Move r2, r6
-					Count r3, r0
+Start_21:			LoadNothing r2
+Start_22:			Count r3, r0
 					EmitMessage Outbound_Done, Args_0 // "Done(total, count)"
 					ReturnVoid
 
@@ -311,7 +310,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 .segment code
 
 Start:				 // handler Start()
-					RegisterLocals #12
+					RegisterLocals #11
 					StageInteger #1
 					StageInteger #2
 					StageInteger #3
@@ -336,54 +335,51 @@ Start:				 // handler Start()
 					TakeFirst r1, r0, #10
 					IteratorCreateOrJump r5, r1, Start_34
 					IteratorNext r6, r5, Start_29
-					Move r7, r6
+					Move r2, r6
 Start_26:			IteratorNext r6, r5, Start_32
-					Add r7, r7, r6
+					Add r2, r2, r6
 					Jump Start_26
 Start_29:			IteratorClose r5
-					LoadInteger r7, #0
+					LoadInteger r2, #0
 					Jump Start_35
 Start_32:			IteratorClose r5
 					Jump Start_35
-Start_34:			LoadNothing r7
-Start_35:			Move r2, r7
-					IteratorCreateOrJump r5, r0, Start_57
+Start_34:			LoadNothing r2
+Start_35:			IteratorCreateOrJump r5, r0, Start_56
 					LoadFalse r6
-					LoadNothing r7
-Start_39:			IteratorNext r8, r5, Start_53
+					LoadNothing r3
+Start_38:			IteratorNext r7, r5, Start_52
+					LoadInteger r8, #2
+					Modulo r9, r7, r8
+					LoadInteger r8, #0
+					Equal r10, r9, r8
+					JumpIfNotTrue r10, Start_38
 					LoadInteger r9, #2
-					Modulo r10, r8, r9
-					LoadInteger r9, #0
-					Equal r11, r10, r9
-					JumpIfNotTrue r11, Start_39
-					LoadInteger r10, #2
-					Multiply r9, r8, r10
-					JumpIfTrue r6, Start_51
-					Move r7, r9
+					Multiply r8, r7, r9
+					JumpIfTrue r6, Start_50
+					Move r3, r8
 					LoadTrue r6
-					Jump Start_39
-Start_51:			Add r7, r7, r9
-					Jump Start_39
-Start_53:			IteratorClose r5
-					JumpIfTrue r6, Start_58
-					LoadInteger r7, #0
-					Jump Start_58
-Start_57:			LoadNothing r7
-Start_58:			Move r3, r7
-					IteratorCreateOrJump r5, r0, Start_70
-					LoadInteger r6, #0
-					LoadInteger r7, #1
-Start_62:			IteratorNext r8, r5, Start_68
-					LoadInteger r10, #10
-					Greater r9, r8, r10
-					JumpIfNotTrue r9, Start_62
-					Add r6, r6, r7
-					Jump Start_62
-Start_68:			IteratorClose r5
-					Jump Start_71
-Start_70:			LoadNothing r6
-Start_71:			Move r4, r6
-					EmitMessage Outbound_Done, Args_0 // "Done(directTotal, streamTotal, streamCount)"
+					Jump Start_38
+Start_50:			Add r3, r3, r8
+					Jump Start_38
+Start_52:			IteratorClose r5
+					JumpIfTrue r6, Start_57
+					LoadInteger r3, #0
+					Jump Start_57
+Start_56:			LoadNothing r3
+Start_57:			IteratorCreateOrJump r5, r0, Start_68
+					LoadInteger r4, #0
+					LoadInteger r6, #1
+Start_60:			IteratorNext r7, r5, Start_66
+					LoadInteger r9, #10
+					Greater r8, r7, r9
+					JumpIfNotTrue r8, Start_60
+					Add r4, r4, r6
+					Jump Start_60
+Start_66:			IteratorClose r5
+					Jump Start_69
+Start_68:			LoadNothing r4
+Start_69:			EmitMessage Outbound_Done, Args_0 // "Done(directTotal, streamTotal, streamCount)"
 					ReturnVoid
 
 
@@ -473,111 +469,106 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 .segment code
 
 Start:				 // handler Start(values)
-					RegisterLocals #23
+					RegisterLocals #22
 					IteratorCreateOrJump r16, r0, Start_21
 					LoadFalse r17
-					LoadNothing r18
-Start_4:			IteratorNext r19, r16, Start_17
-					StageRegister r19
-					Call r20, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r20, Start_4
-					LoadPercentage r20, #0.05
-					Add r21, r19, r20
-					Floor r19, r21
+					LoadNothing r1
+Start_4:			IteratorNext r18, r16, Start_17
+					StageRegister r18
+					Call r19, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r19, Start_4
+					LoadPercentage r19, #0.05
+					Add r20, r18, r19
+					Floor r18, r20
 					JumpIfTrue r17, Start_15
-					Move r18, r19
+					Move r1, r18
 					LoadTrue r17
 					Jump Start_4
-Start_15:			Add r18, r18, r19
+Start_15:			Add r1, r1, r18
 					Jump Start_4
 Start_17:			IteratorClose r16
 					JumpIfTrue r17, Start_22
-					LoadInteger r18, #0
+					LoadInteger r1, #0
 					Jump Start_22
-Start_21:			LoadNothing r18
-Start_22:			Move r1, r18
-					IteratorCreateOrJump r16, r0, Start_48
-					LoadInteger r17, #0
-					LoadInteger r18, #1
-					LoadFalse r21
-					LoadNothing r19
-Start_28:			IteratorNext r20, r16, Start_42
-					StageRegister r20
+Start_21:			LoadNothing r1
+Start_22:			IteratorCreateOrJump r16, r0, Start_47
+					LoadInteger r2, #0
+					LoadInteger r17, #1
+					LoadFalse r20
+					LoadNothing r18
+Start_27:			IteratorNext r19, r16, Start_41
+					StageRegister r19
+					Call r21, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
+					JumpIfNotTrue r21, Start_27
+					LoadPercentage r21, #0.05
+					Add r22, r19, r21
+					Floor r19, r22
+					Add r2, r2, r17
+					JumpIfTrue r20, Start_39
+					Move r18, r19
+					LoadTrue r20
+					Jump Start_27
+Start_39:			Add r18, r18, r19
+					Jump Start_27
+Start_41:			IteratorClose r16
+					JumpIfNotTrue r2, Start_45
+					Divide r2, r18, r2
+					Jump Start_48
+Start_45:			LoadNothing r2
+					Jump Start_48
+Start_47:			LoadNothing r2
+Start_48:			IteratorCreateOrJump r16, r0, Start_61
+					LoadInteger r3, #0
+					LoadInteger r17, #1
+Start_51:			IteratorNext r20, r16, Start_59
+					LoadInteger r18, #2
+					Modulo r22, r20, r18
+					LoadInteger r20, #1
+					Equal r18, r22, r20
+					JumpIfNotTrue r18, Start_51
+					Add r3, r3, r17
+					Jump Start_51
+Start_59:			IteratorClose r16
+					Jump Start_62
+Start_61:			LoadNothing r3
+Start_62:			IteratorCreateOrJump r16, r0, Start_74
+					LoadNothing r4
+Start_64:			IteratorNext r17, r16, Start_72
+					StageRegister r17
 					Call r22, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r22, Start_28
+					JumpIfNotTrue r22, Start_64
 					LoadPercentage r22, #0.05
-					Add r23, r20, r22
-					Floor r20, r23
-					Add r17, r17, r18
-					JumpIfTrue r21, Start_40
-					Move r19, r20
-					LoadTrue r21
-					Jump Start_28
-Start_40:			Add r19, r19, r20
-					Jump Start_28
-Start_42:			IteratorClose r16
-					JumpIfNotTrue r17, Start_46
-					Divide r17, r19, r17
-					Jump Start_49
-Start_46:			LoadNothing r17
-					Jump Start_49
-Start_48:			LoadNothing r17
-Start_49:			Move r2, r17
-					IteratorCreateOrJump r16, r0, Start_63
-					LoadInteger r17, #0
-					LoadInteger r18, #1
-Start_53:			IteratorNext r21, r16, Start_61
-					LoadInteger r19, #2
-					Modulo r23, r21, r19
-					LoadInteger r21, #1
-					Equal r19, r23, r21
-					JumpIfNotTrue r19, Start_53
-					Add r17, r17, r18
-					Jump Start_53
-Start_61:			IteratorClose r16
+					Add r4, r17, r22
+					Jump Start_72
 					Jump Start_64
-Start_63:			LoadNothing r17
-Start_64:			Move r3, r17
-					IteratorCreateOrJump r16, r0, Start_77
-					LoadNothing r17
-Start_67:			IteratorNext r18, r16, Start_75
-					StageRegister r18
-					Call r23, predicate_high flags=NormalizeResultAsPredicate // predicate high(value)
-					JumpIfNotTrue r23, Start_67
-					LoadPercentage r23, #0.05
-					Add r17, r18, r23
+Start_72:			IteratorClose r16
 					Jump Start_75
-					Jump Start_67
-Start_75:			IteratorClose r16
-					Jump Start_78
-Start_77:			LoadNothing r17
-Start_78:			Move r4, r17
-					LoadInteger r5, #105, unit:meter
+Start_74:			LoadNothing r4
+Start_75:			LoadInteger r5, #105, unit:meter
 					CastUnit r5, r5, unit:meter
 					LoadFloat r6, #0.6
-					IteratorCreateOrJump r16, r0, Start_100
-					LoadInteger r17, #0
-					LoadInteger r18, #1
-Start_85:			IteratorNext r23, r16, Start_98
-					LoadInteger r21, #2
-					Modulo r19, r23, r21
-					LoadInteger r21, #1
-					Equal r20, r19, r21
-					JumpIfNotTrue r20, Start_85
-					LoadInteger r19, #2
-					Multiply r21, r23, r19
-					LoadInteger r23, #10
-					Greater r19, r21, r23
-					JumpIfNotTrue r19, Start_85
-					Add r17, r17, r18
-					Jump Start_85
-Start_98:			IteratorClose r16
-					Jump Start_101
-Start_100:			LoadNothing r17
-Start_101:			Move r7, r17
-					LoadInteger r16, #100, unit:meter
+					IteratorCreateOrJump r16, r0, Start_96
+					LoadInteger r7, #0
+					LoadInteger r17, #1
+Start_81:			IteratorNext r22, r16, Start_94
+					LoadInteger r20, #2
+					Modulo r18, r22, r20
+					LoadInteger r20, #1
+					Equal r19, r18, r20
+					JumpIfNotTrue r19, Start_81
+					LoadInteger r18, #2
+					Multiply r20, r22, r18
+					LoadInteger r22, #10
+					Greater r18, r20, r22
+					JumpIfNotTrue r18, Start_81
+					Add r7, r7, r17
+					Jump Start_81
+Start_94:			IteratorClose r16
+					Jump Start_97
+Start_96:			LoadNothing r7
+Start_97:			LoadInteger r16, #100, unit:meter
 					Greater r17, r5, r16
-					JumpIfNotTrue r17, Start_112
+					JumpIfNotTrue r17, Start_107
 					Add r8, r5, r6
 					Divide r9, r5, r6
 					LoadHandler r10, Shape_0 // "Success", "message", "value"
@@ -585,59 +576,57 @@ Start_101:			Move r7, r17
 					BindHandler r11, r10, Args_1
 					LoadText r16, T_world // "world"
 					LoadMessage r12, Shape_0, Args_2 // "Success", "message", "value"
-Start_112:			CreateRangeIteratorShort r16, #1, #16, #1
-Start_113:			IteratorNext r13, r16, Start_140
-					IteratorCreateOrJump r17, r0, Start_137
-					LoadFalse r18
-					LoadNothing r21
-Start_117:			IteratorNext r23, r17, Start_133
-					Add r19, r23, r13
-					LoadInteger r20, #7
-					Modulo r22, r19, r20
-					LoadInteger r19, #0
-					Greater r20, r22, r19
-					JumpIfNotTrue r20, Start_117
-					Add r22, r23, r13
-					LoadInteger r23, #2
-					Multiply r19, r22, r23
-					JumpIfTrue r18, Start_131
-					Move r21, r19
-					LoadTrue r18
-					Jump Start_117
-Start_131:			Add r21, r21, r19
-					Jump Start_117
-Start_133:			IteratorClose r17
-					JumpIfTrue r18, Start_138
-					LoadInteger r21, #0
-					Jump Start_138
-Start_137:			LoadNothing r21
-Start_138:			Move r14, r21
-					Jump Start_113
-Start_140:			IteratorClose r16
-					IteratorCreateOrJump r16, r0, Start_162
-					LoadFalse r17
-					LoadNothing r18
-Start_144:			IteratorNext r21, r16, Start_158
-					LoadInteger r22, #10
-					GreaterOrEqual r23, r21, r22
-					JumpIfNotTrue r23, Start_144
-					LoadPercentage r22, #0.05
-					Add r23, r21, r22
-					LoadInteger r21, #2
-					Multiply r22, r23, r21
-					JumpIfTrue r17, Start_156
-					Move r18, r22
-					LoadTrue r17
-					Jump Start_144
-Start_156:			Add r18, r18, r22
-					Jump Start_144
-Start_158:			IteratorClose r16
-					JumpIfTrue r17, Start_163
+Start_107:			CreateRangeIteratorShort r16, #1, #16, #1
+Start_108:			IteratorNext r13, r16, Start_134
+					IteratorCreateOrJump r17, r0, Start_132
+					LoadFalse r20
+					LoadNothing r14
+Start_112:			IteratorNext r22, r17, Start_128
+					Add r18, r22, r13
+					LoadInteger r19, #7
+					Modulo r21, r18, r19
 					LoadInteger r18, #0
-					Jump Start_163
-Start_162:			LoadNothing r18
-Start_163:			Move r15, r18
-					EmitMessage Outbound_Done, Args_3 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
+					Greater r19, r21, r18
+					JumpIfNotTrue r19, Start_112
+					Add r21, r22, r13
+					LoadInteger r22, #2
+					Multiply r18, r21, r22
+					JumpIfTrue r20, Start_126
+					Move r14, r18
+					LoadTrue r20
+					Jump Start_112
+Start_126:			Add r14, r14, r18
+					Jump Start_112
+Start_128:			IteratorClose r17
+					JumpIfTrue r20, Start_108
+					LoadInteger r14, #0
+					Jump Start_108
+Start_132:			LoadNothing r14
+					Jump Start_108
+Start_134:			IteratorClose r16
+					IteratorCreateOrJump r16, r0, Start_156
+					LoadFalse r17
+					LoadNothing r15
+Start_138:			IteratorNext r20, r16, Start_152
+					LoadInteger r21, #10
+					GreaterOrEqual r22, r20, r21
+					JumpIfNotTrue r22, Start_138
+					LoadPercentage r21, #0.05
+					Add r22, r20, r21
+					LoadInteger r20, #2
+					Multiply r21, r22, r20
+					JumpIfTrue r17, Start_150
+					Move r15, r21
+					LoadTrue r17
+					Jump Start_138
+Start_150:			Add r15, r15, r21
+					Jump Start_138
+Start_152:			IteratorClose r16
+					JumpIfTrue r17, Start_157
+					LoadInteger r15, #0
+					Jump Start_157
+Start_156:			LoadNothing r15
+Start_157:			EmitMessage Outbound_Done, Args_3 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
 					ReturnVoid
 
 predicate_high:		 // predicate high(value)

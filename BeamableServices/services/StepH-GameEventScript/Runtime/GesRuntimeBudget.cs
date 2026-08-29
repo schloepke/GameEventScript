@@ -20,7 +20,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
     public bool IsStepping => false;
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryConsumeExecutionStep(string detail)
+    public bool ConsumeExecutionStepIfAvailable(string detail)
     {
         if (_exhausted)
         {
@@ -44,7 +44,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryConsumeExecutionSteps(int count, string detail)
+    public bool ConsumeExecutionStepsIfAvailable(int count, string detail)
     {
         if (_exhausted)
         {
@@ -72,7 +72,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
         return true;
     }
 
-    public bool TryConsumeLoopIteration(string detail)
+    public bool ConsumeLoopIterationIfAvailable(string detail)
     {
         if (_exhausted)
         {
@@ -90,7 +90,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
         return true;
     }
 
-    public bool TryEnterCall(string detail)
+    public bool EnterCallIfAvailable(string detail)
     {
         if (_exhausted)
         {
@@ -116,7 +116,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
         }
     }
 
-    public bool TryCheckRangeLength(long length, string detail)
+    public bool CheckRangeLengthWithinLimit(long length, string detail)
     {
         var limit = Limits.MaxRangeItems;
         if (limit <= 0 || length <= limit)
@@ -128,7 +128,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
         return false;
     }
 
-    public bool TryCheckGeneratedCollectionItemCount(int count, string detail)
+    public bool CheckGeneratedCollectionItemCountWithinLimit(int count, string detail)
     {
         var limit = Limits.MaxGeneratedCollectionItems;
         if (limit <= 0 || count <= limit)
@@ -140,7 +140,7 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
         return false;
     }
 
-    public bool TryCheckDice(int diceCount, int sideCount)
+    public bool CheckDiceWithinLimit(int diceCount, int sideCount)
     {
         if (Limits.MaxDiceCount > 0 && diceCount > Limits.MaxDiceCount)
         {

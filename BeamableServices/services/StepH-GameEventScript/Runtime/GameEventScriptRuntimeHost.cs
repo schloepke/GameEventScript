@@ -123,7 +123,7 @@ internal sealed class GameEventScriptRuntimeHost
         var shouldScheduleAutomaticDispatch = false;
         ResetManualStateIfCompletedAndIdle();
         EnqueueLiveStateInitializationIfNeeded();
-        if (!TryEnqueueInvocations(_liveState, message))
+        if (!EnqueueInvocations(_liveState, message))
         {
             return false;
         }
@@ -187,9 +187,9 @@ internal sealed class GameEventScriptRuntimeHost
 
     public GameEventScriptRun BeginRun(GameEventScriptMessage message)
     {
-        var state = new GameEventScriptHostRunState(this, _dispatcher, _runtimeGate, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        var state = new GameEventScriptHostRunState(this, _dispatcher, _runtimeGate, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: EnqueueInvocations, publishHook: _publishHook);
         EnqueueInitializationInvocations(state);
-        var accepted = TryEnqueueInvocations(state, message);
+        var accepted = EnqueueInvocations(state, message);
         return new GameEventScriptRun(DrainSlice, state, accepted, _runtimeGate);
     }
 
@@ -198,10 +198,10 @@ internal sealed class GameEventScriptRuntimeHost
     #region Internals
 
     private GameEventScriptHostRunState CreateLiveState()
-        => new(this, _dispatcher, _runtimeGate, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: TryEnqueueInvocations, publishHook: _publishHook);
+        => new(this, _dispatcher, _runtimeGate, _random, _runtimeObserver, _extensionRegistry, _runtimeLimits, queuePublisher: EnqueueInvocations, publishHook: _publishHook);
 
-    internal bool TryEnqueueSessionInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
-        => TryEnqueueInvocations(state, message);
+    internal bool EnqueueSessionInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
+        => EnqueueInvocations(state, message);
 
     internal void DrainSessionToCompletion(GameEventScriptHostRunState state)
         => DrainToCompletion(state);
@@ -468,7 +468,7 @@ internal sealed class GameEventScriptRuntimeHost
     private MessageSubscription[]? GetNameSubscriptions(string messageName)
         => _messageNameDispatchIndex.TryGetValue(messageName, out var subscriptions) ? subscriptions : null;
 
-    private bool TryEnqueueInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
+    private bool EnqueueInvocations(GameEventScriptHostRunState state, GameEventScriptMessage message)
     {
         if (string.IsNullOrWhiteSpace(message.Name))
         {
@@ -486,7 +486,7 @@ internal sealed class GameEventScriptRuntimeHost
         var hasNameSubscriptions = nameSubscriptions.Length > 0;
         if (!hasExactSubscriptions && !hasNameSubscriptions)
         {
-            return TryEnqueueUndeliverableInvocation(state, message);
+            return EnqueueUndeliverableInvocation(state, message);
         }
 
         var enqueueResult = EnqueueMatchingDispatchSubscriptions(
@@ -499,10 +499,10 @@ internal sealed class GameEventScriptRuntimeHost
 
         return (enqueueResult & DispatchEnqueueMatched) != 0
             ? (enqueueResult & DispatchEnqueueAccepted) != 0
-            : TryEnqueueUndeliverableInvocation(state, message);
+            : EnqueueUndeliverableInvocation(state, message);
     }
 
-    private bool TryEnqueueUndeliverableInvocation(GameEventScriptHostRunState state, GameEventScriptMessage message)
+    private bool EnqueueUndeliverableInvocation(GameEventScriptHostRunState state, GameEventScriptMessage message)
     {
         if (GameEventScriptSystemEndpoints.IsUndeliverableName(message.Name))
         {

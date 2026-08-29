@@ -349,7 +349,7 @@ internal static class GesCompiler
                     case LetStatementNode let:
                     {
                         var destination = context.Declare(let.Identifier);
-                        if (!TryEmitExpressionToRegister(let.Expression, destination, context, new ExpressionState(context.RegisterCount)))
+                        if (!EmitExpressionToRegister(let.Expression, destination, context, new ExpressionState(context.RegisterCount)))
                         {
                             var value = EmitExpression(let.Expression, context, new ExpressionState(context.RegisterCount));
                             if (value.Id != destination.Id) _builder.Move(destination, value);
@@ -467,7 +467,7 @@ internal static class GesCompiler
             }
         }
 
-        private bool TryEmitExpressionToRegister(ExpressionNode expression, GesRegisterRef destination, LoweringContext context, ExpressionState state)
+        private bool EmitExpressionToRegister(ExpressionNode expression, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             using var sourceRange = _builder.SourceRange(expression.SourceRange);
             switch (expression)
@@ -533,66 +533,45 @@ internal static class GesCompiler
                 case CallExpressionNode call:
                     EmitHandlerBindCallInto(call, destination, context, state);
                     return true;
-                default:
-                    return false;
-            }
-        }
-
-        private GesRegisterRef EmitExpression(ExpressionNode expression, LoweringContext context, ExpressionState state)
-        {
-            using var sourceRange = _builder.SourceRange(expression.SourceRange);
-            var destination = state.AllocateTemporary(_builder, context);
-            if (TryEmitExpressionToRegister(expression, destination, context, state)) return destination;
-
-            switch (expression)
-            {
                 case MessageLiteralExpressionNode message:
                 {
                     var argumentNames = ReadArgumentNames(message.Arguments);
                     var arguments = EmitArgumentExpressionRegisters(message.Arguments, context, state);
                     _builder.LoadMessage(destination, MessageShape(message.Message, argumentNames), arguments);
-                    return destination;
+                    return true;
                 }
-
                 case HandlerLiteralExpressionNode handler:
                     _builder.LoadHandler(destination, MessageShape(handler.Message, handler.SignatureLabels));
-                    return destination;
-
+                    return true;
                 case ListLiteralExpressionNode list:
                     EmitStageArguments(list.Items, context, state);
                     _builder.CreateList(destination);
-                    return destination;
-
+                    return true;
                 case MapLiteralExpressionNode map:
                     EmitStageMapValues(map.Entries, context, state);
                     _builder.CreateMap(destination, ReadMapKeys(map.Entries));
-                    return destination;
-
+                    return true;
                 case RangeExpressionNode range:
                 {
                     var from = EmitExpressionForRead(range.FromExpression, context, state);
                     var to = EmitExpressionForRead(range.ToExpression, context, state);
                     if (range.StepExpression is null) _builder.CreateRange(destination, from, to);
                     else _builder.CreateRangeWithStep(destination, from, to, EmitExpressionForRead(range.StepExpression, context, state));
-                    return destination;
+                    return true;
                 }
-
                 case DiceExpressionNode dice:
                     _builder.CreateDice(destination, ToShort(dice.DiceCount, "dice count"), ToShort(dice.SideCount, "dice side count"));
-                    return destination;
-
+                    return true;
                 case SeriesExpressionNode series:
                     _builder.CreateSeries(destination, series.SeriesKind);
-                    return destination;
-
+                    return true;
                 case ClampExpressionNode clamp:
                     _builder.Clamp(
                         destination,
                         EmitExpressionForRead(clamp.Value, context, state),
                         EmitExpressionForRead(clamp.Minimum, context, state),
                         EmitExpressionForRead(clamp.Maximum, context, state));
-                    return destination;
-
+                    return true;
                 case RandomExpressionNode random:
                 {
                     var from = EmitExpressionForRead(random.FromExpression, context, state);
@@ -607,61 +586,61 @@ internal static class GesCompiler
                         _builder.RandomTake(destination, from, to);
                     }
 
-                    return destination;
+                    return true;
                 }
-
                 case SeededRandomExpressionNode seededRandom:
                     EmitRandomPush(seededRandom.SeedExpression, context, state);
-                    var result = EmitExpressionForRead(seededRandom.BodyExpression, context, state);
-                    _builder.Move(destination, result);
+                    if (!EmitExpressionToRegister(seededRandom.BodyExpression, destination, context, state))
+                    {
+                        var result = EmitExpressionForRead(seededRandom.BodyExpression, context, state);
+                        if (result.Id != destination.Id) _builder.Move(destination, result);
+                    }
                     _builder.RandomPop();
-                    return destination;
-
+                    return true;
                 case GeneratedCollectionExpressionNode generatedCollection:
                     EmitGeneratedCollectionInto(generatedCollection, destination, context, state);
-                    return destination;
-
+                    return true;
                 case GuardedChoiceExpressionNode guardedChoice:
                     EmitGuardedChoiceInto(guardedChoice, destination, context, state);
-                    return destination;
-
+                    return true;
                 case BinaryExpressionNode binary:
-                    return EmitShortCircuitBinary(binary, destination, context, state);
-
+                    EmitShortCircuitBinary(binary, destination, context, state);
+                    return true;
                 case VariadicTaggedExpressionNode variadic:
-                    return EmitVariadic(variadic, destination, context, state);
-
+                    EmitVariadic(variadic, destination, context, state);
+                    return true;
                 case IntrinsicCallExpressionNode intrinsic:
                     EmitIntrinsicCallInto(intrinsic, destination, context, state);
-                    return destination;
-
+                    return true;
                 case ExtensionCallExpressionNode extensionCall:
                     EmitExtensionCallInto(extensionCall, destination, context, state, isPredicate: false);
-                    return destination;
-
+                    return true;
                 case ExtensionPredicateExpressionNode extensionPredicate:
                     EmitExtensionPredicateInto(extensionPredicate, destination, context, state);
-                    return destination;
-
+                    return true;
                 case TypeCheckExpressionNode check:
                     EmitCheckInto(destination, EmitExpressionForRead(check.Value, context, state), check.TypeName);
-                    return destination;
-
+                    return true;
                 case TypeConstructorExpressionNode constructor:
                     EmitTypeConstructorInto(constructor, destination, context, state);
-                    return destination;
-
+                    return true;
                 case MemberAccessExpressionNode member:
                     _builder.MemberAccess(destination, member.Member, EmitExpressionForRead(member.Target, context, state));
-                    return destination;
-
+                    return true;
                 case CollectionAccessExpressionNode access:
                     EmitCollectionAccessInto(access, destination, context, state);
-                    return destination;
-
+                    return true;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support expression node '{expression.GetType().Name}'.");
+                    return false;
             }
+        }
+
+        private GesRegisterRef EmitExpression(ExpressionNode expression, LoweringContext context, ExpressionState state)
+        {
+            using var sourceRange = _builder.SourceRange(expression.SourceRange);
+            var destination = state.AllocateTemporary(_builder, context);
+            if (EmitExpressionToRegister(expression, destination, context, state)) return destination;
+            throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support expression node '{expression.GetType().Name}'.");
         }
 
         private GesRegisterRef EmitExpressionForRead(ExpressionNode expression, LoweringContext context, ExpressionState state)
@@ -817,7 +796,7 @@ internal static class GesCompiler
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            if (TryEmitCollectionPipelineInto(access, destination, context, state))
+            if (EmitCollectionPipelineInto(access, destination, context, state))
             {
                 return;
             }
@@ -939,7 +918,7 @@ internal static class GesCompiler
             }
         }
 
-        private bool TryEmitCollectionPipelineInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
+        private bool EmitCollectionPipelineInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             var selectors = new List<CollectionSelectorNode>();
             ExpressionNode source = access;
@@ -2114,7 +2093,7 @@ internal static class GesCompiler
 
         private void EmitTypeConstructorInto(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            if (constructor.TypeName is "vector" or "point" && TryEmitSpatialConstructor(constructor, destination, context, state)) return;
+            if (constructor.TypeName is "vector" or "point" && EmitSpatialConstructor(constructor, destination, context, state)) return;
 
             if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null && IsBuiltInCastType(constructor.TypeName))
             {
@@ -2171,7 +2150,7 @@ internal static class GesCompiler
             throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support type constructor ':{constructor.TypeName}'.");
         }
 
-        private bool TryEmitSpatialConstructor(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
+        private bool EmitSpatialConstructor(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
             if (GetSpatialConstructorStageShape(constructor.Arguments) is not { } shape) return false;
             EmitStageArgumentNodes(shape.Arguments, context, state);

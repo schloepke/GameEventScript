@@ -13,7 +13,6 @@ namespace StepH.GameEventScript.Runtime.VM;
 internal class GesVmState
 {
     private const int InitialRegisterCapacity = 32;
-    private const int RegisterCapacityGrowth = 32;
 
     internal enum StateValue
     {
@@ -32,26 +31,10 @@ internal class GesVmState
         internal bool NormalizeResultAsPredicate;
     }
 
-    internal readonly struct OutboundMessageSignature
-    {
-        internal OutboundMessageSignature(string name, string[] argumentNames, string signatureId)
-        {
-            Name = name;
-            ArgumentNames = argumentNames;
-            SignatureId = signatureId;
-            IsValid = true;
-        }
-
-        internal bool IsValid { get; }
-        internal string Name { get; }
-        internal string[] ArgumentNames { get; }
-        internal string SignatureId { get; }
-    }
-
     internal GesValue[] EmptyList { get; init; }
-
-    internal GameEventScriptBinary Binary { get; init; }
-    internal string[] StringPool { get; init; }
+    internal GesLinkedProgram? ActiveProgram { get; private set; }
+    internal GameEventScriptProgram Binary => ActiveProgram!.Program;
+    internal string[] StringPool => ActiveProgram!.StringPool;
 
     internal StateValue State { get; set; }
 
@@ -70,27 +53,24 @@ internal class GesVmState
     internal ushort StageLength { get; private set; }
 
     internal string? ErrorMessage { get; private set; }
-    internal OutboundMessageSignature[] OutboundMessageSignatures { get; init; }
-    internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; init; }
-    internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds { get; init; }
-    internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; init; }
-    internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls { get; private set; }
-    internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; private set; }
+    internal GesLinkedProgram.OutboundMessageSignature[] OutboundMessageSignatures => ActiveProgram!.OutboundMessageSignatures;
+    internal GameEventScriptBinaryBindEntry[] RecordConstructors => ActiveProgram!.RecordConstructors;
+    internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds => ActiveProgram!.ExtensionCallBinds;
+    internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds => ActiveProgram!.ExternalTypeBinds;
+    internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls => ActiveProgram!.BoundExtensionCalls;
+    internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors => ActiveProgram!.BoundExternalTypeConstructors;
     internal GesExtensionCall ExtensionCall { get; }
     private GesExternalTypeConstructorCall? _externalTypeConstructorCall;
     internal GesExternalTypeConstructorCall ExternalTypeConstructorCall => _externalTypeConstructorCall ??= new GesExternalTypeConstructorCall();
 
-    internal readonly ushort CodeSegmentSize;
+    internal ushort CodeSegmentSize => ActiveProgram!.CodeSegmentSize;
     internal readonly int MaxRegisterCount;
     
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
-    internal GesVmState(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
+    internal GesVmState(ushort registerSize, ushort stackSize)
     {
         MaxRegisterCount = Math.Max(InitialRegisterCapacity, (int)registerSize);
         EmptyList = [];
-        Binary = binary;
-        StringPool = BuildStringPool(binary.TextConstantTable);
-        CodeSegmentSize = checked((ushort)binary.InstructionTable.Length);
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
@@ -98,85 +78,31 @@ internal class GesVmState
         RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = GameEventScriptRandomGenerator.FromSeed(0L);
-        OutboundMessageSignatures = BuildOutboundMessageSignatures(binary);
-        RecordConstructors = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.Record);
-        ExtensionCallBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExtensionCall);
-        ExternalTypeBinds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.ExternalType);
-        BoundExtensionCalls = [];
-        BoundExternalTypeConstructors = [];
         ExtensionCall = new GesExtensionCall();
     }
 
-    internal void BindDynamicReferences(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal bool PrepareCapacity(GesLinkedProgram program)
+        => PrepareCapacity(program.RequiredRegisterCapacity);
+
+    internal bool PrepareCapacity(int required)
     {
-        _ = extensionRegistry ?? throw new ArgumentNullException(nameof(extensionRegistry));
-        _ = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
+        if (State != StateValue.Ready) return false;
 
-        var boundExtensionCalls = new IGameEventScriptExtensionFunction?[ExtensionCallBinds.Length];
-        for (ushort bindId = 0; bindId < ExtensionCallBinds.Length; bindId++)
-        {
-            var bind = ExtensionCallBinds[bindId];
-            if (bind.Kind != GameEventScriptBinaryBindKind.ExtensionCall || bind.Id != bindId) continue;
-            var fullName = FetchStringByPointer(bind.Name);
-            var separator = fullName.IndexOf('.');
-            if (separator <= 0 || separator >= fullName.Length - 1)
-            {
-                throw new GameEventScriptDynamicLinkException($"External extension reference '{fullName}' has an invalid name.");
-            }
-
-            var labels = bind.ArgumentNames.Count == 0 ? [] : new string[bind.ArgumentNames.Count];
-            for (var labelIndex = 0; labelIndex < labels.Length; labelIndex++)
-            {
-                labels[labelIndex] = FetchStringByPointer(bind.ArgumentNames[labelIndex]);
-            }
-
-            var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], labels);
-            var function = extensionRegistry.Resolve(reference);
-            if (function is null)
-            {
-                throw new GameEventScriptDynamicLinkException(
-                    $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
-            }
-
-            boundExtensionCalls[bindId] = function;
-        }
-
-        var boundExternalTypeConstructors = new IGameEventScriptExternalTypeConstructor?[ExternalTypeBinds.Length];
-        for (ushort bindId = 0; bindId < ExternalTypeBinds.Length; bindId++)
-        {
-            var bind = ExternalTypeBinds[bindId];
-            if (bind.Kind != GameEventScriptBinaryBindKind.ExternalType || bind.Id != bindId) continue;
-            var typeName = FetchStringByPointer(bind.Name);
-            var labels = bind.ArgumentNames.Count == 0 ? [] : new string[bind.ArgumentNames.Count];
-            for (var labelIndex = 0; labelIndex < labels.Length; labelIndex++)
-            {
-                labels[labelIndex] = FetchStringByPointer(bind.ArgumentNames[labelIndex]);
-            }
-
-            var reference = new GameEventScriptExternalTypeConstructorReference(typeName, labels);
-            var constructor = typeRegistry.Resolve(reference);
-            if (constructor is null)
-            {
-                throw new GameEventScriptDynamicLinkException(
-                    $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
-            }
-
-            boundExternalTypeConstructors[bindId] = constructor;
-        }
-
-        BoundExtensionCalls = boundExtensionCalls;
-        BoundExternalTypeConstructors = boundExternalTypeConstructors;
+        if (!EnsureRegisterCapacity(required))
+            throw new GameEventScriptVmException(ErrorMessage ?? "VM register capacity could not be prepared.");
+        return true;
     }
 
 
-    internal bool PrepareStateForMessage(GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptSession session)
+    internal bool PrepareStateForMessage(GesLinkedProgram program, GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptContext context)
     {
         if (State != Ready) return RaiseError("State not ready to receive new messages.");
+        ActiveProgram = program ?? throw new ArgumentNullException(nameof(program));
         if (entryAddress >= CodeSegmentSize) return RaiseError($"Illegal entry address {entryAddress} for message.");
         InstructionPointer = entryAddress;
         RegisterFrameStart = 0;
         StageLength = 0;
-        RandomGenerator = session.Random;
+        RandomGenerator = context.Random;
         RandomGeneratorsPointer = 0;
         if (callAsArguments)
         {
@@ -263,7 +189,13 @@ internal class GesVmState
         StageLength = 0;
         RandomGeneratorsPointer = 0;
         for (var i = 0; i < RegisterValues.Length; i++) RegisterValues[i].SetNothing();
+        Array.Clear(RandomGenerators, 0, RandomGenerators.Length);
+        RandomGenerator = null!;
+        ExtensionCall.EndCall();
+        _externalTypeConstructorCall?.EndCall();
         ProcessingMessage = null;
+        ActiveProgram = null;
+        ErrorMessage = null;
         State = Ready;
     }
     internal void JumpAddress(ushort address)
@@ -434,7 +366,7 @@ internal class GesVmState
         var newLength = RegisterValues.Length;
         do
         {
-            newLength = Math.Min(newLength + RegisterCapacityGrowth, MaxRegisterCount);
+            newLength = Math.Min(checked(newLength * 2), MaxRegisterCount);
         } while (newLength < requiredRegisters);
 
         var oldLength = RegisterValues.Length;
@@ -453,66 +385,4 @@ internal class GesVmState
         }
     }
  
-    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptBinary binary, GameEventScriptBinaryBindKind kind)
-    {
-        var maxId = -1;
-        foreach (var entry in binary.BindTable.Entries)
-        {
-            if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId) maxId = entry.Id;
-        }
-
-        if (maxId < 0) return [];
-        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
-        foreach (var entry in binary.BindTable.Entries)
-        {
-            if (entry.Kind == kind && entry.Id != ushort.MaxValue) result[entry.Id] = entry;
-        }
-
-        return result;
-    }
-
-    private OutboundMessageSignature[] BuildOutboundMessageSignatures(GameEventScriptBinary binary)
-    {
-        var binds = BuildIdIndexedBindTable(binary, GameEventScriptBinaryBindKind.OutboundMessage);
-        if (binds.Length == 0)
-        {
-            return [];
-        }
-
-        var signatures = new OutboundMessageSignature[binds.Length];
-        for (var bindIndex = 0; bindIndex < binds.Length; bindIndex++)
-        {
-            var bind = binds[bindIndex];
-            if (bind.Kind != GameEventScriptBinaryBindKind.OutboundMessage || bind.Id != bindIndex)
-            {
-                continue;
-            }
-
-            var name = FetchStringByPointer(bind.Name);
-            var argumentNames = new string[bind.ArgumentNames.Count];
-            for (var argumentIndex = 0; argumentIndex < argumentNames.Length; argumentIndex++)
-            {
-                argumentNames[argumentIndex] = FetchStringByPointer(bind.ArgumentNames[argumentIndex]);
-            }
-
-            signatures[bindIndex] = new OutboundMessageSignature(
-                name,
-                argumentNames,
-                GameEventScriptMessageSignature.CreateSignatureId(name, argumentNames));
-        }
-
-        return signatures;
-    }
-
-    private static string[] BuildStringPool(GameEventScriptTextTable textTable)
-    {
-        var strings = new string[textTable.Slices.Length];
-        for (var i = 0; i < strings.Length; i++)
-        {
-            strings[i] = textTable.Resolve((ushort)i);
-        }
-
-        return strings;
-    }
-    
 }

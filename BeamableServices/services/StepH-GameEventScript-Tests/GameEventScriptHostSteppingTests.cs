@@ -1,7 +1,6 @@
-using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.CSharpBridge;
-using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 
@@ -11,593 +10,486 @@ namespace StepH_GameEventScript_Tests;
 public sealed class GameEventScriptHostSteppingTests
 {
     [TestMethod]
-    public void SessionPublishesAndStepsThroughItsOwnQueue()
+    public void NativeOnlyHostReceivesAndEmitsLocally()
     {
         var calls = new List<string>();
         var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Subscribe("Start", [], (_, context) =>
-        {
-            calls.Add("start");
-            context.Emit("Next");
-        });
+        host.Subscribe("Start", [], (_, context) => { calls.Add("start"); context.Emit("Next"); });
         host.Subscribe("Next", [], (_, _) => calls.Add("next"));
 
-        var session = host.StartSession();
+        Assert.IsTrue(host.Receive(Create("Start")));
+        var result = host.RunToCompletion();
 
-        Assert.IsTrue(session.Dispatch(Create("Start")));
-        var step = session.Update(100);
-
-        Assert.AreEqual(GameEventScriptRunState.Completed, step.State);
+        Assert.AreEqual(GameEventScriptExecutionState.Completed, result.State);
         CollectionAssert.AreEqual(new[] { "start", "next" }, calls);
     }
 
     [TestMethod]
-    public void SessionKeepsOneContextAcrossMultipleDispatches()
+    public void HostReusesOneContext()
     {
-        var contexts = new List<GameEventScriptSession>();
+        var contexts = new List<GameEventScriptContext>();
         var host = GameEventScriptHost.CreateBuilder().Build();
         host.Subscribe("Start", [], (_, context) => contexts.Add(context));
 
-        var session = host.StartSession();
-
-        Assert.IsTrue(session.DispatchToCompletion(Create("Start")));
-        Assert.IsTrue(session.DispatchToCompletion(Create("Start")));
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
 
         Assert.HasCount(2, contexts);
         Assert.AreSame(contexts[0], contexts[1]);
-        Assert.AreSame(contexts[0], session);
     }
 
     [TestMethod]
-    public void WildcardMessageSignatureMatchesByNameWithoutLegacyDispatchKind()
+    public void MultipleProgramsAreLoadedAdditivelyAndRunSerially()
     {
+        var first = Compile("on Start { emit First }");
+        var second = Compile("on Start { emit Second }");
         var calls = new List<string>();
         var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Subscribe(
-            new GameEventScriptMessageHandlerDescriptor(
-                GameEventScriptMessageSignature.Create("Ping", []),
-                (message, _) => calls.Add(message.SignatureId),
-                matchArguments: false));
-        host.Subscribe(
-            GameEventScriptMessageSignature.Create("Ping", ["message"]),
-            (_, _) => calls.Add("exact"));
+        host.Load(first);
+        host.Load(second);
+        host.Subscribe("First", [], (_, _) => calls.Add("first"));
+        host.Subscribe("Second", [], (_, _) => calls.Add("second"));
 
-        var session = host.StartSession();
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
 
-        Assert.IsTrue(session.DispatchToCompletion(Create("Ping", ("amount", GesValue.GesInteger(7)))));
-        CollectionAssert.AreEqual(new[] { "Ping(amount)" }, calls);
+        CollectionAssert.AreEqual(new[] { "first", "second" }, calls);
     }
 
     [TestMethod]
-    public void SessionStartQueuesInitializationHandlersBeforeExternalMessages()
+    public void SameProgramRunsIndependentlyInTwoHosts()
     {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on initialization {
-                  emit Ready
-                }
-
-                on Start {
-                  emit Started
-                }
-                """)
-            .CompileModule();
-        var calls = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .Build()
-            .Load(bytecode);
-        host.Subscribe("Ready", [], (_, _) => calls.Add("ready"));
-        host.Subscribe("Started", [], (_, _) => calls.Add("started"));
-
-        var session = host.StartSession();
-
-        Assert.IsTrue(session.DispatchToCompletion(Create("Start")));
-        CollectionAssert.AreEqual(new[] { "ready", "started" }, calls);
+        var program = Compile("on Roll { emit Result(value: random from 1 to 100) }");
+        var first = 0L;
+        var second = 0L;
+        Parallel.Invoke(
+            () => first = ExecuteOnce(program, 11),
+            () => second = ExecuteOnce(program, 11));
+        Assert.AreEqual(first, second);
     }
 
     [TestMethod]
-    public void InitializationEndpointCannotBeDispatchedAsExternalMessage()
+    public void LoadedProgramsShareOneFullyResetHostVmState()
     {
         var host = GameEventScriptHost.CreateBuilder().Build();
-        var session = host.StartSession();
+        host.Load(Compile("on First { emit Done }"));
+        var vmState = host.VmState;
+        host.Load(Compile("on Second { emit Done }"));
+        host.Subscribe("Done", [], (_, _) => { });
 
-        Assert.IsFalse(session.Dispatch(Create("initialization")));
+        Assert.AreSame(vmState, host.VmState);
+        host.Receive(Create("First"));
+        host.Receive(Create("Second"));
+        host.RunToCompletion();
+
+        Assert.IsNotNull(vmState);
+        Assert.AreEqual(GesVmState.StateValue.Ready, vmState.State);
+        Assert.IsNull(vmState.ActiveProgram);
+        Assert.IsNull(vmState.ProcessingMessage);
+        Assert.IsTrue(vmState.RegisterValues.All(value => value.IsNothing));
     }
 
     [TestMethod]
-    public void PublishCapturesSubscriptionSnapshotAtPublishTime()
+    public void ExecuteFramePausesAndResumesScriptWithoutStartingNextMessage()
     {
-        var calls = new List<string>();
+        var program = Compile("on Start { for item from 1 to 4 { emit Tick(value: item) } }");
+        var values = new List<long>();
         var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Subscribe("Start", [], (_, _) => calls.Add("first"));
+        host.Load(program);
+        host.Subscribe("Tick", ["value"], (message, _) => values.Add(message.Arguments.GetAsInteger("value")));
+        host.Receive(Create("Start"));
 
-        Assert.IsTrue(host.Publish(Create("Start")));
-        host.Subscribe("Start", [], (_, _) => calls.Add("late"));
-
-        var step = host.Update(100);
-
-        Assert.AreEqual(GameEventScriptRunState.Completed, step.State);
-        CollectionAssert.AreEqual(new[] { "first" }, calls);
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-        CollectionAssert.AreEqual(new[] { "first", "first", "late" }, calls);
-    }
-
-    [TestMethod]
-    public void RuntimeEmitWithoutSubscriberIsDroppedBeforeLaterSubscription()
-    {
-        var accepted = new List<bool>();
-        var calls = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Subscribe("Start", [], (_, context) =>
+        var paused = false;
+        while (!host.IsIdle)
         {
-            accepted.Add(context.Emit("Later"));
-            host.Subscribe("Later", [], (_, _) => calls.Add("later"));
-        });
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new[] { false }, accepted);
-        CollectionAssert.AreEqual(Array.Empty<string>(), calls);
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new[] { false, true }, accepted);
-        CollectionAssert.AreEqual(new[] { "later" }, calls);
-    }
-
-    [TestMethod]
-    public void EmitAndPublishWithTagsUseHandlerMatchingFilters()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  let dynamicTags be [#radio, #command, #radio]
-                  emit Local(value: 1) with #local
-                  emit Local(value: 2) with #local, #blocked
-                  emit Local(value: 3) with #other
-                  emit Remote(value: 4) with dynamicTags
-                }
-
-                on Local(value) matching #local without #blocked {
-                  emit Seen(value: value)
-                }
-
-                on Local(value) without #local {
-                  emit Seen(value: value + 100)
-                }
-
-                on Remote(value) matching #radio, #command {
-                  emit Seen(value: value + 10)
-                }
-
-                on Remote(value) matching #missing {
-                  emit Seen(value: 999)
-                }
-                """)
-            .CompileModule();
-        var seen = new List<long>();
-        var messages = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(messages.Add))
-            .Build()
-            .Load(bytecode);
-        host.Subscribe("Seen", ["value"], (message, _) => seen.Add(message.Arguments.GetAsInteger("value")));
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new long[] { 1, 103, 14 }, seen);
-        var remote = messages.Single(message => message.Name == "Remote");
-        CollectionAssert.AreEqual(new[] { "radio", "command" }, remote.Tags.ToArray());
-    }
-
-    [TestMethod]
-    public void ContextPublishUsesHookWhileEmitStaysLocal()
-    {
-        var outbound = new List<GameEventScriptMessage>();
-        var calls = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithPublishHook(message =>
-            {
-                outbound.Add(message);
-                return true;
-            })
-            .Build();
-
-        host.Subscribe("Start", [], (_, context) =>
-        {
-            Assert.IsTrue(context.Emit("Local"));
-            Assert.IsTrue(context.Publish(Create("Remote").WithTags("#radio")));
-        });
-        host.Subscribe("Local", [], (_, _) => calls.Add("local"));
-        host.Subscribe("Remote", [], (_, _) => calls.Add("remote"));
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new[] { "local" }, calls);
-        Assert.HasCount(1, outbound);
-        Assert.AreEqual("Remote", outbound[0].Name);
-        CollectionAssert.AreEqual(new[] { "radio" }, outbound[0].Tags.ToArray());
-    }
-
-    [TestMethod]
-    public void CSharpSubscribersCanFilterByMessageTags()
-    {
-        var calls = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
-        var signal = GameEventScriptMessageSignature.Create("Signal", []);
-        host.Subscribe(signal, (_, _) => calls.Add("radio"), matchingTags: ["radio"]);
-        host.Subscribe(signal, (_, _) => calls.Add("clear"), matchingTags: null, withoutTags: ["blocked"]);
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Signal").WithTags("#radio")));
-        Assert.IsFalse(host.PublishToCompletion(Create("Signal").WithTags("#blocked")));
-
-        CollectionAssert.AreEqual(new[] { "radio", "clear" }, calls);
-    }
-
-    [TestMethod]
-    public void ScriptPublishUsesHookAndDoesNotDeliverLocallyWhenHookRedirects()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit Local
-                  publish Remote with #radio
-                }
-
-                on Remote {
-                  emit ShouldNotRun
-                }
-                """)
-            .CompileModule();
-        var outbound = new List<GameEventScriptMessage>();
-        var observed = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => observed.Add(message.Name)))
-            .WithPublishHook(message =>
-            {
-                outbound.Add(message);
-                return true;
-            })
-            .Build()
-            .Load(bytecode);
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new[] { "Local", "Remote" }, observed);
-        Assert.HasCount(1, outbound);
-        Assert.AreEqual("Remote", outbound[0].Name);
-        CollectionAssert.AreEqual(new[] { "radio" }, outbound[0].Tags.ToArray());
-    }
-
-    [TestMethod]
-    public void ManualHostStepsScriptEmitStatementsByOpcodeBudget()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit A
-                  emit B
-                }
-                """)
-            .CompileModule();
-        var published = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
-            .Build()
-            .Load(bytecode);
-
-        var accepted = host.Publish(Create("Start"));
-
-        Assert.IsTrue(accepted);
-        CollectionAssert.AreEqual(Array.Empty<string>(), published);
-
-        var steps = DrainWithTinyBudget(host);
-
-        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
-        Assert.AreEqual(GameEventScriptRunState.Completed, steps[^1].State);
-        Assert.IsGreaterThan(0, steps.Sum(step => step.ExecutedOpcodes));
-        Assert.AreEqual(2, steps.Sum(step => step.PublishedMessages));
-        CollectionAssert.AreEqual(new[] { "A", "B" }, published);
-    }
-
-    [TestMethod]
-    public void ManualHostKeepsMessageQueueInsideRun()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit Middle
-                }
-
-                on Middle {
-                  emit Done
-                }
-                """)
-            .CompileModule();
-        var published = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
-            .Build()
-            .Load(bytecode);
-
-        host.Publish(Create("Start"));
-
-        GameEventScriptRunStepResult step;
-        do
-        {
-            step = host.Update(1);
+            var frame = host.ExecuteFrame(1);
+            paused |= frame.State == GameEventScriptExecutionState.Paused;
         }
-        while (step.State != GameEventScriptRunState.Completed);
 
-        CollectionAssert.AreEqual(new[] { "Middle", "Done" }, published);
+        Assert.IsTrue(paused);
+        CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4 }, values);
     }
 
     [TestMethod]
-    public void AutomaticDispatchPublishesWithoutWaitingForCallerDrain()
+    public void PublishDeliversLocallyAndToOutboundSink()
     {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit Done
-                }
-                """)
-            .CompileModule();
-        var completed = new ManualResetEventSlim(false);
+        var sink = new RecordingSink(true);
+        var local = new List<string>();
+        GameEventScriptPublishResult result = default;
+        var host = GameEventScriptHost.CreateBuilder().WithPublishSink(sink).Build();
+        host.Subscribe("Start", [], (_, context) => result = context.Publish("Shared"));
+        host.Subscribe("Shared", [], (_, _) => local.Add("shared"));
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+
+        Assert.IsTrue(result.LocalAccepted);
+        Assert.IsTrue(result.OutboundAttempted);
+        Assert.IsTrue(result.OutboundAccepted);
+        CollectionAssert.AreEqual(new[] { "shared" }, local);
+        CollectionAssert.AreEqual(new[] { "Shared" }, sink.Messages.Select(message => message.Name).ToArray());
+    }
+
+    [TestMethod]
+    public void ReceiveNeverForwardsOutbound()
+    {
+        var sink = new RecordingSink(true);
+        var host = GameEventScriptHost.CreateBuilder().WithPublishSink(sink).Build();
+        host.Subscribe("Start", [], (_, _) => { });
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
+        Assert.IsEmpty(sink.Messages);
+    }
+
+    [TestMethod]
+    public void PublishWithoutSinkReportsLocalOnlyAcceptance()
+    {
+        GameEventScriptPublishResult result = default;
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, context) => result = context.Publish("Shared"));
+        host.Subscribe("Shared", [], (_, _) => { });
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+
+        Assert.IsTrue(result.LocalAccepted);
+        Assert.IsFalse(result.OutboundAttempted);
+        Assert.IsFalse(result.OutboundAccepted);
+        Assert.IsTrue(result.AnyAccepted);
+    }
+
+    [TestMethod]
+    public void RejectedPublishSinkDoesNotDamageLocalDispatch()
+    {
+        GameEventScriptPublishResult result = default;
+        var localCalls = 0;
+        var host = GameEventScriptHost.CreateBuilder().WithPublishSink(new RecordingSink(false)).Build();
+        host.Subscribe("Start", [], (_, context) => result = context.Publish("Shared"));
+        host.Subscribe("Shared", [], (_, _) => localCalls++);
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+
+        Assert.AreEqual(1, localCalls);
+        Assert.IsTrue(result.LocalAccepted);
+        Assert.IsTrue(result.OutboundAttempted);
+        Assert.IsFalse(result.OutboundAccepted);
+        Assert.IsTrue(result.AnyAccepted);
+    }
+
+    [TestMethod]
+    public void PublishSinkExceptionIsReportedAsRejectedAndObserved()
+    {
+        GameEventScriptPublishResult result = default;
+        GameEventScriptPublishResult observed = default;
+        var observer = TestRuntimeObserver.ObservePublishResults(value => observed = value);
         var host = GameEventScriptHost.CreateBuilder()
-            .WithAutomaticDispatch()
-            .WithRuntimeObserver(TestRuntimeObserver.ObserveOutputs(message =>
-            {
-                if (message.Name == "Done")
-                {
-                    completed.Set();
-                }
-            }))
-            .Build()
-            .Load(bytecode);
+            .WithRuntimeObserver(observer)
+            .WithPublishSink(new ThrowingSink())
+            .Build();
+        host.Subscribe("Start", [], (_, context) => result = context.Publish("Shared"));
+        host.Subscribe("Shared", [], (_, _) => { });
 
-        var accepted = host.Publish(Create("Start"));
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
 
-        Assert.IsTrue(accepted);
+        Assert.IsTrue(result.LocalAccepted);
+        Assert.IsTrue(result.OutboundAttempted);
+        Assert.IsFalse(result.OutboundAccepted);
+        Assert.AreEqual(result.LocalAccepted, observed.LocalAccepted);
+        Assert.AreEqual(result.OutboundAttempted, observed.OutboundAttempted);
+        Assert.AreEqual(result.OutboundAccepted, observed.OutboundAccepted);
+    }
+
+    [TestMethod]
+    public void SubscriptionAndDetachUseEnqueueTimeSnapshots()
+    {
+        var calls = new List<string>();
+        var program = Compile("on Start { emit Script }");
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        var instance = host.Load(program);
+        var subscription = host.Subscribe("Start", [], (_, _) => calls.Add("native"));
+        host.Subscribe("Script", [], (_, _) => calls.Add("script"));
+
+        Assert.IsTrue(host.Receive(Create("Start")));
+        Assert.IsTrue(instance.Detach());
+        Assert.IsTrue(subscription.Unsubscribe());
+        host.RunToCompletion();
+
+        CollectionAssert.AreEqual(new[] { "native", "script" }, calls);
+        Assert.IsFalse(host.Receive(Create("Start")));
+        Assert.IsFalse(instance.Detach());
+        Assert.IsFalse(subscription.Unsubscribe());
+    }
+
+    [TestMethod]
+    public void InitializationRunsOncePerLoadedInstanceInLoadOrder()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Ready", [], (_, _) => calls.Add("ready"));
+        var program = Compile("on initialization { emit Ready }");
+
+        host.Load(program);
+        host.Load(program);
+        host.RunToCompletion();
+        host.RunToCompletion();
+
+        CollectionAssert.AreEqual(new[] { "ready", "ready" }, calls);
+    }
+
+    [TestMethod]
+    public void InitializationIsQueuedBetweenOlderAndNewerMessages()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithPublishSink(new TestPublishSink(_ => calls.Add("ready")))
+            .Build();
+        host.Subscribe("Before", [], (_, _) => calls.Add("before"));
+        host.Subscribe("After", [], (_, _) => calls.Add("after"));
+        host.Receive(Create("Before"));
+        host.Load(Compile("on initialization { publish Ready }"));
+        host.Receive(Create("After"));
+
+        host.RunToCompletion();
+
+        CollectionAssert.AreEqual(new[] { "before", "ready", "after" }, calls);
+    }
+
+    [TestMethod]
+    public void SubscribeDuringDispatchOnlyAffectsLaterMessages()
+    {
+        var lateCalls = 0;
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, _) => host.Subscribe("Start", [], (_, _) => lateCalls++));
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+        Assert.AreEqual(0, lateCalls);
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+        Assert.AreEqual(1, lateCalls);
+    }
+
+    [TestMethod]
+    public void LoadDuringDispatchOnlyAffectsLaterMessages()
+    {
+        var scriptCalls = 0;
+        var program = Compile("on Start { emit Script } ");
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, _) => host.Load(program));
+        host.Subscribe("Script", [], (_, _) => scriptCalls++);
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+        Assert.AreEqual(0, scriptCalls);
+
+        host.Receive(Create("Start"));
+        host.RunToCompletion();
+        Assert.AreEqual(1, scriptCalls);
+    }
+
+    [TestMethod]
+    public void LoadWhileScriptIsPausedDoesNotResetTheActiveVmState()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Load(Compile("on Start {\n  let value be 1 + 2 + 3\n  emit First(value: value)\n}"));
+        host.Subscribe("First", ["value"], (message, _) => calls.Add($"first:{message.Arguments.GetAsInteger("value")}"));
+        host.Subscribe("Second", [], (_, _) => calls.Add("second"));
+        host.Receive(Create("Start"));
+
+        Assert.AreEqual(GameEventScriptExecutionState.Paused, host.ExecuteFrame(1).State);
+        host.Load(Compile("on Next { emit Second }"));
+        host.RunToCompletion();
+        host.Receive(Create("Next"));
+        host.RunToCompletion();
+
+        CollectionAssert.AreEqual(new[] { "first:6", "second" }, calls);
+    }
+
+    [TestMethod]
+    public void RuntimeLimitsResetForEveryScriptHandler()
+    {
+        var ticks = 0;
+        var host = GameEventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxLoopIterations = 2 })
+            .Build();
+        host.Load(Compile("on Start { for item from 1 to 2 emit Tick }"));
+        host.Load(Compile("on Start { for item from 1 to 2 emit Tick }"));
+        host.Subscribe("Tick", [], (_, _) => ticks++);
+
+        host.Receive(Create("Start"));
+        var result = host.RunToCompletion();
+
+        Assert.AreEqual(GameEventScriptExecutionState.Completed, result.State);
+        Assert.AreEqual(4, ticks);
+    }
+
+    [TestMethod]
+    public void MessageNameSubscriptionMatchesAnySignature()
+    {
+        var seen = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.SubscribeMessageName("Ping", (message, _) => seen.Add(message.SignatureId));
+        host.Receive(Create("Ping", ("amount", GesValue.GesInteger(7))));
+        host.RunToCompletion();
+        CollectionAssert.AreEqual(new[] { "Ping(amount)" }, seen);
+    }
+
+    [TestMethod]
+    public void NativeHandlerIsAtomicForFrameBudget()
+    {
+        var calls = new List<string>();
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Subscribe("Start", [], (_, context) => { calls.Add("start"); context.Emit("Done"); });
+        host.Subscribe("Done", [], (_, _) => calls.Add("done"));
+        host.Receive(Create("Start"));
+        var frame = host.ExecuteFrame(1);
+        Assert.AreEqual(GameEventScriptExecutionState.Completed, frame.State);
+        CollectionAssert.AreEqual(new[] { "start", "done" }, calls);
+    }
+
+    [TestMethod]
+    public void CSharpAutoRunnerSerializesReceiveAndPumps()
+    {
+        var completed = new ManualResetEventSlim(false);
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        using var runner = host.RunAutomatically();
+        runner.Subscribe("Start", [], (_, _) => completed.Set());
+        Assert.IsTrue(runner.Receive(Create("Start")));
         Assert.IsTrue(completed.Wait(TimeSpan.FromSeconds(2)));
     }
 
     [TestMethod]
-    public void AutomaticDispatchSerializesCallerPublishWithWorkerDispatch()
+    public void CSharpAutoRunnerSerializesConcurrentReceives()
     {
-        var handlerEntered = new ManualResetEventSlim(false);
-        var releaseHandler = new ManualResetEventSlim(false);
-        var handlerTimedOut = new ManualResetEventSlim(false);
-        var publishStarted = new ManualResetEventSlim(false);
-        var publishReturned = new ManualResetEventSlim(false);
-        var otherHandled = new ManualResetEventSlim(false);
-        var accepted = false;
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithAutomaticDispatch()
-            .Build();
-        host.Subscribe("Block", [], (_, _) =>
+        const int messageCount = 32;
+        using var completed = new CountdownEvent(messageCount);
+        var active = 0;
+        var maximumActive = 0;
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        using var runner = host.RunAutomatically();
+        runner.Subscribe("Start", [], (_, _) =>
         {
-            handlerEntered.Set();
-            if (!releaseHandler.Wait(TimeSpan.FromSeconds(2)))
-            {
-                handlerTimedOut.Set();
-            }
+            var nowActive = Interlocked.Increment(ref active);
+            UpdateMaximum(ref maximumActive, nowActive);
+            Thread.SpinWait(10_000);
+            Interlocked.Decrement(ref active);
+            completed.Signal();
         });
-        host.Subscribe("Other", [], (_, _) => otherHandled.Set());
 
-        try
-        {
-            Assert.IsTrue(host.Publish(Create("Block")));
-            Assert.IsTrue(handlerEntered.Wait(TimeSpan.FromSeconds(2)));
+        Parallel.For(0, messageCount, _ => Assert.IsTrue(runner.Receive(Create("Start"))));
 
-            var publishTask = Task.Run(() =>
+        Assert.IsTrue(completed.Wait(TimeSpan.FromSeconds(5)));
+        Assert.AreEqual(1, maximumActive);
+    }
+
+    [TestMethod]
+    public void CSharpAutoRunnerSupportsDynamicSubscribeAndDetachWithSnapshots()
+    {
+        using var nativeCompleted = new CountdownEvent(2);
+        using var scriptCompleted = new ManualResetEventSlim(false);
+        var nativeCalls = 0;
+        var observer = TestRuntimeObserver.ObserveMessages(
+            messageEmitted: message =>
             {
-                publishStarted.Set();
-                accepted = host.Publish(Create("Other"));
-                publishReturned.Set();
+                if (message.Name == "ScriptDone") scriptCompleted.Set();
             });
+        var host = GameEventScriptHost.CreateBuilder().WithRuntimeObserver(observer).Build();
+        using var runner = host.RunAutomatically();
 
-            Assert.IsTrue(publishStarted.Wait(TimeSpan.FromSeconds(2)));
-            Assert.IsFalse(publishReturned.Wait(TimeSpan.FromMilliseconds(100)));
-
-            releaseHandler.Set();
-
-            Assert.IsTrue(publishTask.Wait(TimeSpan.FromSeconds(2)));
-            Assert.IsTrue(accepted);
-            Assert.IsTrue(publishReturned.IsSet);
-            Assert.IsFalse(handlerTimedOut.IsSet);
-            Assert.IsTrue(otherHandled.Wait(TimeSpan.FromSeconds(2)));
-        }
-        finally
+        var first = runner.Subscribe("Native", [], (_, _) =>
         {
-            releaseHandler.Set();
-        }
-    }
-
-    [TestMethod]
-    public void SubscribeDuringDispatchUpdatesFutureDispatchSnapshots()
-    {
-        var calls = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .Build();
-        host.Subscribe("Start", [], (_, _) =>
-        {
-            calls.Add("first");
-            host.Subscribe("Start", [], (_, _) => calls.Add("late"));
+            Interlocked.Increment(ref nativeCalls);
+            nativeCompleted.Signal();
         });
-        host.Subscribe("Start", [], (_, _) => calls.Add("second"));
+        Assert.IsTrue(runner.Receive(Create("Native")));
+        Assert.IsTrue(runner.Unsubscribe(first));
 
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new[] { "first", "second" }, calls);
-
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
-
-        CollectionAssert.AreEqual(new[] { "first", "second", "first", "second", "late" }, calls);
-    }
-
-    [TestMethod]
-    public void ManualHostStopsDispatchWhenProcessedEventLimitIsReached()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit Middle
-                }
-
-                on Middle {
-                  emit Done
-                }
-                """)
-            .CompileModule();
-        var published = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxProcessedEventsPerRun = 1 })
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
-            .Build()
-            .Load(bytecode);
-
-        host.Publish(Create("Start"));
-
-        var step = host.Update(8);
-
-        Assert.AreEqual(GameEventScriptRunState.Paused, step.State);
-        CollectionAssert.AreEqual(new[] { "Middle" }, published);
-    }
-
-    [TestMethod]
-    public void ManualHostCanResumeInsideLoopBody()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  for item from 1 to 4 {
-                    emit Tick(value: item)
-                  }
-                }
-                """)
-            .CompileModule();
-        var published = new List<long>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Arguments.GetAsInteger("value"))))
-            .Build()
-            .Load(bytecode);
-
-        host.Publish(Create("Start"));
-
-        var steps = DrainWithTinyBudget(host);
-
-        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
-        CollectionAssert.AreEqual(new long[] { 1, 2, 3, 4 }, published);
-    }
-
-    [TestMethod]
-    public void ManualHostCanResumeAcrossNestedExpressionWork()
-    {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                predicate high(value) be value >= 2
-                function boost(_ value) be value + 1
-
-                on Start(values, seed as :number) {
-                  let total be values[:filter value where value is high][:select value => boost(value)][:sum value => value]
-                  let seeded be random with seed :list[:select item from 1 to 3 => random from 1 to 6]
-                  let label be 'high' when total > 6, otherwise 'low'
-                  emit Done(total: total, first: seeded[1], label: label)
-                }
-                """)
-            .CompileModule();
-        var published = new List<GameEventScriptMessage>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(published.Add))
-            .Build()
-            .Load(bytecode);
-
-        host.Publish(Create(
-            "Start",
-            ("values", GesValue.GesList([GesValue.GesInteger(1), GesValue.GesInteger(2), GesValue.GesInteger(3)])),
-            ("seed", GesValue.GesInteger(7))));
-
-        var steps = DrainWithTinyBudget(host);
-
-        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
-        Assert.HasCount(1, published);
-        Assert.AreEqual(7, published[0].Arguments.GetAsInteger("total"));
-        Assert.AreEqual("high", published[0].Arguments.GetAsText("label"));
-    }
-
-    [TestMethod]
-    public void ManualHostKeepsExternalSubscriberAtomicDuringStepping()
-    {
-        var calls = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .Build();
-        host.Subscribe("Start", [], (_, context) =>
+        var second = runner.Subscribe("Native", [], (_, _) =>
         {
-            calls.Add("external");
-            context.Emit("Done");
+            Interlocked.Increment(ref nativeCalls);
+            nativeCompleted.Signal();
         });
-        host.Subscribe("Done", [], (_, _) => calls.Add("done"));
+        Assert.IsTrue(runner.Receive(Create("Native")));
+        Assert.IsTrue(runner.Unsubscribe(second));
 
-        host.Publish(Create("Start"));
+        var instance = runner.Load(Compile("on ScriptStart { emit ScriptDone }"));
+        Assert.IsTrue(runner.Receive(Create("ScriptStart")));
+        Assert.IsTrue(runner.Detach(instance));
 
-        var step = host.Update(1);
-
-        Assert.AreEqual(GameEventScriptRunState.Completed, step.State);
-        CollectionAssert.AreEqual(new[] { "external", "done" }, calls);
+        Assert.IsTrue(nativeCompleted.Wait(TimeSpan.FromSeconds(5)));
+        Assert.IsTrue(scriptCompleted.Wait(TimeSpan.FromSeconds(5)));
+        Assert.AreEqual(2, nativeCalls);
+        Assert.IsFalse(runner.Receive(Create("Native")));
+        Assert.IsFalse(runner.Receive(Create("ScriptStart")));
     }
 
     [TestMethod]
-    public void BeginRunStepsWithoutBackgroundWorker()
+    [TestCategory("Performance")]
+    public void WarmQueueDispatchFrameResultAndVmResumeDoNotAllocate()
     {
-        var bytecode = GameEventScriptBuilder.Create()
-            .AddScript(
-                """
-                on Start {
-                  emit A
-                  emit B
-                }
-                """)
-            .CompileModule();
-        var published = new List<string>();
-        var host = GameEventScriptHost.CreateBuilder()
-            .WithRuntimeObserver(StepH_GameEventScript_Tests.TestRuntimeObserver.ObserveOutputs(message => published.Add(message.Name)))
-            .Build()
-            .Load(bytecode);
+        const int iterations = 1_000;
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        host.Load(Compile("on Tick { let value be 1 + 2 + 3 }"));
+        var message = Create("Tick");
 
-        using var run = host.BeginRun(Create("Start"));
-        var steps = new List<GameEventScriptRunStepResult>();
-        while (!run.IsCompleted)
+        for (var index = 0; index < 100; index++)
         {
-            steps.Add(run.Step(1));
+            host.Receive(message);
+            while (!host.IsIdle) host.ExecuteFrame(1);
         }
 
-        Assert.IsTrue(steps.Any(step => step.State == GameEventScriptRunState.Paused));
-        Assert.AreEqual(GameEventScriptRunState.Completed, steps[^1].State);
-        CollectionAssert.AreEqual(new[] { "A", "B" }, published);
+        GC.Collect();
+        GC.WaitForPendingFinalizers();
+        GC.Collect();
+        var before = GC.GetAllocatedBytesForCurrentThread();
+        for (var index = 0; index < iterations; index++)
+        {
+            host.Receive(message);
+            while (!host.IsIdle) host.ExecuteFrame(1);
+        }
+
+        Assert.AreEqual(0, GC.GetAllocatedBytesForCurrentThread() - before);
     }
 
-    private static List<GameEventScriptRunStepResult> DrainWithTinyBudget(GameEventScriptHost host)
+    private static GameEventScriptProgram Compile(string source)
+        => GameEventScriptBuilder.Create().AddScript(source).Compile();
+
+    private static long ExecuteOnce(GameEventScriptProgram program, long seed)
     {
-        var steps = new List<GameEventScriptRunStepResult>();
-        GameEventScriptRunStepResult step;
+        var value = 0L;
+        var host = GameEventScriptHost.CreateBuilder().WithRandom(GameEventScriptRandomGenerator.FromSeed(seed)).Build();
+        host.Load(program);
+        host.Subscribe("Result", ["value"], (message, _) => value = message.Arguments.GetAsInteger("value"));
+        host.Receive(Create("Roll"));
+        host.RunToCompletion();
+        return value;
+    }
+
+    private static void UpdateMaximum(ref int target, int candidate)
+    {
+        int current;
         do
         {
-            step = host.Update(1);
-            steps.Add(step);
+            current = Volatile.Read(ref target);
+            if (candidate <= current) return;
         }
-        while (step.State != GameEventScriptRunState.Completed &&
-               step.State != GameEventScriptRunState.RuntimeLimitReached);
+        while (Interlocked.CompareExchange(ref target, candidate, current) != current);
+    }
 
-        return steps;
+    private sealed class RecordingSink(bool accepted) : IGameEventScriptPublishSink
+    {
+        public List<GameEventScriptMessage> Messages { get; } = [];
+        public bool Publish(GameEventScriptMessage message) { Messages.Add(message); return accepted; }
+    }
+
+    private sealed class ThrowingSink : IGameEventScriptPublishSink
+    {
+        public bool Publish(GameEventScriptMessage message) => throw new InvalidOperationException("sink failed");
     }
 }

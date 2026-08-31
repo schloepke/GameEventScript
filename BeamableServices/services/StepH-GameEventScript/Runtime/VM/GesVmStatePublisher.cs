@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmStatePublisher
 {
-    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16Slice argumentRegisters, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16Slice argumentRegisters, bool publish, GameEventScriptContext context)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -32,14 +32,14 @@ internal static class GesVmStatePublisher
             }
 
             var message = GameEventScriptMessage.CreatePrecomputed(signature.Name, arguments, signature.SignatureId);
-            return publish ? session.Publish(message) : session.Emit(message);
+            return publish ? context.Publish(message).AnyAccepted : context.Emit(message);
         }
         catch (ArgumentException)
         {
             return false;
         }
     }
-    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16Slice argumentRegisters, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16Slice argumentRegisters, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptContext context)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -70,22 +70,22 @@ internal static class GesVmStatePublisher
             }
 
             var message = GameEventScriptMessage.CreatePrecomputedWithNormalizedTags(signature.Name, arguments, signature.SignatureId, tags.ToArrayOrEmpty());
-            return publish ? session.Publish(message) : session.Emit(message);
+            return publish ? context.Publish(message).AnyAccepted : context.Emit(message);
         }
         catch (ArgumentException)
         {
             return false;
         }
     }
-    internal static bool GesVmPublishMessageValue(this GesVmState vmState, in GesValue messageValue, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValue(this GesVmState vmState, in GesValue messageValue, bool publish, GameEventScriptContext context)
     {
         if (messageValue.Kind is Message && messageValue.ObjectValue is GameEventScriptMessage msg)
         {
-            return publish ? session.Publish(msg) : session.Emit(msg);
+            return publish ? context.Publish(msg).AnyAccepted : context.Emit(msg);
         }
         return false;
     }
-    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, in GesValue messageValue, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptSession session)
+    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, in GesValue messageValue, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptContext context)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
         var tags = new GameEventScriptTagBuffer(tagRegisters.Length);
@@ -94,7 +94,7 @@ internal static class GesVmStatePublisher
             AddTagsToBuffer(tags, in vmState.Register(tagRegisters[index]));
         }
         var message = msg.WithNormalizedTags(tags.ToArrayOrEmpty());
-        return publish ? session.Publish(message) : session.Emit(message);
+        return publish ? context.Publish(message).AnyAccepted : context.Emit(message);
     }
 
     private static void AddTagsToBuffer(GameEventScriptTagBuffer tags, in GesValue value)

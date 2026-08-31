@@ -103,5 +103,5 @@ public sealed class GameEventScriptBinaryTests
         StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n\n.gesb ");
     }
 
-    private static string Resolve(GameEventScriptBinary binary, ushort index) => binary.TextConstantTable.Resolve(index);
+    private static string Resolve(GameEventScriptProgram binary, ushort index) => binary.TextConstantTable.Resolve(index);
 }

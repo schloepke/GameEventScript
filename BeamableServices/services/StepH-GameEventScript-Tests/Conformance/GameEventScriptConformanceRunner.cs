@@ -64,12 +64,12 @@ internal static class GameEventScriptConformanceRunner
     internal static string GetCaseId(GameEventScriptConformanceCase testCase)
         => $"{testCase.SuiteName}/{testCase.Test.Name}";
 
-    internal static IGameEventScriptModule CompileScripts(GameEventScriptConformanceTest test)
+    internal static GameEventScriptProgram CompileScripts(GameEventScriptConformanceTest test)
     {
-        return CreateScriptBuilder(test).CompileModule(CreateCompileOptions(test));
+        return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
     }
 
-    internal static GameEventScriptBinary CompileBytecodeForTest(GameEventScriptConformanceTest test)
+    internal static GameEventScriptProgram CompileBytecodeForTest(GameEventScriptConformanceTest test)
         => CompileBytecode(test);
 
     internal static GameEventScriptRandomGenerator CreateRandomForTest(IReadOnlyList<string>? randomSequence)
@@ -379,7 +379,7 @@ internal static class GameEventScriptConformanceRunner
            Matches(expected.EndLine, location.EndLine) &&
            Matches(expected.EndColumn, location.EndColumn);
 
-    private static GameEventScriptBinary CompileBytecode(GameEventScriptConformanceTest test)
+    private static GameEventScriptProgram CompileBytecode(GameEventScriptConformanceTest test)
     {
         return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
     }
@@ -410,13 +410,17 @@ internal static class GameEventScriptConformanceRunner
         };
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(
-        IGameEventScriptModule compiled)
+        GameEventScriptProgram compiled)
     {
-        return compiled.Handlers
-            .GroupBy(handler => handler.Signature.Name, StringComparer.Ordinal)
+        return compiled.BindTable.Entries
+            .Where(entry => entry.Kind is GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler)
+            .Select(entry => GameEventScriptMessageSignature.Create(
+                compiled.TextConstantTable.Resolve(entry.Name),
+                entry.ArgumentNames.Select(compiled.TextConstantTable.Resolve)))
+            .GroupBy(signature => signature.Name, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,
-                group => (IReadOnlyList<GameEventScriptMessageSignature>)group.Select(handler => handler.Signature).ToArray(),
+                group => (IReadOnlyList<GameEventScriptMessageSignature>)group.ToArray(),
                 StringComparer.Ordinal);
     }
 

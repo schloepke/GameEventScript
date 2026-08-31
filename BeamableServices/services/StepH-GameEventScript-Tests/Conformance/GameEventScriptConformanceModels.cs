@@ -25,6 +25,8 @@ public sealed class GameEventScriptConformanceTest
 
     public List<GameEventScriptSourceSpec>? Scripts { get; set; }
 
+    public List<GameEventScriptSourceSpec>? Programs { get; set; }
+
     public List<string>? RandomSequence { get; set; }
 
     public GameEventScriptCompileOptionsSpec? CompileOptions { get; set; }
@@ -111,6 +113,10 @@ public sealed class GameEventScriptApiStepSpec
     public List<GameEventScriptRuntimeLimitExpectationSpec>? ExpectedRuntimeLimits { get; set; }
 
     public List<GameEventScriptRuntimeLimitExpectationSpec>? UnexpectedRuntimeLimits { get; set; }
+
+    public int? OpcodeBudget { get; set; }
+
+    public bool? ExpectedPaused { get; set; }
 }
 
 public sealed class GameEventScriptCompileOptionsSpec

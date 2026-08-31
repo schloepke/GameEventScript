@@ -10,7 +10,7 @@ namespace StepH.GameEventScript.Compiler;
 
 internal static class GesCompiler
 {
-    public static GameEventScriptBinary Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
+    public static GameEventScriptProgram Compile(GesSyntaxTreeModule module, GameEventScriptCompileOptions? options = null)
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new GameEventScriptCompileOptions();
@@ -32,7 +32,7 @@ internal static class GesCompiler
         private readonly Dictionary<string, GesLabelRef> _callableEntries = new(StringComparer.Ordinal);
         private int _helperIndex;
 
-        public GameEventScriptBinary Build()
+        public GameEventScriptProgram Build()
         {
             EmitCallables();
             EmitRecordConstructors();

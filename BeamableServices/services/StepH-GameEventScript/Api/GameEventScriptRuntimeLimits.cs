@@ -56,6 +56,9 @@ public sealed class GameEventScriptRuntimeLimits
     /// </remarks>
     public int MaxExecutionSteps { get; init; } = 100_000;
 
+    /// <summary>Maximum number of values in the reusable VM register storage of one host.</summary>
+    public int MaxRegisterValues { get; init; } = 512;
+
     /// <summary>
     /// Defines the maximum number of iterations allowed for loops during the execution of a game event script.
     /// This property sets an upper limit to prevent scripts from running indefinitely or consuming excessive resources.

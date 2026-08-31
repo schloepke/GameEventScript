@@ -112,7 +112,7 @@ public sealed class GameEventScriptExtensionReference
 
 public sealed class GesExtensionCall
 {
-    private GameEventScriptSession? _runtimeSession;
+    private GameEventScriptContext? _context;
     private GesValueArguments _arguments = GesValueArguments.Empty;
     private Runtime.VM.GesVmState? _vmState;
     private ushort _destinationRegister;
@@ -123,16 +123,16 @@ public sealed class GesExtensionCall
     {
     }
 
-    public GesExtensionCall(GameEventScriptSession runtimeSession)
+    public GesExtensionCall(GameEventScriptContext context)
     {
-        _runtimeSession = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
     }
 
-    public GameEventScriptSession RuntimeSession => _runtimeSession ?? throw new InvalidOperationException("Extension context is not initialized.");
+    public GameEventScriptContext Context => _context ?? throw new InvalidOperationException("Extension context is not initialized.");
 
-    public GameEventScriptRandomGenerator Random => RuntimeSession.Random;
+    public GameEventScriptRandomGenerator Random => Context.Random;
 
-    public GameEventScriptRuntimeLimits RuntimeLimits => RuntimeSession.RuntimeLimits;
+    public GameEventScriptRuntimeLimits RuntimeLimits => Context.RuntimeLimits;
 
     public GesValueArguments Arguments => _arguments;
 
@@ -140,11 +140,11 @@ public sealed class GesExtensionCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GameEventScriptSession runtimeSession, GesValueArguments arguments)
+    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GameEventScriptContext context, GesValueArguments arguments)
     {
         _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));
         _destinationRegister = destinationRegister;
-        _runtimeSession = runtimeSession ?? throw new ArgumentNullException(nameof(runtimeSession));
+        _context = context ?? throw new ArgumentNullException(nameof(context));
         _arguments = arguments;
         _result = default;
         _hasResult = false;

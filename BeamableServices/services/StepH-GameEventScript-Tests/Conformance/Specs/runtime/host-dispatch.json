@@ -398,6 +398,109 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "multiple loaded programs dispatch in load order",
+      "programs": [
+        {
+          "sourceName": "first.ges",
+          "text": "module FirstProgram\non Start { emit First }"
+        },
+        {
+          "sourceName": "second.ges",
+          "text": "module SecondProgram\non Start { emit Second }"
+        }
+      ],
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "expectedPublished": [
+            {
+              "name": "First",
+              "args": {}
+            },
+            {
+              "name": "Second",
+              "args": {}
+            }
+          ],
+          "expectedOutboundPublished": []
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "initialization runs once for every loaded program instance",
+      "programs": [
+        {
+          "sourceName": "first-init.ges",
+          "text": "on initialization { emit FirstReady }"
+        },
+        {
+          "sourceName": "second-init.ges",
+          "text": "on initialization { emit SecondReady }"
+        }
+      ],
+      "expectedInitializationPublished": [
+        {
+          "name": "FirstReady",
+          "args": {}
+        },
+        {
+          "name": "SecondReady",
+          "args": {}
+        }
+      ],
+      "expectedInitializationOutboundPublished": []
+    },
+    {
+      "kind": "scriptApi",
+      "name": "frame budget pauses and resumes one script handler",
+      "script": "on Start { for item from 1 to 3 emit Tick(value: item) }",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {}
+          },
+          "opcodeBudget": 1,
+          "expectedPaused": true,
+          "expectedPublished": [
+            {
+              "name": "Tick",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "1"
+                }
+              }
+            },
+            {
+              "name": "Tick",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
+              }
+            },
+            {
+              "name": "Tick",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
+              }
+            }
+          ],
+          "expectedOutboundPublished": []
+        }
+      ]
     }
   ]
 }

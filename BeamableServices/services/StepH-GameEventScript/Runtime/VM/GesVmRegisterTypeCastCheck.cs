@@ -45,12 +45,12 @@ internal static class GesVmRegisterTypeCastCheck
     {
         vmState.SetBoolean(destinationRegister, xValue.Kind is Integer or Float or Vector or Point && xValue.Unit == unit);
     }
-    internal static void GesVmCast(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeTypeKind type, GameEventScriptSession? session = null)
+    internal static void GesVmCast(this GesVmState vmState, ushort destinationRegister, in GesValue xValue, GameEventScriptBytecodeTypeKind type, GameEventScriptContext? context = null)
     {
-        var dst = GesVmCast(in xValue, type, vmState, destinationRegister, session);
+        var dst = GesVmCast(in xValue, type, vmState, destinationRegister, context);
         vmState.SetValue(destinationRegister, in dst);
     }
-    internal static GesValue GesVmCast(in GesValue xValue, GameEventScriptBytecodeTypeKind type, GesVmState state, ushort destinationRegister, GameEventScriptSession? session = null)
+    internal static GesValue GesVmCast(in GesValue xValue, GameEventScriptBytecodeTypeKind type, GesVmState state, ushort destinationRegister, GameEventScriptContext? context = null)
     {
         var dst = new GesValue();
         switch (type)
@@ -119,7 +119,7 @@ internal static class GesVmRegisterTypeCastCheck
                         return dst;
                 }
             case List:
-                return CastList(state, in xValue, session);
+                return CastList(state, in xValue, context);
             case Map:
                 return CastMap(state, in xValue);
 
@@ -264,7 +264,7 @@ internal static class GesVmRegisterTypeCastCheck
         dst.SetText(xValue.ToText);
         return dst;
     }
-    private static GesValue CastList(GesVmState vmState, in GesValue xValue, GameEventScriptSession? session)
+    private static GesValue CastList(GesVmState vmState, in GesValue xValue, GameEventScriptContext? context)
     {
         var dst = new GesValue();
         switch (xValue.Kind)
@@ -309,7 +309,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return dst;
                 }
 
-                if (session is not null && !session.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
+                if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
                 {
                     dst.SetList(vmState.EmptyList);
                     return dst;
@@ -334,7 +334,7 @@ internal static class GesVmRegisterTypeCastCheck
                     return dst;
                 }
 
-                if (session is not null && !session.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
+                if (context is not null && !context.RuntimeBudget.CheckRangeLengthWithinLimit(xValue.IntegerValue, "Range length exceeds the configured limit."))
                 {
                     dst.SetList(vmState.EmptyList);
                     return dst;

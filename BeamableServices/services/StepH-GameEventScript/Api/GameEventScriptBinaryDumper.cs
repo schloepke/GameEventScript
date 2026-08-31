@@ -17,25 +17,25 @@ public static class GameEventScriptBinaryDumper
     /// <summary>
     /// Dumps the binary header, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptBinary binary)
+    public static string Dump(this GameEventScriptProgram binary)
         => Dump(binary, includeInstructionAddresses: false);
 
     /// <summary>
     /// Dumps the binary header, source script, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptBinary binary, string? scriptSource)
+    public static string Dump(this GameEventScriptProgram binary, string? scriptSource)
         => Dump(binary, includeInstructionAddresses: false, scriptSource: scriptSource);
 
     /// <summary>
     /// Dumps the binary header, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptBinary binary, bool includeInstructionAddresses)
+    public static string Dump(this GameEventScriptProgram binary, bool includeInstructionAddresses)
         => Dump(binary, includeInstructionAddresses, scriptSource: null);
 
     /// <summary>
     /// Dumps the binary header, optional source script, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptBinary binary, bool includeInstructionAddresses, string? scriptSource)
+    public static string Dump(this GameEventScriptProgram binary, bool includeInstructionAddresses, string? scriptSource)
     {
         var context = new DisassemblyContext(binary);
         var builder = new StringBuilder();
@@ -54,7 +54,7 @@ public static class GameEventScriptBinaryDumper
         return builder.ToString();
     }
 
-    private static void AppendHeader(StringBuilder builder, GameEventScriptBinary binary, string? scriptSource)
+    private static void AppendHeader(StringBuilder builder, GameEventScriptProgram binary, string? scriptSource)
     {
         builder
             .AppendLine("// -------------------------------------------------------------------------------")
@@ -706,7 +706,7 @@ public static class GameEventScriptBinaryDumper
         private readonly ListRole[] _listRoles;
         private readonly Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> _bindsByKindAndId = [];
 
-        internal DisassemblyContext(GameEventScriptBinary binary)
+        internal DisassemblyContext(GameEventScriptProgram binary)
         {
             Binary = binary;
             _bindLabels = BuildBindLabels(binary, _bindsByKindAndId);
@@ -717,7 +717,7 @@ public static class GameEventScriptBinaryDumper
             BuildCodeLabels(binary, _codeLabels, _codeLabelNames, _codeLabelComments);
         }
 
-        internal GameEventScriptBinary Binary { get; }
+        internal GameEventScriptProgram Binary { get; }
 
         internal bool HasCodeLabel(int address)
             => _codeLabels.Contains(address);
@@ -785,7 +785,7 @@ public static class GameEventScriptBinaryDumper
         private string BindLabel(GameEventScriptBinaryBindKind kind, ushort id, string fallback)
             => _bindsByKindAndId.TryGetValue((kind, id), out var index) ? BindLabel(index) : fallback;
 
-        private static string[] BuildTextLabels(GameEventScriptBinary binary)
+        private static string[] BuildTextLabels(GameEventScriptProgram binary)
         {
             var labels = new string[binary.TextConstantTable.Slices.Length];
             var used = new HashSet<string>(StringComparer.Ordinal);
@@ -820,7 +820,7 @@ public static class GameEventScriptBinaryDumper
             return labels;
         }
 
-        private static string[] BuildBindLabels(GameEventScriptBinary binary, Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> bindsByKindAndId)
+        private static string[] BuildBindLabels(GameEventScriptProgram binary, Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> bindsByKindAndId)
         {
             var entries = binary.BindTable.Entries;
             var labels = new string[entries.Count];
@@ -839,7 +839,7 @@ public static class GameEventScriptBinaryDumper
         }
 
         private static string BuildBindLabel(
-            GameEventScriptBinary binary,
+            GameEventScriptProgram binary,
             GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry,
             int index,
             HashSet<string> used)
@@ -868,7 +868,7 @@ public static class GameEventScriptBinaryDumper
             return unique;
         }
 
-        private static void BuildListLabels(GameEventScriptBinary binary, string[] labels, ListRole[] roles)
+        private static void BuildListLabels(GameEventScriptProgram binary, string[] labels, ListRole[] roles)
         {
             for (var i = 0; i < labels.Length; i++)
             {
@@ -897,7 +897,7 @@ public static class GameEventScriptBinaryDumper
         }
 
         private static void BuildCodeLabels(
-            GameEventScriptBinary binary,
+            GameEventScriptProgram binary,
             SortedSet<int> codeLabels,
             Dictionary<int, string> codeLabelNames,
             Dictionary<int, string> codeLabelComments)
@@ -924,7 +924,7 @@ public static class GameEventScriptBinaryDumper
             AddScopedCodeLabels(codeLabels, codeLabelNames);
         }
 
-        private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptBinary binary, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
+        private static void AddCodeLabelsForOperand(SortedSet<int> labels, GameEventScriptProgram binary, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         {
             switch (part)
             {
@@ -949,7 +949,7 @@ public static class GameEventScriptBinaryDumper
             }
         }
 
-        private static void AddCodeLabel(SortedSet<int> labels, GameEventScriptBinary binary, ushort address)
+        private static void AddCodeLabel(SortedSet<int> labels, GameEventScriptProgram binary, ushort address)
         {
             if (address != NoAddress && address < binary.InstructionTable.Length)
             {
@@ -960,7 +960,7 @@ public static class GameEventScriptBinaryDumper
         private static void AddNamedCodeLabel(
             Dictionary<int, string> labels,
             Dictionary<int, string> comments,
-            GameEventScriptBinary binary,
+            GameEventScriptProgram binary,
             GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
         {
             if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.InstructionTable.Length)
@@ -1058,7 +1058,7 @@ public static class GameEventScriptBinaryDumper
             }
         }
 
-        private static string FormatCodeLabelComment(GameEventScriptBinary binary, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
         {
             var kind = entry.Kind switch
             {

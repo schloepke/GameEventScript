@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterCallExternal
 {
-    internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GameEventScriptSession session, bool isPredicate)
+    internal static void GesVmCallExternal(this GesVmState state, ushort destinationRegister, ushort externalBindId, ushort argumentRegisterList, GameEventScriptContext context, bool isPredicate)
     {
         if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GameEventScriptBinaryBindKind.ExtensionCall)
         {
@@ -36,7 +36,7 @@ internal static class GesVmRegisterCallExternal
             ? GesValueArguments.Empty
             : new GesValueArguments(state, argumentRegisters);
         var call = state.ExtensionCall;
-        call.BeginCall(state, destinationRegister, session, arguments);
+        call.BeginCall(state, destinationRegister, context, arguments);
         try
         {
             function.Invoke(call);

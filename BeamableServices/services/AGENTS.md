@@ -30,7 +30,7 @@ dotnet test StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj --fil
 
 ## Current Architecture Direction
 
-The project is moving toward a portable Game Event Script VM with a compact value model:
+The project has a portable Game Event Script host/VM architecture with a compact value model:
 
 - The old polymorphic value graph has been removed or largely replaced.
 - `GesValue` / `GameEventScriptValue` are the current compact value concepts.
@@ -39,8 +39,36 @@ The project is moving toward a portable Game Event Script VM with a compact valu
 - The old VM/compiler path has been removed or superseded by the new binary compiler and VM.
 - Standard extensions were migrated into opcodes where possible.
 - Series now use direct VM concepts and `CreateSeries`.
+- `GameEventScriptProgram` is the immutable reusable compiler result.
+- `GameEventScriptProgram` is the portable in-memory representation of the future `.gesb` binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
+- `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
+- `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.
+- Native `Subscribe` returns an idempotently detachable `GameEventScriptSubscription`.
+- Each host creates one `GameEventScriptContext`, owns one logical-message ring queue, and lazily creates at most one reusable `GesVmState`.
+- `GameEventScriptVirtualMachine` is a stateless executor; program-specific dynamic links live in `GesLinkedProgram`.
+- `Receive` and `Emit` are local. `Publish` is local plus one optional synchronous `IGameEventScriptPublishSink`.
+- Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
+- There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
+- `StepH-GameEventScript/HostArchitecture.md` is the normative portable responsibility/state-machine document.
 
 ## Recent Completed Work
+
+### Host / Program / VM Split
+
+- Removed `IGameEventScriptModule`, `GameEventScriptSession`, isolated runs, the module-owned VM, and automatic Core dispatch.
+- Added immutable program table views and host-specific linked-program data.
+- Added direct resumable script dispatch, immutable subscription snapshots, and a growing logical-message ring queue.
+- Added value-type execution/publish results, local-plus-outbound Publish semantics, initialization-per-instance, Detach, and Unsubscribe.
+- Migrated JSON conformance to `Program -> Host.Load -> Receive -> ExecuteFrame/RunToCompletion`, including multi-program and frame-resume cases.
+- Added allocation validation showing zero queue/selection/frame/resume heap allocation after warmup when message creation and output payload creation are excluded.
+
+Verification after this architecture change:
+
+```text
+993/993 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
 
 ### Custom `Try...` Cleanup
 
@@ -54,7 +82,7 @@ Completed cleanup:
   - `TryEmitSpatialConstructor` -> `EmitSpatialConstructor`
   - Rewriter helpers like `TryGetJumpTarget`, `TryInvertBranch`, `TryFoldUnary`, `TryFoldBinary`, and `TryGetLocalConstant` were converted to nullable/default-return styles.
 - Runtime/Budget/Host custom `Try...` methods were renamed:
-  - `TryConsumeExecutionStep(s)` -> `ConsumeExecutionStep(s)IfAvailable`
+  - execution-step accounting now uses `ReserveExecutionSlice` / `CompleteExecutionSlice`
   - `TryConsumeLoopIteration` -> `ConsumeLoopIterationIfAvailable`
   - `TryEnterCall` -> `EnterCallIfAvailable`
   - `TryCheckRangeLength` -> `CheckRangeLengthWithinLimit`
@@ -80,11 +108,14 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/Compiler/GesBinaryBuilder.cs`
 - `StepH-GameEventScript/Compiler/GesBinaryBuilderRewriter.cs`
 - `StepH-GameEventScript/Runtime/GesRuntimeBudget.cs`
-- `StepH-GameEventScript/Runtime/GameEventScriptRuntimeHost.cs`
-- `StepH-GameEventScript/Runtime/VM/GameEventScriptVirtualMaschine.cs`
+- `StepH-GameEventScript/Api/GameEventScriptProgram.cs`
+- `StepH-GameEventScript/Api/GameEventScriptHost.cs`
+- `StepH-GameEventScript/Api/GameEventScriptContext.cs`
+- `StepH-GameEventScript/Runtime/VM/GesLinkedProgram.cs`
+- `StepH-GameEventScript/Runtime/VM/GameEventScriptVirtualMachine.cs`
 - `StepH-GameEventScript/Runtime/VM/GesVmState.cs`
-- `StepH-GameEventScript/Api/GameEventScriptSession.cs`
-- `StepH-GameEventScript/CSharpBridge`
+- `StepH-GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
+- `StepH-GameEventScript/HostArchitecture.md`
 
 ## Known Warnings
 
@@ -97,7 +128,6 @@ Likely next useful areas:
 - Message/Emit allocation path, only if performance data justifies more work.
 - More compiler allocation optimization.
 - Check whether bytecode optimizer passes still produce meaningful diffs now that the compiler emits better registers directly.
-- Table type and mutation/lifecycle concept.
+- Table type and mutation/lifecycle concept beyond immutable program tables.
 - Further VM-near extension call model if boxing at the extension boundary becomes expensive again.
 - JSON/wire message shape is intentionally not finalized yet.
-

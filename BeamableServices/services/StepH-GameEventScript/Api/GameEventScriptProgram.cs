@@ -2,26 +2,68 @@
 
 using System;
 using System.Collections.Generic;
+using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
 namespace StepH.GameEventScript.Api;
 
-public sealed class GameEventScriptBinary(
-    GameEventScriptBinaryHeader header,
-    string moduleName,
-    GameEventScriptTextTable textConstantTable,
-    GameEventScriptUInt16Table uint16ConstantTable,
-    GameEventScriptBinaryBindTable bindTable,
-    GameEventScriptBytecodeInstruction[] instructionTable)
+public sealed class GameEventScriptProgram
 {
-    public GameEventScriptBinaryHeader Header { get; } = header;
-    public string ModuleName { get; } = moduleName;
-    public GameEventScriptTextTable TextConstantTable = textConstantTable;
-    public GameEventScriptUInt16Table Uint16ConstantTable { get; } = uint16ConstantTable;
-    public GameEventScriptBinaryBindTable BindTable { get; } = bindTable;
-    public GameEventScriptBytecodeInstruction[] InstructionTable { get; } = instructionTable;
+    public GameEventScriptProgram(
+        GameEventScriptBinaryHeader header,
+        string moduleName,
+        GameEventScriptTextTable textConstantTable,
+        GameEventScriptUInt16Table uint16ConstantTable,
+        GameEventScriptBinaryBindTable bindTable,
+        IReadOnlyList<GameEventScriptBytecodeInstruction> instructionTable)
+    {
+        Header = header;
+        ModuleName = moduleName ?? string.Empty;
+        TextConstantTable = textConstantTable;
+        Uint16ConstantTable = uint16ConstantTable;
+        BindTable = bindTable;
+        InstructionTable = new GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction>(instructionTable);
+    }
+
+    public GameEventScriptBinaryHeader Header { get; }
+    public string ModuleName { get; }
+    public GameEventScriptTextTable TextConstantTable { get; }
+    public GameEventScriptUInt16Table Uint16ConstantTable { get; }
+    public GameEventScriptBinaryBindTable BindTable { get; }
+    public GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction> InstructionTable { get; }
+}
+
+/// <summary>
+/// Immutable array view used by the portable program representation.
+/// </summary>
+public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
+{
+    private readonly T[]? _items;
+
+    public GameEventScriptReadOnlyArray(IReadOnlyList<T>? items)
+    {
+        if (items is null || items.Count == 0)
+        {
+            _items = [];
+            return;
+        }
+
+        _items = new T[items.Count];
+        for (var index = 0; index < items.Count; index++)
+        {
+            _items[index] = items[index];
+        }
+    }
+
+    public int Count => _items?.Length ?? 0;
+    public int Length => Count;
+    public T this[int index] => (_items ?? [])[index];
+    public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)(_items ?? [])).GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    internal T[] UnsafeItems => _items ?? [];
 }
 
 public readonly struct GameEventScriptBinaryHeader
@@ -50,11 +92,20 @@ public readonly struct GameEventScriptTextTable
         public ushort Length { get; init; }
     }
 
-    public SliceEntry[] Slices { get; init; }
-    public byte[] Data { get; init; }
+    private readonly GameEventScriptReadOnlyArray<SliceEntry> _slices;
+    private readonly GameEventScriptReadOnlyArray<byte> _data;
 
-    public int ResolveSize(ushort index) => Slices[index].Length;
-    public string Resolve(ushort index) => Encoding.UTF8.GetString(Data, Slices[index].Start, Slices[index].Length);
+    public GameEventScriptTextTable(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
+    {
+        _slices = new GameEventScriptReadOnlyArray<SliceEntry>(slices);
+        _data = new GameEventScriptReadOnlyArray<byte>(data);
+    }
+
+    public GameEventScriptReadOnlyArray<SliceEntry> Slices => _slices;
+    public GameEventScriptReadOnlyArray<byte> Data => _data;
+
+    public int ResolveSize(ushort index) => _slices[index].Length;
+    public string Resolve(ushort index) => Encoding.UTF8.GetString(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
 }
 
 public readonly struct GameEventScriptUInt16Slice
@@ -83,10 +134,19 @@ public readonly struct GameEventScriptUInt16Table
         public ushort Length { get; init; }
     }
 
-    public SliceEntry[] Slices { get; init; }
-    public ushort[] Data { get; init; }
+    private readonly GameEventScriptReadOnlyArray<SliceEntry> _slices;
+    private readonly GameEventScriptReadOnlyArray<ushort> _data;
 
-    public GameEventScriptUInt16Slice Resolve(ushort index) => new(Data, Slices[index].Start, Slices[index].Length);
+    public GameEventScriptUInt16Table(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
+    {
+        _slices = new GameEventScriptReadOnlyArray<SliceEntry>(slices);
+        _data = new GameEventScriptReadOnlyArray<ushort>(data);
+    }
+
+    public GameEventScriptReadOnlyArray<SliceEntry> Slices => _slices;
+    public GameEventScriptReadOnlyArray<ushort> Data => _data;
+
+    public GameEventScriptUInt16Slice Resolve(ushort index) => new(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
 }
 
 public readonly struct GameEventScriptBinaryBindTable
@@ -101,9 +161,9 @@ public readonly struct GameEventScriptBinaryBindTable
         IReadOnlyList<ushort>? requiredTags = null,
         IReadOnlyList<ushort>? excludedTags = null)
     {
-        private readonly ushort[]? _argumentNames = Copy(argumentNames);
-        private readonly ushort[]? _requiredTags = Copy(requiredTags);
-        private readonly ushort[]? _excludedTags = Copy(excludedTags);
+        private readonly GameEventScriptReadOnlyArray<ushort> _argumentNames = new(argumentNames);
+        private readonly GameEventScriptReadOnlyArray<ushort> _requiredTags = new(requiredTags);
+        private readonly GameEventScriptReadOnlyArray<ushort> _excludedTags = new(excludedTags);
 
         public ushort Id { get; } = id;
 
@@ -111,61 +171,30 @@ public readonly struct GameEventScriptBinaryBindTable
 
         public ushort Name { get; } = name;
 
-        public IReadOnlyList<ushort> ArgumentNames => _argumentNames ?? [];
+        public GameEventScriptReadOnlyArray<ushort> ArgumentNames => _argumentNames;
 
-        public IReadOnlyList<ushort> RequiredTags => _requiredTags ?? [];
+        public GameEventScriptReadOnlyArray<ushort> RequiredTags => _requiredTags;
 
-        public IReadOnlyList<ushort> ExcludedTags => _excludedTags ?? [];
+        public GameEventScriptReadOnlyArray<ushort> ExcludedTags => _excludedTags;
 
         public ushort EntryAddress { get; } = entryAddress;
 
-        private static ushort[] Copy(IReadOnlyList<ushort>? values)
-        {
-            if (values is null || values.Count == 0)
-            {
-                return [];
-            }
-
-            var result = new ushort[values.Count];
-            for (var index = 0; index < values.Count; index++)
-            {
-                result[index] = values[index];
-            }
-
-            return result;
-        }
     }
 
-    private readonly GameEventScriptBinaryBindEntry[]? _entries;
+    private readonly GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry> _entries;
 
     public GameEventScriptBinaryBindTable(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
     {
-        _entries = Copy(entries);
-        EntryCount = ToEntryCount(_entries.Length);
+        _entries = new GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry>(entries);
+        EntryCount = ToEntryCount(_entries.Count);
     }
 
     public ushort EntryCount { get; }
 
-    public IReadOnlyList<GameEventScriptBinaryBindEntry> Entries => _entries ?? [];
+    public GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry> Entries => _entries;
 
-    private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptBinary tables cannot exceed 65535 entries.") : checked((ushort)count);
+    private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptProgram tables cannot exceed 65535 entries.") : checked((ushort)count);
 
-    private static GameEventScriptBinaryBindEntry[] Copy(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
-    {
-        if (entries is null || entries.Count == 0)
-        {
-            return [];
-        }
-
-        var result = new GameEventScriptBinaryBindEntry[entries.Count];
-        for (var index = 0; index < entries.Count; index++)
-        {
-            result[index] = entries[index];
-        }
-
-        return result;
-    }
-    
 }
 
 public enum GameEventScriptBinaryBindKind : byte

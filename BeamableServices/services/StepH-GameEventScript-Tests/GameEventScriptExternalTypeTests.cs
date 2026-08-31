@@ -40,11 +40,12 @@ public sealed class GameEventScriptExternalTypeTests
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypes(registry)
-            .Build()
-            .Load(GameEventScriptManager.CreateModule(bytecode))
-            .Subscribe("Done", ["isAim", "bearing", "range", "steps", "directionZ", "checksum"], (message, _) => received.Add(message));
+            .Build();
+        host.Load(bytecode);
+        host.Subscribe("Done", ["isAim", "bearing", "range", "steps", "directionZ", "checksum"], (message, _) => received.Add(message));
 
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
         Assert.HasCount(1, received);
         var arguments = received[0].Arguments;
         Assert.IsTrue(arguments.GetAsBoolean("isAim"));
@@ -77,7 +78,7 @@ public sealed class GameEventScriptExternalTypeTests
         Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() =>
             GameEventScriptHost.CreateBuilder()
                 .Build()
-                .Load(GameEventScriptManager.CreateModule(bytecode)));
+                .Load(bytecode));
     }
 
     [TestMethod]
@@ -125,11 +126,12 @@ public sealed class GameEventScriptExternalTypeTests
         var host = GameEventScriptHost.CreateBuilder()
             .WithExternalTypes(registry)
             .WithRegistry(GameEventScriptCSharpExtensions.CreateRegistry(typeof(AimExtensionFunctions)))
-            .Build()
-            .Load(GameEventScriptManager.CreateModule(bytecode))
-            .Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
+            .Build();
+        host.Load(bytecode);
+        host.Subscribe("Done", ["score", "lead", "distance", "integerDistance"], (message, _) => received.Add(message));
 
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
         Assert.HasCount(1, received);
         var arguments = received[0].Arguments;
         Assert.AreEqual(106, arguments.GetAsInteger("score"));

@@ -7,11 +7,10 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
-internal sealed class GameEventScriptCSharpDispatcher : IGameEventScriptDispatcher, IGameEventScriptRuntimeGate, IDisposable
+internal sealed class GameEventScriptCSharpDispatcher : IDisposable
 {
     private readonly Queue<Action> _workItems = new();
     private readonly object _gate = new();
-    private readonly object _executionGate = new();
     private readonly Thread[] _workers;
     private bool _disposed;
 
@@ -30,10 +29,6 @@ internal sealed class GameEventScriptCSharpDispatcher : IGameEventScriptDispatch
     public static GameEventScriptCSharpDispatcher Shared { get; } = new(1, "GameEventScript shared dispatch pump");
 
     public static GameEventScriptCSharpDispatcher Create(int workerCount = 1) => new(workerCount, "GameEventScript dispatch pump");
-
-    public void Enter() => Monitor.Enter(_executionGate);
-
-    public void Exit() => Monitor.Exit(_executionGate);
 
     public void Enqueue(Action workItem)
     {
@@ -80,15 +75,7 @@ internal sealed class GameEventScriptCSharpDispatcher : IGameEventScriptDispatch
 
             try
             {
-                Enter();
-                try
-                {
-                    workItem();
-                }
-                finally
-                {
-                    Exit();
-                }
+                workItem();
             }
             catch
             {

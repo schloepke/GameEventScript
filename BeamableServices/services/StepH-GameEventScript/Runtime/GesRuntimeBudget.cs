@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 
 namespace StepH.GameEventScript.Runtime;
 
-internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEventScriptRuntimeLimits limits)
+internal sealed class GesRuntimeBudget(GameEventScriptContext context, GameEventScriptRuntimeLimits limits)
 {
     private long _executionSteps;
     private long _loopIterations;
@@ -19,57 +19,39 @@ internal sealed class GesRuntimeBudget(GameEventScriptSession context, GameEvent
 
     public bool IsStepping => false;
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool ConsumeExecutionStepIfAvailable(string detail)
+    public void Reset()
     {
-        if (_exhausted)
-        {
-            return false;
-        }
-
-        var limit = Limits.MaxExecutionSteps;
-        if (limit <= 0)
-        {
-            return true;
-        }
-
-        if (_executionSteps >= limit)
-        {
-            MarkExhausted("MaxExecutionSteps", detail, limit);
-            return false;
-        }
-
-        _executionSteps++;
-        return true;
+        _executionSteps = 0;
+        _loopIterations = 0;
+        _callDepth = 0;
+        _exhausted = false;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool ConsumeExecutionStepsIfAvailable(int count, string detail)
+    public int ReserveExecutionSlice(int requestedSteps, string detail)
     {
-        if (_exhausted)
-        {
-            return false;
-        }
-
-        if (count <= 1)
-        {
-            count = 1;
-        }
-
+        if (_exhausted || requestedSteps <= 0) return 0;
         var limit = Limits.MaxExecutionSteps;
-        if (limit <= 0)
-        {
-            return true;
-        }
-
-        if (_executionSteps > limit - count)
+        if (limit <= 0) return requestedSteps;
+        var remaining = limit - _executionSteps;
+        if (remaining <= 0)
         {
             MarkExhausted("MaxExecutionSteps", detail, limit);
-            return false;
+            return 0;
         }
 
-        _executionSteps += count;
-        return true;
+        var reserved = (int)Math.Min(requestedSteps, remaining);
+        _executionSteps += reserved;
+        return reserved;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void CompleteExecutionSlice(int executedSteps, int reservedSteps, bool stillProcessing, string detail)
+    {
+        if (Limits.MaxExecutionSteps <= 0 || _exhausted) return;
+        if (executedSteps < reservedSteps) _executionSteps -= reservedSteps - executedSteps;
+        if (stillProcessing && _executionSteps >= Limits.MaxExecutionSteps)
+            MarkExhausted("MaxExecutionSteps", detail, Limits.MaxExecutionSteps);
     }
 
     public bool ConsumeLoopIterationIfAvailable(string detail)

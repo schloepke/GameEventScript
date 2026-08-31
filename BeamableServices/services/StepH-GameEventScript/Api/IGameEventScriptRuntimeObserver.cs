@@ -6,7 +6,7 @@ public interface IGameEventScriptRuntimeObserver
 {
     void MessageEmitted(GameEventScriptMessage message, bool accepted);
 
-    void MessagePublished(GameEventScriptMessage message, bool accepted);
+    void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result);
 
     void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId);
 

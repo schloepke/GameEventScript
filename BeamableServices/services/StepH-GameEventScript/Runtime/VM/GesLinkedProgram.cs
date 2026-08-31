@@ -1,0 +1,192 @@
+using System;
+using StepH.GameEventScript.Api;
+using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
+using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
+
+namespace StepH.GameEventScript.Runtime.VM;
+
+internal sealed class GesLinkedProgram
+{
+    internal readonly struct OutboundMessageSignature
+    {
+        internal OutboundMessageSignature(string name, string[] argumentNames, string signatureId)
+        {
+            Name = name;
+            ArgumentNames = argumentNames;
+            SignatureId = signatureId;
+            IsValid = true;
+        }
+
+        internal bool IsValid { get; }
+        internal string Name { get; }
+        internal string[] ArgumentNames { get; }
+        internal string SignatureId { get; }
+    }
+
+    internal readonly struct Handler(
+        GameEventScriptMessageSignature signature,
+        string[] requiredTags,
+        string[] excludedTags,
+        bool matchArguments,
+        ushort entryAddress)
+    {
+        internal GameEventScriptMessageSignature Signature { get; } = signature;
+        internal string[] RequiredTags { get; } = requiredTags;
+        internal string[] ExcludedTags { get; } = excludedTags;
+        internal bool MatchArguments { get; } = matchArguments;
+        internal ushort EntryAddress { get; } = entryAddress;
+    }
+
+    internal GesLinkedProgram(
+        GameEventScriptProgram program,
+        IGameEventScriptExtensionRegistry extensionRegistry,
+        IGameEventScriptExternalTypeRegistry typeRegistry)
+    {
+        Program = program ?? throw new ArgumentNullException(nameof(program));
+        StringPool = BuildStringPool(program.TextConstantTable);
+        CodeSegmentSize = checked((ushort)program.InstructionTable.Length);
+        RecordConstructors = BuildIdIndexedBindTable(program, Record);
+        ExtensionCallBinds = BuildIdIndexedBindTable(program, ExtensionCall);
+        ExternalTypeBinds = BuildIdIndexedBindTable(program, ExternalType);
+        OutboundMessageSignatures = BuildOutboundMessageSignatures(program);
+        BoundExtensionCalls = BindExtensions(extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance);
+        BoundExternalTypeConstructors = BindExternalTypes(typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance);
+        Handlers = BuildHandlers(program);
+        RequiredRegisterCapacity = CalculateRequiredRegisterCapacity(program, Handlers);
+    }
+
+    internal GameEventScriptProgram Program { get; }
+    internal string[] StringPool { get; }
+    internal ushort CodeSegmentSize { get; }
+    internal OutboundMessageSignature[] OutboundMessageSignatures { get; }
+    internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; }
+    internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds { get; }
+    internal GameEventScriptBinaryBindEntry[] ExternalTypeBinds { get; }
+    internal IGameEventScriptExtensionFunction?[] BoundExtensionCalls { get; }
+    internal IGameEventScriptExternalTypeConstructor?[] BoundExternalTypeConstructors { get; }
+    internal Handler[] Handlers { get; }
+    internal int RequiredRegisterCapacity { get; }
+
+    internal string FetchString(ushort index) => StringPool[index];
+
+    private static int CalculateRequiredRegisterCapacity(GameEventScriptProgram program, Handler[] handlers)
+    {
+        var required = 32;
+        for (var index = 0; index < handlers.Length; index++)
+            required = Math.Max(required, handlers[index].Signature.Parameters.Count);
+        for (var index = 0; index < program.InstructionTable.Length; index++)
+        {
+            var instruction = program.InstructionTable[index];
+            if (instruction.OpCode == GameEventScriptBytecodeOpCode.RegisterLocals && instruction.Count > 0)
+                required = Math.Max(required, instruction.Count);
+        }
+
+        return required;
+    }
+
+    private Handler[] BuildHandlers(GameEventScriptProgram program)
+    {
+        var count = 0;
+        foreach (var bind in program.BindTable.Entries)
+        {
+            if (bind.Kind is MessageHandler or MessageNameHandler) count++;
+        }
+
+        if (count == 0) return [];
+        var handlers = new Handler[count];
+        var handlerIndex = 0;
+        foreach (var bind in program.BindTable.Entries)
+        {
+            if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
+            var name = FetchString(bind.Name);
+            var arguments = ReadStrings(bind.ArgumentNames);
+            handlers[handlerIndex++] = new Handler(
+                GameEventScriptMessageSignature.Create(name, arguments),
+                ReadStrings(bind.RequiredTags),
+                ReadStrings(bind.ExcludedTags),
+                bind.Kind == MessageHandler,
+                bind.EntryAddress);
+        }
+
+        return handlers;
+    }
+
+    private string[] ReadStrings(System.Collections.Generic.IReadOnlyList<ushort> pointers)
+    {
+        if (pointers.Count == 0) return [];
+        var values = new string[pointers.Count];
+        for (var index = 0; index < values.Length; index++) values[index] = FetchString(pointers[index]);
+        return values;
+    }
+
+    private IGameEventScriptExtensionFunction?[] BindExtensions(IGameEventScriptExtensionRegistry registry)
+    {
+        var result = new IGameEventScriptExtensionFunction?[ExtensionCallBinds.Length];
+        for (ushort bindId = 0; bindId < ExtensionCallBinds.Length; bindId++)
+        {
+            var bind = ExtensionCallBinds[bindId];
+            if (bind.Kind != ExtensionCall || bind.Id != bindId) continue;
+            var fullName = FetchString(bind.Name);
+            var separator = fullName.IndexOf('.');
+            if (separator <= 0 || separator >= fullName.Length - 1)
+                throw new GameEventScriptDynamicLinkException($"External extension reference '{fullName}' has an invalid name.");
+            var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], ReadStrings(bind.ArgumentNames));
+            result[bindId] = registry.Resolve(reference) ?? throw new GameEventScriptDynamicLinkException(
+                $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+        }
+
+        return result;
+    }
+
+    private IGameEventScriptExternalTypeConstructor?[] BindExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    {
+        var result = new IGameEventScriptExternalTypeConstructor?[ExternalTypeBinds.Length];
+        for (ushort bindId = 0; bindId < ExternalTypeBinds.Length; bindId++)
+        {
+            var bind = ExternalTypeBinds[bindId];
+            if (bind.Kind != ExternalType || bind.Id != bindId) continue;
+            var reference = new GameEventScriptExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
+            result[bindId] = registry.Resolve(reference) ?? throw new GameEventScriptDynamicLinkException(
+                $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+        }
+
+        return result;
+    }
+
+    private OutboundMessageSignature[] BuildOutboundMessageSignatures(GameEventScriptProgram program)
+    {
+        var binds = BuildIdIndexedBindTable(program, OutboundMessage);
+        if (binds.Length == 0) return [];
+        var signatures = new OutboundMessageSignature[binds.Length];
+        for (var index = 0; index < binds.Length; index++)
+        {
+            var bind = binds[index];
+            if (bind.Kind != OutboundMessage || bind.Id != index) continue;
+            var name = FetchString(bind.Name);
+            var arguments = ReadStrings(bind.ArgumentNames);
+            signatures[index] = new OutboundMessageSignature(name, arguments,
+                GameEventScriptMessageSignature.CreateSignatureId(name, arguments));
+        }
+
+        return signatures;
+    }
+
+    private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GameEventScriptBinaryBindKind kind)
+    {
+        var maxId = -1;
+        foreach (var entry in program.BindTable.Entries)
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId) maxId = entry.Id;
+        if (maxId < 0) return [];
+        var result = new GameEventScriptBinaryBindEntry[maxId + 1];
+        foreach (var entry in program.BindTable.Entries)
+            if (entry.Kind == kind && entry.Id != ushort.MaxValue) result[entry.Id] = entry;
+        return result;
+    }
+
+    private static string[] BuildStringPool(GameEventScriptTextTable table)
+    {
+        var strings = new string[table.Slices.Length];
+        for (var index = 0; index < strings.Length; index++) strings[index] = table.Resolve((ushort)index);
+        return strings;
+    }
+}

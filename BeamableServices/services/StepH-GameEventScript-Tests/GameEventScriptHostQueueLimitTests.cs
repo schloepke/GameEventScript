@@ -29,7 +29,8 @@ public sealed class GameEventScriptHostQueueLimitTests
         host.Subscribe("B", [], (_, _) => { });
         host.Subscribe("C", [], (_, _) => { });
 
-        Assert.IsTrue(host.PublishToCompletion(Create("Start")));
+        Assert.IsTrue(host.Receive(Create("Start")));
+        host.RunToCompletion();
 
         CollectionAssert.AreEqual(
             new[] { "Emit:A:True", "Emit:B:True", "Emit:C:False" },
@@ -58,8 +59,8 @@ public sealed class GameEventScriptHostQueueLimitTests
         public void MessageEmitted(GameEventScriptMessage message, bool accepted)
             => Outputs.Add($"Emit:{message.Name}:{accepted}");
 
-        public void MessagePublished(GameEventScriptMessage message, bool accepted)
-            => Outputs.Add($"Publish:{message.Name}:{accepted}");
+        public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result)
+            => Outputs.Add($"Publish:{message.Name}:{result.AnyAccepted}");
 
         public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)
             => StartedDispatches.Add(dispatchSignatureId);

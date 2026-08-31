@@ -26,7 +26,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
     [TestMethod]
     public void CompilerTypesStayInternal()
     {
-        var leakedTypes = typeof(GameEventScriptBinary)
+        var leakedTypes = typeof(GameEventScriptProgram)
             .Assembly
             .GetExportedTypes()
             .Where(type =>
@@ -40,7 +40,7 @@ public sealed class GameEventScriptPublicApiSurfaceTests
 
     internal static string BuildPublicSurfaceSnapshot()
     {
-        var assembly = typeof(GameEventScriptBinary).Assembly;
+        var assembly = typeof(GameEventScriptProgram).Assembly;
         var output = new StringBuilder();
         foreach (var type in assembly.GetExportedTypes().OrderBy(type => type.FullName, StringComparer.Ordinal))
         {

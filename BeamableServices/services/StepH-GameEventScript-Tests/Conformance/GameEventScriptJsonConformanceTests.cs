@@ -545,27 +545,33 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             GameEventScriptConformanceRunner.CreateScriptBuilderForTest(testCase.Test).BuildModule(compileOptions));
         var binaryBuild = Measure("binaryBuild", () =>
             GesCompiler.Compile(astBuild.Value, compileOptions));
-        var moduleLoad = Measure("moduleLoad", () =>
-            GameEventScriptManager.CreateModule(binaryBuild.Value, 4096, 256));
-        var compiled = new CompiledPerformanceModule(binaryBuild.Value, moduleLoad.Value);
-        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, compiled.Binary);
+        var programLoad = Measure("programLoad", () =>
+        {
+            var host = GameEventScriptManager.CreateHostBuilder()
+                .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
+                .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+                .WithRuntimeLimits(GameEventScriptConformanceRunner.CreateRuntimeLimitsForTest(testCase.Test.RuntimeLimits))
+                .Build();
+            return host.Load(binaryBuild.Value);
+        });
+        AppendPerformanceBinaryDumpCase(binaryDumpReport, testCase, binaryBuild.Value);
         if (testCase.Test.DumpBinary)
         {
             TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
-            TestContext.WriteLine(StableBinaryDump(compiled.Binary, GetScriptSourceForDump(testCase)));
+            TestContext.WriteLine(StableBinaryDump(binaryBuild.Value, GetScriptSourceForDump(testCase)));
         }
 
-        AssertPerformanceCorrectness(testCase, "new vm", compiled.Module);
+        AssertPerformanceCorrectness(testCase, "new vm", binaryBuild.Value);
 
-        var newRun = MeasurePerformanceRun(testCase, compiled.Module, iterations, warmupIterations);
+        var newRun = MeasurePerformanceRun(testCase, binaryBuild.Value, iterations, warmupIterations);
 
-        AppendPerformanceCase(report, testCase, iterations, warmupIterations, astBuild, binaryBuild, moduleLoad, newRun);
+        AppendPerformanceCase(report, testCase, iterations, warmupIterations, astBuild, binaryBuild, programLoad, newRun);
     }
 
     private static void AppendPerformanceBinaryDumpCase(
         StringBuilder report,
         GameEventScriptConformanceCase testCase,
-        GameEventScriptBinary binary)
+        GameEventScriptProgram binary)
     {
         report.AppendLine("// -------------------------------------------------------------------------------");
         report.Append("//  Performance Case: ").Append(testCase.SuiteName).Append('/').AppendLine(testCase.Test.Name);
@@ -575,7 +581,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.AppendLine();
     }
 
-    private static string StableBinaryDump(GameEventScriptBinary binary, string? scriptSource)
+    private static string StableBinaryDump(GameEventScriptProgram binary, string? scriptSource)
     {
         var dump = binary.Dump(includeInstructionAddresses: false, scriptSource: scriptSource);
         var lines = dump.ReplaceLineEndings("\n").Split('\n');
@@ -596,8 +602,8 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         int iterations,
         int warmupIterations,
         Measured<GesSyntaxTreeModule> astBuild,
-        Measured<GameEventScriptBinary> binaryBuild,
-        Measured<IGameEventScriptModule> moduleLoad,
+        Measured<GameEventScriptProgram> binaryBuild,
+        Measured<GameEventScriptInstance> programLoad,
         PerformanceRunMetrics run)
     {
         report.AppendLine($"## {testCase.SuiteName}/{testCase.Test.Name}");
@@ -607,8 +613,8 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.AppendLine($"steps={testCase.Test.Steps!.Count}");
         AppendMeasured(report, "astBuild", astBuild);
         AppendMeasured(report, "binaryBuild", binaryBuild);
-        AppendMeasured(report, "moduleLoad", moduleLoad);
-        AppendCompileTotal(report, astBuild, binaryBuild, moduleLoad);
+        AppendMeasured(report, "programLoad", programLoad);
+        AppendCompileTotal(report, astBuild, binaryBuild, programLoad);
         AppendRun(report, "run", run, iterations);
         report.AppendLine();
     }
@@ -616,7 +622,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     private static void AssertPerformanceCorrectness(
         GameEventScriptConformanceCase testCase,
         string engine,
-        IGameEventScriptModule module)
+        GameEventScriptProgram module)
     {
         var emitted = new List<GameEventScriptMessage>();
         var published = new List<GameEventScriptMessage>();
@@ -627,8 +633,9 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             emitted.Clear();
             published.Clear();
             var step = testCase.Test.Steps[stepIndex];
-            var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
-            if (!handled)
+            var accepted = host.Receive(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
+            host.RunToCompletion();
+            if (!accepted)
             {
                 Assert.Fail($"{testCase} {engine} step {stepIndex + 1}: handler was not found or could not start.");
             }
@@ -640,7 +647,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
     private static PerformanceRunMetrics MeasurePerformanceRun(
         GameEventScriptConformanceCase testCase,
-        IGameEventScriptModule module,
+        GameEventScriptProgram module,
         int iterations,
         int warmupIterations)
     {
@@ -652,13 +659,16 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             _ => emittedCount++,
             _ => publishedCount++);
 
-        RunPerformanceIterations(testCase, host, warmupIterations);
+        var inputs = testCase.Test.Steps!
+            .Select(step => GameEventScriptConformanceValueCodec.DecodeMessage(step.Input))
+            .ToArray();
+        RunPerformanceIterations(testCase, host, inputs, warmupIterations);
         ForceFullCollection();
         emittedCount = 0;
         publishedCount = 0;
         var beforeAllocated = GC.GetAllocatedBytesForCurrentThread();
         var stopwatch = Stopwatch.StartNew();
-        RunPerformanceIterations(testCase, host, iterations);
+        RunPerformanceIterations(testCase, host, inputs, iterations);
         stopwatch.Stop();
         return new PerformanceRunMetrics(
             stopwatch.Elapsed,
@@ -667,14 +677,19 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             publishedCount);
     }
 
-    private static void RunPerformanceIterations(GameEventScriptConformanceCase testCase, GameEventScriptHost host, int iterations)
+    private static void RunPerformanceIterations(
+        GameEventScriptConformanceCase testCase,
+        GameEventScriptHost host,
+        IReadOnlyList<GameEventScriptMessage> inputs,
+        int iterations)
     {
         for (var iteration = 0; iteration < iterations; iteration++)
         {
-            foreach (var step in testCase.Test.Steps!)
+            foreach (var input in inputs)
             {
-                var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
-                if (!handled)
+                var accepted = host.Receive(input);
+                var result = host.RunToCompletion();
+                if (!accepted || result.State == GameEventScriptExecutionState.RuntimeLimitReached)
                 {
                     Assert.Fail($"{testCase}: handler was not found or could not start during performance run.");
                 }
@@ -684,14 +699,14 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
     private static GameEventScriptHost CreatePerformanceHost(
         GameEventScriptConformanceCase testCase,
-        IGameEventScriptModule module,
+        GameEventScriptProgram module,
         List<GameEventScriptMessage> emitted,
         List<GameEventScriptMessage> published)
         => CreatePerformanceHost(testCase, module, emitted.Add, published.Add);
 
     private static GameEventScriptHost CreatePerformanceHost(
         GameEventScriptConformanceCase testCase,
-        IGameEventScriptModule module,
+        GameEventScriptProgram module,
         Action<GameEventScriptMessage> emitted,
         Action<GameEventScriptMessage> published)
     {
@@ -703,12 +718,9 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
                 messageEmitted: emitted,
                 messagePublished: emitted))
-            .WithPublishHook(message =>
-            {
-                published(message);
-                return true;
-            });
-        var host = builder.Build().Load(module);
+            .WithPublishSink(new TestPublishSink(published));
+        var host = builder.Build();
+        host.Load(module);
         GameEventScriptConformanceRunner.RegisterExternalSubscribers(testCase, host);
         return host;
     }
@@ -747,7 +759,11 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         {
             var module = GameEventScriptConformanceRunner.CreateScriptBuilderForTest(testCase.Test).BuildModule(compileOptions);
             var binary = GesCompiler.Compile(module, compileOptions);
-            _ = GameEventScriptManager.CreateModule(binary, 4096, 256);
+            var host = GameEventScriptManager.CreateHostBuilder()
+                .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
+                .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+                .Build();
+            _ = host.Load(binary);
         }
     }
 
@@ -774,19 +790,19 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     private static void AppendCompileTotal(
         StringBuilder report,
         Measured<GesSyntaxTreeModule> astBuild,
-        Measured<GameEventScriptBinary> binaryBuild,
-        Measured<IGameEventScriptModule> moduleLoad)
+        Measured<GameEventScriptProgram> binaryBuild,
+        Measured<GameEventScriptInstance> programLoad)
     {
         report.Append("compile.elapsedMs=");
         report.AppendLine(FormatMilliseconds(
             astBuild.Elapsed.TotalMilliseconds +
             binaryBuild.Elapsed.TotalMilliseconds +
-            moduleLoad.Elapsed.TotalMilliseconds));
+            programLoad.Elapsed.TotalMilliseconds));
         report.Append("compile.allocatedKb=");
         report.AppendLine(FormatAllocatedKilobytes(
             astBuild.AllocatedBytes +
             binaryBuild.AllocatedBytes +
-            moduleLoad.AllocatedBytes));
+            programLoad.AllocatedBytes));
     }
 
     private static void AppendRun(StringBuilder report, string label, PerformanceRunMetrics run, int iterations)
@@ -832,8 +848,6 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
     }
 
     private sealed record Measured<T>(string Name, T Value, TimeSpan Elapsed, long AllocatedBytes);
-
-    private readonly record struct CompiledPerformanceModule(GameEventScriptBinary Binary, IGameEventScriptModule Module);
 
     private sealed record PerformanceRunMetrics(
         TimeSpan Elapsed,
@@ -999,10 +1013,10 @@ public abstract class GameEventScriptJsonConformanceTestBase
         GameEventScriptConformanceCase testCase,
         bool includeMessageDiff = true)
     {
-        GameEventScriptBinary binary;
+        IReadOnlyList<GameEventScriptProgram> programs;
         try
         {
-            binary = GameEventScriptConformanceRunner.CompileBytecodeForTest(testCase.Test);
+            programs = CompileProgramsForTest(testCase.Test);
         }
         catch (Exception exception)
         {
@@ -1011,7 +1025,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         try
         {
-            return RunScriptApiCase(testCase, binary, includeMessageDiff, out var mismatch, out var debugDump)
+            return RunScriptApiCase(testCase, programs, includeMessageDiff, out var mismatch, out var debugDump)
                 ? ScriptApiConformanceOutcome.Pass()
                 : ScriptApiConformanceOutcome.Mismatch(mismatch, debugDump);
         }
@@ -1019,6 +1033,25 @@ public abstract class GameEventScriptJsonConformanceTestBase
         {
             return ScriptApiConformanceOutcome.RuntimeFailure(exception.Message);
         }
+    }
+
+    private static IReadOnlyList<GameEventScriptProgram> CompileProgramsForTest(GameEventScriptConformanceTest test)
+    {
+        if (test.Programs is not { Count: > 0 })
+            return [GameEventScriptConformanceRunner.CompileBytecodeForTest(test)];
+
+        var options = GameEventScriptConformanceRunner.CreateCompileOptionsForTest(test);
+        var programs = new GameEventScriptProgram[test.Programs.Count];
+        for (var index = 0; index < programs.Length; index++)
+        {
+            var source = test.Programs[index];
+            programs[index] = GameEventScriptBuilder.Create()
+                .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+                .AddScript(source.Text ?? string.Empty, source.SourceName)
+                .Compile(options);
+        }
+
+        return programs;
     }
 
     protected static string? GetScriptSourceForDump(GameEventScriptConformanceCase testCase)
@@ -1029,15 +1062,16 @@ public abstract class GameEventScriptJsonConformanceTestBase
             return test.Script;
         }
 
-        if (test.Scripts is not { Count: > 0 })
+        var sources = test.Scripts is { Count: > 0 } ? test.Scripts : test.Programs;
+        if (sources is not { Count: > 0 })
         {
             return null;
         }
 
         var builder = new StringBuilder();
-        for (var index = 0; index < test.Scripts.Count; index++)
+        for (var index = 0; index < sources.Count; index++)
         {
-            var source = test.Scripts[index];
+            var source = sources[index];
             if (index > 0)
             {
                 builder.AppendLine();
@@ -1061,7 +1095,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
     private static bool RunScriptApiCase(
         GameEventScriptConformanceCase testCase,
-        GameEventScriptBinary binary,
+        IReadOnlyList<GameEventScriptProgram> programs,
         bool includeMessageDiff,
         out string mismatch,
         out string debugDump)
@@ -1084,9 +1118,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var published = new List<GameEventScriptMessage>();
         var observedRuntimeLimits = new List<TestRuntimeLimitEvent>();
         var scriptSource = GetScriptSourceForDump(testCase);
-        var vmModule = (GameEventScriptVirtualMaschine)GameEventScriptManager.CreateModule(binary, 4096, 256);
-        vmModule.DebugScriptSource = scriptSource;
-        var lastCapturedVmDump = string.Empty;
+        var lastCapturedVmDump = string.Join(
+            Environment.NewLine,
+            programs.Select(program => program.Dump(includeInstructionAddresses: true, scriptSource: scriptSource)));
         var host = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(random)
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
@@ -1096,27 +1130,17 @@ public abstract class GameEventScriptJsonConformanceTestBase
                 messageEmitted: message =>
                 {
                     emitted.Add(message);
-                    lastCapturedVmDump = vmModule.DumpState(scriptSource);
                 },
                 messagePublished: message =>
                 {
                     emitted.Add(message);
-                    lastCapturedVmDump = vmModule.DumpState(scriptSource);
                 },
                 runtimeLimitReached: (name, detail, limit) => observedRuntimeLimits.Add(new TestRuntimeLimitEvent(name, detail, limit))))
-            .WithPublishHook(message =>
-            {
-                published.Add(message);
-                lastCapturedVmDump = vmModule.DumpState(scriptSource);
-                return true;
-            })
-            .Build()
-            .Load(vmModule);
+            .WithPublishSink(new TestPublishSink(published.Add))
+            .Build();
+        for (var programIndex = 0; programIndex < programs.Count; programIndex++) host.Load(programs[programIndex]);
         GameEventScriptConformanceRunner.RegisterExternalSubscribers(testCase, host);
-        if (hasInitializationExpectations)
-        {
-            host.StartSession().Update(runtimeLimits.MaxExecutionSteps);
-        }
+        host.RunToCompletion();
 
         if (test.ExpectedInitializationPublished is not null &&
             !TryMatchMessages(testCase, -1, "initialization emitted messages", test.ExpectedInitializationPublished, emitted, includeMessageDiff, out var initializationEmittedDiff))
@@ -1140,10 +1164,31 @@ public abstract class GameEventScriptJsonConformanceTestBase
             emitted.Clear();
             published.Clear();
             observedRuntimeLimits.Clear();
-            var handled = host.PublishToCompletion(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
-            if (!handled)
+            var accepted = host.Receive(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
+            var paused = false;
+            if (step.OpcodeBudget is > 0)
+            {
+                while (!host.IsIdle)
+                {
+                    var frame = host.ExecuteFrame(step.OpcodeBudget.Value);
+                    paused |= frame.State == GameEventScriptExecutionState.Paused;
+                    if (frame.State == GameEventScriptExecutionState.RuntimeLimitReached) break;
+                }
+            }
+            else
+            {
+                host.RunToCompletion();
+            }
+            if (!accepted)
             {
                 mismatch = $"step {stepIndex + 1}: handler was not found or could not start.";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
+                return false;
+            }
+
+            if (step.ExpectedPaused.HasValue && step.ExpectedPaused.Value != paused)
+            {
+                mismatch = $"step {stepIndex + 1}: expectedPaused was {step.ExpectedPaused.Value} but actual was {paused}.";
                 debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }

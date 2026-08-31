@@ -101,19 +101,11 @@ public sealed class GameEventScriptBuilder
     /// </summary>
     /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
     /// <returns>The generated GameEventScript bytecode.</returns>
-    public GameEventScriptBinary Compile(GameEventScriptCompileOptions? options = null)
+    public GameEventScriptProgram Compile(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
         return GesCompiler.Compile(BuildModule(compileOptions));
     }
-
-    /// <summary>
-    /// Compiles the configured GameEventScript sources into a bindable runtime module.
-    /// </summary>
-    /// <param name="options">Optional compilation options that specify settings for bytecode generation.</param>
-    /// <returns>A bindable runtime module that exports the compiled message handlers.</returns>
-    public IGameEventScriptModule CompileModule(GameEventScriptCompileOptions? options = null)
-        => GameEventScriptManager.CreateModule(Compile(options));
 
     /// <summary>
     /// Builds and returns a new internal module model based on the configured sources.

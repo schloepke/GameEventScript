@@ -1,7 +1,7 @@
 # GameEventScript Bytecode Spec
 
 This document defines the intended portable bytecode shape for the
-`GameEventScriptBinary` container.
+`GameEventScriptProgram` container.
 The goal is a compact, portable, high-level bytecode for the GameEventScript DSL
 that is naturally executable by a linear program-counter VM.
 
@@ -54,7 +54,7 @@ expressions are layout-free direct instructions.
 
 ## Top-Level Artifact
 
-The target binary container is named `GameEventScriptBinary`. Its header is the
+The target binary container is named `GameEventScriptProgram`. Its header is the
 fixed 16-byte `GameEventScriptBinaryHeader` shape:
 
 ```text
@@ -69,7 +69,7 @@ GameEventScriptBinaryHeader
 The first normalized binary tables are intentionally compact:
 
 ```text
-GameEventScriptBinary
+GameEventScriptProgram
   Header
   ModuleName
   StringPool              zero-based UTF-8 strings in the file
@@ -358,7 +358,7 @@ without a value uses `ReturnVoid`; returning a register value uses
 
 ## Execution Model
 
-A script VM session owns mutable execution state:
+A host-owned reusable VM state contains only the active resumable handler:
 
 ```text
 pc
@@ -367,6 +367,8 @@ callStack[]
 scopeStack[]
 randomStack[]
 activeHighLevelOperationState
+activeLinkedProgram
+activeMessage
 ```
 
 Each frame owns a local register array or a frame slice in a shared register memory:
@@ -382,6 +384,13 @@ Frame
   ScopeMark
   RandomMark
 ```
+
+The VM executor itself is stateless. One host has at most one VM state and cannot
+run two handlers concurrently. The state is rebound to a linked program and
+entry address for each handler, retained only while a frame is paused, and fully
+reset after completion or error. Program string pools, bind tables, resolved
+extensions, and resolved external types live in the immutable host-linked
+program structure instead of this mutable state.
 
 The C# stack is not part of script control flow. `Call` pushes a portable frame
 record onto `callStack`; `ReturnValue` restores the next `pc` and writes the returned
@@ -444,7 +453,7 @@ undeliverable as message
 
 `initialization` is encoded as a `MessageHandler` entry without
 arguments. It is not normal external dispatch input; the host queues all loaded
-initialization handlers directly when a `GameEventScriptSession` starts.
+initialization handlers directly when a `GameEventScriptContext` starts.
 
 `undeliverable` is encoded as a `MessageNameHandler` entry with message name
 `undeliverable`. It receives the original `:message` when no `MessageHandler`

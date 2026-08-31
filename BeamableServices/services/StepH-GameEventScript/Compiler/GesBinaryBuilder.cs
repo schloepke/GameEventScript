@@ -203,7 +203,7 @@ internal sealed partial class GesBinaryBuilder
         return this;
     }
 
-    public GameEventScriptBinary Build()
+    public GameEventScriptProgram Build()
     {
         EnsureScopesClosed();
         var planItems = _rewrittenItems ?? LinearizePlanItems();
@@ -358,7 +358,7 @@ internal sealed partial class GesBinaryBuilder
             return this;
         }
 
-        public GameEventScriptBinary Build()
+        public GameEventScriptProgram Build()
             => new(
                 new GameEventScriptBinaryHeader { Version = _version, Flags = _flags },
                 ResolveModuleName(),
@@ -504,7 +504,7 @@ internal sealed partial class GesBinaryBuilder
                 offset += Encoding.UTF8.GetBytes(values[index], 0, values[index].Length, data, offset);
             }
 
-            return new GameEventScriptTextTable { Slices = slices, Data = data };
+            return new GameEventScriptTextTable(slices, data);
         }
 
         private static GameEventScriptUInt16Table BuildUInt16Table(IReadOnlyList<ushort[]> values)
@@ -531,7 +531,7 @@ internal sealed partial class GesBinaryBuilder
                 offset += value.Length;
             }
 
-            return new GameEventScriptUInt16Table { Slices = slices, Data = data };
+            return new GameEventScriptUInt16Table(slices, data);
         }
 
         private static GameEventScriptBytecodeInstruction[] CopyInstructions(IReadOnlyList<GameEventScriptBytecodeInstruction> source)

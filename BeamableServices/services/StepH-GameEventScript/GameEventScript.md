@@ -137,8 +137,9 @@ It exposes the read-only members `name`, `signature`, `arguments`, and `tags`.
 `undeliverable` is a system endpoint. It receives messages that were not
 otherwise dispatched, and it must use message binding:
 
-`initialization` is a parameterless system endpoint. It is queued when a host
-session starts and runs before later messages in that session:
+`initialization` is a parameterless system endpoint. Each `Load(program)` queues
+it exactly once for the returned program instance. It is placed after messages
+already waiting at load time and before messages received later:
 
 ```ges
 on initialization {
@@ -167,8 +168,8 @@ listed tag. The message still contains all original tags.
 
 ### `emit` and `publish`
 
-`emit` sends a message into the local event space. `publish` sends a message to
-the host publish hook.
+`emit` queues a message only in the local host. `publish` first queues the same
+message locally and then offers it to the host's outbound publish sink.
 
 ```ges
 emit Done
@@ -1085,25 +1086,29 @@ Custom type checks use `is :typeName`.
 ## Runtime and Host API
 
 The host compiles scripts through `GameEventScriptBuilder` or
-`GameEventScriptManager`, loads the compiled result into a host, and publishes
-messages to completion.
+`GameEventScriptManager`, loads immutable programs additively, receives messages,
+and pumps them synchronously. The complete portable contract and state machine
+are specified in [HostArchitecture.md](HostArchitecture.md).
 
 Core host concepts:
 
-- `GameEventScriptBinary`: portable binary-oriented representation.
-- `GameEventScriptHost`: dispatch host with local queue and publish hook.
-- `GameEventScriptSession`: mutable runtime state created from a loaded host;
-  it owns the active queue, context, random generator, runtime budget and active
-  invocation state.
+- `GameEventScriptProgram`: portable binary-oriented representation.
+- `GameEventScriptHost`: autonomous serial dispatch and execution unit.
+- `GameEventScriptInstance`: detachable host-specific link returned by `Load`.
+- `GameEventScriptSubscription`: detachable native handler registration.
+- `GameEventScriptContext`: one host-owned handler context exposing `Emit`,
+  `Publish`, `Random`, and runtime limits; it does not own a queue.
+- `IGameEventScriptPublishSink`: optional single outbound handoff.
 - `GameEventScriptRuntimeLimits`: execution, loop, range, dice, and queue limits.
 - `IGameEventScriptRuntimeObserver`: optional host observer for message output,
   dispatch lifecycle, and runtime-limit events.
 
 The runtime resolves handlers by signature/name and tag filters. Exact-signature
-handlers and message-name handlers can both observe the same message. A loaded host
-creates sessions with `StartSession()`. Published messages are sent through the
-host publish hook; emitted messages stay in the session dispatch queue. The host
-also exposes convenience publish/update methods for existing integrations.
+handlers and message-name handlers can both observe the same message. `Receive`
+and `Emit` enqueue locally. `Publish` enqueues locally and then invokes the
+outbound sink. `ExecuteFrame` pumps with an opcode scheduler budget;
+`RunToCompletion` pumps until idle or a runtime limit. The portable core is
+synchronous, threadless, and has no session or isolated-run API.
 
 ## Errors and Limits
 

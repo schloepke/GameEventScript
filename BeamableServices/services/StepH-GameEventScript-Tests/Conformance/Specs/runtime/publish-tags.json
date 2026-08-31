@@ -4,7 +4,7 @@
   "tests": [
     {
       "kind": "scriptApi",
-      "name": "emit stays local while publish uses outbound hook",
+      "name": "emit stays local while publish is local and outbound",
       "script": "on Start {\n  emit Local\n  publish Remote with #radio\n}\n\non Local {\n  emit Seen(value: 1)\n}\n\non Remote {\n  emit ShouldNotRun\n}",
       "steps": [
         {
@@ -32,6 +32,10 @@
                   "value": "1"
                 }
               }
+            },
+            {
+              "name": "ShouldNotRun",
+              "args": {}
             }
           ],
           "expectedOutboundPublished": [

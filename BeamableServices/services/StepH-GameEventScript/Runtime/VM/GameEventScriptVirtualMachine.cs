@@ -1,10 +1,8 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Runtime.VM.GesVmState.StateValue;
@@ -14,139 +12,31 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal class GameEventScriptVmException(string message) : GameEventScriptFatalRuntimeException(message);
 
-internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEventScriptDebugDumpModule
+internal static class GameEventScriptVirtualMachine
 {
-    private readonly GesVmState _vmState;
-    private readonly GameEventScriptMessageHandlerDescriptor[] _handlers;
-
-    public string ModuleName { get; }
-    public IEnumerable<GameEventScriptMessageHandlerDescriptor> Handlers => _handlers;
-    public string? DebugScriptSource { get; set; }
-
-    public string DumpState(string? scriptSource = null, bool includeInstructionAddresses = true)
-        => _vmState.Dump(includeInstructionAddresses, scriptSource ?? DebugScriptSource);
-
-    public void Bind(IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal static void Begin(
+        GesVmState vmState,
+        GesLinkedProgram program,
+        GameEventScriptMessage message,
+        bool matchArguments,
+        ushort entryAddress,
+        GameEventScriptContext context)
     {
-        _vmState.BindDynamicReferences(
-            extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance,
-            typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance);
-    }
-    
-    public static GameEventScriptVirtualMaschine Create(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
-    {
-        return new GameEventScriptVirtualMaschine(binary, registerSize, stackSize);
+        if (vmState.State is Processing) throw new GameEventScriptVmException("Virtual machine is already processing another message");
+        if (vmState.State != Ready) vmState.Reset();
+        if (!vmState.PrepareStateForMessage(program, message, matchArguments, entryAddress, context))
+            vmState.RaiseError("Failed to prepare state for message");
     }
 
-    private GameEventScriptVirtualMaschine(GameEventScriptBinary binary, ushort registerSize, ushort stackSize)
+    internal static int RunSlice(GesVmState vmState, GameEventScriptContext context, int maxSteps)
     {
-        ModuleName = binary.ModuleName;
-        _vmState = new GesVmState(binary, registerSize, stackSize);
-        _handlers = CreateHandlers();
-    }
-
-    private GameEventScriptMessageHandlerDescriptor[] CreateHandlers()
-    {
-        var entries = _vmState.Binary.BindTable.Entries;
-        var handlerCount = 0;
-        for (var index = 0; index < entries.Count; index++)
+        if (maxSteps <= 0) throw new ArgumentOutOfRangeException(nameof(maxSteps), "RunSlice requires a positive integer as max steps");
+        var opcodesExecuted = 0;
+        const string executionLimitDetail = "Execution step limit reached.";
+        var reservedSteps = context.RuntimeBudget.ReserveExecutionSlice(maxSteps, executionLimitDetail);
+        try
         {
-            var kind = entries[index].Kind;
-            if (kind is MessageHandler or MessageNameHandler)
-            {
-                handlerCount++;
-            }
-        }
-
-        if (handlerCount == 0)
-        {
-            return [];
-        }
-
-        var handlers = new GameEventScriptMessageHandlerDescriptor[handlerCount];
-        var handlerIndex = 0;
-        for (var index = 0; index < entries.Count; index++)
-        {
-            var bind = entries[index];
-            if (bind.Kind is not (MessageHandler or MessageNameHandler))
-            {
-                continue;
-            }
-
-            var name = _vmState.FetchStringByPointer(bind.Name);
-            var argumentNames = ReadTextPointers(bind.ArgumentNames);
-            var requiredTags = ReadTextPointers(bind.RequiredTags);
-            var excludedTags = ReadTextPointers(bind.ExcludedTags);
-            var matchArguments = bind.Kind == MessageHandler;
-            var entryAddress = bind.EntryAddress;
-            var signature = GameEventScriptMessageSignature.Create(name, argumentNames);
-            handlers[handlerIndex++] = new GameEventScriptMessageHandlerDescriptor(
-                signature,
-                (msg, session) => Invoke(msg, matchArguments, entryAddress, session),
-                requiredTags,
-                excludedTags,
-                matchArguments);
-        }
-
-        return handlers;
-    }
-
-    private string[] ReadTextPointers(IReadOnlyList<ushort> pointers)
-    {
-        if (pointers.Count == 0)
-        {
-            return [];
-        }
-
-        var values = new string[pointers.Count];
-        for (var index = 0; index < pointers.Count; index++)
-        {
-            values[index] = _vmState.FetchStringByPointer(pointers[index]);
-        }
-
-        return values;
-    }
-
-    private IGameEventScriptMessageInvocation Invoke(GameEventScriptMessage message, bool matchArguments, ushort entryAddress, GameEventScriptSession session)
-    {
-        if (_vmState.State is Processing) throw new GameEventScriptVmException("Virtual machine is already processing another message");
-        if (_vmState.State != Ready) _vmState.Reset();
-        if (!_vmState.PrepareStateForMessage(message, matchArguments, entryAddress, session)) _vmState.RaiseError("Failed to prepare state for message");
-        return new Runner(_vmState, session);
-    }
-
-    public bool ExecuteMessage(GameEventScriptMessage message, GameEventScriptSession session)
-    {
-        GameEventScriptMessageHandlerDescriptor? handler = null;
-        for (var index = 0; index < _handlers.Length; index++)
-        {
-            var candidate = _handlers[index];
-            if (candidate.MatchArguments
-                    ? candidate.Signature.SignatureId == message.SignatureId
-                    : message.Name == candidate.Signature.Name)
-            {
-                handler = candidate;
-                break;
-            }
-        }
-
-        if (handler is null) return false;
-        var init = handler.Invoke(message, session);
-        while (!init.IsCompleted) init.RunSlice(int.MaxValue);
-        return true;
-    }
-
-    private class Runner(GesVmState vmState, GameEventScriptSession session) : IGameEventScriptMessageInvocation
-    {
-        public bool IsCompleted { get; private set; } = false;
-
-        public int RunSlice(int maxSteps)
-        {
-            if (maxSteps <= 0) throw new ArgumentOutOfRangeException(nameof(maxSteps), "RunSlice requires a positive integer as max steps");
-            var opcodesExecuted = 0;
-            try
-            {
-                while (!IsCompleted && vmState.State == Processing && !session.RuntimeBudget.IsExhausted && opcodesExecuted < maxSteps)
+            while (vmState.State == Processing && !context.RuntimeBudget.IsExhausted && opcodesExecuted < reservedSteps)
                 {
                     var instruction = vmState.FetchInstructionAndIncrementInstructionPointer();
                     switch (instruction.OpCode)
@@ -181,7 +71,7 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             vmState.GesVmCreateSeries(instruction.DestinationRegister, (GameEventScriptBytecodeSeriesKind)instruction.TypeOperand);
                             break;
                         case CallExternal:
-                            vmState.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, session, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
+                            vmState.GesVmCallExternal(instruction.DestinationRegister, instruction.BindId, instruction.ListIndex, context, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                             break;
 
                         case ReturnVoid:
@@ -192,35 +82,35 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             break;
 
                         case EmitMessage:
-                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
+                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, context);
                             break;
                         case EmitMessageWithTags:
                             vmState.GesVmPublishMessageWithTags(instruction.MessageDestination, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
-                                vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, session);
+                                vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), false, context);
                             break;
                         case EmitMessageValue:
-                            vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), false, session);
+                            vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), false, context);
                             break;
                         case EmitMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, session);
+                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), false, context);
                             break;
 
                         case PublishMessage:
-                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
+                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, context);
                             break;
                         case PublishMessageWithTags:
                             vmState.GesVmPublishMessageWithTags(instruction.MessageDestination, vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex),
-                                vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), true, session);
+                                vmState.Binary.Uint16ConstantTable.Resolve(instruction.SecondaryListIndex), true, context);
                             break;
                         case PublishMessageValue:
-                            vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), true, session);
+                            vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), true, context);
                             break;
                         case PublishMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, session);
+                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.Uint16ConstantTable.Resolve(instruction.ListIndex), true, context);
                             break;
 
                         case Cast:
-                            vmState.GesVmCast(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TypeKind, session);
+                            vmState.GesVmCast(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TypeKind, context);
                             break;
                         case CastCustom:
                             vmState.GesVmCastCustom(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.SecondaryStringIndex);
@@ -327,7 +217,7 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             break;
 
                         case CreateDice:
-                            vmState.GesVmCreateDice(instruction.DestinationRegister, instruction.Count, instruction.ImmediateY, session);
+                            vmState.GesVmCreateDice(instruction.DestinationRegister, instruction.Count, instruction.ImmediateY, context);
                             break;
                         case CreateVector:
                             vmState.GesVmCreateVector(instruction.DestinationRegister, instruction.ImmediateX);
@@ -352,13 +242,13 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             vmState.GesVmCreateRange(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU));
                             break;
                         case CreateRangeIterator:
-                            vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), session);
+                            vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), context);
                             break;
                         case CreateRangeIteratorWithStep:
-                            vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), session);
+                            vmState.GesVmCreateRangeIterator(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister), vmState.Register(instruction.AU), context);
                             break;
                         case CreateRangeIteratorShort:
-                            if (!session.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
+                            if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(instruction.ImmediateX, instruction.ImmediateY, instruction.AS), "For loop range would enumerate more range items than allowed."))
                             {
                                 vmState.SetIterator(instruction.DestinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                                 break;
@@ -717,7 +607,7 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                             vmState.GesVmIteratorNext(instruction.DestinationRegister, vmState.Register(instruction.XRegister), instruction.TargetAddress);
                             if (vmState.Register(instruction.DestinationRegister).Kind is not Nothing)
                             {
-                                session.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
+                                context.RuntimeBudget.ConsumeLoopIterationIfAvailable("For loop iteration exceeds the configured limit.");
                             }
                             break;
                         }
@@ -815,11 +705,12 @@ internal class GameEventScriptVirtualMaschine : IGameEventScriptModule, IGameEve
                 vmState.RaiseError(e.Message);
             }
 
-            if (vmState.State == Processing) return opcodesExecuted;
-            IsCompleted = true;
-
-            vmState.Reset();
-            return opcodesExecuted;
-        }
+        context.RuntimeBudget.CompleteExecutionSlice(
+            opcodesExecuted,
+            reservedSteps,
+            vmState.State == Processing,
+            executionLimitDetail);
+        if (vmState.State != Processing) vmState.Reset();
+        return opcodesExecuted;
     }
 }

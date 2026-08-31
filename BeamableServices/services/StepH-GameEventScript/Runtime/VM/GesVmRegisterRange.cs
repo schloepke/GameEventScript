@@ -37,11 +37,11 @@ internal static class GesVmRegisterRange
             vmState.SetNothing(destinationRegister);
         }
     }
-    internal static void GesVmCreateRangeIterator(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptSession session)
+    internal static void GesVmCreateRangeIterator(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, GameEventScriptContext context)
     {
         if (from.Kind is Integer && to.Kind is Integer)
         {
-            if (!session.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.IntegerValue, to.IntegerValue, 1), "For loop range would enumerate more range items than allowed."))
+            if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.IntegerValue, to.IntegerValue, 1), "For loop range would enumerate more range items than allowed."))
             {
                 vmState.SetIterator(destinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                 return;
@@ -51,7 +51,7 @@ internal static class GesVmRegisterRange
         }
         else if (from.IsNumeric && to.IsNumeric)
         {
-            if (!session.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.AsNumeric, to.AsNumeric, 1.0d), "For loop range would enumerate more range items than allowed."))
+            if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.AsNumeric, to.AsNumeric, 1.0d), "For loop range would enumerate more range items than allowed."))
             {
                 vmState.SetIterator(destinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                 return;
@@ -64,11 +64,11 @@ internal static class GesVmRegisterRange
             vmState.SetNothing(destinationRegister);
         }
     }
-    internal static void GesVmCreateRangeIterator(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, in GesValue step, GameEventScriptSession session)
+    internal static void GesVmCreateRangeIterator(this GesVmState vmState, ushort destinationRegister, in GesValue from, in GesValue to, in GesValue step, GameEventScriptContext context)
     {
         if (from.Kind is Integer && to.Kind is Integer && step.Kind is Integer)
         {
-            if (!session.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.IntegerValue, to.IntegerValue, step.IntegerValue), "For loop range would enumerate more range items than allowed."))
+            if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.IntegerValue, to.IntegerValue, step.IntegerValue), "For loop range would enumerate more range items than allowed."))
             {
                 vmState.SetIterator(destinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                 return;
@@ -78,7 +78,7 @@ internal static class GesVmRegisterRange
         }
         else if (from.IsNumeric && to.IsNumeric && step.IsNumeric)
         {
-            if (!session.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.AsNumeric, to.AsNumeric, step.AsNumeric), "For loop range would enumerate more range items than allowed."))
+            if (!context.RuntimeBudget.CheckRangeLengthWithinLimit(GameEventScriptRangeMath.GetLength(from.AsNumeric, to.AsNumeric, step.AsNumeric), "For loop range would enumerate more range items than allowed."))
             {
                 vmState.SetIterator(destinationRegister, new GesIntegerRangeIterator(0, 0, 0));
                 return;

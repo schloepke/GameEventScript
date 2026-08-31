@@ -29,7 +29,7 @@ internal static class GameEventScriptVmStateDumper
         }
 
         builder
-            .Append("CodeSegmentSize: ").AppendLine(state.CodeSegmentSize.ToString(CultureInfo.InvariantCulture))
+            .Append("CodeSegmentSize: ").AppendLine((state.ActiveProgram?.CodeSegmentSize ?? 0).ToString(CultureInfo.InvariantCulture))
             .Append("MaxRegisterSize: ").AppendLine(state.MaxRegisterCount.ToString(CultureInfo.InvariantCulture))
             .Append("CurrentRegisterArraySize: ").AppendLine(state.RegisterValues.Length.ToString(CultureInfo.InvariantCulture))
             .Append("CurrentRandomStackSize: ").AppendLine(state.RandomGeneratorsPointer.ToString(CultureInfo.InvariantCulture))
@@ -40,11 +40,9 @@ internal static class GameEventScriptVmStateDumper
         AppendStageArea(builder, state);
         AppendCurrentExecutionFrame(builder, state);
 
-        builder
-            .AppendLine()
-            .AppendLine("Binary")
-            .AppendLine("------")
-            .Append(state.Binary.Dump(includeInstructionAddresses, scriptSource));
+        builder.AppendLine().AppendLine("Program").AppendLine("-------");
+        if (state.ActiveProgram is null) builder.Append("<none>");
+        else builder.Append(state.Binary.Dump(includeInstructionAddresses, scriptSource));
 
         return builder.ToString();
     }

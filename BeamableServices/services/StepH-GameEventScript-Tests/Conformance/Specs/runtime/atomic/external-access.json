@@ -666,7 +666,7 @@
     },
     {
       "kind": "scriptApi",
-      "name": "emit dispatches locally while publish only reaches outbound hook",
+      "name": "emit and publish dispatch locally while publish also reaches outbound sink",
       "script": "module AtomicEmitPublishDispatch\non Start {\n  emit Local(value: 1)\n  publish Remote(value: 2)\n}\n\non Local(value) {\n  emit Seen(value: value)\n}\n\non Remote(value) {\n  emit ShouldNotRun(value: value)\n}",
       "steps": [
         {
@@ -699,6 +699,15 @@
                 "value": {
                   "type": ":integer",
                   "value": "1"
+                }
+              }
+            },
+            {
+              "name": "ShouldNotRun",
+              "args": {
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
                 }
               }
             }

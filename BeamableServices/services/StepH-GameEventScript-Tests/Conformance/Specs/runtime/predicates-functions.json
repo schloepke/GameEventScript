@@ -447,11 +447,11 @@
       "name": "multiple modules share predicate function and type definitions",
       "scripts": [
         {
-          "sourceName": "shared.es",
+          "sourceName": "shared.ges",
           "text": "module Shared\nrecord :gauge as {\n  current: :number,\n  maximum: :number\n}\n\npredicate wounded(_ unit) be unit.hp < unit.maxHp\nfunction woundedUnits(_ units) be units[:filter unit where unit is wounded]"
         },
         {
-          "sourceName": "runtime.es",
+          "sourceName": "runtime.ges",
           "text": "module Runtime\non Start(unit, units) {\n  let hp as :gauge be [current: unit.hp, maximum: unit.maxHp]\n  let anyWounded be wounded(unit)\n  let candidates be woundedUnits(units)\n  emit Done(anyWounded: anyWounded, candidateCount: candidates[:count], maximum: hp.maximum)\n}"
         }
       ],

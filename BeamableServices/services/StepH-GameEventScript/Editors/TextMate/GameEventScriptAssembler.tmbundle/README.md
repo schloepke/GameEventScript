@@ -19,4 +19,8 @@ bundle instead.
 
 The grammar is intentionally lightweight. It highlights `.gesa` directives,
 segments, labels, opcodes, registers, immediates, bind kinds, type names,
-comments, and strings.
+comments, and strings. Version directives such as `.program-version 42` are
+recognized explicitly. If embedded debug symbols are present in a dump,
+`r20(total)` highlights `r20` as the physical register and `total` as its source
+variable annotation; execution flags such as `NormalizeResultAsPredicate` retain
+their separate constant scope.

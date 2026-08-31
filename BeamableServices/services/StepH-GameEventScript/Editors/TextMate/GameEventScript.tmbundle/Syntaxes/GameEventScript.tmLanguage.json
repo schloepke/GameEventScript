@@ -1,9 +1,6 @@
 {
   "fileTypes": [
-    "ges",
-    "gescript",
-    "gameeventscript",
-    "es"
+    "ges"
   ],
   "firstLineMatch": "^\\s*module\\s+[A-Za-z_][A-Za-z0-9_]*\\b",
   "repository": {
@@ -320,7 +317,7 @@
           }
         },
         {
-          "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term)\\b",
+          "match": ":(?:any|all|filter|has|take|drop|count|choose|draw|shuffle|reverse|sum|average|select|contains|sort|first|last|single|min|max|highest|lowest|map|distinct|group|order|term|keys|values|entries)\\b",
           "name": "support.function.selector.pipeline.gameeventscript"
         }
       ]

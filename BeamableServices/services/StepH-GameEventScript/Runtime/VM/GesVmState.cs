@@ -33,7 +33,7 @@ internal class GesVmState
 
     internal GesValue[] EmptyList { get; init; }
     internal GesLinkedProgram? ActiveProgram { get; private set; }
-    internal GameEventScriptProgram Binary => ActiveProgram!.Program;
+    internal GameEventScriptProgram Program => ActiveProgram!.Program;
     internal string[] StringPool => ActiveProgram!.StringPool;
 
     internal StateValue State { get; set; }
@@ -272,9 +272,9 @@ internal class GesVmState
         if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
         RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
-    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.Code[InstructionPointer++];
+    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Program.Code[InstructionPointer++];
     internal string FetchStringByPointer(ushort index) => StringPool[index];
-    internal GameEventScriptUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Binary.UInt16IndexLists.Resolve(index);
+    internal GameEventScriptUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Program.UInt16IndexLists.Resolve(index);
     internal void ModifyLocalRegisters(short registerCount)
     {
         switch (registerCount)

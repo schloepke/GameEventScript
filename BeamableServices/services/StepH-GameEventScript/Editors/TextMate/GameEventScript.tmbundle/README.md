@@ -1,7 +1,8 @@
 # GameEventScript TextMate Bundle
 
 This bundle provides modern JSON TextMate-compatible syntax highlighting for
-GameEventScript.
+GameEventScript source files. `.ges` is the canonical and only registered source
+extension.
 
 ## Install
 

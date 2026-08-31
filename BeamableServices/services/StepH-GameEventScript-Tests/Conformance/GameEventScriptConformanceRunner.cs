@@ -501,9 +501,9 @@ internal static class GameEventScriptConformanceRunner
     private static GameEventScriptCompileOptions CreateCompileOptions(GameEventScriptConformanceTest test)
         => new()
         {
-            DebugInfo = test.CompileOptions?.EnableDebugInfo == true
-                ? GameEventScriptDebugInfoOptions.All
-                : GameEventScriptDebugInfoOptions.None
+            DebugInfo = test.CompileOptions?.EnableDebugInfo is false
+                ? GameEventScriptDebugInfoOptions.None
+                : GameEventScriptDebugInfoOptions.All
         };
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(
@@ -534,7 +534,7 @@ internal static class GameEventScriptConformanceRunner
 
                 yield return new GameEventScriptSourceSpec
                 {
-                    SourceName = string.IsNullOrWhiteSpace(source.SourceName) ? $"{test.Name}.es" : source.SourceName,
+                    SourceName = string.IsNullOrWhiteSpace(source.SourceName) ? $"{test.Name}.ges" : source.SourceName,
                     Text = source.Text
                 };
             }
@@ -546,7 +546,7 @@ internal static class GameEventScriptConformanceRunner
         {
             yield return new GameEventScriptSourceSpec
             {
-                SourceName = $"{test.Name}.es",
+                SourceName = $"{test.Name}.ges",
                 Text = test.Script
             };
             yield break;

@@ -7,11 +7,6 @@ enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
   enum-field OutboundMessage = 33
   enum-field Record = 48
   enum-field ExternalType = 49
-static class StepH.GameEventScript.Api.GameEventScriptBinaryDumper
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram binary)
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram binary, System.Boolean includeInstructionAddresses)
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram binary, System.Boolean includeInstructionAddresses, System.String scriptSource)
-  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram binary, System.String scriptSource)
 static class StepH.GameEventScript.Api.GameEventScriptBinaryFormat
   field static System.Byte MagicB
   field static System.Byte MagicE
@@ -584,6 +579,9 @@ sealed class StepH.GameEventScript.Api.GameEventScriptProgram
   property System.UInt16 RequiredCallStackDepth { get }
   property System.UInt16 RequiredRegisterCount { get }
   property System.UInt64 ProgramVersion { get }
+static class StepH.GameEventScript.Api.GameEventScriptProgramDumper
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram program)
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Boolean includeInstructionAddresses)
 enum StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode
   enum-field InvalidMagic = 1
   enum-field UnsupportedFormatVersion = 2

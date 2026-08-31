@@ -1,7 +1,8 @@
 # GameEventScript TextMate Classic Bundle
 
 This bundle provides classic XML plist TextMate-compatible syntax highlighting
-for GameEventScript.
+for GameEventScript source files. `.ges` is the canonical and only registered
+source extension.
 
 ## Install
 

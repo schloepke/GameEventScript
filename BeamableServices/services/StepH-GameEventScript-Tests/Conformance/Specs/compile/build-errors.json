@@ -230,11 +230,11 @@
       "name": "predicate and function definitions cannot share a name",
       "scripts": [
         {
-          "sourceName": "a.es",
+          "sourceName": "a.ges",
           "text": "module A\npredicate wounded(_ unit) be unit.hp < unit.maxHp"
         },
         {
-          "sourceName": "b.es",
+          "sourceName": "b.ges",
           "text": "module B\nfunction wounded(_ unit) be unit.hp < unit.maxHp"
         }
       ],

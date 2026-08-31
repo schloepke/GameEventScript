@@ -10,12 +10,9 @@ namespace StepH.GameEventScript.Runtime.VM;
 internal static class GameEventScriptVmStateDumper
 {
     internal static string Dump(this GesVmState state)
-        => Dump(state, includeInstructionAddresses: true, scriptSource: null);
+        => Dump(state, includeInstructionAddresses: true);
 
-    internal static string Dump(this GesVmState state, string? scriptSource)
-        => Dump(state, includeInstructionAddresses: true, scriptSource: scriptSource);
-
-    internal static string Dump(this GesVmState state, bool includeInstructionAddresses, string? scriptSource)
+    internal static string Dump(this GesVmState state, bool includeInstructionAddresses)
     {
         var builder = new StringBuilder();
         builder
@@ -42,7 +39,7 @@ internal static class GameEventScriptVmStateDumper
 
         builder.AppendLine().AppendLine("Program").AppendLine("-------");
         if (state.ActiveProgram is null) builder.Append("<none>");
-        else builder.Append(state.Binary.Dump(includeInstructionAddresses, scriptSource));
+        else builder.Append(state.Program.Dump(includeInstructionAddresses));
 
         return builder.ToString();
     }

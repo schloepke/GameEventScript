@@ -7,45 +7,33 @@ using static StepH.GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 namespace StepH.GameEventScript.Api;
 
 /// <summary>
-/// Creates an assembler-style disassembly of the portable GameEventScript binary model.
+/// Creates an assembler-style disassembly of a portable GameEventScript program.
 /// </summary>
-public static class GameEventScriptBinaryDumper
+public static class GameEventScriptProgramDumper
 {
     private const string CodeIndent = "\t\t\t\t\t";
     private const ushort NoAddress = 0xFFFF;
 
     /// <summary>
-    /// Dumps the binary header, tables, binds, and code as an assembler-like text format.
+    /// Dumps program metadata, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptProgram binary)
-        => Dump(binary, includeInstructionAddresses: false);
+    public static string Dump(this GameEventScriptProgram program)
+        => Dump(program, includeInstructionAddresses: false);
 
     /// <summary>
-    /// Dumps the binary header, source script, tables, binds, and code as an assembler-like text format.
+    /// Dumps program metadata, tables, binds, and code as an assembler-like text format.
     /// </summary>
-    public static string Dump(this GameEventScriptProgram binary, string? scriptSource)
-        => Dump(binary, includeInstructionAddresses: false, scriptSource: scriptSource);
-
-    /// <summary>
-    /// Dumps the binary header, tables, binds, and code as an assembler-like text format.
-    /// </summary>
-    public static string Dump(this GameEventScriptProgram binary, bool includeInstructionAddresses)
-        => Dump(binary, includeInstructionAddresses, scriptSource: null);
-
-    /// <summary>
-    /// Dumps the binary header, optional source script, tables, binds, and code as an assembler-like text format.
-    /// </summary>
-    public static string Dump(this GameEventScriptProgram binary, bool includeInstructionAddresses, string? scriptSource)
+    public static string Dump(this GameEventScriptProgram program, bool includeInstructionAddresses)
     {
-        var context = new DisassemblyContext(binary);
+        var context = new DisassemblyContext(program);
         var builder = new StringBuilder();
 
-        AppendHeader(builder, binary, scriptSource);
+        AppendHeader(builder, program);
 
         builder
-            .Append(".gesb ").Append(binary.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine()
-            .Append(".module \"").Append(Escape(binary.ModuleName)).AppendLine("\"")
-            .Append(".program-version ").Append(binary.ProgramVersion.ToString(CultureInfo.InvariantCulture)).AppendLine();
+            .Append(".gesb ").Append(program.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine()
+            .Append(".module \"").Append(Escape(program.ModuleName)).AppendLine("\"")
+            .Append(".program-version ").Append(program.ProgramVersion.ToString(CultureInfo.InvariantCulture)).AppendLine();
 
         AppendTextSegment(builder, context);
         AppendListSegment(builder, context);
@@ -54,30 +42,20 @@ public static class GameEventScriptBinaryDumper
         return builder.ToString();
     }
 
-    private static void AppendHeader(StringBuilder builder, GameEventScriptProgram binary, string? scriptSource)
+    private static void AppendHeader(StringBuilder builder, GameEventScriptProgram program)
     {
         builder
             .AppendLine("// -------------------------------------------------------------------------------")
-            .Append("//  Module: ").AppendLine(binary.ModuleName)
+            .Append("//  Module: ").AppendLine(program.ModuleName)
             .AppendLine("//  Type: Game Event Script Assembler")
-            .Append("//  Format version: ").Append(binary.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine(".0")
+            .Append("//  Format version: ").Append(program.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine(".0")
             .AppendLine("// -------------------------------------------------------------------------------");
 
-        if (!string.IsNullOrWhiteSpace(scriptSource))
+        if (program.SourceArchive is not null)
         {
-            builder
-                .AppendLine("// Script:")
-                .AppendLine("//");
-            AppendHeaderScript(builder, scriptSource);
-            builder
-                .AppendLine("//")
-                .AppendLine("// -------------------------------------------------------------------------------");
-        }
-        else if (binary.SourceArchive is not null)
-        {
-            for (var index = 0; index < binary.SourceArchive.Sources.Count; index++)
+            for (var index = 0; index < program.SourceArchive.Sources.Count; index++)
             {
-                var source = binary.SourceArchive.Sources[index];
+                var source = program.SourceArchive.Sources[index];
                 builder
                     .Append("// Source: ").AppendLine(source.SourceName)
                     .AppendLine("//");
@@ -102,18 +80,18 @@ public static class GameEventScriptBinaryDumper
     private static void AppendTextSegment(StringBuilder builder, DisassemblyContext context)
     {
         builder.AppendLine().AppendLine().AppendLine(".segment text").AppendLine();
-        for (var i = 0; i < context.Binary.StringConstants.Slices.Length; i++)
+        for (var i = 0; i < context.Program.StringConstants.Slices.Length; i++)
         {
             AppendAlignedLabel(builder, context.TextLabel(i))
                 .Append(".text \"")
-                .Append(Escape(context.Binary.StringConstants.Resolve(checked((ushort)i))))
+                .Append(Escape(context.Program.StringConstants.Resolve(checked((ushort)i))))
                 .AppendLine("\"");
         }
     }
 
     private static void AppendListSegment(StringBuilder builder, DisassemblyContext context)
     {
-        var table = context.Binary.UInt16IndexLists;
+        var table = context.Program.UInt16IndexLists;
         builder.AppendLine().AppendLine().AppendLine(".segment lists").AppendLine();
         for (var i = 0; i < table.Slices.Length; i++)
         {
@@ -147,7 +125,7 @@ public static class GameEventScriptBinaryDumper
     private static void AppendBindSegment(StringBuilder builder, DisassemblyContext context)
     {
         builder.AppendLine().AppendLine().AppendLine(".segment bind").AppendLine();
-        var entries = context.Binary.Bindings.Entries;
+        var entries = context.Program.Bindings.Entries;
         for (var i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
@@ -191,13 +169,14 @@ public static class GameEventScriptBinaryDumper
 
     private static void AppendCodeSegment(StringBuilder builder, DisassemblyContext context, bool includeInstructionAddresses)
     {
-        var instructions = context.Binary.Code.Instructions;
+        var instructions = context.Program.Code.Instructions;
         builder.AppendLine().AppendLine().AppendLine(".segment code").AppendLine();
-        GameEventScriptSourceMapEntry? previousSource = null;
+        uint? previousSourceId = null;
+        var previousSourceLine = -1;
         var previousWasCompilerGenerated = false;
         for (var i = 0; i < instructions.Length; i++)
         {
-            AppendSourceComment(builder, context.Binary, checked((uint)i), ref previousSource, ref previousWasCompilerGenerated);
+            AppendSourceComment(builder, context.Program, checked((uint)i), ref previousSourceId, ref previousSourceLine, ref previousWasCompilerGenerated);
             var hasCodeLabel = context.HasCodeLabel(i);
             var isNamedCodeEntry = hasCodeLabel && context.IsNamedCodeEntry(i);
             var inlineLocalLabel = hasCodeLabel && !isNamedCodeEntry && !includeInstructionAddresses;
@@ -236,7 +215,7 @@ public static class GameEventScriptBinaryDumper
             var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
             for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
             {
-                var operand = FormatOperand(context, instruction, operands[operandIndex], operandIndex);
+                var operand = FormatOperand(context, instruction, operands[operandIndex], operandIndex, i);
                 if (operand.Length == 0)
                 {
                     continue;
@@ -257,7 +236,8 @@ public static class GameEventScriptBinaryDumper
         StringBuilder builder,
         GameEventScriptProgram program,
         uint codeAddress,
-        ref GameEventScriptSourceMapEntry? previous,
+        ref uint? previousSourceId,
+        ref int previousSourceLine,
         ref bool previousWasCompilerGenerated)
     {
         var current = FindSourceMapping(program.SourceMap, codeAddress);
@@ -267,17 +247,19 @@ public static class GameEventScriptBinaryDumper
             {
                 builder.AppendLine("// compiler-generated");
                 previousWasCompilerGenerated = true;
-                previous = null;
+                previousSourceId = null;
+                previousSourceLine = -1;
             }
             return;
         }
 
         previousWasCompilerGenerated = false;
-        if (previous.HasValue && SameSourceSpan(previous.Value, current.Value)) return;
-        previous = current;
         var source = FindSource(program.SourceMap!, current.Value.SourceId);
         if (source is null) return;
         var lineIndex = ResolveSourceLine(source, current.Value.SourceStartByteOffset);
+        if (previousSourceId == current.Value.SourceId && previousSourceLine == lineIndex) return;
+        previousSourceId = current.Value.SourceId;
+        previousSourceLine = lineIndex;
         builder.Append("// ").Append(source.SourceName).Append(':').Append((lineIndex + 1).ToString(CultureInfo.InvariantCulture)).AppendLine();
         var sourceText = ResolveSourceText(program.SourceArchive, current.Value.SourceId);
         if (sourceText is null) return;
@@ -295,9 +277,6 @@ public static class GameEventScriptBinaryDumper
         }
         return null;
     }
-
-    private static bool SameSourceSpan(GameEventScriptSourceMapEntry left, GameEventScriptSourceMapEntry right)
-        => left.SourceId == right.SourceId && left.SourceStartByteOffset == right.SourceStartByteOffset && left.SourceByteLength == right.SourceByteLength;
 
     private static GameEventScriptSourceMapSource? FindSource(GameEventScriptSourceMapSegment sourceMap, uint sourceId)
     {
@@ -337,48 +316,56 @@ public static class GameEventScriptBinaryDumper
         return end < 0 ? normalized[start..] : normalized.Substring(start, end - start);
     }
 
-    private static string FormatOperand(DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex)
-        => part switch
+    private static string FormatOperand(
+        DisassemblyContext context,
+        GameEventScriptBytecodeInstruction instruction,
+        GameEventScriptOpcodePrinter.OperandPart part,
+        int operandIndex,
+        int codeAddress)
+    {
+        string RegisterAtAddress(ushort registerId) => context.Register(registerId, codeAddress);
+
+        return part switch
         {
-            TargetRegister => Register(instruction.DestinationRegister),
+            TargetRegister => RegisterAtAddress(instruction.DestinationRegister),
             OutboundMessage => context.OutboundMessageLabel(instruction.MessageDestination),
 
-            SourceRegister => Register(instruction.XRegister),
-            LeftRegister => Register(instruction.XRegister),
-            OperandRegister => Register(instruction.XRegister),
-            ReturnRegister => Register(instruction.XRegister),
-            MessageRegister => Register(instruction.XRegister),
-            HandlerRegister => Register(instruction.XRegister),
-            PropertyRegister => Register(instruction.XRegister),
-            BuilderRegister => Register(instruction.XRegister),
-            ConditionRegister => Register(instruction.ConditionRegister),
-            CollectionRegister => Register(instruction.XRegister),
-            IteratorRegister => Register(instruction.XRegister),
-            SourceIteratorRegister => Register(instruction.XRegister),
-            SeriesRegister => Register(instruction.XRegister),
-            FromRegister => Register(instruction.XRegister),
+            SourceRegister => RegisterAtAddress(instruction.XRegister),
+            LeftRegister => RegisterAtAddress(instruction.XRegister),
+            OperandRegister => RegisterAtAddress(instruction.XRegister),
+            ReturnRegister => RegisterAtAddress(instruction.XRegister),
+            MessageRegister => RegisterAtAddress(instruction.XRegister),
+            HandlerRegister => RegisterAtAddress(instruction.XRegister),
+            PropertyRegister => RegisterAtAddress(instruction.XRegister),
+            BuilderRegister => RegisterAtAddress(instruction.XRegister),
+            ConditionRegister => RegisterAtAddress(instruction.ConditionRegister),
+            CollectionRegister => RegisterAtAddress(instruction.XRegister),
+            IteratorRegister => RegisterAtAddress(instruction.XRegister),
+            SourceIteratorRegister => RegisterAtAddress(instruction.XRegister),
+            SeriesRegister => RegisterAtAddress(instruction.XRegister),
+            FromRegister => RegisterAtAddress(instruction.XRegister),
 
-            RightRegister => Register(instruction.YRegister),
-            ObjectRegister => Register(instruction.YRegister),
-            ItemRegister => Register(instruction.YRegister),
-            KeyRegister => Register(instruction.YRegister),
-            ValueRegister => Register(instruction.AU),
-            IndexRegister => Register(instruction.YRegister),
-            DefaultRegister => Register(instruction.YRegister),
-            SeedRegister => Register(instruction.XRegister),
-            NeedleRegister => Register(instruction.YRegister),
-            ToRegister => Register(instruction.YRegister),
+            RightRegister => RegisterAtAddress(instruction.YRegister),
+            ObjectRegister => RegisterAtAddress(instruction.YRegister),
+            ItemRegister => RegisterAtAddress(instruction.YRegister),
+            KeyRegister => RegisterAtAddress(instruction.YRegister),
+            ValueRegister => RegisterAtAddress(instruction.AU),
+            IndexRegister => RegisterAtAddress(instruction.YRegister),
+            DefaultRegister => RegisterAtAddress(instruction.YRegister),
+            SeedRegister => RegisterAtAddress(instruction.XRegister),
+            NeedleRegister => RegisterAtAddress(instruction.YRegister),
+            ToRegister => RegisterAtAddress(instruction.YRegister),
 
-            ItemBindingRegister => Register(operandIndex >= 3 ? instruction.AU : instruction.YRegister),
-            AuxItemBindingRegister => Register(instruction.AU),
-            WeightRegister => Register(instruction.OpCode == GameEventScriptBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister),
-            StepRegister => Register(instruction.AU),
-            MinimumRegister => Register(instruction.YRegister),
-            MaximumRegister => Register(instruction.AU),
-            AuxARegister => Register(instruction.AU),
-            AuxBRegister => Register(instruction.BU),
-            AuxCRegister => Register(instruction.CU),
-            AuxDRegister => Register(instruction.DU),
+            ItemBindingRegister => RegisterAtAddress(operandIndex >= 3 ? instruction.AU : instruction.YRegister),
+            AuxItemBindingRegister => RegisterAtAddress(instruction.AU),
+            WeightRegister => RegisterAtAddress(instruction.OpCode == GameEventScriptBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister),
+            StepRegister => RegisterAtAddress(instruction.AU),
+            MinimumRegister => RegisterAtAddress(instruction.YRegister),
+            MaximumRegister => RegisterAtAddress(instruction.AU),
+            AuxARegister => RegisterAtAddress(instruction.AU),
+            AuxBRegister => RegisterAtAddress(instruction.BU),
+            AuxCRegister => RegisterAtAddress(instruction.CU),
+            AuxDRegister => RegisterAtAddress(instruction.DU),
 
             LocalRegisterDelta => Immediate(instruction.Count),
             DiceCount => Immediate(instruction.Count),
@@ -401,7 +388,7 @@ public static class GameEventScriptBinaryDumper
             ProjectionEntry => context.CodeLabel(instruction.AU),
             KeyEntry => context.CodeLabel(instruction.AU),
             ValueEntry => context.CodeLabel(instruction.BU),
-            FaceRegister => Register(instruction.BU),
+            FaceRegister => RegisterAtAddress(instruction.BU),
 
             GameEventScriptOpcodePrinter.OperandPart.String => FormatTextReference(context, instruction.StringIndex),
             Text => FormatTextReference(context, instruction.StringIndex),
@@ -428,6 +415,7 @@ public static class GameEventScriptBinaryDumper
 
             _ => throw new ArgumentOutOfRangeException(nameof(part), part, null)
         };
+    }
 
     private static ushort CaptureRegisterListIndex(GameEventScriptBytecodeInstruction instruction)
         => instruction.BU;
@@ -599,7 +587,7 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddTextComment(List<string> comments, DisassemblyContext context, ushort textIndex)
     {
-        if (textIndex < context.Binary.StringConstants.Slices.Length)
+        if (textIndex < context.Program.StringConstants.Slices.Length)
         {
             comments.Add("\"" + Escape(context.ResolveText(textIndex)) + "\"");
         }
@@ -607,12 +595,12 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddListTextComment(List<string> comments, DisassemblyContext context, ushort listIndex)
     {
-        if (listIndex >= context.Binary.UInt16IndexLists.Slices.Length)
+        if (listIndex >= context.Program.UInt16IndexLists.Slices.Length)
         {
             return;
         }
 
-        var values = context.Binary.UInt16IndexLists.Resolve(listIndex);
+        var values = context.Program.UInt16IndexLists.Resolve(listIndex);
         if (values.Length == 0)
         {
             return;
@@ -622,7 +610,7 @@ public static class GameEventScriptBinaryDumper
         for (var index = 0; index < values.Length; index++)
         {
             var value = values[index];
-            if (value < context.Binary.StringConstants.Slices.Length)
+            if (value < context.Program.StringConstants.Slices.Length)
             {
                 text.Add("\"" + Escape(context.ResolveText(value)) + "\"");
             }
@@ -725,7 +713,7 @@ public static class GameEventScriptBinaryDumper
         for (var index = 0; index < values.Length; index++)
         {
             var value = values[index];
-            if (value >= context.Binary.StringConstants.Slices.Length)
+            if (value >= context.Program.StringConstants.Slices.Length)
             {
                 continue;
             }
@@ -802,18 +790,18 @@ public static class GameEventScriptBinaryDumper
         private readonly ListRole[] _listRoles;
         private readonly Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> _bindsByKindAndId = [];
 
-        internal DisassemblyContext(GameEventScriptProgram binary)
+        internal DisassemblyContext(GameEventScriptProgram program)
         {
-            Binary = binary;
-            _bindLabels = BuildBindLabels(binary, _bindsByKindAndId);
-            _textLabels = BuildTextLabels(binary);
-            _listLabels = new string[binary.UInt16IndexLists.Slices.Length];
-            _listRoles = new ListRole[binary.UInt16IndexLists.Slices.Length];
-            BuildListLabels(binary, _listLabels, _listRoles);
-            BuildCodeLabels(binary, _codeLabels, _codeLabelNames, _codeLabelComments);
+            Program = program;
+            _bindLabels = BuildBindLabels(program, _bindsByKindAndId);
+            _textLabels = BuildTextLabels(program);
+            _listLabels = new string[program.UInt16IndexLists.Slices.Length];
+            _listRoles = new ListRole[program.UInt16IndexLists.Slices.Length];
+            BuildListLabels(program, _listLabels, _listRoles);
+            BuildCodeLabels(program, _codeLabels, _codeLabelNames, _codeLabelComments);
         }
 
-        internal GameEventScriptProgram Binary { get; }
+        internal GameEventScriptProgram Program { get; }
 
         internal bool HasCodeLabel(int address)
             => _codeLabels.Contains(address);
@@ -849,7 +837,7 @@ public static class GameEventScriptBinaryDumper
             => (uint)index < (uint)_listLabels.Length ? _listLabels[index] : "U16_" + index.ToString(CultureInfo.InvariantCulture);
 
         internal ListRole GetListRole(int index)
-            => (uint)index < (uint)_listRoles.Length ? _listRoles[index] : GameEventScriptBinaryDumper.ListRole.Raw;
+            => (uint)index < (uint)_listRoles.Length ? _listRoles[index] : GameEventScriptProgramDumper.ListRole.Raw;
 
         internal string BindLabel(int index)
             => (uint)index < (uint)_bindLabels.Length ? _bindLabels[index] : "Bind_" + index.ToString(CultureInfo.InvariantCulture);
@@ -866,13 +854,44 @@ public static class GameEventScriptBinaryDumper
                 : BindLabel(GameEventScriptBinaryBindKind.ExtensionCall, id, "External_" + id.ToString(CultureInfo.InvariantCulture));
 
         internal string ResolveText(ushort index)
-            => index < Binary.StringConstants.Slices.Length ? Binary.StringConstants.Resolve(index) : "#" + index.ToString(CultureInfo.InvariantCulture);
+            => index < Program.StringConstants.Slices.Length ? Program.StringConstants.Resolve(index) : "#" + index.ToString(CultureInfo.InvariantCulture);
+
+        internal string Register(ushort registerId, int codeAddress)
+        {
+            var physicalName = GameEventScriptProgramDumper.Register(registerId);
+            var debugSymbols = Program.DebugSymbols;
+            if (debugSymbols is null)
+            {
+                return physicalName;
+            }
+
+            var symbols = debugSymbols.Symbols;
+            GameEventScriptDebugSymbol? bestMatch = null;
+            var address = checked((uint)codeAddress);
+            for (var index = 0; index < symbols.Count; index++)
+            {
+                var symbol = symbols[index];
+                if (symbol.RegisterId != registerId || address < symbol.CodeStart || address >= symbol.CodeStart + symbol.CodeLength)
+                {
+                    continue;
+                }
+
+                if (!bestMatch.HasValue || symbol.CodeLength < bestMatch.Value.CodeLength)
+                {
+                    bestMatch = symbol;
+                }
+            }
+
+            return bestMatch.HasValue
+                ? physicalName + "(" + bestMatch.Value.Name + ")"
+                : physicalName;
+        }
 
         internal GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry? GetBindEntry(GameEventScriptBinaryBindKind kind, ushort id)
         {
             if (_bindsByKindAndId.TryGetValue((kind, id), out var index))
             {
-                return Binary.Bindings.Entries[index];
+                return Program.Bindings.Entries[index];
             }
 
             return null;

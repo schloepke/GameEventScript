@@ -41,6 +41,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Series now use direct VM concepts and `CreateSeries`.
 - `GameEventScriptProgram` is the immutable reusable compiler result.
 - `GameEventScriptProgram` is the portable parsed representation of the `.gesb` V1 binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
+- Compilation includes `DebugSymbols`, `SourceMap`, and `SourceArchive` by default; production or size-sensitive builds opt out explicitly with `GameEventScriptDebugInfoOptions.None`.
 - `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
 - `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.
 - Native `Subscribe` returns an idempotently detachable `GameEventScriptSubscription`.
@@ -62,7 +63,8 @@ The project has a portable Game Event Script host/VM architecture with a compact
   metadata, and opaque segments. The compiler always optimizes and emits stable
   C# compiler metadata plus optional DebugSymbols, SourceMap, and SourceArchive.
 - Source IDs follow `AddScript` order and source mappings use UTF-8 byte offsets.
-  The dumper consumes embedded source data and interleaves source-line comments.
+  `GameEventScriptProgramDumper` consumes embedded source data and interleaves
+  source-line comments. It has no legacy API for separately supplied source text.
 - Golden, invalid, retention, Unicode, runtime roundtrip, and JSON binary-roundtrip
   tests cover the portable boundary. `StepH-GameEventScript/GesbFormatV1.md` is
   the normative container specification.
@@ -157,6 +159,7 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/Api/GameEventScriptProgramReader.cs`
 - `StepH-GameEventScript/Api/GameEventScriptProgramWriter.cs`
 - `StepH-GameEventScript/Api/GameEventScriptProgramValidator.cs`
+- `StepH-GameEventScript/Api/GameEventScriptProgramDumper.cs`
 - `StepH-GameEventScript/Api/GameEventScriptHost.cs`
 - `StepH-GameEventScript/Api/GameEventScriptContext.cs`
 - `StepH-GameEventScript/Runtime/VM/GesLinkedProgram.cs`

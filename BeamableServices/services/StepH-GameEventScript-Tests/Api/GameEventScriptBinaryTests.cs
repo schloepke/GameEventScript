@@ -64,7 +64,7 @@ public sealed class GameEventScriptBinaryTests
     }
 
     [TestMethod]
-    public void BinaryDumperFormatsMessageNameHandlersAsMessageNameDispatch()
+    public void ProgramDumperFormatsMessageNameHandlersAsMessageNameDispatch()
     {
         const string script =
             """
@@ -82,7 +82,7 @@ public sealed class GameEventScriptBinaryTests
     }
 
     [TestMethod]
-    public void BinaryDumperCanIncludeSourceScriptInHeader()
+    public void ProgramDumperUsesEmbeddedSourceArchiveInHeader()
     {
         const string script =
             """
@@ -93,13 +93,16 @@ public sealed class GameEventScriptBinaryTests
             }
             """;
 
-        var dump = GameEventScriptManager.Compile(script).Dump(
-            includeInstructionAddresses: true,
-            scriptSource: script);
+        var dump = GameEventScriptManager.CreateScriptBuilder()
+            .AddScript(script, "binary-source-dump.ges")
+            .WithDebugInfo()
+            .Compile()
+            .Dump(includeInstructionAddresses: true);
 
-        StringAssert.Contains(dump, "// Script:");
+        StringAssert.Contains(dump, "// Source: binary-source-dump.ges");
         StringAssert.Contains(dump, "//\t\tmodule BinarySourceDump");
         StringAssert.Contains(dump, "//\t\ton Start {");
+        StringAssert.Contains(dump, "// binary-source-dump.ges:");
         StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n\n.gesb ");
     }
 

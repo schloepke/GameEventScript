@@ -82,31 +82,31 @@ internal static class GameEventScriptVirtualMachine
                             break;
 
                         case EmitMessage:
-                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
+                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
                             break;
                         case EmitMessageWithTags:
-                            vmState.GesVmPublishMessageWithTags(instruction.MessageDestination, vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex),
-                                vmState.Binary.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), false, context);
+                            vmState.GesVmPublishMessageWithTags(instruction.MessageDestination, vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex),
+                                vmState.Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), false, context);
                             break;
                         case EmitMessageValue:
                             vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), false, context);
                             break;
                         case EmitMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
+                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), false, context);
                             break;
 
                         case PublishMessage:
-                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
+                            vmState.GesVmPublishMessage(instruction.MessageDestination, vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
                             break;
                         case PublishMessageWithTags:
-                            vmState.GesVmPublishMessageWithTags(instruction.MessageDestination, vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex),
-                                vmState.Binary.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), true, context);
+                            vmState.GesVmPublishMessageWithTags(instruction.MessageDestination, vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex),
+                                vmState.Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), true, context);
                             break;
                         case PublishMessageValue:
                             vmState.GesVmPublishMessageValue(in vmState.Register(instruction.XRegister), true, context);
                             break;
                         case PublishMessageValueWithTags:
-                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
+                            vmState.GesVmPublishMessageValueWithTags(in vmState.Register(instruction.XRegister), vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex), true, context);
                             break;
 
                         case Cast:
@@ -154,7 +154,7 @@ internal static class GameEventScriptVirtualMachine
                             vmState.GesVmPropertyAccess(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Register(instruction.YRegister));
                             break;
                         case BindHandler:
-                            vmState.BindHandler(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex));
+                            vmState.BindHandler(instruction.DestinationRegister, vmState.Register(instruction.XRegister), vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                             break;
 
                         case LoadNothing:
@@ -182,10 +182,10 @@ internal static class GameEventScriptVirtualMachine
                             vmState.SetTagPointer(instruction.DestinationRegister, instruction.StringIndex);
                             break;
                         case LoadHandler:
-                            vmState.CreateMessageSignature(instruction.DestinationRegister, vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex));
+                            vmState.CreateMessageSignature(instruction.DestinationRegister, vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                             break;
                         case LoadMessage:
-                            vmState.CreateMessage(instruction.DestinationRegister, vmState.Binary.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), vmState.Binary.UInt16IndexLists.Resolve(instruction.ListIndex));
+                            vmState.CreateMessage(instruction.DestinationRegister, vmState.Program.UInt16IndexLists.Resolve(instruction.SecondaryListIndex), vmState.Program.UInt16IndexLists.Resolve(instruction.ListIndex));
                             break;
 
                         case StageRegister:

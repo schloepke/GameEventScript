@@ -43,6 +43,18 @@
         {
           "captures": {
             "1": {
+              "name": "keyword.control.directive.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "constant.numeric.version.gameeventscript.assembler"
+            }
+          },
+          "match": "^\\s*(\\.(?:gesb|program-version))\\s+(\\d+)\\b",
+          "name": "meta.directive.version.gameeventscript.assembler"
+        },
+        {
+          "captures": {
+            "1": {
               "name": "keyword.control.directive.segment.gameeventscript.assembler"
             },
             "2": {
@@ -65,7 +77,7 @@
           "name": "meta.directive.segment.gameeventscript.assembler"
         },
         {
-          "match": "(?<!\\S)\\.(?:gesb|module|flags|text|u16|registers|texts|bind)\\b",
+          "match": "(?<!\\S)\\.(?:gesb|module|program-version|text|u16|registers|texts|bind)\\b",
           "name": "keyword.control.directive.gameeventscript.assembler"
         }
       ]
@@ -82,7 +94,7 @@
           "name": "meta.label.definition.gameeventscript.assembler"
         },
         {
-          "match": "\\b(?:L_\\d+|L_none|T_[A-Za-z_][A-Za-z0-9_]*|T_\\d+|U16_\\d+|Args_\\d+|Names_\\d+|Keys_\\d+|Shape_\\d+|StdExt_\\d+|Items_\\d+|Values_\\d+|Captures_\\d+|Tags_\\d+|Handler_[A-Za-z_][A-Za-z0-9_]*|Handler_\\d+|Function_\\d+|Predicate_\\d+|Extension_\\d+|Outbound_\\d+|Record_\\d+|ExternalType_\\d+|Bind_\\d+)\\b",
+          "match": "\\b(?:L_\\d+|L_none|T_[A-Za-z_][A-Za-z0-9_]*|T_\\d+|U16_\\d+|Args_\\d+|Names_\\d+|Keys_\\d+|Shape_\\d+|StdExt_\\d+|Items_\\d+|Values_\\d+|Captures_\\d+|Tags_\\d+|(?:Handler|Function|Predicate|Extension|Outbound|Record|ExternalType|Bind)_(?:[A-Za-z_][A-Za-z0-9_]*|\\d+)|(?:function|predicate|record)_[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*_\\d+)\\b",
           "name": "variable.other.label.reference.gameeventscript.assembler"
         }
       ]
@@ -101,13 +113,31 @@
               "name": "keyword.mnemonic.opcode.gameeventscript.assembler"
             }
           },
-          "match": "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(?:Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern)\\b",
+          "match": "^\\s*(?:([A-Za-z_][A-Za-z0-9_]*):\\s*)?(@\\d{4,5}\\b\\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern)\\b",
           "name": "meta.instruction.gameeventscript.assembler"
         }
       ]
     },
     "operands": {
       "patterns": [
+        {
+          "captures": {
+            "1": {
+              "name": "variable.other.register.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "punctuation.definition.annotation.begin.gameeventscript.assembler"
+            },
+            "3": {
+              "name": "constant.other.symbol.gameeventscript.assembler"
+            },
+            "4": {
+              "name": "punctuation.definition.annotation.end.gameeventscript.assembler"
+            }
+          },
+          "match": "\\b(r\\d+)(\\()([A-Za-z_][A-Za-z0-9_]*|_)(\\))",
+          "name": "meta.register.symbolic.gameeventscript.assembler"
+        },
         {
           "match": "\\br\\d+\\b",
           "name": "variable.other.register.gameeventscript.assembler"
@@ -128,7 +158,7 @@
           "match": "\\b(unit)(:(?:none|degree|meter|second))\\b"
         },
         {
-          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|Iterator|Series|Custom)\\b",
+          "match": "\\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\\b",
           "name": "support.type.bytecode.gameeventscript.assembler"
         },
         {
@@ -136,8 +166,20 @@
           "name": "support.type.bind-kind.gameeventscript.assembler"
         },
         {
-          "match": "\\b(?:optimization|debug|none|NormalizeResultAsPredicate)\\b",
+          "match": "\\bNormalizeResultAsPredicate\\b",
           "name": "constant.language.flag.gameeventscript.assembler"
+        },
+        {
+          "match": "\\b(?:CountAny|CountFace|FullHouse|Straight|Fibonacci|Factorial|none)\\b",
+          "name": "constant.language.gameeventscript.assembler"
+        },
+        {
+          "match": "\\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\\b(?=\\s*=)",
+          "name": "variable.parameter.attribute.gameeventscript.assembler"
+        },
+        {
+          "match": "(?<![#A-Za-z0-9_])\\d+\\b",
+          "name": "constant.numeric.gameeventscript.assembler"
         }
       ]
     },

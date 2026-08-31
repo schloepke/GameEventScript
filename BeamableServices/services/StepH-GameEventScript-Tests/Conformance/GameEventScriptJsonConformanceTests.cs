@@ -558,7 +558,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         if (testCase.Test.DumpBinary)
         {
             TestContext.WriteLine($"Binary dump: {testCase.SuiteName}/{testCase.Test.Name}");
-            TestContext.WriteLine(StableBinaryDump(binaryBuild.Value, GetScriptSourceForDump(testCase)));
+            TestContext.WriteLine(StableBinaryDump(binaryBuild.Value));
         }
 
         AssertPerformanceCorrectness(testCase, "new vm", binaryBuild.Value);
@@ -577,13 +577,13 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         report.Append("//  Performance Case: ").Append(testCase.SuiteName).Append('/').AppendLine(testCase.Test.Name);
         report.AppendLine("// -------------------------------------------------------------------------------");
         report.AppendLine();
-        report.AppendLine(StableBinaryDump(binary, GetScriptSourceForDump(testCase)));
+        report.AppendLine(StableBinaryDump(binary));
         report.AppendLine();
     }
 
-    private static string StableBinaryDump(GameEventScriptProgram binary, string? scriptSource)
+    private static string StableBinaryDump(GameEventScriptProgram binary)
     {
-        var dump = binary.Dump(includeInstructionAddresses: false, scriptSource: scriptSource);
+        var dump = binary.Dump(includeInstructionAddresses: false);
         var lines = dump.ReplaceLineEndings("\n").Split('\n');
         for (var index = 0; index < lines.Length; index++)
         {
@@ -1057,39 +1057,6 @@ public abstract class GameEventScriptJsonConformanceTestBase
         return programs;
     }
 
-    protected static string? GetScriptSourceForDump(GameEventScriptConformanceCase testCase)
-    {
-        var test = testCase.Test;
-        if (!string.IsNullOrWhiteSpace(test.Script))
-        {
-            return test.Script;
-        }
-
-        var sources = test.Scripts is { Count: > 0 } ? test.Scripts : test.Programs;
-        if (sources is not { Count: > 0 })
-        {
-            return null;
-        }
-
-        var builder = new StringBuilder();
-        for (var index = 0; index < sources.Count; index++)
-        {
-            var source = sources[index];
-            if (index > 0)
-            {
-                builder.AppendLine();
-            }
-
-            builder.AppendLine($"// source: {source.SourceName ?? $"script-{index + 1}"}");
-            builder.Append(source.Text ?? string.Empty);
-            if (builder.Length > 0 && builder[^1] != '\n')
-            {
-                builder.AppendLine();
-            }
-        }
-        return builder.ToString();
-    }
-
     private static IEnumerable<object[]> Cases(string relativeSpecFile)
         => GameEventScriptConformanceRunner.ConformanceCases(SpecDirectory, relativeSpecFile);
 
@@ -1120,10 +1087,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var emitted = new List<GameEventScriptMessage>();
         var published = new List<GameEventScriptMessage>();
         var observedRuntimeLimits = new List<TestRuntimeLimitEvent>();
-        var scriptSource = GetScriptSourceForDump(testCase);
         var lastCapturedVmDump = string.Join(
             Environment.NewLine,
-            programs.Select(program => program.Dump(includeInstructionAddresses: true, scriptSource: scriptSource)));
+            programs.Select(program => program.Dump(includeInstructionAddresses: true)));
         var host = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(random)
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)

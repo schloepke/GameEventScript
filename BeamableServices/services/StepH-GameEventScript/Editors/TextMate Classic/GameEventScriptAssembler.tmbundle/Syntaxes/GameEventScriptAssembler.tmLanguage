@@ -4,16 +4,14 @@
 <dict>
 	<key>$schema</key>
 	<string>https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json</string>
-	<key>name</key>
-	<string>GameEventScript Assembler</string>
-	<key>scopeName</key>
-	<string>source.gameeventscript.assembler</string>
 	<key>fileTypes</key>
 	<array>
 		<string>gesa</string>
 	</array>
 	<key>firstLineMatch</key>
 	<string>^\s*\.gesb\b</string>
+	<key>name</key>
+	<string>GameEventScript Assembler</string>
 	<key>patterns</key>
 	<array>
 		<dict>
@@ -69,6 +67,25 @@
 						<key>1</key>
 						<dict>
 							<key>name</key>
+							<string>keyword.control.directive.gameeventscript.assembler</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>constant.numeric.version.gameeventscript.assembler</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>^\s*(\.(?:gesb|program-version))\s+(\d+)\b</string>
+					<key>name</key>
+					<string>meta.directive.version.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
 							<string>keyword.control.directive.segment.gameeventscript.assembler</string>
 						</dict>
 						<key>2</key>
@@ -103,7 +120,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>(?&lt;!\S)\.(?:gesb|module|flags|text|u16|registers|texts|bind)\b</string>
+					<string>(?&lt;!\S)\.(?:gesb|module|program-version|text|u16|registers|texts|bind)\b</string>
 					<key>name</key>
 					<string>keyword.control.directive.gameeventscript.assembler</string>
 				</dict>
@@ -129,7 +146,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:L_\d+|L_none|T_[A-Za-z_][A-Za-z0-9_]*|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|Handler_[A-Za-z_][A-Za-z0-9_]*|Handler_\d+|Function_\d+|Predicate_\d+|Extension_\d+|Outbound_\d+|Record_\d+|ExternalType_\d+|Bind_\d+)\b</string>
+					<string>\b(?:L_\d+|L_none|T_[A-Za-z_][A-Za-z0-9_]*|T_\d+|U16_\d+|Args_\d+|Names_\d+|Keys_\d+|Shape_\d+|StdExt_\d+|Items_\d+|Values_\d+|Captures_\d+|Tags_\d+|(?:Handler|Function|Predicate|Extension|Outbound|Record|ExternalType|Bind)_(?:[A-Za-z_][A-Za-z0-9_]*|\d+)|(?:function|predicate|record)_[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*_\d+)\b</string>
 					<key>name</key>
 					<string>variable.other.label.reference.gameeventscript.assembler</string>
 				</dict>
@@ -159,7 +176,7 @@
 						</dict>
 					</dict>
 					<key>match</key>
-						<string>^\s*(?:([A-Za-z_][A-Za-z0-9_]*):\s*)?(@\d{4,5}\b\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern)\b</string>
+					<string>^\s*(?:([A-Za-z_][A-Za-z0-9_]*):\s*)?(@\d{4,5}\b\s*)?(Nop|RegisterLocals|Jump|JumpIfTrue|JumpIfFalse|JumpIfNotTrue|JumpIfNothing|Call|CreateSeries|CallExternal|ReturnVoid|ReturnValue|EmitMessage|EmitMessageWithTags|EmitMessageValue|EmitMessageValueWithTags|PublishMessage|PublishMessageWithTags|PublishMessageValue|PublishMessageValueWithTags|Cast|CastCustom|CastUnit|CastNumeric|CheckType|CheckCustomType|CheckUnit|CheckNumeric|CheckInteger|CheckFractional|Move|MemberAccess|IndexAccess|PropertyAccess|BindHandler|LoadNothing|LoadTrue|LoadFalse|LoadInteger|LoadFloat|LoadPercentage|LoadText|LoadTag|LoadHandler|LoadMessage|StageRegister|StageNothing|StageTrue|StageFalse|StageInteger|StageFloat|StageText|StageTag|StagePercentage|CreateDice|CreateVector|CreatePoint|CreateList|CreateMap|CreateRange|CreateRangeWithStep|CreateRangeIterator|CreateRangeIteratorWithStep|CreateRangeIteratorShort|CreateRecord|CreateRecordValue|CreateExternalType|HasValue|IsEmpty|Default|Or|And|Xor|Implies|Not|Equal|NotEqual|Less|Greater|LessOrEqual|GreaterOrEqual|Add|Subtract|Multiply|Divide|Power|IntegerDivide|Modulo|Remainder|Min|Max|Negate|Abs|LogN|Chance|Clamp|RandomTake|RandomTakeFloat|RandomPush|RandomPushConstant|RandomPop|Term|Exp|Floor|Ceil|Truncate|RoundHalfEven|RoundHalfUp|RoundHalfDown|DegreeToRadians|DegreeFromRadians|WrapDegree|Sin|Cos|Tan|Asin|Acos|Atan|Atan2|Hypot2D|Hypot3D|Distance|Distance2D|Distance3D|DistanceSquared|DistanceSquared2D|DistanceSquared3D|LengthSquared|LengthSquared2D|LengthSquared3D|Normalize|Normalize2D|Normalize3D|Dot|Dot2D|Dot3D|Cross|Cross2D|Cross3D|AngleBetween|AngleBetween2D|AngleBetween3D|TakeFirst|DropFirst|TakeLast|DropLast|TakeHighest|TakeLowest|DropHighest|DropLowest|OneRandom|TakeRandom|OneWeighted|TakeWeighted|Count|StartsWith|EndsWith|Contains|ContainsAny|ContainsAll|HasAny|HasAll|ContainsValue|Union|Intersect|Zip|KeysOfMap|ValuesOfMap|EntriesOfMap|First|Last|Single|IteratorCreate|IteratorCreateOrJump|IteratorNext|IteratorClose|MapBuilderCreate|MapBuilderAdd|MapBuilderFinish|DistinctBuilderCreate|DistinctBuilderAdd|DistinctBuilderFinish|GroupBuilderCreate|GroupBuilderAdd|GroupBuilderFinish|OrderBuilderCreate|OrderBuilderAdd|OrderBuilderFinishAscending|OrderBuilderFinishDescending|Distinct|SortAscending|SortDescending|Reverse|Shuffle|ListBuilderCreate|ListBuilderAdd|ListBuilderFinish|HasPattern|TakePattern)\b</string>
 					<key>name</key>
 					<string>meta.instruction.gameeventscript.assembler</string>
 				</dict>
@@ -169,6 +186,35 @@
 		<dict>
 			<key>patterns</key>
 			<array>
+				<dict>
+					<key>captures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>variable.other.register.gameeventscript.assembler</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.annotation.begin.gameeventscript.assembler</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>constant.other.symbol.gameeventscript.assembler</string>
+						</dict>
+						<key>4</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.definition.annotation.end.gameeventscript.assembler</string>
+						</dict>
+					</dict>
+					<key>match</key>
+					<string>\b(r\d+)(\()([A-Za-z_][A-Za-z0-9_]*|_)(\))</string>
+					<key>name</key>
+					<string>meta.register.symbolic.gameeventscript.assembler</string>
+				</dict>
 				<dict>
 					<key>match</key>
 					<string>\br\d+\b</string>
@@ -200,7 +246,7 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|Iterator|Series|Custom)\b</string>
+					<string>\b(?:Nothing|Boolean|Integer|Float|Percentage|Tag|Text|Vector|Point|Range|Handler|Message|List|Dice|Map|ListBuilder|MapBuilder|DistinctBuilder|GroupBuilder|OrderBuilder|Iterator|Series|Custom)\b</string>
 					<key>name</key>
 					<string>support.type.bytecode.gameeventscript.assembler</string>
 				</dict>
@@ -212,9 +258,27 @@
 				</dict>
 				<dict>
 					<key>match</key>
-					<string>\b(?:optimization|debug|none|NormalizeResultAsPredicate)\b</string>
+					<string>\bNormalizeResultAsPredicate\b</string>
 					<key>name</key>
 					<string>constant.language.flag.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(?:CountAny|CountFace|FullHouse|Straight|Fibonacci|Factorial|none)\b</string>
+					<key>name</key>
+					<string>constant.language.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>\b(?:id|name|args|entry|requiredTags|excludedTags|flags)\b(?=\s*=)</string>
+					<key>name</key>
+					<string>variable.parameter.attribute.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>(?&lt;![#A-Za-z0-9_])\d+\b</string>
+					<key>name</key>
+					<string>constant.numeric.gameeventscript.assembler</string>
 				</dict>
 			</array>
 		</dict>
@@ -260,5 +324,7 @@
 			</array>
 		</dict>
 	</dict>
+	<key>scopeName</key>
+	<string>source.gameeventscript.assembler</string>
 </dict>
 </plist>

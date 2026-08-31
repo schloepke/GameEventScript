@@ -14,7 +14,7 @@ internal static class GesVmRegisterCollections
 
     internal static void GesVmCreateMap(this GesVmState vmState, ushort destinationRegister, ushort keyNamesIndex)
     {
-        var keyNames = vmState.Binary.UInt16IndexLists.Resolve(keyNamesIndex);
+        var keyNames = vmState.Program.UInt16IndexLists.Resolve(keyNamesIndex);
         if (keyNames.Length != vmState.StageLength)
         {
             vmState.SetNothing(destinationRegister);

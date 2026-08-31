@@ -16,7 +16,7 @@ public class GesOptimizerTests
             """;
 
         var module = GameEventScriptBuilder.Create()
-            .AddScript(script, "optimizer.es")
+            .AddScript(script, "optimizer.ges")
             .BuildModule();
 
         var predicate = module.Callables["high"];
@@ -38,7 +38,7 @@ public class GesOptimizerTests
             """;
 
         var module = GameEventScriptBuilder.Create()
-            .AddScript(script, "constant-math.es")
+            .AddScript(script, "constant-math.ges")
             .BuildModule();
 
         var handler = module.Handlers.Values.SelectMany(handlers => handlers).Single();

@@ -10,6 +10,19 @@ namespace StepH_GameEventScript_Tests.Api;
 public sealed class GameEventScriptProgramFormatTests
 {
     [TestMethod]
+    public void CompilerGeneratesAllDebugSectionsByDefault()
+    {
+        var program = GameEventScriptManager.CreateScriptBuilder()
+            .AddScript("module DefaultDebug\n\non Start { emit Done(value: 1) }", "default-debug.ges")
+            .Compile();
+
+        Assert.IsNotNull(program.DebugSymbols);
+        Assert.IsNotNull(program.SourceMap);
+        Assert.IsNotNull(program.SourceArchive);
+        Assert.AreEqual("default-debug.ges", program.SourceArchive.Sources[0].SourceName);
+    }
+
+    [TestMethod]
     public void CanonicalBinaryRoundTripsWithoutKnownRawSections()
     {
         var program = Compile(GameEventScriptDebugInfoOptions.All);
@@ -46,7 +59,11 @@ public sealed class GameEventScriptProgramFormatTests
     [TestMethod]
     public void CanonicalGoldenBinariesRemainByteStable()
     {
-        var emptyHash = Sha256(GameEventScriptProgramWriter.ToArray(GameEventScriptManager.CreateScriptBuilder().Compile()));
+        var emptyHash = Sha256(GameEventScriptProgramWriter.ToArray(
+            GameEventScriptManager.CreateScriptBuilder().Compile(new GameEventScriptCompileOptions
+            {
+                DebugInfo = GameEventScriptDebugInfoOptions.None
+            })));
         var runtimeHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None)));
         var debugHash = Sha256(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
 
@@ -320,6 +337,8 @@ public sealed class GameEventScriptProgramFormatTests
         StringAssert.Contains(dump, "// Source: main.ges");
         StringAssert.Contains(dump, "// main.ges:");
         StringAssert.Contains(dump, "let result be value + 1");
+        StringAssert.Contains(dump, "Add r1(result), r0(value), r2");
+        Assert.AreEqual(1, dump.ReplaceLineEndings("\n").Split('\n').Count(line => line == "// main.ges:4"));
     }
 
     private static GameEventScriptProgram Compile(GameEventScriptDebugInfoOptions options)

@@ -10,7 +10,9 @@ must stay outside the portable core.
 `GameEventScriptProgram` is the immutable compiler result. It contains bytecode,
 constant tables, and bind metadata but no VM state, random generator, delegate,
 host binding, or queue. A program may be loaded into multiple hosts at the same
-time. All public program tables copy their input and expose read-only views.
+time. All public program tables copy their input and expose read-only views. Its
+resource metadata contains only portable integers: per-handler requirements in
+message-handler binds and their maxima in the program header model.
 
 `GameEventScriptHost` is one autonomous serial execution unit. It owns the local
 message queue, exact- and name-subscription indexes, deterministic random stream,
@@ -21,7 +23,10 @@ does not create a VM until the first program is loaded.
 `GameEventScriptInstance` is one host-specific link of one program. `Load` is
 additive and returns an instance. Linking resolves extension and external-type
 references against that host. `Detach` is idempotent and removes the instance
-from future dispatch snapshots.
+from future dispatch snapshots. Before registering anything, loading rejects a
+cyclic synchronous call graph or requirements above `MaxRegisterValues` and
+`MaxCallDepth`. It then pre-warms the reusable register storage from the program
+maximum.
 
 `GameEventScriptSubscription` represents one native registration. `Unsubscribe`
 is idempotent and affects future snapshots only.
@@ -125,6 +130,8 @@ synchronous core contract.
 - Execution and publish results are value types.
 - Program loading prewarms VM register capacity. Later register growth is
   geometric and bounded by `MaxRegisterValues`.
+- Synchronous script call graphs are acyclic. A root handler has call-stack depth
+  zero; every nested call adds one entry.
 - After warmup, queue dispatch, handler selection, frame-result creation, and VM
   resume must not allocate. Message creation, emitted value payloads, extension
   behavior, and JSON decoding are measured separately.

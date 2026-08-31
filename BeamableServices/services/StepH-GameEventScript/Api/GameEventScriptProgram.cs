@@ -14,6 +14,8 @@ public sealed class GameEventScriptProgram
     public GameEventScriptProgram(
         GameEventScriptBinaryHeader header,
         string moduleName,
+        ushort requiredRegisterCount,
+        ushort requiredCallStackDepth,
         GameEventScriptTextTable textConstantTable,
         GameEventScriptUInt16Table uint16ConstantTable,
         GameEventScriptBinaryBindTable bindTable,
@@ -21,6 +23,8 @@ public sealed class GameEventScriptProgram
     {
         Header = header;
         ModuleName = moduleName ?? string.Empty;
+        RequiredRegisterCount = requiredRegisterCount;
+        RequiredCallStackDepth = requiredCallStackDepth;
         TextConstantTable = textConstantTable;
         Uint16ConstantTable = uint16ConstantTable;
         BindTable = bindTable;
@@ -29,6 +33,8 @@ public sealed class GameEventScriptProgram
 
     public GameEventScriptBinaryHeader Header { get; }
     public string ModuleName { get; }
+    public ushort RequiredRegisterCount { get; }
+    public ushort RequiredCallStackDepth { get; }
     public GameEventScriptTextTable TextConstantTable { get; }
     public GameEventScriptUInt16Table Uint16ConstantTable { get; }
     public GameEventScriptBinaryBindTable BindTable { get; }
@@ -159,7 +165,9 @@ public readonly struct GameEventScriptBinaryBindTable
         ushort entryAddress = 0xFFFF,
         ushort id = 0xFFFF,
         IReadOnlyList<ushort>? requiredTags = null,
-        IReadOnlyList<ushort>? excludedTags = null)
+        IReadOnlyList<ushort>? excludedTags = null,
+        ushort requiredRegisterCount = 0,
+        ushort requiredCallStackDepth = 0)
     {
         private readonly GameEventScriptReadOnlyArray<ushort> _argumentNames = new(argumentNames);
         private readonly GameEventScriptReadOnlyArray<ushort> _requiredTags = new(requiredTags);
@@ -178,6 +186,10 @@ public readonly struct GameEventScriptBinaryBindTable
         public GameEventScriptReadOnlyArray<ushort> ExcludedTags => _excludedTags;
 
         public ushort EntryAddress { get; } = entryAddress;
+
+        public ushort RequiredRegisterCount { get; } = requiredRegisterCount;
+
+        public ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
 
     }
 

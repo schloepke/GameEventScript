@@ -28,13 +28,17 @@ internal sealed class GesLinkedProgram
         string[] requiredTags,
         string[] excludedTags,
         bool matchArguments,
-        ushort entryAddress)
+        ushort entryAddress,
+        ushort requiredRegisterCount,
+        ushort requiredCallStackDepth)
     {
         internal GameEventScriptMessageSignature Signature { get; } = signature;
         internal string[] RequiredTags { get; } = requiredTags;
         internal string[] ExcludedTags { get; } = excludedTags;
         internal bool MatchArguments { get; } = matchArguments;
         internal ushort EntryAddress { get; } = entryAddress;
+        internal ushort RequiredRegisterCount { get; } = requiredRegisterCount;
+        internal ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
     }
 
     internal GesLinkedProgram(
@@ -43,6 +47,8 @@ internal sealed class GesLinkedProgram
         IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         Program = program ?? throw new ArgumentNullException(nameof(program));
+        GesProgramCallGraphValidator.Validate(program);
+        ValidateResourceMetadata(program);
         StringPool = BuildStringPool(program.TextConstantTable);
         CodeSegmentSize = checked((ushort)program.InstructionTable.Length);
         RecordConstructors = BuildIdIndexedBindTable(program, Record);
@@ -52,7 +58,7 @@ internal sealed class GesLinkedProgram
         BoundExtensionCalls = BindExtensions(extensionRegistry ?? GameEventScriptEmptyExtensionRegistry.Instance);
         BoundExternalTypeConstructors = BindExternalTypes(typeRegistry ?? GameEventScriptEmptyExternalTypeRegistry.Instance);
         Handlers = BuildHandlers(program);
-        RequiredRegisterCapacity = CalculateRequiredRegisterCapacity(program, Handlers);
+        RequiredRegisterCapacity = program.RequiredRegisterCount;
     }
 
     internal GameEventScriptProgram Program { get; }
@@ -68,21 +74,6 @@ internal sealed class GesLinkedProgram
     internal int RequiredRegisterCapacity { get; }
 
     internal string FetchString(ushort index) => StringPool[index];
-
-    private static int CalculateRequiredRegisterCapacity(GameEventScriptProgram program, Handler[] handlers)
-    {
-        var required = 32;
-        for (var index = 0; index < handlers.Length; index++)
-            required = Math.Max(required, handlers[index].Signature.Parameters.Count);
-        for (var index = 0; index < program.InstructionTable.Length; index++)
-        {
-            var instruction = program.InstructionTable[index];
-            if (instruction.OpCode == GameEventScriptBytecodeOpCode.RegisterLocals && instruction.Count > 0)
-                required = Math.Max(required, instruction.Count);
-        }
-
-        return required;
-    }
 
     private Handler[] BuildHandlers(GameEventScriptProgram program)
     {
@@ -105,7 +96,9 @@ internal sealed class GesLinkedProgram
                 ReadStrings(bind.RequiredTags),
                 ReadStrings(bind.ExcludedTags),
                 bind.Kind == MessageHandler,
-                bind.EntryAddress);
+                bind.EntryAddress,
+                bind.RequiredRegisterCount,
+                bind.RequiredCallStackDepth);
         }
 
         return handlers;
@@ -188,5 +181,26 @@ internal sealed class GesLinkedProgram
         var strings = new string[table.Slices.Length];
         for (var index = 0; index < strings.Length; index++) strings[index] = table.Resolve((ushort)index);
         return strings;
+    }
+
+    private static void ValidateResourceMetadata(GameEventScriptProgram program)
+    {
+        ushort requiredRegisterCount = 0;
+        ushort requiredCallStackDepth = 0;
+        foreach (var bind in program.BindTable.Entries)
+        {
+            if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
+            requiredRegisterCount = Math.Max(requiredRegisterCount, bind.RequiredRegisterCount);
+            requiredCallStackDepth = Math.Max(requiredCallStackDepth, bind.RequiredCallStackDepth);
+        }
+
+        if (program.RequiredRegisterCount != requiredRegisterCount ||
+            program.RequiredCallStackDepth != requiredCallStackDepth)
+        {
+            throw new GameEventScriptDynamicLinkException(
+                $"Program resource metadata is inconsistent. Program requires {program.RequiredRegisterCount} registers and " +
+                $"{program.RequiredCallStackDepth} call-stack entries, but its message handlers require maxima of " +
+                $"{requiredRegisterCount} and {requiredCallStackDepth}.");
+        }
     }
 }

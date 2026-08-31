@@ -78,8 +78,9 @@ public sealed class GameEventScriptRuntimeLimits
     /// stack overflow or excessive resource consumption.
     /// </summary>
     /// <remarks>
-    /// The value of this property is used to monitor and restrict the depth of recursive or nested
-    /// calls during script execution. If the number of nested calls exceeds this limit,
+    /// The value of this property is used to monitor and restrict the depth of nested
+    /// calls during script execution. Recursive call graphs are rejected by the compiler and loader.
+    /// If the number of nested calls exceeds this limit,
     /// the script runtime will halt further execution to prevent resource exhaustion.
     /// </remarks>
     public int MaxCallDepth { get; init; } = 64;

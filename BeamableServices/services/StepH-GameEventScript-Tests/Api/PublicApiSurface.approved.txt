@@ -12,7 +12,7 @@ struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable
   property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry> Entries { get }
   property System.UInt16 EntryCount { get }
 struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry
-  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id, System.Collections.Generic.IReadOnlyList<System.UInt16> requiredTags, System.Collections.Generic.IReadOnlyList<System.UInt16> excludedTags)
+  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id, System.Collections.Generic.IReadOnlyList<System.UInt16> requiredTags, System.Collections.Generic.IReadOnlyList<System.UInt16> excludedTags, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth)
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
   property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt16> ArgumentNames { get }
   property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt16> ExcludedTags { get }
@@ -20,6 +20,8 @@ struct StepH.GameEventScript.Api.GameEventScriptBinaryBindTable.GameEventScriptB
   property System.UInt16 EntryAddress { get }
   property System.UInt16 Id { get }
   property System.UInt16 Name { get }
+  property System.UInt16 RequiredCallStackDepth { get }
+  property System.UInt16 RequiredRegisterCount { get }
 static class StepH.GameEventScript.Api.GameEventScriptBinaryDumper
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram binary)
   method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram binary, System.Boolean includeInstructionAddresses)
@@ -526,13 +528,15 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
   property System.String Name { get }
   property System.String SignatureId { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptProgram
-  ctor GameEventScriptProgram(StepH.GameEventScript.Api.GameEventScriptBinaryHeader header, System.String moduleName, StepH.GameEventScript.Api.GameEventScriptTextTable textConstantTable, StepH.GameEventScript.Api.GameEventScriptUInt16Table uint16ConstantTable, StepH.GameEventScript.Api.GameEventScriptBinaryBindTable bindTable, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> instructionTable)
+  ctor GameEventScriptProgram(StepH.GameEventScript.Api.GameEventScriptBinaryHeader header, System.String moduleName, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth, StepH.GameEventScript.Api.GameEventScriptTextTable textConstantTable, StepH.GameEventScript.Api.GameEventScriptUInt16Table uint16ConstantTable, StepH.GameEventScript.Api.GameEventScriptBinaryBindTable bindTable, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> instructionTable)
   property StepH.GameEventScript.Api.GameEventScriptBinaryBindTable BindTable { get }
   property StepH.GameEventScript.Api.GameEventScriptBinaryHeader Header { get }
   property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> InstructionTable { get }
   property StepH.GameEventScript.Api.GameEventScriptTextTable TextConstantTable { get }
   property StepH.GameEventScript.Api.GameEventScriptUInt16Table Uint16ConstantTable { get }
   property System.String ModuleName { get }
+  property System.UInt16 RequiredCallStackDepth { get }
+  property System.UInt16 RequiredRegisterCount { get }
 struct StepH.GameEventScript.Api.GameEventScriptPublishResult
   ctor GameEventScriptPublishResult(System.Boolean localAccepted, System.Boolean outboundAttempted, System.Boolean outboundAccepted)
   property System.Boolean AnyAccepted { get }

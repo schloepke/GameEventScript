@@ -65,6 +65,10 @@ public sealed class GameEventScriptConformanceTest
 
     public List<GameEventScriptMessageDefinitionExpectationSpec>? ExpectedMessageDefinitions { get; set; }
 
+    public GameEventScriptResourceRequirementExpectationSpec? ExpectedProgramResources { get; set; }
+
+    public List<GameEventScriptHandlerResourceExpectationSpec>? ExpectedHandlerResources { get; set; }
+
     public GameEventScriptBytecodeOpcodeExpectationSpec? ExpectedOpcodes { get; set; }
 }
 
@@ -89,6 +93,20 @@ public sealed class GameEventScriptMessageDefinitionExpectationSpec
     public List<string>? SignatureIds { get; set; }
 
     public int? Count { get; set; }
+}
+
+public class GameEventScriptResourceRequirementExpectationSpec
+{
+    public int? RequiredRegisterCount { get; set; }
+
+    public int? RequiredCallStackDepth { get; set; }
+}
+
+public sealed class GameEventScriptHandlerResourceExpectationSpec : GameEventScriptResourceRequirementExpectationSpec
+{
+    public string? Name { get; set; }
+
+    public string? SignatureId { get; set; }
 }
 
 public sealed class GameEventScriptBytecodeOpcodeExpectationSpec
@@ -155,6 +173,8 @@ public sealed class GameEventScriptRuntimeLimitsSpec
     public int? MaxQueuedMessagesPerRun { get; set; }
 
     public int? MaxExecutionSteps { get; set; }
+
+    public int? MaxRegisterValues { get; set; }
 
     public int? MaxLoopIterations { get; set; }
 

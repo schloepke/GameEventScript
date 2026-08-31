@@ -195,6 +195,164 @@ public sealed class GesBinaryBuilderTests
     }
 
     [TestMethod]
+    public void BuildCalculatesHandlerAndProgramResourceRequirementsAcrossCallGraph()
+    {
+        var builder = new GesBinaryBuilder().WithModuleName("BuilderResources");
+
+        using (var handler = builder.BeginHandler("Start"))
+        {
+            var handlerResult = handler.AddRegister("handlerResult");
+            GesLabelRef firstHelperEntry;
+
+            using (var firstHelper = builder.BeginHelper("firstHelper"))
+            {
+                firstHelperEntry = firstHelper.EntryLabel;
+                var firstResult = firstHelper.AddRegister("firstResult");
+                GesLabelRef secondHelperEntry;
+
+                using (var secondHelper = builder.BeginHelper("secondHelper"))
+                {
+                    secondHelperEntry = secondHelper.EntryLabel;
+                    var secondResult = secondHelper.AddRegister("secondResult");
+                    builder.LoadInteger(secondResult, 7);
+                    builder.ReturnValue(secondResult);
+                }
+
+                builder.Call(firstResult, secondHelperEntry);
+                builder.ReturnValue(firstResult);
+            }
+
+            builder.Call(handlerResult, firstHelperEntry);
+            builder.ReturnVoid();
+        }
+
+        var program = builder.Build();
+        var handlerBind = program.BindTable.Entries[0];
+
+        Assert.AreEqual((ushort)3, program.RequiredRegisterCount);
+        Assert.AreEqual((ushort)2, program.RequiredCallStackDepth);
+        Assert.AreEqual((ushort)3, handlerBind.RequiredRegisterCount);
+        Assert.AreEqual((ushort)2, handlerBind.RequiredCallStackDepth);
+    }
+
+    [TestMethod]
+    public void BuildRejectsDirectRecursiveCall()
+    {
+        var builder = new GesBinaryBuilder().WithModuleName("DirectRecursion");
+        using (var handler = builder.BeginHandler("Start"))
+        {
+            var result = handler.AddRegister("result");
+            builder.Call(result, handler.EntryLabel);
+            builder.ReturnVoid();
+        }
+
+        var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() => builder.Build());
+        StringAssert.Contains(exception.Message, "Start -> Start");
+    }
+
+    [TestMethod]
+    public void BuildRejectsIndirectRecursiveCall()
+    {
+        var builder = new GesBinaryBuilder().WithModuleName("IndirectRecursion");
+        using (var handler = builder.BeginHandler("Start"))
+        {
+            var handlerResult = handler.AddRegister("handlerResult");
+            GesLabelRef helperEntry;
+            using (var helper = builder.BeginHelper("helper"))
+            {
+                helperEntry = helper.EntryLabel;
+                var helperResult = helper.AddRegister("helperResult");
+                builder.Call(helperResult, handler.EntryLabel);
+                builder.ReturnValue(helperResult);
+            }
+
+            builder.Call(handlerResult, helperEntry);
+            builder.ReturnVoid();
+        }
+
+        var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() => builder.Build());
+        StringAssert.Contains(exception.Message, "Start -> helper -> Start");
+    }
+
+    [TestMethod]
+    public void HostLoadRejectsCyclicCallGraphFromUntrustedProgramData()
+    {
+        var builder = new GesBinaryBuilder().WithModuleName("UntrustedCycle");
+        using (builder.BeginHandler("Start"))
+        {
+            builder.ReturnVoid();
+        }
+
+        var validProgram = builder.Build();
+        var instructions = validProgram.InstructionTable.ToArray();
+        instructions[^1] = new GameEventScriptBytecodeInstruction
+        {
+            OpCode = GameEventScriptBytecodeOpCode.Call,
+            TargetAddress = validProgram.BindTable.Entries[0].EntryAddress
+        };
+        var untrustedProgram = new GameEventScriptProgram(
+            validProgram.Header,
+            validProgram.ModuleName,
+            validProgram.RequiredRegisterCount,
+            validProgram.RequiredCallStackDepth,
+            validProgram.TextConstantTable,
+            validProgram.Uint16ConstantTable,
+            validProgram.BindTable,
+            instructions);
+
+        var host = GameEventScriptHost.CreateBuilder().Build();
+        var exception = Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() => host.Load(untrustedProgram));
+        StringAssert.Contains(exception.Message, "Start -> Start");
+    }
+
+    [TestMethod]
+    public void HostLoadRejectsProgramResourceRequirementsAboveLimits()
+    {
+        var callDepthBuilder = new GesBinaryBuilder().WithModuleName("CallDepthLimit");
+        using (var handler = callDepthBuilder.BeginHandler("Start"))
+        {
+            var result = handler.AddRegister("result");
+            GesLabelRef helperEntry;
+            using (var helper = callDepthBuilder.BeginHelper("helper"))
+            {
+                helperEntry = helper.EntryLabel;
+                var helperResult = helper.AddRegister("helperResult");
+                GesLabelRef nestedEntry;
+                using (var nested = callDepthBuilder.BeginHelper("nested"))
+                {
+                    nestedEntry = nested.EntryLabel;
+                    var nestedResult = nested.AddRegister("nestedResult");
+                    callDepthBuilder.LoadInteger(nestedResult, 1);
+                    callDepthBuilder.ReturnValue(nestedResult);
+                }
+
+                callDepthBuilder.Call(helperResult, nestedEntry);
+                callDepthBuilder.ReturnValue(helperResult);
+            }
+
+            callDepthBuilder.Call(result, helperEntry);
+            callDepthBuilder.ReturnVoid();
+        }
+
+        var callDepthHost = GameEventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxCallDepth = 1 })
+            .Build();
+        Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() => callDepthHost.Load(callDepthBuilder.Build()));
+
+        var registerBuilder = new GesBinaryBuilder().WithModuleName("RegisterLimit");
+        using (var handler = registerBuilder.BeginHandler("Start"))
+        {
+            for (var index = 0; index < 3; index++) handler.AddRegister("value" + index);
+            registerBuilder.ReturnVoid();
+        }
+
+        var registerHost = GameEventScriptHost.CreateBuilder()
+            .WithRuntimeLimits(new GameEventScriptRuntimeLimits { MaxRegisterValues = 2 })
+            .Build();
+        Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() => registerHost.Load(registerBuilder.Build()));
+    }
+
+    [TestMethod]
     public void OptimizeCanRewritePlanBeforeBuild()
     {
         var builder = new GesBinaryBuilder()

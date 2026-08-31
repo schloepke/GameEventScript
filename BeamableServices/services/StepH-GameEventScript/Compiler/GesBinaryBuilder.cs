@@ -212,9 +212,11 @@ internal sealed partial class GesBinaryBuilder
         var registerAllocation = AllocateRegisters(optimizedItems);
         var registerMap = registerAllocation.RegisterMap;
         var items = PatchRoutineRegisterLocals(optimizedItems, registerAllocation);
+        var resourceAnalysis = AnalyzeProgramResources(items, registerAllocation);
         var builder = new BinaryMaterializer()
             .WithVersion(_version)
             .WithModuleName(_moduleName)
+            .WithResourceRequirements(resourceAnalysis.RequiredRegisterCount, resourceAnalysis.RequiredCallStackDepth)
             .WithFlag(GameEventScriptBinaryFlags.Optimization, (_flags & GameEventScriptBinaryFlags.Optimization) != 0)
             .WithFlag(GameEventScriptBinaryFlags.Debug, (_flags & GameEventScriptBinaryFlags.Debug) != 0);
 
@@ -245,7 +247,7 @@ internal sealed partial class GesBinaryBuilder
             return builder.AddUInt16Slice(indexes);
         }
 
-        var bindIds = ResolveBinds(builder, ResolveText, labelAddresses);
+        var bindIds = ResolveBinds(builder, ResolveText, labelAddresses, resourceAnalysis);
         for (var index = 0; index < items.Length; index++)
         {
             var item = items[index];
@@ -259,7 +261,8 @@ internal sealed partial class GesBinaryBuilder
     private ushort[] ResolveBinds(
         BinaryMaterializer builder,
         Func<string, ushort> resolveText,
-        IReadOnlyDictionary<int, ushort> labelAddresses)
+        IReadOnlyDictionary<int, ushort> labelAddresses,
+        ProgramResourceAnalysis resourceAnalysis)
     {
         var nextIds = new Dictionary<GameEventScriptBinaryBindKind, ushort>();
         var result = new ushort[_binds.Count];
@@ -282,7 +285,17 @@ internal sealed partial class GesBinaryBuilder
                 ? labelAddresses[bind.EntryLabel.Value.Id]
                 : ushort.MaxValue;
 
-            builder.AddBind(new GameEventScriptBinaryBindEntry(bind.Kind, resolveText(bind.Name), argumentNames, entryAddress, id, requiredTags, excludedTags));
+            var requirements = resourceAnalysis.BindRequirements[bind.Index];
+            builder.AddBind(new GameEventScriptBinaryBindEntry(
+                bind.Kind,
+                resolveText(bind.Name),
+                argumentNames,
+                entryAddress,
+                id,
+                requiredTags,
+                excludedTags,
+                requirements.RequiredRegisterCount,
+                requirements.RequiredCallStackDepth));
         }
 
         return result;
@@ -293,6 +306,8 @@ internal sealed partial class GesBinaryBuilder
         private ushort _version = 1;
         private string _moduleName = "Unknown";
         private GameEventScriptBinaryFlags _flags = GameEventScriptBinaryFlags.None;
+        private ushort _requiredRegisterCount;
+        private ushort _requiredCallStackDepth;
         private readonly List<string> _textConstants = [];
         private readonly Dictionary<string, ushort> _textIndexes = [];
         private readonly List<ushort[]> _uint16Slices = [];
@@ -314,6 +329,13 @@ internal sealed partial class GesBinaryBuilder
         public BinaryMaterializer WithFlag(GameEventScriptBinaryFlags flag, bool enabled = true)
         {
             _flags = enabled ? _flags | flag : _flags & ~flag;
+            return this;
+        }
+
+        public BinaryMaterializer WithResourceRequirements(ushort requiredRegisterCount, ushort requiredCallStackDepth)
+        {
+            _requiredRegisterCount = requiredRegisterCount;
+            _requiredCallStackDepth = requiredCallStackDepth;
             return this;
         }
 
@@ -362,6 +384,8 @@ internal sealed partial class GesBinaryBuilder
             => new(
                 new GameEventScriptBinaryHeader { Version = _version, Flags = _flags },
                 ResolveModuleName(),
+                _requiredRegisterCount,
+                _requiredCallStackDepth,
                 BuildTextTable(_textConstants),
                 BuildUInt16Table(_uint16Slices),
                 new GameEventScriptBinaryBindTable(_binds),
@@ -378,6 +402,8 @@ internal sealed partial class GesBinaryBuilder
 
         hash.MixUShort(_version);
         hash.MixUInt((uint)_flags);
+        hash.MixUShort(_requiredRegisterCount);
+        hash.MixUShort(_requiredCallStackDepth);
 
         for (var index = 0; index < _textConstants.Count; index++)
         {
@@ -407,6 +433,8 @@ internal sealed partial class GesBinaryBuilder
 
             hash.MixUShort(bind.EntryAddress);
             hash.MixUShort(bind.Id);
+            hash.MixUShort(bind.RequiredRegisterCount);
+            hash.MixUShort(bind.RequiredCallStackDepth);
             hash.MixInt(bind.RequiredTags.Count);
             for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
             {

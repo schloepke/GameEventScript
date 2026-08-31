@@ -63,12 +63,24 @@ public sealed class GameEventScriptHost
     public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
+        var maxRegisterCount = Math.Min(
+            ushort.MaxValue,
+            _limits.MaxRegisterValues > 0 ? _limits.MaxRegisterValues : DefaultRegisterLimit);
+        var maxCallStackDepth = Math.Min(ushort.MaxValue, Math.Max(0, _limits.MaxCallDepth));
+        if (program.RequiredRegisterCount > maxRegisterCount)
+        {
+            throw new GameEventScriptDynamicLinkException(
+                $"Program requires {program.RequiredRegisterCount} registers but the host limit is {maxRegisterCount}.");
+        }
+
+        if (program.RequiredCallStackDepth > maxCallStackDepth)
+        {
+            throw new GameEventScriptDynamicLinkException(
+                $"Program requires call-stack depth {program.RequiredCallStackDepth} but the host limit is {maxCallStackDepth}.");
+        }
+
         var linked = new GesLinkedProgram(program, _extensionRegistry, _externalTypeRegistry);
-        _vmState ??= new GesVmState((ushort)Math.Min(ushort.MaxValue, Math.Max(32, _limits.MaxRegisterValues > 0 ? _limits.MaxRegisterValues : DefaultRegisterLimit)),
-            (ushort)Math.Min(ushort.MaxValue, Math.Max(1, _limits.MaxCallDepth)));
-        if (linked.RequiredRegisterCapacity > _vmState.MaxRegisterCount)
-            throw new GameEventScriptVmException(
-                $"Program requires {linked.RequiredRegisterCapacity} registers but the host limit is {_vmState.MaxRegisterCount}.");
+        _vmState ??= new GesVmState((ushort)maxRegisterCount, (ushort)maxCallStackDepth);
         if (!_vmState.PrepareCapacity(linked))
             _pendingVmWarmupCapacity = Math.Max(_pendingVmWarmupCapacity, linked.RequiredRegisterCapacity);
 

@@ -11,8 +11,9 @@ is still part of the VM target state for calls, return addresses, frame
 metadata, scoped locals, and resumable execution. The C# call stack is not part
 of script control flow.
 
-The public artifact exposes one global linear `Code` segment, `MaxFrameRegisters`,
-entry addresses for handlers, callables, and type-field helpers, plus normalized
+The public artifact exposes one global linear instruction segment, static
+per-handler/program resource requirements, entry addresses for handlers,
+callables, and type-field helpers, plus normalized
 tables for strings, ushort lists, external references, debug metadata, and
 pipelines. High-level language constructs lower either to normal linear
 instructions or to explicit opcodes that reference normalized tables. Function
@@ -72,6 +73,8 @@ The first normalized binary tables are intentionally compact:
 GameEventScriptProgram
   Header
   ModuleName
+  RequiredRegisterCount   max simultaneous VM register values of any handler
+  RequiredCallStackDepth  max nested calls below any root handler
   StringPool              zero-based UTF-8 strings in the file
   UInt16SliceTable        compact ushort lists used by code and metadata
   BindTable
@@ -81,6 +84,8 @@ GameEventScriptProgram
     Name                  string-pool index
     ArgumentNames         ordered string-pool indexes
     EntryAddress          global code address for exports, 0 for imports
+    RequiredRegisterCount message-handler requirement, otherwise 0
+    RequiredCallStackDepth message-handler requirement, otherwise 0
 ```
 
 `OutboundMessage` bind entries list statically shaped `emit`/`publish` messages.
@@ -101,9 +106,19 @@ booleans and `nothing` have dedicated opcodes; integer and float payloads use
 raw 64-bit bits split over `A`/`B`; text, tags, and handler message names point
 into `StringPool`.
 
-`MaxFrameRegisters` is the maximum local register count needed by any handler or
-callable frame, including parameters, user `let` bindings, compiler temporaries,
-loop temporaries, and high-level operation temporaries.
+After physical register allocation, every message-handler bind stores its static
+resource requirements. `RequiredRegisterCount` is the maximum number of VM values
+simultaneously retained while that handler runs. It includes the active frame,
+staged values, and all live caller frames on the deepest synchronous call path.
+`RequiredCallStackDepth` counts nested calls below the root handler, so a handler
+that calls nothing has depth `0`. The program-level fields are the maxima across
+all message handlers and allow a host to reject or pre-warm a program at load
+time without executing it.
+
+The synchronous call graph must be acyclic. Direct and indirect recursion are
+compile errors, and a loader must validate the same invariant for deserialized
+programs before accepting them. Loops and bounded collection operations are the
+portable repetition mechanisms.
 
 ## Portable Constants
 

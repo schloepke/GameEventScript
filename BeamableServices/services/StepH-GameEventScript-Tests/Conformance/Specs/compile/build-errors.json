@@ -4,6 +4,15 @@
   "tests": [
     {
       "kind": "compileError",
+      "name": "direct recursive function call is rejected",
+      "script": "function repeat(value) be repeat(value: value)\n\non Start {\n  let result be repeat(value: 1)\n}\n",
+      "expectedError": {
+        "phase": "compilation",
+        "messageContains": "Recursive calls are not allowed"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "missing predicate call fails module build",
       "script": "on Start(unit) {\n  let x be missingRule(unit)\n}",
       "expectedError": {

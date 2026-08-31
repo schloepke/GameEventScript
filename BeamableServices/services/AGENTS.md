@@ -53,6 +53,29 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Static VM Resource Metadata and Acyclic Calls
+
+- The compiler rejects direct and indirect cycles in the synchronous script call
+  graph. Program loading validates the invariant again for future untrusted
+  `.gesb` input.
+- After physical register allocation, each message-handler bind stores
+  `RequiredRegisterCount` and `RequiredCallStackDepth`; the program stores the
+  maximum of both values across all message handlers.
+- Register requirements include simultaneous caller/callee frames and staged
+  values. The root handler has call-stack depth zero.
+- `Host.Load(...)` rejects programs whose declared requirements exceed
+  `MaxRegisterValues` or `MaxCallDepth` and uses the register requirement to
+  pre-warm the host-owned VM state.
+- JSON conformance covers metadata and load-limit rejection; low-level compiler
+  tests cover direct and indirect cycles.
+
+Verification after this change:
+
+```text
+1002/1002 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+```
+
 ### Host / Program / VM Split
 
 - Removed `IGameEventScriptModule`, `GameEventScriptSession`, isolated runs, the module-owned VM, and automatic Core dispatch.
@@ -121,13 +144,43 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 
 The normal test build currently emits XML documentation warnings for `GesValueMap`. These warnings were not part of the last cleanup task.
 
-## Open Topics
+## Architecture Backlog
 
-Likely next useful areas:
+This is the persistent list of intentionally deferred or upcoming architecture
+work. Keep these topics in mind when changing adjacent code, but do not implement
+an item merely because it is listed here. Work on it when the user makes it part
+of the current task. Whenever a backlog item is completed, remove it from this
+section as part of the same change; record the outcome in the relevant normative
+documentation or, when useful for handoff, under `Recent Completed Work`. Do not
+leave completed or checked-off items in the backlog. Keep entries short; if this
+section grows substantially, move the details to a dedicated backlog document
+and retain a required pointer here.
 
-- Message/Emit allocation path, only if performance data justifies more work.
-- More compiler allocation optimization.
-- Check whether bytecode optimizer passes still produce meaningful diffs now that the compiler emits better registers directly.
-- Table type and mutation/lifecycle concept beyond immutable program tables.
-- Further VM-near extension call model if boxing at the extension boundary becomes expensive again.
-- JSON/wire message shape is intentionally not finalized yet.
+### Next portable architecture steps
+
+- Prioritize the language-neutral contracts, metadata, and JSON conformance needed
+  for the existing Swift/Kotlin/C++/C# monorepo before deeper optimizer work.
+
+### Deferred language and state features
+
+- Add a general immutable collection `fold`/`reduce` concept if concrete use cases
+  exceed the existing specialized aggregations (`sum`, `average`, `min`, `max`,
+  and `count`). Prefer a bounded collection operation over recursion or general
+  local mutation.
+- Design host-bound Tables as the future explicit mutation model. Mutations should
+  enter a deterministic modification queue; snapshot visibility, read-your-writes,
+  commit boundary, rollback, observation, persistence, and replication semantics
+  remain to be specified.
+- Add the canonical portable `.gesb` reader/writer after the program representation
+  and its C#-specific portability TODOs are settled.
+- Finalize the JSON/wire message shape later; it is intentionally still open.
+
+### Deferred performance work
+
+- Improve CFG/liveness-based register allocation and reuse of non-overlapping
+  locals after the monorepo-oriented contracts are stable.
+- Check whether bytecode optimizer passes still produce meaningful diffs now that
+  the compiler emits better registers directly.
+- Revisit Message/Emit allocation only when performance data justifies it.
+- Revisit a more VM-near extension call model if boxing at the extension boundary
+  becomes expensive again.

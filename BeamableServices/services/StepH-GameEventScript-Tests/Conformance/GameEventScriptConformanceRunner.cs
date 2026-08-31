@@ -138,6 +138,7 @@ internal static class GameEventScriptConformanceRunner
     private static bool UsesRuntimeEngine(string? kind)
         => string.Equals(kind, "scriptApi", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(kind, "compileError", StringComparison.OrdinalIgnoreCase) ||
+           string.Equals(kind, "loadError", StringComparison.OrdinalIgnoreCase) ||
            string.Equals(kind, "compileMetadata", StringComparison.OrdinalIgnoreCase);
 
     internal static void RunCompileErrorTest(GameEventScriptConformanceCase testCase)
@@ -159,6 +160,34 @@ internal static class GameEventScriptConformanceRunner
         }
 
         Assert.Fail($"{testCase}: expected compilation to fail.");
+    }
+
+    internal static void RunLoadErrorTest(GameEventScriptConformanceCase testCase)
+    {
+        var expected = testCase.Test.ExpectedError;
+        if (expected is null || string.IsNullOrWhiteSpace(expected.MessageContains))
+        {
+            Assert.Fail($"{testCase}: loadError tests require expectedError.messageContains.");
+        }
+
+        var program = CompileScripts(testCase.Test);
+        var host = GameEventScriptManager.CreateHostBuilder()
+            .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
+            .WithExternalTypes(ExternalTypeRegistry)
+            .WithRuntimeLimits(CreateRuntimeLimits(testCase.Test.RuntimeLimits))
+            .Build();
+
+        try
+        {
+            host.Load(program);
+        }
+        catch (GameEventScriptDynamicLinkException exception)
+        {
+            if (MessageMatches(expected.MessageContains, exception.Message)) return;
+            Assert.Fail($"{testCase}: load error expectation did not match.{Environment.NewLine}{exception.Message}");
+        }
+
+        Assert.Fail($"{testCase}: expected program loading to fail.");
     }
 
     internal static void RunMessageApiTest(GameEventScriptConformanceCase testCase)
@@ -188,34 +217,96 @@ internal static class GameEventScriptConformanceRunner
     internal static void RunCompileMetadataTest(GameEventScriptConformanceCase testCase)
     {
         var expectedDefinitions = testCase.Test.ExpectedMessageDefinitions;
-        if (expectedDefinitions is null || expectedDefinitions.Count == 0)
+        var expectedProgramResources = testCase.Test.ExpectedProgramResources;
+        var expectedHandlerResources = testCase.Test.ExpectedHandlerResources;
+        if ((expectedDefinitions is null || expectedDefinitions.Count == 0) &&
+            expectedProgramResources is null &&
+            (expectedHandlerResources is null || expectedHandlerResources.Count == 0))
         {
-            Assert.Fail($"{testCase}: compileMetadata tests require expectedMessageDefinitions.");
+            Assert.Fail($"{testCase}: compileMetadata tests require metadata expectations.");
         }
 
         var compiled = CompileScripts(testCase.Test);
-        var messageDefinitions = GetMessageDefinitions(compiled);
-        foreach (var expected in expectedDefinitions)
+        if (expectedDefinitions is not null)
         {
-            ValidateRequired(expected.Name, "expected message definition name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-            if (!messageDefinitions.TryGetValue(expected.Name!, out var definitions))
+            var messageDefinitions = GetMessageDefinitions(compiled);
+            foreach (var expected in expectedDefinitions)
             {
-                Assert.Fail($"{testCase}: expected compiled message definition '{expected.Name}' was not found.");
-            }
+                ValidateRequired(expected.Name, "expected message definition name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+                if (!messageDefinitions.TryGetValue(expected.Name!, out var definitions))
+                {
+                    Assert.Fail($"{testCase}: expected compiled message definition '{expected.Name}' was not found.");
+                }
 
-            if (expected.Count is { } expectedCount)
-            {
-                Assert.HasCount(expectedCount, definitions, $"{testCase}: message definition count for '{expected.Name}' differs.");
-            }
+                if (expected.Count is { } expectedCount)
+                {
+                    Assert.HasCount(expectedCount, definitions, $"{testCase}: message definition count for '{expected.Name}' differs.");
+                }
 
-            if (expected.SignatureIds is not null)
-            {
-                CollectionAssert.AreEqual(
-                    expected.SignatureIds.ToArray(),
-                    definitions.Select(definition => definition.SignatureId).ToArray(),
-                    $"{testCase}: message definition signature ids for '{expected.Name}' differ.");
+                if (expected.SignatureIds is not null)
+                {
+                    CollectionAssert.AreEqual(
+                        expected.SignatureIds.ToArray(),
+                        definitions.Select(definition => definition.SignatureId).ToArray(),
+                        $"{testCase}: message definition signature ids for '{expected.Name}' differ.");
+                }
             }
         }
+
+        if (expectedProgramResources is not null)
+        {
+            AssertResourceRequirements(
+                testCase,
+                "program",
+                expectedProgramResources,
+                compiled.RequiredRegisterCount,
+                compiled.RequiredCallStackDepth);
+        }
+
+        foreach (var expected in expectedHandlerResources ?? [])
+        {
+            ValidateRequired(expected.Name, "expected handler resource name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
+            var matched = false;
+            foreach (var bind in compiled.BindTable.Entries)
+            {
+                if (bind.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler)) continue;
+                var name = compiled.TextConstantTable.Resolve(bind.Name);
+                if (!string.Equals(name, expected.Name, StringComparison.Ordinal)) continue;
+                var parameters = new string[bind.ArgumentNames.Count];
+                for (var index = 0; index < parameters.Length; index++)
+                    parameters[index] = compiled.TextConstantTable.Resolve(bind.ArgumentNames[index]);
+                var signatureId = GameEventScriptMessageSignature.CreateSignatureId(name, parameters);
+                if (!string.IsNullOrWhiteSpace(expected.SignatureId) &&
+                    !string.Equals(signatureId, expected.SignatureId, StringComparison.Ordinal)) continue;
+
+                AssertResourceRequirements(
+                    testCase,
+                    $"handler '{signatureId}'",
+                    expected,
+                    bind.RequiredRegisterCount,
+                    bind.RequiredCallStackDepth);
+                matched = true;
+                break;
+            }
+
+            if (!matched)
+            {
+                Assert.Fail($"{testCase}: expected handler resource metadata for '{expected.Name}' was not found.");
+            }
+        }
+    }
+
+    private static void AssertResourceRequirements(
+        GameEventScriptConformanceCase testCase,
+        string scope,
+        GameEventScriptResourceRequirementExpectationSpec expected,
+        ushort actualRegisterCount,
+        ushort actualCallStackDepth)
+    {
+        if (expected.RequiredRegisterCount is { } expectedRegisters)
+            Assert.AreEqual(expectedRegisters, actualRegisterCount, $"{testCase}: {scope} required register count differs.");
+        if (expected.RequiredCallStackDepth is { } expectedDepth)
+            Assert.AreEqual(expectedDepth, actualCallStackDepth, $"{testCase}: {scope} required call-stack depth differs.");
     }
 
     internal static void RunBytecodeOpcodeTest(GameEventScriptConformanceCase testCase)
@@ -514,6 +605,7 @@ internal static class GameEventScriptConformanceRunner
             MaxProcessedEventsPerRun = spec.MaxProcessedEventsPerRun ?? defaults.MaxProcessedEventsPerRun,
             MaxQueuedMessagesPerRun = spec.MaxQueuedMessagesPerRun ?? defaults.MaxQueuedMessagesPerRun,
             MaxExecutionSteps = spec.MaxExecutionSteps ?? defaults.MaxExecutionSteps,
+            MaxRegisterValues = spec.MaxRegisterValues ?? defaults.MaxRegisterValues,
             MaxLoopIterations = spec.MaxLoopIterations ?? defaults.MaxLoopIterations,
             MaxCallDepth = spec.MaxCallDepth ?? defaults.MaxCallDepth,
             MaxRangeItems = spec.MaxRangeItems ?? defaults.MaxRangeItems,

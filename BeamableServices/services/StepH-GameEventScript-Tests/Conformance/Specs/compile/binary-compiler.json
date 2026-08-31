@@ -3,6 +3,49 @@
   "name": "CompileBinaryCompiler",
   "tests": [
     {
+      "kind": "compileMetadata",
+      "name": "handler and program resource requirements include nested calls",
+      "script": "module BinaryCompilerResources\n\nfunction leaf(value) be value + 1\n\nfunction middle(value) be leaf(value: value)\n\non Start(value) {\n  let result be middle(value: value)\n  emit Done(result: result)\n}\n\non Ping(value) {\n  emit Pong(value: value)\n}\n",
+      "expectedProgramResources": {
+        "requiredRegisterCount": 7,
+        "requiredCallStackDepth": 2
+      },
+      "expectedHandlerResources": [
+        {
+          "name": "Start",
+          "requiredRegisterCount": 7,
+          "requiredCallStackDepth": 2
+        },
+        {
+          "name": "Ping",
+          "requiredRegisterCount": 1,
+          "requiredCallStackDepth": 0
+        }
+      ]
+    },
+    {
+      "kind": "loadError",
+      "name": "host rejects program whose call depth exceeds its limit",
+      "script": "module BinaryCompilerCallDepthLimit\n\nfunction leaf(value) be value + 1\n\nfunction middle(value) be leaf(value: value)\n\non Start(value) {\n  let result be middle(value: value)\n  emit Done(result: result)\n}\n",
+      "runtimeLimits": {
+        "maxCallDepth": 1
+      },
+      "expectedError": {
+        "messageContains": "requires call-stack depth 2 but the host limit is 1"
+      }
+    },
+    {
+      "kind": "loadError",
+      "name": "host rejects program whose register requirement exceeds its limit",
+      "script": "module BinaryCompilerRegisterLimit\n\nfunction leaf(value) be value + 1\n\nfunction middle(value) be leaf(value: value)\n\non Start(value) {\n  let result be middle(value: value)\n  emit Done(result: result)\n}\n",
+      "runtimeLimits": {
+        "maxRegisterValues": 6
+      },
+      "expectedError": {
+        "messageContains": "requires 7 registers but the host limit is 6"
+      }
+    },
+    {
       "kind": "scriptApi",
       "name": "simple handler compiles to runnable binary",
       "script": "module BinaryCompilerSmoke\n\non Start(value) {\n  let doubled be value * 2\n  emit Done(result: doubled, text: 'ok')\n}\n",

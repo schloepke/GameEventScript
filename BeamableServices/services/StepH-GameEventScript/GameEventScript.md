@@ -1117,6 +1117,7 @@ Compilation validates:
 - naming conventions
 - duplicate definitions and duplicate parameters
 - callable arity
+- direct and indirect cyclic calls (recursion is not part of the language)
 - predicate return type (`:boolean` or `nothing`)
 - handler message-name shape
 - record field definitions
@@ -1128,6 +1129,7 @@ Runtime limits cover:
 - maximum processed events
 - maximum queued messages
 - maximum execution steps
+- maximum register values
 - maximum loop iterations
 - maximum call depth
 - maximum range items

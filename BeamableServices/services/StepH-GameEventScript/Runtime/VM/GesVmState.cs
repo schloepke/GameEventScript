@@ -69,12 +69,12 @@ internal class GesVmState
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
     internal GesVmState(ushort registerSize, ushort stackSize)
     {
-        MaxRegisterCount = Math.Max(InitialRegisterCapacity, (int)registerSize);
+        MaxRegisterCount = registerSize;
         EmptyList = [];
         InstructionPointer = 0;
         CallStackPointer = 0;
         CallStack = new CallFrame[stackSize];
-        RegisterValues = new GesValue[InitialRegisterCapacity];
+        RegisterValues = new GesValue[Math.Min(InitialRegisterCapacity, MaxRegisterCount)];
         RandomGenerators = new GameEventScriptRandomGenerator[16];
         RandomGeneratorsPointer = 0;
         RandomGenerator = GameEventScriptRandomGenerator.FromSeed(0L);

@@ -979,6 +979,9 @@ public abstract class GameEventScriptJsonConformanceTestBase
             case "compileError":
                 GameEventScriptConformanceRunner.RunCompileErrorTest(testCase);
                 break;
+            case "loadError":
+                GameEventScriptConformanceRunner.RunLoadErrorTest(testCase);
+                break;
             case "messageApi":
                 GameEventScriptConformanceRunner.RunMessageApiTest(testCase);
                 break;

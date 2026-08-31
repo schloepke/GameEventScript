@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.VM;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -21,9 +20,9 @@ internal static class GesCompiler
     {
         private readonly GesBinaryBuilder _builder = new GesBinaryBuilder()
             .WithModuleName(module.ModuleName)
-            .WithOptimization(options.Optimize)
-            .WithFlag(GameEventScriptBinaryFlags.Optimization, options.Optimize)
-            .WithFlag(GameEventScriptBinaryFlags.Debug, options.EnableDebugInfo);
+            .WithProgramVersion(options.ProgramVersion)
+            .WithDebugInfo(options.DebugInfo, module.Sources)
+            .WithOptimization();
 
         private readonly Dictionary<string, GesBindRef> _outboundMessages = new(StringComparer.Ordinal);
         private readonly Dictionary<string, GesBindRef> _extensionCalls = new(StringComparer.Ordinal);

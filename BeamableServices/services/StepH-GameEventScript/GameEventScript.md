@@ -1092,7 +1092,9 @@ are specified in [HostArchitecture.md](HostArchitecture.md).
 
 Core host concepts:
 
-- `GameEventScriptProgram`: portable binary-oriented representation.
+- `GameEventScriptProgram`: immutable parsed `.gesb` representation containing
+  only losslessly serializable language-neutral data. See
+  [GesbFormatV1.md](GesbFormatV1.md).
 - `GameEventScriptHost`: autonomous serial dispatch and execution unit.
 - `GameEventScriptInstance`: detachable host-specific link returned by `Load`.
 - `GameEventScriptSubscription`: detachable native handler registration.

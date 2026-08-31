@@ -2,8 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryHeader;
+using static StepH.GameEventScript.Api.GameEventScriptBindingSegment;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -16,7 +15,7 @@ internal sealed partial class GesBinaryBuilder
     private PlanItem[]? _rewrittenItems;
     private ushort _version = 1;
     private string _moduleName = "Unknown";
-    private GameEventScriptBinaryFlags _flags = GameEventScriptBinaryFlags.None;
+    private ulong _programVersion;
     private bool _optimize = true;
 
     public GesBinaryBuilder WithVersion(ushort version)
@@ -31,9 +30,9 @@ internal sealed partial class GesBinaryBuilder
         return this;
     }
 
-    public GesBinaryBuilder WithFlag(GameEventScriptBinaryFlags flag, bool enabled = true)
+    public GesBinaryBuilder WithProgramVersion(ulong programVersion)
     {
-        _flags = enabled ? _flags | flag : _flags & ~flag;
+        _programVersion = programVersion;
         return this;
     }
 
@@ -46,14 +45,20 @@ internal sealed partial class GesBinaryBuilder
     public GesRegisterRef AddRegister(string name)
         => AddRegisterInRoutine(name, CurrentRoutineId);
 
+    internal GesRegisterRef AddCompilerRegister(string name)
+        => AddRegisterInRoutine(name, CurrentRoutineId, debugVisible: false);
+
+    internal GesRegisterRef AddCompilerRegisterInRoutine(string name, int routineId)
+        => AddRegisterInRoutine(name, routineId, debugVisible: false);
+
     public GesRegisterRef AddTemporaryRegister(string? name = null)
         => AddTemporaryRegisterInRoutine(name, CurrentRoutineId);
 
-    private GesRegisterRef AddRegisterInRoutine(string name, int routineId)
+    private GesRegisterRef AddRegisterInRoutine(string name, int routineId, bool debugVisible = true)
     {
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Register name must be non-empty.", nameof(name));
         ValidateRoutineId(routineId);
-        var register = new RegisterSymbol(_registers.Count, name, IsTemporary: false, routineId);
+        var register = new RegisterSymbol(_registers.Count, name, IsTemporary: false, routineId, debugVisible);
         _registers.Add(register);
         return new GesRegisterRef(register.Id);
     }
@@ -61,7 +66,7 @@ internal sealed partial class GesBinaryBuilder
     private GesRegisterRef AddTemporaryRegisterInRoutine(string? name, int routineId)
     {
         ValidateRoutineId(routineId);
-        var register = new RegisterSymbol(_registers.Count, string.IsNullOrWhiteSpace(name) ? null : name, IsTemporary: true, routineId);
+        var register = new RegisterSymbol(_registers.Count, string.IsNullOrWhiteSpace(name) ? null : name, IsTemporary: true, routineId, IsDebugVisible: false);
         _registers.Add(register);
         return new GesRegisterRef(register.Id);
     }
@@ -213,12 +218,13 @@ internal sealed partial class GesBinaryBuilder
         var registerMap = registerAllocation.RegisterMap;
         var items = PatchRoutineRegisterLocals(optimizedItems, registerAllocation);
         var resourceAnalysis = AnalyzeProgramResources(items, registerAllocation);
+        var debugSegments = BuildDebugSegments(items, registerMap);
         var builder = new BinaryMaterializer()
             .WithVersion(_version)
             .WithModuleName(_moduleName)
+            .WithProgramVersion(_programVersion)
             .WithResourceRequirements(resourceAnalysis.RequiredRegisterCount, resourceAnalysis.RequiredCallStackDepth)
-            .WithFlag(GameEventScriptBinaryFlags.Optimization, (_flags & GameEventScriptBinaryFlags.Optimization) != 0)
-            .WithFlag(GameEventScriptBinaryFlags.Debug, (_flags & GameEventScriptBinaryFlags.Debug) != 0);
+            .WithDebugSegments(debugSegments.Symbols, debugSegments.SourceMap, debugSegments.SourceArchive);
 
         ushort ResolveText(string text)
         {
@@ -286,6 +292,9 @@ internal sealed partial class GesBinaryBuilder
                 : ushort.MaxValue;
 
             var requirements = resourceAnalysis.BindRequirements[bind.Index];
+            builder.AddUInt16Slice(argumentNames);
+            builder.AddUInt16Slice(requiredTags);
+            builder.AddUInt16Slice(excludedTags);
             builder.AddBind(new GameEventScriptBinaryBindEntry(
                 bind.Kind,
                 resolveText(bind.Name),
@@ -305,9 +314,12 @@ internal sealed partial class GesBinaryBuilder
     {
         private ushort _version = 1;
         private string _moduleName = "Unknown";
-        private GameEventScriptBinaryFlags _flags = GameEventScriptBinaryFlags.None;
+        private ulong _programVersion;
         private ushort _requiredRegisterCount;
         private ushort _requiredCallStackDepth;
+        private GameEventScriptDebugSymbolsSegment? _debugSymbols;
+        private GameEventScriptSourceMapSegment? _sourceMap;
+        private GameEventScriptSourceArchiveSegment? _sourceArchive;
         private readonly List<string> _textConstants = [];
         private readonly Dictionary<string, ushort> _textIndexes = [];
         private readonly List<ushort[]> _uint16Slices = [];
@@ -326,9 +338,9 @@ internal sealed partial class GesBinaryBuilder
             return this;
         }
 
-        public BinaryMaterializer WithFlag(GameEventScriptBinaryFlags flag, bool enabled = true)
+        public BinaryMaterializer WithProgramVersion(ulong programVersion)
         {
-            _flags = enabled ? _flags | flag : _flags & ~flag;
+            _programVersion = programVersion;
             return this;
         }
 
@@ -336,6 +348,17 @@ internal sealed partial class GesBinaryBuilder
         {
             _requiredRegisterCount = requiredRegisterCount;
             _requiredCallStackDepth = requiredCallStackDepth;
+            return this;
+        }
+
+        public BinaryMaterializer WithDebugSegments(
+            GameEventScriptDebugSymbolsSegment? debugSymbols,
+            GameEventScriptSourceMapSegment? sourceMap,
+            GameEventScriptSourceArchiveSegment? sourceArchive)
+        {
+            _debugSymbols = debugSymbols;
+            _sourceMap = sourceMap;
+            _sourceArchive = sourceArchive;
             return this;
         }
 
@@ -381,15 +404,24 @@ internal sealed partial class GesBinaryBuilder
         }
 
         public GameEventScriptProgram Build()
-            => new(
-                new GameEventScriptBinaryHeader { Version = _version, Flags = _flags },
-                ResolveModuleName(),
+        {
+            var moduleName = ResolveModuleName();
+            AddText(moduleName);
+            return new GameEventScriptProgram(
+                _version,
+                moduleName,
+                _programVersion,
                 _requiredRegisterCount,
                 _requiredCallStackDepth,
                 BuildTextTable(_textConstants),
                 BuildUInt16Table(_uint16Slices),
-                new GameEventScriptBinaryBindTable(_binds),
-                CopyInstructions(_instructions));
+                new GameEventScriptBindingSegment(_binds),
+                new GameEventScriptCodeSegment(CopyInstructions(_instructions)),
+                _debugSymbols,
+                _sourceMap,
+                _sourceArchive,
+                buildMetadataSegment: new GameEventScriptBuildMetadataSegment(GameEventScriptCompilerMetadata.CompilerId, GameEventScriptCompilerMetadata.CompilerVersion));
+        }
 
         private string ResolveModuleName()
             => string.IsNullOrWhiteSpace(_moduleName)
@@ -401,7 +433,7 @@ internal sealed partial class GesBinaryBuilder
         var hash = new BinaryHashBuilder(2166136261u);
 
         hash.MixUShort(_version);
-        hash.MixUInt((uint)_flags);
+        hash.MixULong(_programVersion);
         hash.MixUShort(_requiredRegisterCount);
         hash.MixUShort(_requiredCallStackDepth);
 
@@ -510,17 +542,17 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-        private static GameEventScriptTextTable BuildTextTable(IReadOnlyList<string> values)
+        private static GameEventScriptStringConstantSegment BuildTextTable(IReadOnlyList<string> values)
         {
             var totalLength = 0;
-            var slices = new GameEventScriptTextTable.SliceEntry[values.Count];
+            var slices = new GameEventScriptStringConstantSegment.SliceEntry[values.Count];
             for (var index = 0; index < values.Count; index++)
             {
                 var byteCount = Encoding.UTF8.GetByteCount(values[index]);
-                slices[index] = new GameEventScriptTextTable.SliceEntry
+                slices[index] = new GameEventScriptStringConstantSegment.SliceEntry
                 {
-                    Start = checked((ushort)totalLength),
-                    Length = checked((ushort)byteCount)
+                    Start = totalLength,
+                    Length = byteCount
                 };
                 totalLength += byteCount;
             }
@@ -532,20 +564,20 @@ internal sealed partial class GesBinaryBuilder
                 offset += Encoding.UTF8.GetBytes(values[index], 0, values[index].Length, data, offset);
             }
 
-            return new GameEventScriptTextTable(slices, data);
+            return new GameEventScriptStringConstantSegment(slices, data);
         }
 
-        private static GameEventScriptUInt16Table BuildUInt16Table(IReadOnlyList<ushort[]> values)
+        private static GameEventScriptUInt16IndexListSegment BuildUInt16Table(IReadOnlyList<ushort[]> values)
         {
             var totalLength = 0;
-            var slices = new GameEventScriptUInt16Table.SliceEntry[values.Count];
+            var slices = new GameEventScriptUInt16IndexListSegment.SliceEntry[values.Count];
             for (var index = 0; index < values.Count; index++)
             {
                 var value = values[index];
-                slices[index] = new GameEventScriptUInt16Table.SliceEntry
+                slices[index] = new GameEventScriptUInt16IndexListSegment.SliceEntry
                 {
-                    Start = checked((ushort)totalLength),
-                    Length = checked((ushort)value.Length)
+                    Start = totalLength,
+                    Length = value.Length
                 };
                 totalLength += value.Length;
             }
@@ -559,7 +591,7 @@ internal sealed partial class GesBinaryBuilder
                 offset += value.Length;
             }
 
-            return new GameEventScriptUInt16Table(slices, data);
+            return new GameEventScriptUInt16IndexListSegment(slices, data);
         }
 
         private static GameEventScriptBytecodeInstruction[] CopyInstructions(IReadOnlyList<GameEventScriptBytecodeInstruction> source)
@@ -1221,7 +1253,7 @@ internal sealed partial class GesBinaryBuilder
         IReadOnlyDictionary<int, ushort> RegisterMap,
         IReadOnlyList<short> RoutineLocalCounts);
 
-    private readonly record struct RegisterSymbol(int Id, string? Name, bool IsTemporary, int RoutineId);
+    private readonly record struct RegisterSymbol(int Id, string? Name, bool IsTemporary, int RoutineId, bool IsDebugVisible);
 
     private readonly record struct LabelSymbol(int Id, string? Name)
     {

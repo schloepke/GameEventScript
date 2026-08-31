@@ -39,6 +39,8 @@ public sealed class GameEventScriptConformanceTest
 
     public bool DumpBinary { get; set; }
 
+    public bool BinaryRoundTrip { get; set; }
+
     public List<GameEventScriptExternalSubscriberSpec>? ExternalSubscribers { get; set; }
 
     public List<JsonElement>? ExpectedInitializationPublished { get; set; }
@@ -139,8 +141,6 @@ public sealed class GameEventScriptApiStepSpec
 
 public sealed class GameEventScriptCompileOptionsSpec
 {
-    public bool? Optimize { get; set; }
-
     public bool? EnableDebugInfo { get; set; }
 }
 

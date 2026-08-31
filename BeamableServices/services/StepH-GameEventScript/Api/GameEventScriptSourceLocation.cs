@@ -22,7 +22,8 @@ namespace StepH.GameEventScript.Api;
 /// <param name="ModuleName">
 /// The name of the GameEventScript module where the location resides. Defaults to "UnknownModule" if not explicitly provided.
 /// </param>
-public sealed record GameEventScriptSourceLocation(string SourceName, int? Line = null, int? Column = null, int? EndLine = null, int? EndColumn = null, string ModuleName = "UnknownModule")
+/// <param name="SourceId">The stable compiler-input identifier, when the location originated from a compiled source document.</param>
+public sealed record GameEventScriptSourceLocation(string SourceName, int? Line = null, int? Column = null, int? EndLine = null, int? EndColumn = null, string ModuleName = "UnknownModule", uint? SourceId = null)
 {
     /// <summary>
     /// Returns a string representation of the GameEventScriptSourceLocation object, including the module name,

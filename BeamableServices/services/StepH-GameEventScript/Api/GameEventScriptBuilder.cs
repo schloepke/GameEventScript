@@ -24,31 +24,29 @@ public sealed class GameEventScriptBuilder
     public static GameEventScriptBuilder Create() => new();
 
     /// <summary>
-    /// Enables or disables optimization before bytecode generation.
+    /// Selects the portable debug metadata generated for bytecode dumps and tooling.
     /// </summary>
-    /// <param name="enabled">A boolean value indicating whether optimization should be enabled. Defaults to true.</param>
-    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified optimization setting applied.</returns>
-    public GameEventScriptBuilder WithOptimization(bool enabled = true)
+    /// <param name="options">The independently selectable debug sections. Defaults to all debug sections.</param>
+    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified debug setting applied.</returns>
+    public GameEventScriptBuilder WithDebugInfo(GameEventScriptDebugInfoOptions options = GameEventScriptDebugInfoOptions.All)
     {
         _options = new GameEventScriptCompileOptions
         {
-            Optimize = enabled,
-            EnableDebugInfo = _options.EnableDebugInfo
+            DebugInfo = options,
+            ProgramVersion = _options.ProgramVersion
         };
         return this;
     }
 
-    /// <summary>
-    /// Enables or disables debug metadata generation for bytecode dumps and tooling.
-    /// </summary>
-    /// <param name="enabled">A boolean value indicating whether debug metadata should be generated. Defaults to true.</param>
-    /// <returns>The current instance of <see cref="GameEventScriptBuilder"/> with the specified debug setting applied.</returns>
-    public GameEventScriptBuilder WithDebugInfo(bool enabled = true)
+    /// <summary>Sets the stable application-defined program version stored in binary metadata.</summary>
+    /// <param name="version">The version, or zero for development/unspecified programs.</param>
+    /// <returns>The current builder instance.</returns>
+    public GameEventScriptBuilder WithProgramVersion(ulong version)
     {
         _options = new GameEventScriptCompileOptions
         {
-            Optimize = _options.Optimize,
-            EnableDebugInfo = enabled
+            DebugInfo = _options.DebugInfo,
+            ProgramVersion = version
         };
         return this;
     }
@@ -104,7 +102,7 @@ public sealed class GameEventScriptBuilder
     public GameEventScriptProgram Compile(GameEventScriptCompileOptions? options = null)
     {
         var compileOptions = options ?? _options;
-        return GesCompiler.Compile(BuildModule(compileOptions));
+        return GesCompiler.Compile(BuildModule(compileOptions), compileOptions);
     }
 
     /// <summary>
@@ -121,7 +119,7 @@ public sealed class GameEventScriptBuilder
         for (var index = 0; index < _sources.Count; index++)
         {
             var source = _sources[index];
-            modules[index] = GesParser.Parse(source.Text, source.SourceName);
+            modules[index] = GesParser.Parse(source.Text, source.SourceName, checked((uint)index));
         }
 
         var errors = new GesValidationErrors();
@@ -154,8 +152,14 @@ public sealed class GameEventScriptBuilder
 
         errors.ThrowIfAny();
 
-        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions);
-        return compileOptions.Optimize ? GesAstOptimizer.Optimize(moduleResult) : moduleResult;
+        var sourceDocuments = new GesSourceDocument[_sources.Count];
+        for (var index = 0; index < _sources.Count; index++)
+        {
+            var source = _sources[index];
+            sourceDocuments[index] = new GesSourceDocument(checked((uint)index), string.IsNullOrWhiteSpace(source.SourceName) ? "UnknownSource" : source.SourceName!, source.Text);
+        }
+        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions, sourceDocuments);
+        return GesAstOptimizer.Optimize(moduleResult);
     }
 
     private sealed record SourceInput(string Text, string? SourceName);

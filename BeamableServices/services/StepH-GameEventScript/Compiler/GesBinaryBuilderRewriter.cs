@@ -80,12 +80,12 @@ internal sealed partial class GesBinaryBuilder
 
         internal int RegisterCount => _builder._registers.Count;
 
-        public GesRegisterRef AddRegister(string name) => _builder.AddRegister(name);
+        public GesRegisterRef AddRegister(string name) => _builder.AddCompilerRegister(name);
 
         public GesRegisterRef AddTemporaryRegister(string? name = null) => _builder.AddTemporaryRegister(name);
 
         public GesRegisterRef AddRegisterNear(int index, string name)
-            => _builder.AddRegisterInRoutine(name, ResolveRoutineIdNear(index));
+            => _builder.AddCompilerRegisterInRoutine(name, ResolveRoutineIdNear(index));
 
         public GesRegisterRef AddTemporaryRegisterNear(int index, string? name = null)
             => _builder.AddTemporaryRegisterInRoutine(name, ResolveRoutineIdNear(index));

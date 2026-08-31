@@ -10,7 +10,7 @@ public readonly struct GesValueArguments
 {
     private readonly GesValue[]? _values;
     private readonly GesVmState? _vmState;
-    private readonly GameEventScriptUInt16Slice _registers;
+    private readonly GameEventScriptUInt16IndexList _registers;
 
     public static readonly GesValueArguments Empty = new([]);
 
@@ -22,7 +22,7 @@ public readonly struct GesValueArguments
         Length = _values.Length;
     }
 
-    internal GesValueArguments(GesVmState vmState, GameEventScriptUInt16Slice registers)
+    internal GesValueArguments(GesVmState vmState, GameEventScriptUInt16IndexList registers)
     {
         _values = null;
         _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));

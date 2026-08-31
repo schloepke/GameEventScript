@@ -5,6 +5,7 @@
     {
       "kind": "scriptApi",
       "name": "handler binding creates message values and publishable calls",
+      "binaryRoundTrip": true,
       "script": "module MessageBinding\non Start(unit, target) {\n  let shoot as :handler be Shoot(unit, target)\n  let msg as :message be shoot(unit: unit, target: target)\n  let isHandler be shoot is :handler\n  let isMessage be msg is :message\n  emit msg\n  emit shoot(unit: unit, target: target)\n  emit Shoot(unit: unit, target: target)\n  emit Done(isHandler: isHandler, isMessage: isMessage)\n}",
       "steps": [
         {

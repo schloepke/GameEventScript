@@ -40,7 +40,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Standard extensions were migrated into opcodes where possible.
 - Series now use direct VM concepts and `CreateSeries`.
 - `GameEventScriptProgram` is the immutable reusable compiler result.
-- `GameEventScriptProgram` is the portable in-memory representation of the future `.gesb` binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
+- `GameEventScriptProgram` is the portable parsed representation of the `.gesb` V1 binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
 - `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
 - `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.
 - Native `Subscribe` returns an idempotently detachable `GameEventScriptSubscription`.
@@ -52,6 +52,28 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - `StepH-GameEventScript/HostArchitecture.md` is the normative portable responsibility/state-machine document.
 
 ## Recent Completed Work
+
+### Portable `.gesb` V1
+
+- Added the canonical little-endian sectioned `.gesb` V1 reader and writer,
+  bounded retention modes, opaque optional-section preservation, stable format
+  errors, and shared validation in reader, writer, and `Host.Load`.
+- `GameEventScriptProgram` now exposes immutable runtime, debug/source, build
+  metadata, and opaque segments. The compiler always optimizes and emits stable
+  C# compiler metadata plus optional DebugSymbols, SourceMap, and SourceArchive.
+- Source IDs follow `AddScript` order and source mappings use UTF-8 byte offsets.
+  The dumper consumes embedded source data and interleaves source-line comments.
+- Golden, invalid, retention, Unicode, runtime roundtrip, and JSON binary-roundtrip
+  tests cover the portable boundary. `StepH-GameEventScript/GesbFormatV1.md` is
+  the normative container specification.
+
+Verification after this change:
+
+```text
+1024/1024 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
 
 ### Static VM Resource Metadata and Acyclic Calls
 
@@ -132,6 +154,9 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/Compiler/GesBinaryBuilderRewriter.cs`
 - `StepH-GameEventScript/Runtime/GesRuntimeBudget.cs`
 - `StepH-GameEventScript/Api/GameEventScriptProgram.cs`
+- `StepH-GameEventScript/Api/GameEventScriptProgramReader.cs`
+- `StepH-GameEventScript/Api/GameEventScriptProgramWriter.cs`
+- `StepH-GameEventScript/Api/GameEventScriptProgramValidator.cs`
 - `StepH-GameEventScript/Api/GameEventScriptHost.cs`
 - `StepH-GameEventScript/Api/GameEventScriptContext.cs`
 - `StepH-GameEventScript/Runtime/VM/GesLinkedProgram.cs`
@@ -139,6 +164,7 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/Runtime/VM/GesVmState.cs`
 - `StepH-GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
 - `StepH-GameEventScript/HostArchitecture.md`
+- `StepH-GameEventScript/GesbFormatV1.md`
 
 ## Known Warnings
 
@@ -171,9 +197,15 @@ and retain a required pointer here.
   enter a deterministic modification queue; snapshot visibility, read-your-writes,
   commit boundary, rollback, observation, persistence, and replication semantics
   remain to be specified.
-- Add the canonical portable `.gesb` reader/writer after the program representation
-  and its C#-specific portability TODOs are settled.
 - Finalize the JSON/wire message shape later; it is intentionally still open.
+
+### Deferred binary-format extensions
+
+- Specify and implement optional `.gesb` compression codecs separately; V1 only
+  reserves the codec bits and emits known sections uncompressed.
+- Specify signatures, certificates/keys, trust policy, and rollback behavior
+  separately; V1 only reserves the security section range and provides no
+  authenticity guarantee.
 
 ### Deferred performance work
 

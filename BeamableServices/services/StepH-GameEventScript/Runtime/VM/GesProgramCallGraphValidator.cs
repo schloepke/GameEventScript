@@ -9,23 +9,23 @@ internal static class GesProgramCallGraphValidator
 {
     internal static void Validate(GameEventScriptProgram program)
     {
-        if (program.InstructionTable.Count == 0) return;
+        if (program.Code.Count == 0) return;
 
         var entryAddresses = new HashSet<ushort>();
         var entryNames = new Dictionary<ushort, string>();
         var recordEntriesById = new Dictionary<ushort, ushort>();
         var recordEntriesByName = new Dictionary<string, ushort>(StringComparer.Ordinal);
-        foreach (var bind in program.BindTable.Entries)
+        foreach (var bind in program.Bindings.Entries)
         {
             if (!IsExecutableBind(bind.Kind)) continue;
-            if (bind.EntryAddress >= program.InstructionTable.Count)
+            if (bind.EntryAddress >= program.Code.Count)
             {
                 throw new GameEventScriptDynamicLinkException(
                     $"Executable bind id '{bind.Id}' has invalid entry address '{bind.EntryAddress}'.");
             }
 
             entryAddresses.Add(bind.EntryAddress);
-            var name = program.TextConstantTable.Resolve(bind.Name);
+            var name = program.StringConstants.Resolve(bind.Name);
             entryNames[bind.EntryAddress] = name;
             if (bind.Kind == Record)
             {
@@ -34,12 +34,12 @@ internal static class GesProgramCallGraphValidator
             }
         }
 
-        for (var instructionIndex = 0; instructionIndex < program.InstructionTable.Count; instructionIndex++)
+        for (var instructionIndex = 0; instructionIndex < program.Code.Count; instructionIndex++)
         {
-            var instruction = program.InstructionTable[instructionIndex];
+            var instruction = program.Code[instructionIndex];
             if (instruction.OpCode == GameEventScriptBytecodeOpCode.Call)
             {
-                if (instruction.TargetAddress >= program.InstructionTable.Count)
+                if (instruction.TargetAddress >= program.Code.Count)
                 {
                     throw new GameEventScriptDynamicLinkException(
                         $"Call target address '{instruction.TargetAddress}' is outside the instruction table.");
@@ -61,10 +61,10 @@ internal static class GesProgramCallGraphValidator
         for (var routineIndex = 0; routineIndex < entries.Length; routineIndex++)
         {
             var start = entries[routineIndex];
-            var end = routineIndex + 1 < entries.Length ? entries[routineIndex + 1] : program.InstructionTable.Count;
+            var end = routineIndex + 1 < entries.Length ? entries[routineIndex + 1] : program.Code.Count;
             for (var instructionIndex = start; instructionIndex < end; instructionIndex++)
             {
-                var instruction = program.InstructionTable[instructionIndex];
+                var instruction = program.Code[instructionIndex];
                 switch (instruction.OpCode)
                 {
                     case GameEventScriptBytecodeOpCode.Call:
@@ -80,7 +80,7 @@ internal static class GesProgramCallGraphValidator
                         AddCall(calls[routineIndex], recordEntry, entryIndexes);
                         break;
                     case GameEventScriptBytecodeOpCode.CastCustom:
-                        var typeName = program.TextConstantTable.Resolve(instruction.SecondaryStringIndex);
+                        var typeName = program.StringConstants.Resolve(instruction.SecondaryStringIndex);
                         if (recordEntriesByName.TryGetValue(typeName, out var castRecordEntry))
                         {
                             AddCall(calls[routineIndex], castRecordEntry, entryIndexes);

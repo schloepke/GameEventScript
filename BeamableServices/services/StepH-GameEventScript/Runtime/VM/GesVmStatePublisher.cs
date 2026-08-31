@@ -7,7 +7,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmStatePublisher
 {
-    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16Slice argumentRegisters, bool publish, GameEventScriptContext context)
+    internal static bool GesVmPublishMessage(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16IndexList argumentRegisters, bool publish, GameEventScriptContext context)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -39,7 +39,7 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16Slice argumentRegisters, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptContext context)
+    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16IndexList argumentRegisters, GameEventScriptUInt16IndexList tagRegisters, bool publish, GameEventScriptContext context)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];
@@ -85,7 +85,7 @@ internal static class GesVmStatePublisher
         }
         return false;
     }
-    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, in GesValue messageValue, GameEventScriptUInt16Slice tagRegisters, bool publish, GameEventScriptContext context)
+    internal static bool GesVmPublishMessageValueWithTags(this GesVmState vmState, in GesValue messageValue, GameEventScriptUInt16IndexList tagRegisters, bool publish, GameEventScriptContext context)
     {
         if (messageValue.Kind is not Message || messageValue.ObjectValue is not GameEventScriptMessage msg) return false;
         var tags = new GameEventScriptTagBuffer(tagRegisters.Length);

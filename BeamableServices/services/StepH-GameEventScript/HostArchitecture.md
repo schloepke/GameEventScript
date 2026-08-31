@@ -7,10 +7,11 @@ must stay outside the portable core.
 
 ## Responsibilities
 
-`GameEventScriptProgram` is the immutable compiler result. It contains bytecode,
-constant tables, and bind metadata but no VM state, random generator, delegate,
-host binding, or queue. A program may be loaded into multiple hosts at the same
-time. All public program tables copy their input and expose read-only views. Its
+`GameEventScriptProgram` is the immutable parsed `.gesb` artifact. It contains
+portable runtime segments and optional debug/source/build/opaque segments, but
+no VM state, random generator, delegate, host binding, or queue. The normative
+container is `GesbFormatV1.md`. A program may be loaded into multiple hosts at
+the same time. All public program segments copy their input and expose read-only views. Its
 resource metadata contains only portable integers: per-handler requirements in
 message-handler binds and their maxima in the program header model.
 
@@ -141,7 +142,7 @@ synchronous core contract.
 Every implementation runs the JSON suites through this sequence:
 
 ```text
-source -> GameEventScriptProgram -> Host.Load
+source -> GameEventScriptProgram -> optional .gesb Write/Read -> Host.Load
 input JSON -> GameEventScriptMessage -> Host.Receive
 Host.ExecuteFrame or Host.RunToCompletion -> observed local/outbound messages
 ```

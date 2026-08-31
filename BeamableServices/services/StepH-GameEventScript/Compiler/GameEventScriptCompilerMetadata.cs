@@ -1,0 +1,7 @@
+namespace StepH.GameEventScript.Compiler;
+
+internal static class GameEventScriptCompilerMetadata
+{
+    internal const string CompilerId = "steph.ges.compiler.csharp";
+    internal const string CompilerVersion = "0.1.0";
+}

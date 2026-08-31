@@ -8,7 +8,7 @@ namespace StepH.GameEventScript.Runtime.VM;
 
 internal static class GesVmRegisterMessages
 {
-    internal static void CreateMessageSignature(this GesVmState vmState, ushort destinationRegister, GameEventScriptUInt16Slice shape)
+    internal static void CreateMessageSignature(this GesVmState vmState, ushort destinationRegister, GameEventScriptUInt16IndexList shape)
     {
         if (shape.Length == 0)
         {
@@ -23,7 +23,7 @@ internal static class GesVmRegisterMessages
         }
         vmState.SetMessageHandler(destinationRegister, GameEventScriptMessageSignature.Create(messageName, argumentNames));
     }
-    internal static void CreateMessage(this GesVmState vmState, ushort destinationRegister, GameEventScriptUInt16Slice shape, GameEventScriptUInt16Slice argumentRegisters)
+    internal static void CreateMessage(this GesVmState vmState, ushort destinationRegister, GameEventScriptUInt16IndexList shape, GameEventScriptUInt16IndexList argumentRegisters)
     {
         if (shape.Length == 0 || argumentRegisters.Length != shape.Length - 1)
         {
@@ -64,7 +64,7 @@ internal static class GesVmRegisterMessages
             vmState.SetNothing(destinationRegister);
         }
     }
-    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesValue handler, GameEventScriptUInt16Slice argumentRegisters)
+    internal static void BindHandler(this GesVmState vmState, ushort destinationRegister, in GesValue handler, GameEventScriptUInt16IndexList argumentRegisters)
     {
         if (handler.Kind is not Handler || handler.ObjectValue is not GameEventScriptMessageSignature signature)
         {

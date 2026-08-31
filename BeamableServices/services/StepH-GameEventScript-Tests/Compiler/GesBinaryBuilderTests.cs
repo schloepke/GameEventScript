@@ -27,11 +27,11 @@ public sealed class GesBinaryBuilderTests
             .Build();
 
         Assert.AreEqual("BuilderSmoke", binary.ModuleName);
-        Assert.HasCount(1, binary.TextConstantTable.Slices);
-        Assert.AreEqual("same", binary.TextConstantTable.Resolve(0));
-        Assert.HasCount(5, binary.InstructionTable);
+        Assert.HasCount(2, binary.StringConstants.Slices);
+        Assert.AreEqual("same", binary.StringConstants.Resolve(0));
+        Assert.HasCount(5, binary.Code.Instructions);
 
-        var multiply = binary.InstructionTable[4];
+        var multiply = binary.Code.Instructions[4];
         Assert.AreEqual(GameEventScriptBytecodeOpCode.Multiply, multiply.OpCode);
         Assert.AreEqual((ushort)2, multiply.DestinationRegister);
         Assert.AreEqual((ushort)0, multiply.XRegister);
@@ -57,10 +57,10 @@ public sealed class GesBinaryBuilderTests
 
         var binary = builder.Build();
 
-        Assert.HasCount(Count, binary.InstructionTable);
+        Assert.HasCount(Count, binary.Code.Instructions);
         for (var index = 0; index < Count; index++)
         {
-            var instruction = binary.InstructionTable[index];
+            var instruction = binary.Code.Instructions[index];
             Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, instruction.OpCode);
             Assert.AreEqual(index, instruction.I64);
             Assert.AreEqual((ushort)index, instruction.DestinationRegister);
@@ -91,24 +91,24 @@ public sealed class GesBinaryBuilderTests
 
         var binary = builder.Build();
 
-        Assert.HasCount(1, binary.BindTable.Entries);
-        var bind = binary.BindTable.Entries[0];
+        Assert.HasCount(1, binary.Bindings.Entries);
+        var bind = binary.Bindings.Entries[0];
         Assert.AreEqual(GameEventScriptBinaryBindKind.MessageHandler, bind.Kind);
-        Assert.AreEqual("Start", binary.TextConstantTable.Resolve(bind.Name));
+        Assert.AreEqual("Start", binary.StringConstants.Resolve(bind.Name));
         Assert.AreEqual((ushort)0, bind.EntryAddress);
         Assert.HasCount(1, bind.ArgumentNames);
-        Assert.AreEqual("value", binary.TextConstantTable.Resolve(bind.ArgumentNames[0]));
+        Assert.AreEqual("value", binary.StringConstants.Resolve(bind.ArgumentNames[0]));
 
-        Assert.HasCount(4, binary.InstructionTable);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.InstructionTable[0].OpCode);
-        Assert.AreEqual((short)2, binary.InstructionTable[0].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[1].OpCode);
-        Assert.AreEqual((ushort)2, binary.InstructionTable[1].DestinationRegister);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.Add, binary.InstructionTable[2].OpCode);
-        Assert.AreEqual((ushort)1, binary.InstructionTable[2].DestinationRegister);
-        Assert.AreEqual((ushort)0, binary.InstructionTable[2].XRegister);
-        Assert.AreEqual((ushort)2, binary.InstructionTable[2].YRegister);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[3].OpCode);
+        Assert.HasCount(4, binary.Code.Instructions);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.Code.Instructions[0].OpCode);
+        Assert.AreEqual((short)2, binary.Code.Instructions[0].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.Code.Instructions[1].OpCode);
+        Assert.AreEqual((ushort)2, binary.Code.Instructions[1].DestinationRegister);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.Add, binary.Code.Instructions[2].OpCode);
+        Assert.AreEqual((ushort)1, binary.Code.Instructions[2].DestinationRegister);
+        Assert.AreEqual((ushort)0, binary.Code.Instructions[2].XRegister);
+        Assert.AreEqual((ushort)2, binary.Code.Instructions[2].YRegister);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.Code.Instructions[3].OpCode);
     }
 
     [TestMethod]
@@ -136,20 +136,20 @@ public sealed class GesBinaryBuilderTests
 
         var binary = builder.Build();
 
-        Assert.HasCount(1, binary.BindTable.Entries);
-        Assert.AreEqual(GameEventScriptBinaryBindKind.MessageHandler, binary.BindTable.Entries[0].Kind);
-        Assert.AreEqual("Start", binary.TextConstantTable.Resolve(binary.BindTable.Entries[0].Name));
-        Assert.AreEqual((ushort)0, binary.BindTable.Entries[0].EntryAddress);
+        Assert.HasCount(1, binary.Bindings.Entries);
+        Assert.AreEqual(GameEventScriptBinaryBindKind.MessageHandler, binary.Bindings.Entries[0].Kind);
+        Assert.AreEqual("Start", binary.StringConstants.Resolve(binary.Bindings.Entries[0].Name));
+        Assert.AreEqual((ushort)0, binary.Bindings.Entries[0].EntryAddress);
 
-        Assert.HasCount(6, binary.InstructionTable);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.InstructionTable[0].OpCode);
-        Assert.AreEqual((short)0, binary.InstructionTable[0].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[1].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.InstructionTable[2].OpCode);
-        Assert.AreEqual((short)2, binary.InstructionTable[2].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[3].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.Add, binary.InstructionTable[4].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnValue, binary.InstructionTable[5].OpCode);
+        Assert.HasCount(6, binary.Code.Instructions);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.Code.Instructions[0].OpCode);
+        Assert.AreEqual((short)0, binary.Code.Instructions[0].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.Code.Instructions[1].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.Code.Instructions[2].OpCode);
+        Assert.AreEqual((short)2, binary.Code.Instructions[2].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.Code.Instructions[3].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.Add, binary.Code.Instructions[4].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnValue, binary.Code.Instructions[5].OpCode);
     }
 
     [TestMethod]
@@ -176,22 +176,22 @@ public sealed class GesBinaryBuilderTests
 
         var binary = builder.Build();
 
-        Assert.HasCount(1, binary.BindTable.Entries);
-        Assert.AreEqual(GameEventScriptBinaryBindKind.MessageHandler, binary.BindTable.Entries[0].Kind);
-        Assert.AreEqual("Start", binary.TextConstantTable.Resolve(binary.BindTable.Entries[0].Name));
-        Assert.AreEqual((ushort)0, binary.BindTable.Entries[0].EntryAddress);
+        Assert.HasCount(1, binary.Bindings.Entries);
+        Assert.AreEqual(GameEventScriptBinaryBindKind.MessageHandler, binary.Bindings.Entries[0].Kind);
+        Assert.AreEqual("Start", binary.StringConstants.Resolve(binary.Bindings.Entries[0].Name));
+        Assert.AreEqual((ushort)0, binary.Bindings.Entries[0].EntryAddress);
 
-        Assert.HasCount(6, binary.InstructionTable);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.InstructionTable[0].OpCode);
-        Assert.AreEqual((short)1, binary.InstructionTable[0].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.Call, binary.InstructionTable[1].OpCode);
-        Assert.AreEqual((ushort)0, binary.InstructionTable[1].DestinationRegister);
-        Assert.AreEqual((ushort)3, binary.InstructionTable[1].TargetAddress);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[2].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.InstructionTable[3].OpCode);
-        Assert.AreEqual((short)1, binary.InstructionTable[3].Count);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[4].OpCode);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnValue, binary.InstructionTable[5].OpCode);
+        Assert.HasCount(6, binary.Code.Instructions);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.Code.Instructions[0].OpCode);
+        Assert.AreEqual((short)1, binary.Code.Instructions[0].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.Call, binary.Code.Instructions[1].OpCode);
+        Assert.AreEqual((ushort)0, binary.Code.Instructions[1].DestinationRegister);
+        Assert.AreEqual((ushort)3, binary.Code.Instructions[1].TargetAddress);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.Code.Instructions[2].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.RegisterLocals, binary.Code.Instructions[3].OpCode);
+        Assert.AreEqual((short)1, binary.Code.Instructions[3].Count);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.Code.Instructions[4].OpCode);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnValue, binary.Code.Instructions[5].OpCode);
     }
 
     [TestMethod]
@@ -227,7 +227,7 @@ public sealed class GesBinaryBuilderTests
         }
 
         var program = builder.Build();
-        var handlerBind = program.BindTable.Entries[0];
+        var handlerBind = program.Bindings.Entries[0];
 
         Assert.AreEqual((ushort)3, program.RequiredRegisterCount);
         Assert.AreEqual((ushort)2, program.RequiredCallStackDepth);
@@ -284,24 +284,34 @@ public sealed class GesBinaryBuilderTests
         }
 
         var validProgram = builder.Build();
-        var instructions = validProgram.InstructionTable.ToArray();
+        var instructions = validProgram.Code.Instructions.ToArray();
         instructions[^1] = new GameEventScriptBytecodeInstruction
         {
             OpCode = GameEventScriptBytecodeOpCode.Call,
-            TargetAddress = validProgram.BindTable.Entries[0].EntryAddress
+            DestinationRegister = 0,
+            TargetAddress = validProgram.Bindings.Entries[0].EntryAddress
         };
+        var originalBind = validProgram.Bindings.Entries[0];
+        var bindings = new GameEventScriptBindingSegment([
+            new GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry(
+                originalBind.Kind, originalBind.Name, originalBind.ArgumentNames, originalBind.EntryAddress, originalBind.Id,
+                originalBind.RequiredTags, originalBind.ExcludedTags, requiredRegisterCount: 1, originalBind.RequiredCallStackDepth)
+        ]);
         var untrustedProgram = new GameEventScriptProgram(
-            validProgram.Header,
+            validProgram.FormatVersion,
             validProgram.ModuleName,
-            validProgram.RequiredRegisterCount,
+            validProgram.ProgramVersion,
+            1,
             validProgram.RequiredCallStackDepth,
-            validProgram.TextConstantTable,
-            validProgram.Uint16ConstantTable,
-            validProgram.BindTable,
-            instructions);
+            validProgram.StringConstants,
+            validProgram.UInt16IndexLists,
+            bindings,
+            new GameEventScriptCodeSegment(instructions),
+            buildMetadataSegment: validProgram.BuildMetadata);
 
         var host = GameEventScriptHost.CreateBuilder().Build();
-        var exception = Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() => host.Load(untrustedProgram));
+        var exception = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => host.Load(untrustedProgram));
+        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.CyclicCallGraph, exception.ErrorCode);
         StringAssert.Contains(exception.Message, "Start -> Start");
     }
 
@@ -381,14 +391,14 @@ public sealed class GesBinaryBuilderTests
             })
             .Build();
 
-        Assert.HasCount(3, binary.InstructionTable);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[0].OpCode);
-        Assert.AreEqual((ushort)0, binary.InstructionTable[0].DestinationRegister);
-        Assert.AreEqual(2L, binary.InstructionTable[0].I64);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.InstructionTable[1].OpCode);
-        Assert.AreEqual((ushort)1, binary.InstructionTable[1].DestinationRegister);
-        Assert.AreEqual(3L, binary.InstructionTable[1].I64);
-        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.InstructionTable[2].OpCode);
+        Assert.HasCount(3, binary.Code.Instructions);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.Code.Instructions[0].OpCode);
+        Assert.AreEqual((ushort)0, binary.Code.Instructions[0].DestinationRegister);
+        Assert.AreEqual(2L, binary.Code.Instructions[0].I64);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.LoadInteger, binary.Code.Instructions[1].OpCode);
+        Assert.AreEqual((ushort)1, binary.Code.Instructions[1].DestinationRegister);
+        Assert.AreEqual(3L, binary.Code.Instructions[1].I64);
+        Assert.AreEqual(GameEventScriptBytecodeOpCode.ReturnVoid, binary.Code.Instructions[2].OpCode);
     }
 
     [TestMethod]
@@ -433,9 +443,9 @@ public sealed class GesBinaryBuilderTests
             })
             .Build();
 
-        Assert.HasCount(3, binary.InstructionTable);
-        Assert.AreEqual(10L, binary.InstructionTable[0].I64);
-        Assert.AreEqual(2L, binary.InstructionTable[1].I64);
-        Assert.AreEqual(3L, binary.InstructionTable[2].I64);
+        Assert.HasCount(3, binary.Code.Instructions);
+        Assert.AreEqual(10L, binary.Code.Instructions[0].I64);
+        Assert.AreEqual(2L, binary.Code.Instructions[1].I64);
+        Assert.AreEqual(3L, binary.Code.Instructions[2].I64);
     }
 }

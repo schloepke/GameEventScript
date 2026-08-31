@@ -66,7 +66,7 @@ internal static class GameEventScriptConformanceRunner
 
     internal static GameEventScriptProgram CompileScripts(GameEventScriptConformanceTest test)
     {
-        return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
+        return ApplyBinaryRoundTrip(test, CreateScriptBuilder(test).Compile(CreateCompileOptions(test)));
     }
 
     internal static GameEventScriptProgram CompileBytecodeForTest(GameEventScriptConformanceTest test)
@@ -267,14 +267,14 @@ internal static class GameEventScriptConformanceRunner
         {
             ValidateRequired(expected.Name, "expected handler resource name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
             var matched = false;
-            foreach (var bind in compiled.BindTable.Entries)
+            foreach (var bind in compiled.Bindings.Entries)
             {
                 if (bind.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler)) continue;
-                var name = compiled.TextConstantTable.Resolve(bind.Name);
+                var name = compiled.StringConstants.Resolve(bind.Name);
                 if (!string.Equals(name, expected.Name, StringComparison.Ordinal)) continue;
                 var parameters = new string[bind.ArgumentNames.Count];
                 for (var index = 0; index < parameters.Length; index++)
-                    parameters[index] = compiled.TextConstantTable.Resolve(bind.ArgumentNames[index]);
+                    parameters[index] = compiled.StringConstants.Resolve(bind.ArgumentNames[index]);
                 var signatureId = GameEventScriptMessageSignature.CreateSignatureId(name, parameters);
                 if (!string.IsNullOrWhiteSpace(expected.SignatureId) &&
                     !string.Equals(signatureId, expected.SignatureId, StringComparison.Ordinal)) continue;
@@ -318,7 +318,7 @@ internal static class GameEventScriptConformanceRunner
         }
 
         var compiled = CompileBytecode(testCase.Test);
-        var opCodes = compiled.InstructionTable.Select(instruction => instruction.OpCode).ToArray();
+        var opCodes = compiled.Code.Instructions.Select(instruction => instruction.OpCode).ToArray();
         var counts = opCodes
             .GroupBy(opCode => opCode)
             .ToDictionary(group => group.Key, group => group.Count());
@@ -472,8 +472,13 @@ internal static class GameEventScriptConformanceRunner
 
     private static GameEventScriptProgram CompileBytecode(GameEventScriptConformanceTest test)
     {
-        return CreateScriptBuilder(test).Compile(CreateCompileOptions(test));
+        return ApplyBinaryRoundTrip(test, CreateScriptBuilder(test).Compile(CreateCompileOptions(test)));
     }
+
+    private static GameEventScriptProgram ApplyBinaryRoundTrip(GameEventScriptConformanceTest test, GameEventScriptProgram program)
+        => test.BinaryRoundTrip
+            ? GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program))
+            : program;
 
     internal static GameEventScriptBuilder CreateScriptBuilderForTest(GameEventScriptConformanceTest test)
         => CreateScriptBuilder(test);
@@ -496,18 +501,19 @@ internal static class GameEventScriptConformanceRunner
     private static GameEventScriptCompileOptions CreateCompileOptions(GameEventScriptConformanceTest test)
         => new()
         {
-            Optimize = test.CompileOptions?.Optimize ?? true,
-            EnableDebugInfo = test.CompileOptions?.EnableDebugInfo ?? false
+            DebugInfo = test.CompileOptions?.EnableDebugInfo == true
+                ? GameEventScriptDebugInfoOptions.All
+                : GameEventScriptDebugInfoOptions.None
         };
 
     private static IReadOnlyDictionary<string, IReadOnlyList<GameEventScriptMessageSignature>> GetMessageDefinitions(
         GameEventScriptProgram compiled)
     {
-        return compiled.BindTable.Entries
+        return compiled.Bindings.Entries
             .Where(entry => entry.Kind is GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler)
             .Select(entry => GameEventScriptMessageSignature.Create(
-                compiled.TextConstantTable.Resolve(entry.Name),
-                entry.ArgumentNames.Select(compiled.TextConstantTable.Resolve)))
+                compiled.StringConstants.Resolve(entry.Name),
+                entry.ArgumentNames.Select(compiled.StringConstants.Resolve)))
             .GroupBy(signature => signature.Name, StringComparer.Ordinal)
             .ToDictionary(
                 group => group.Key,

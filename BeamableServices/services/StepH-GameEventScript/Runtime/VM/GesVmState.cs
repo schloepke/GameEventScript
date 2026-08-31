@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
+using static StepH.GameEventScript.Api.GameEventScriptBindingSegment;
 using static StepH.GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 using static StepH.GameEventScript.Runtime.VM.GesVmState.StateValue;
 using StepH.GameEventScript.Runtime.Values;
@@ -272,9 +272,9 @@ internal class GesVmState
         if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
         RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
-    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.InstructionTable[InstructionPointer++];
+    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Binary.Code[InstructionPointer++];
     internal string FetchStringByPointer(ushort index) => StringPool[index];
-    internal GameEventScriptUInt16Slice FetchUInt16SliceTableByPointer(ushort index) => Binary.Uint16ConstantTable.Resolve(index);
+    internal GameEventScriptUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Binary.UInt16IndexLists.Resolve(index);
     internal void ModifyLocalRegisters(short registerCount)
     {
         switch (registerCount)

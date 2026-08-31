@@ -63,6 +63,7 @@ public sealed class GameEventScriptHost
     public GameEventScriptInstance Load(GameEventScriptProgram program, int priority = NormalPriority)
     {
         _ = program ?? throw new ArgumentNullException(nameof(program));
+        GameEventScriptProgramValidator.Validate(program);
         var maxRegisterCount = Math.Min(
             ushort.MaxValue,
             _limits.MaxRegisterValues > 0 ? _limits.MaxRegisterValues : DefaultRegisterLimit);

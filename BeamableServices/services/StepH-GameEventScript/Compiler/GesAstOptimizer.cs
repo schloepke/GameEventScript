@@ -47,7 +47,8 @@ internal static class GesAstOptimizer
             optimizedTypes,
             optimizedCallables,
             optimizedHandlers,
-            module.ExternalTypeDefinitions);
+            module.ExternalTypeDefinitions,
+            module.Sources);
     }
 
     private static TypeDefinitionNode OptimizeTypeDefinition(TypeDefinitionNode definition, ISet<string> knownTypeNames)

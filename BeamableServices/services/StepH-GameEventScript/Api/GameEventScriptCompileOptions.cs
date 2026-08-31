@@ -4,7 +4,7 @@ namespace StepH.GameEventScript.Api;
 
 public sealed class GameEventScriptCompileOptions
 {
-    public bool Optimize { get; init; } = true;
+    public GameEventScriptDebugInfoOptions DebugInfo { get; init; }
 
-    public bool EnableDebugInfo { get; init; }
+    public ulong ProgramVersion { get; init; }
 }

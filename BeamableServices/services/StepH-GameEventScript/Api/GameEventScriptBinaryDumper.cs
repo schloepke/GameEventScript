@@ -43,9 +43,9 @@ public static class GameEventScriptBinaryDumper
         AppendHeader(builder, binary, scriptSource);
 
         builder
-            .Append(".gesb ").Append(binary.Header.Version.ToString(CultureInfo.InvariantCulture)).AppendLine()
+            .Append(".gesb ").Append(binary.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine()
             .Append(".module \"").Append(Escape(binary.ModuleName)).AppendLine("\"")
-            .Append(".flags ").AppendLine(FormatHeaderFlags(binary.Header.Flags));
+            .Append(".program-version ").Append(binary.ProgramVersion.ToString(CultureInfo.InvariantCulture)).AppendLine();
 
         AppendTextSegment(builder, context);
         AppendListSegment(builder, context);
@@ -60,9 +60,7 @@ public static class GameEventScriptBinaryDumper
             .AppendLine("// -------------------------------------------------------------------------------")
             .Append("//  Module: ").AppendLine(binary.ModuleName)
             .AppendLine("//  Type: Game Event Script Assembler")
-            .Append("//  Format version: ").Append(binary.Header.Version.ToString(CultureInfo.InvariantCulture)).AppendLine(".0")
-            .AppendLine("//")
-            .Append("//  Disassembled at ").AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture))
+            .Append("//  Format version: ").Append(binary.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine(".0")
             .AppendLine("// -------------------------------------------------------------------------------");
 
         if (!string.IsNullOrWhiteSpace(scriptSource))
@@ -74,6 +72,20 @@ public static class GameEventScriptBinaryDumper
             builder
                 .AppendLine("//")
                 .AppendLine("// -------------------------------------------------------------------------------");
+        }
+        else if (binary.SourceArchive is not null)
+        {
+            for (var index = 0; index < binary.SourceArchive.Sources.Count; index++)
+            {
+                var source = binary.SourceArchive.Sources[index];
+                builder
+                    .Append("// Source: ").AppendLine(source.SourceName)
+                    .AppendLine("//");
+                AppendHeaderScript(builder, source.ResolveText());
+                builder
+                    .AppendLine("//")
+                    .AppendLine("// -------------------------------------------------------------------------------");
+            }
         }
 
         builder.AppendLine();
@@ -90,18 +102,18 @@ public static class GameEventScriptBinaryDumper
     private static void AppendTextSegment(StringBuilder builder, DisassemblyContext context)
     {
         builder.AppendLine().AppendLine().AppendLine(".segment text").AppendLine();
-        for (var i = 0; i < context.Binary.TextConstantTable.Slices.Length; i++)
+        for (var i = 0; i < context.Binary.StringConstants.Slices.Length; i++)
         {
             AppendAlignedLabel(builder, context.TextLabel(i))
                 .Append(".text \"")
-                .Append(Escape(context.Binary.TextConstantTable.Resolve(checked((ushort)i))))
+                .Append(Escape(context.Binary.StringConstants.Resolve(checked((ushort)i))))
                 .AppendLine("\"");
         }
     }
 
     private static void AppendListSegment(StringBuilder builder, DisassemblyContext context)
     {
-        var table = context.Binary.Uint16ConstantTable;
+        var table = context.Binary.UInt16IndexLists;
         builder.AppendLine().AppendLine().AppendLine(".segment lists").AppendLine();
         for (var i = 0; i < table.Slices.Length; i++)
         {
@@ -135,7 +147,7 @@ public static class GameEventScriptBinaryDumper
     private static void AppendBindSegment(StringBuilder builder, DisassemblyContext context)
     {
         builder.AppendLine().AppendLine().AppendLine(".segment bind").AppendLine();
-        var entries = context.Binary.BindTable.Entries;
+        var entries = context.Binary.Bindings.Entries;
         for (var i = 0; i < entries.Count; i++)
         {
             var entry = entries[i];
@@ -179,10 +191,13 @@ public static class GameEventScriptBinaryDumper
 
     private static void AppendCodeSegment(StringBuilder builder, DisassemblyContext context, bool includeInstructionAddresses)
     {
-        var instructions = context.Binary.InstructionTable;
+        var instructions = context.Binary.Code.Instructions;
         builder.AppendLine().AppendLine().AppendLine(".segment code").AppendLine();
+        GameEventScriptSourceMapEntry? previousSource = null;
+        var previousWasCompilerGenerated = false;
         for (var i = 0; i < instructions.Length; i++)
         {
+            AppendSourceComment(builder, context.Binary, checked((uint)i), ref previousSource, ref previousWasCompilerGenerated);
             var hasCodeLabel = context.HasCodeLabel(i);
             var isNamedCodeEntry = hasCodeLabel && context.IsNamedCodeEntry(i);
             var inlineLocalLabel = hasCodeLabel && !isNamedCodeEntry && !includeInstructionAddresses;
@@ -236,6 +251,90 @@ public static class GameEventScriptBinaryDumper
             AppendInstructionComment(builder, context, instruction, operands);
             builder.AppendLine();
         }
+    }
+
+    private static void AppendSourceComment(
+        StringBuilder builder,
+        GameEventScriptProgram program,
+        uint codeAddress,
+        ref GameEventScriptSourceMapEntry? previous,
+        ref bool previousWasCompilerGenerated)
+    {
+        var current = FindSourceMapping(program.SourceMap, codeAddress);
+        if (!current.HasValue)
+        {
+            if (!previousWasCompilerGenerated)
+            {
+                builder.AppendLine("// compiler-generated");
+                previousWasCompilerGenerated = true;
+                previous = null;
+            }
+            return;
+        }
+
+        previousWasCompilerGenerated = false;
+        if (previous.HasValue && SameSourceSpan(previous.Value, current.Value)) return;
+        previous = current;
+        var source = FindSource(program.SourceMap!, current.Value.SourceId);
+        if (source is null) return;
+        var lineIndex = ResolveSourceLine(source, current.Value.SourceStartByteOffset);
+        builder.Append("// ").Append(source.SourceName).Append(':').Append((lineIndex + 1).ToString(CultureInfo.InvariantCulture)).AppendLine();
+        var sourceText = ResolveSourceText(program.SourceArchive, current.Value.SourceId);
+        if (sourceText is null) return;
+        var line = ReadSourceLine(sourceText, lineIndex);
+        builder.Append("// ").AppendLine(line);
+    }
+
+    private static GameEventScriptSourceMapEntry? FindSourceMapping(GameEventScriptSourceMapSegment? sourceMap, uint codeAddress)
+    {
+        if (sourceMap is null) return null;
+        for (var index = 0; index < sourceMap.Entries.Count; index++)
+        {
+            var entry = sourceMap.Entries[index];
+            if (codeAddress >= entry.CodeStart && codeAddress < entry.CodeStart + entry.CodeLength) return entry;
+        }
+        return null;
+    }
+
+    private static bool SameSourceSpan(GameEventScriptSourceMapEntry left, GameEventScriptSourceMapEntry right)
+        => left.SourceId == right.SourceId && left.SourceStartByteOffset == right.SourceStartByteOffset && left.SourceByteLength == right.SourceByteLength;
+
+    private static GameEventScriptSourceMapSource? FindSource(GameEventScriptSourceMapSegment sourceMap, uint sourceId)
+    {
+        for (var index = 0; index < sourceMap.Sources.Count; index++) if (sourceMap.Sources[index].SourceId == sourceId) return sourceMap.Sources[index];
+        return null;
+    }
+
+    private static int ResolveSourceLine(GameEventScriptSourceMapSource source, uint byteOffset)
+    {
+        var result = 0;
+        for (var index = 1; index < source.LineStartByteOffsets.Count; index++)
+        {
+            if (source.LineStartByteOffsets[index] > byteOffset) break;
+            result = index;
+        }
+        return result;
+    }
+
+    private static string? ResolveSourceText(GameEventScriptSourceArchiveSegment? archive, uint sourceId)
+    {
+        if (archive is null) return null;
+        for (var index = 0; index < archive.Sources.Count; index++) if (archive.Sources[index].SourceId == sourceId) return archive.Sources[index].ResolveText();
+        return null;
+    }
+
+    private static string ReadSourceLine(string text, int requestedLine)
+    {
+        var normalized = text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        var start = 0;
+        for (var line = 0; line < requestedLine; line++)
+        {
+            var newline = normalized.IndexOf('\n', start);
+            if (newline < 0) return string.Empty;
+            start = newline + 1;
+        }
+        var end = normalized.IndexOf('\n', start);
+        return end < 0 ? normalized[start..] : normalized.Substring(start, end - start);
     }
 
     private static string FormatOperand(DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex)
@@ -407,7 +506,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendRegisters(StringBuilder builder, GameEventScriptUInt16Slice values)
+    private static void AppendRegisters(StringBuilder builder, GameEventScriptUInt16IndexList values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -420,7 +519,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16Slice values)
+    private static void AppendTextLabels(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16IndexList values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -446,7 +545,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendU16Values(StringBuilder builder, GameEventScriptUInt16Slice values)
+    private static void AppendU16Values(StringBuilder builder, GameEventScriptUInt16IndexList values)
     {
         for (var index = 0; index < values.Length; index++)
         {
@@ -500,7 +599,7 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddTextComment(List<string> comments, DisassemblyContext context, ushort textIndex)
     {
-        if (textIndex < context.Binary.TextConstantTable.Slices.Length)
+        if (textIndex < context.Binary.StringConstants.Slices.Length)
         {
             comments.Add("\"" + Escape(context.ResolveText(textIndex)) + "\"");
         }
@@ -508,12 +607,12 @@ public static class GameEventScriptBinaryDumper
 
     private static void AddListTextComment(List<string> comments, DisassemblyContext context, ushort listIndex)
     {
-        if (listIndex >= context.Binary.Uint16ConstantTable.Slices.Length)
+        if (listIndex >= context.Binary.UInt16IndexLists.Slices.Length)
         {
             return;
         }
 
-        var values = context.Binary.Uint16ConstantTable.Resolve(listIndex);
+        var values = context.Binary.UInt16IndexLists.Resolve(listIndex);
         if (values.Length == 0)
         {
             return;
@@ -523,7 +622,7 @@ public static class GameEventScriptBinaryDumper
         for (var index = 0; index < values.Length; index++)
         {
             var value = values[index];
-            if (value < context.Binary.TextConstantTable.Slices.Length)
+            if (value < context.Binary.StringConstants.Slices.Length)
             {
                 text.Add("\"" + Escape(context.ResolveText(value)) + "\"");
             }
@@ -564,12 +663,12 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+    private static void AddBindSignatureComment(List<string> comments, DisassemblyContext context, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
     {
         comments.Add(FormatBindSignatureComment(context, entry));
     }
 
-    private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+    private static string FormatBindSignatureComment(DisassemblyContext context, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
     {
         var name = Escape(context.ResolveText(entry.Name));
         string signature;
@@ -614,7 +713,7 @@ public static class GameEventScriptBinaryDumper
         }
     }
 
-    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16Slice values, ListRole role)
+    private static void AppendListComment(StringBuilder builder, DisassemblyContext context, GameEventScriptUInt16IndexList values, ListRole role)
     {
         if (values.Length == 0 || role != ListRole.Texts)
         {
@@ -626,7 +725,7 @@ public static class GameEventScriptBinaryDumper
         for (var index = 0; index < values.Length; index++)
         {
             var value = values[index];
-            if (value >= context.Binary.TextConstantTable.Slices.Length)
+            if (value >= context.Binary.StringConstants.Slices.Length)
             {
                 continue;
             }
@@ -645,9 +744,6 @@ public static class GameEventScriptBinaryDumper
             builder.Append(" // ").Append(comment);
         }
     }
-
-    private static string FormatHeaderFlags(GameEventScriptBinaryHeader.GameEventScriptBinaryFlags flags)
-        => flags == GameEventScriptBinaryHeader.GameEventScriptBinaryFlags.None ? "none" : flags.ToString().ToLowerInvariant();
 
     private static string FormatTextReference(DisassemblyContext context, ushort index)
         => context.TextLabel(index);
@@ -711,8 +807,8 @@ public static class GameEventScriptBinaryDumper
             Binary = binary;
             _bindLabels = BuildBindLabels(binary, _bindsByKindAndId);
             _textLabels = BuildTextLabels(binary);
-            _listLabels = new string[binary.Uint16ConstantTable.Slices.Length];
-            _listRoles = new ListRole[binary.Uint16ConstantTable.Slices.Length];
+            _listLabels = new string[binary.UInt16IndexLists.Slices.Length];
+            _listRoles = new ListRole[binary.UInt16IndexLists.Slices.Length];
             BuildListLabels(binary, _listLabels, _listRoles);
             BuildCodeLabels(binary, _codeLabels, _codeLabelNames, _codeLabelComments);
         }
@@ -770,13 +866,13 @@ public static class GameEventScriptBinaryDumper
                 : BindLabel(GameEventScriptBinaryBindKind.ExtensionCall, id, "External_" + id.ToString(CultureInfo.InvariantCulture));
 
         internal string ResolveText(ushort index)
-            => index < Binary.TextConstantTable.Slices.Length ? Binary.TextConstantTable.Resolve(index) : "#" + index.ToString(CultureInfo.InvariantCulture);
+            => index < Binary.StringConstants.Slices.Length ? Binary.StringConstants.Resolve(index) : "#" + index.ToString(CultureInfo.InvariantCulture);
 
-        internal GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry? GetBindEntry(GameEventScriptBinaryBindKind kind, ushort id)
+        internal GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry? GetBindEntry(GameEventScriptBinaryBindKind kind, ushort id)
         {
             if (_bindsByKindAndId.TryGetValue((kind, id), out var index))
             {
-                return Binary.BindTable.Entries[index];
+                return Binary.Bindings.Entries[index];
             }
 
             return null;
@@ -787,11 +883,11 @@ public static class GameEventScriptBinaryDumper
 
         private static string[] BuildTextLabels(GameEventScriptProgram binary)
         {
-            var labels = new string[binary.TextConstantTable.Slices.Length];
+            var labels = new string[binary.StringConstants.Slices.Length];
             var used = new HashSet<string>(StringComparer.Ordinal);
             for (var i = 0; i < labels.Length; i++)
             {
-                var text = binary.TextConstantTable.Resolve(checked((ushort)i));
+                var text = binary.StringConstants.Resolve(checked((ushort)i));
                 var baseName = ToCodeLabelName(text);
                 if (baseName.Length == 0 || baseName == "_")
                 {
@@ -822,7 +918,7 @@ public static class GameEventScriptBinaryDumper
 
         private static string[] BuildBindLabels(GameEventScriptProgram binary, Dictionary<(GameEventScriptBinaryBindKind Kind, ushort Id), int> bindsByKindAndId)
         {
-            var entries = binary.BindTable.Entries;
+            var entries = binary.Bindings.Entries;
             var labels = new string[entries.Count];
             var used = new HashSet<string>(StringComparer.Ordinal);
             for (var i = 0; i < entries.Count; i++)
@@ -840,13 +936,13 @@ public static class GameEventScriptBinaryDumper
 
         private static string BuildBindLabel(
             GameEventScriptProgram binary,
-            GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry,
+            GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry,
             int index,
             HashSet<string> used)
         {
             var prefix = BindPrefix(entry.Kind);
-            var name = entry.Name < binary.TextConstantTable.Slices.Length
-                ? ToCodeLabelName(binary.TextConstantTable.Resolve(entry.Name))
+            var name = entry.Name < binary.StringConstants.Slices.Length
+                ? ToCodeLabelName(binary.StringConstants.Resolve(entry.Name))
                 : string.Empty;
             var candidate = name.Length == 0 || name == "_"
                 ? prefix + "_" + (entry.Id == NoAddress ? index : entry.Id).ToString(CultureInfo.InvariantCulture)
@@ -875,7 +971,7 @@ public static class GameEventScriptBinaryDumper
                 labels[i] = "U16_" + i.ToString(CultureInfo.InvariantCulture);
             }
 
-            foreach (var instruction in binary.InstructionTable)
+            foreach (var instruction in binary.Code.Instructions)
             {
                 var operands = GameEventScriptOpcodePrinter.PrintInstruction(instruction);
                 for (var operandIndex = 0; operandIndex < operands.Length; operandIndex++)
@@ -902,18 +998,18 @@ public static class GameEventScriptBinaryDumper
             Dictionary<int, string> codeLabelNames,
             Dictionary<int, string> codeLabelComments)
         {
-            if (binary.InstructionTable.Length > 0)
+            if (binary.Code.Instructions.Length > 0)
             {
                 codeLabels.Add(0);
             }
 
-            foreach (var entry in binary.BindTable.Entries)
+            foreach (var entry in binary.Bindings.Entries)
             {
                 AddCodeLabel(codeLabels, binary, entry.EntryAddress);
                 AddNamedCodeLabel(codeLabelNames, codeLabelComments, binary, entry);
             }
 
-            foreach (var instruction in binary.InstructionTable)
+            foreach (var instruction in binary.Code.Instructions)
             {
                 foreach (var part in GameEventScriptOpcodePrinter.PrintInstruction(instruction))
                 {
@@ -951,7 +1047,7 @@ public static class GameEventScriptBinaryDumper
 
         private static void AddCodeLabel(SortedSet<int> labels, GameEventScriptProgram binary, ushort address)
         {
-            if (address != NoAddress && address < binary.InstructionTable.Length)
+            if (address != NoAddress && address < binary.Code.Instructions.Length)
             {
                 labels.Add(address);
             }
@@ -961,9 +1057,9 @@ public static class GameEventScriptBinaryDumper
             Dictionary<int, string> labels,
             Dictionary<int, string> comments,
             GameEventScriptProgram binary,
-            GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+            GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
         {
-            if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.InstructionTable.Length)
+            if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.Code.Instructions.Length)
             {
                 return;
             }
@@ -973,8 +1069,8 @@ public static class GameEventScriptBinaryDumper
                 return;
             }
 
-            var name = entry.Name < binary.TextConstantTable.Slices.Length
-                ? binary.TextConstantTable.Resolve(entry.Name)
+            var name = entry.Name < binary.StringConstants.Slices.Length
+                ? binary.StringConstants.Resolve(entry.Name)
                 : string.Empty;
             var label = ToCodeLabelName(name);
             if (label.Length == 0)
@@ -1058,7 +1154,7 @@ public static class GameEventScriptBinaryDumper
             }
         }
 
-        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GameEventScriptBinaryBindTable.GameEventScriptBinaryBindEntry entry)
+        private static string FormatCodeLabelComment(GameEventScriptProgram binary, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
         {
             var kind = entry.Kind switch
             {
@@ -1068,8 +1164,8 @@ public static class GameEventScriptBinaryDumper
                 GameEventScriptBinaryBindKind.Record => "record",
                 _ => "function"
             };
-            var name = entry.Name < binary.TextConstantTable.Slices.Length
-                ? binary.TextConstantTable.Resolve(entry.Name)
+            var name = entry.Name < binary.StringConstants.Slices.Length
+                ? binary.StringConstants.Resolve(entry.Name)
                 : "#" + entry.Name.ToString(CultureInfo.InvariantCulture);
             if (entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler)
             {
@@ -1086,8 +1182,8 @@ public static class GameEventScriptBinaryDumper
                 }
 
                 var argumentName = entry.ArgumentNames[index];
-                builder.Append(argumentName < binary.TextConstantTable.Slices.Length
-                    ? binary.TextConstantTable.Resolve(argumentName)
+                builder.Append(argumentName < binary.StringConstants.Slices.Length
+                    ? binary.StringConstants.Resolve(argumentName)
                     : "#" + argumentName.ToString(CultureInfo.InvariantCulture));
             }
 

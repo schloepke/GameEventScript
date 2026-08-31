@@ -55,45 +55,24 @@ expressions are layout-free direct instructions.
 
 ## Top-Level Artifact
 
-The target binary container is named `GameEventScriptProgram`. Its header is the
-fixed 16-byte `GameEventScriptBinaryHeader` shape:
+The portable in-memory artifact is `GameEventScriptProgram`. The normative
+`.gesb` V1 framing, segment registry, payload encodings, retention modes,
+reader limits, canonical writer rules, and debug/source formats are specified
+in [`GesbFormatV1.md`](GesbFormatV1.md).
 
-```text
-GameEventScriptBinaryHeader
-  Magic:      4 bytes  "GESB"
-  Version:    u16      current 1
-  Flags:      u16      reserved
-  HeaderSize: u32      current 16
-  FileSize:   u32      0 while represented only in memory
-```
-
-The first normalized binary tables are intentionally compact:
-
-```text
-GameEventScriptProgram
-  Header
-  ModuleName
-  RequiredRegisterCount   max simultaneous VM register values of any handler
-  RequiredCallStackDepth  max nested calls below any root handler
-  StringPool              zero-based UTF-8 strings in the file
-  UInt16SliceTable        compact ushort lists used by code and metadata
-  BindTable
-    Kind                  0x10-0x1F export, 0x20-0x2F import
-    MessageHandler | MessageNameHandler | Function | Predicate | ExtensionCall | OutboundMessage | ExternalType
-    Id                    bind id within its kind-specific namespace
-    Name                  string-pool index
-    ArgumentNames         ordered string-pool indexes
-    EntryAddress          global code address for exports, 0 for imports
-    RequiredRegisterCount message-handler requirement, otherwise 0
-    RequiredCallStackDepth message-handler requirement, otherwise 0
-```
+The five required runtime segments are ProgramMetadataSegment,
+StringConstantSegment, UInt16IndexListSegment, BindingSegment, and CodeSegment.
+DebugSymbolsSegment, SourceMapSegment, SourceArchiveSegment, and
+BuildMetadataSegment are independently optional. `FileSize` is encoded by the
+writer and is not kept as program state. Known sections are structured program
+data, never retained raw bytes.
 
 `OutboundMessage` bind entries list statically shaped `emit`/`publish` messages.
 Their name and argument-name fields are the outbound message signature, allowing
 loaders to construct outbound message-signature lookups without scanning the
 instruction table.
 
-Imports leave `EntryAddress` at `0`. They are linked by table index from
+Imports leave `EntryAddress` at `0xFFFF`. They are linked by table index from
 instructions or side tables; extension and external-type implementation code is
 not serialized into the script binary. Export bind kinds occupy `0x10` through
 `0x1F`; import bind kinds occupy `0x20` through `0x2F`. Extension-call import
@@ -279,7 +258,7 @@ Instruction
   DestinationRegister
   XRegister, YRegister
   ConditionRegister, TargetAddress, EntryAddress
-  StringIndex, ListIndex, SecondaryListIndex, ExternalReferenceIndex, TypeOperand
+  StringIndex, ListIndex, SecondaryListIndex, BindId, TypeOperand
   Count
   ImmediateX, ImmediateY, Index
   AU, BU, CU, DU
@@ -292,7 +271,7 @@ Operands are interpreted by opcode:
 - `DestinationRegister`: destination register for value-producing instructions.
 - `XRegister`, `YRegister`: primary-word register operands.
 - `ConditionRegister`, `TargetAddress`, `EntryAddress`: primary-word control-flow aliases.
-- `StringIndex`, `ListIndex`, `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`:
+- `StringIndex`, `ListIndex`, `SecondaryListIndex`, `BindId`, `TypeOperand`:
   primary-word pool/table or type operands.
 - `ImmediateX`, `ImmediateY`: compact signed immediates in the primary word.
 - `Index`: compact unsigned 1-based index in the primary word for `IndexAccess`.

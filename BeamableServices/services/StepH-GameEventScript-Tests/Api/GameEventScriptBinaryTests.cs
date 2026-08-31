@@ -25,14 +25,14 @@ public sealed class GameEventScriptBinaryTests
         var binary = GameEventScriptManager.Compile(script);
 
         Assert.AreEqual("BinaryShape", binary.ModuleName);
-        Assert.AreEqual((ushort)1, binary.Header.Version);
+        Assert.AreEqual((ushort)1, binary.FormatVersion);
 
-        var binds = binary.BindTable.Entries.ToArray();
-        Assert.AreEqual((ushort)4, binary.BindTable.EntryCount);
+        var binds = binary.Bindings.Entries.ToArray();
+        Assert.AreEqual((ushort)4, binary.Bindings.EntryCount);
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler && Resolve(binary, entry.Name) == "Start"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Function && Resolve(binary, entry.Name) == "score"));
         Assert.IsTrue(binds.Any(entry => entry.Kind == GameEventScriptBinaryBindKind.Predicate && Resolve(binary, entry.Name) == "high"));
-        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < binary.InstructionTable.Length));
+        Assert.IsTrue(binds.Where(entry => (byte)entry.Kind is >= 0x10 and <= 0x1F).All(entry => entry.EntryAddress < binary.Code.Instructions.Length));
 
         var start = binds.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageHandler);
         CollectionAssert.AreEqual(new[] { "value" }, start.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
@@ -58,7 +58,7 @@ public sealed class GameEventScriptBinaryTests
 
         var binary = GameEventScriptManager.Compile(script);
 
-        var handler = binary.BindTable.Entries.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler);
+        var handler = binary.Bindings.Entries.Single(entry => entry.Kind == GameEventScriptBinaryBindKind.MessageNameHandler);
         Assert.AreEqual("Ping", Resolve(binary, handler.Name));
         CollectionAssert.AreEqual(new[] { "message" }, handler.ArgumentNames.Select(index => Resolve(binary, index)).ToArray());
     }
@@ -103,5 +103,5 @@ public sealed class GameEventScriptBinaryTests
         StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n\n.gesb ");
     }
 
-    private static string Resolve(GameEventScriptProgram binary, ushort index) => binary.TextConstantTable.Resolve(index);
+    private static string Resolve(GameEventScriptProgram binary, ushort index) => binary.StringConstants.Resolve(index);
 }

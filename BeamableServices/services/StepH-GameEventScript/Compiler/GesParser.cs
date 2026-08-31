@@ -12,12 +12,12 @@ internal sealed class GesParser
     private const double SquareRootExponent = 0.5d;
     private const double CubeRootExponent = 0.3333333333333333333333333333d;
 
-    public static ParsedScript Parse(string script, string? sourceName = null)
+    public static ParsedScript Parse(string script, string? sourceName = null, uint? sourceId = null)
     {
         _ = script ?? throw new ArgumentNullException(nameof(script));
 
         var reader = new GesTokenReader(new GesLexer(script));
-        return new GesParser(reader, sourceName).ParseScript();
+        return new GesParser(reader, sourceName, sourceId).ParseScript();
     }
 
     private sealed class GameEventScriptParseException(string message, int line, int column) : Exception($"{message} (line {line}, col {column})")
@@ -40,14 +40,16 @@ internal sealed class GesParser
 
     private readonly GesTokenReader _reader;
     private readonly string? _requestedSourceName;
+    private readonly uint? _sourceId;
     private readonly List<GameEventScriptCompileError> _errors;
     private string? _moduleName;
     private string? _sourceName;
 
-    private GesParser(GesTokenReader reader, string? sourceName)
+    private GesParser(GesTokenReader reader, string? sourceName, uint? sourceId)
     {
         _reader = reader;
         _requestedSourceName = sourceName;
+        _sourceId = sourceId;
         _errors = [];
     }
 
@@ -56,10 +58,10 @@ internal sealed class GesParser
     private string SourceName => _sourceName ??= string.IsNullOrWhiteSpace(_requestedSourceName) ? "UnknownSource" : _requestedSourceName;
 
     private GameEventScriptSourceLocation CreateRange(GesToken token)
-        => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName);
+        => new(SourceName, token.Line, token.Column, token.EndLine, token.EndColumn, ModuleName, _sourceId);
 
     private GameEventScriptSourceLocation CreateRange(GesToken start, GesToken end)
-        => new(SourceName, start.Line, start.Column, end.EndLine, end.EndColumn, ModuleName);
+        => new(SourceName, start.Line, start.Column, end.EndLine, end.EndColumn, ModuleName, _sourceId);
 
     private GameEventScriptSourceLocation? MergeRanges(ScriptNode? first, ScriptNode? last = null)
     {
@@ -74,7 +76,7 @@ internal sealed class GesParser
         var endColumn = end.EndColumn ?? end.Column;
         return endLine is null || endColumn is null
             ? null
-            : new GameEventScriptSourceLocation(SourceName, start.Line, start.Column, endLine, endColumn, ModuleName);
+            : new GameEventScriptSourceLocation(SourceName, start.Line, start.Column, endLine, endColumn, ModuleName, _sourceId);
     }
 
     private T WithRange<T>(T node, GesToken startToken) where T : ScriptNode
@@ -3037,7 +3039,7 @@ internal sealed class GesParser
             string.Empty,
             GameEventScriptSymbolKind.Unknown,
             GameEventScriptCompileErrorKind.Syntax,
-            new GameEventScriptSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName)));
+            new GameEventScriptSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName, _sourceId)));
     }
 
     private void SynchronizeTopLevel()

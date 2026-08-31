@@ -1,7 +1,7 @@
 using System;
 using StepH.GameEventScript.Api;
 using static StepH.GameEventScript.Api.GameEventScriptBinaryBindKind;
-using static StepH.GameEventScript.Api.GameEventScriptBinaryBindTable;
+using static StepH.GameEventScript.Api.GameEventScriptBindingSegment;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -49,8 +49,8 @@ internal sealed class GesLinkedProgram
         Program = program ?? throw new ArgumentNullException(nameof(program));
         GesProgramCallGraphValidator.Validate(program);
         ValidateResourceMetadata(program);
-        StringPool = BuildStringPool(program.TextConstantTable);
-        CodeSegmentSize = checked((ushort)program.InstructionTable.Length);
+        StringPool = BuildStringPool(program.StringConstants);
+        CodeSegmentSize = checked((ushort)program.Code.Length);
         RecordConstructors = BuildIdIndexedBindTable(program, Record);
         ExtensionCallBinds = BuildIdIndexedBindTable(program, ExtensionCall);
         ExternalTypeBinds = BuildIdIndexedBindTable(program, ExternalType);
@@ -78,7 +78,7 @@ internal sealed class GesLinkedProgram
     private Handler[] BuildHandlers(GameEventScriptProgram program)
     {
         var count = 0;
-        foreach (var bind in program.BindTable.Entries)
+        foreach (var bind in program.Bindings.Entries)
         {
             if (bind.Kind is MessageHandler or MessageNameHandler) count++;
         }
@@ -86,7 +86,7 @@ internal sealed class GesLinkedProgram
         if (count == 0) return [];
         var handlers = new Handler[count];
         var handlerIndex = 0;
-        foreach (var bind in program.BindTable.Entries)
+        foreach (var bind in program.Bindings.Entries)
         {
             if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
             var name = FetchString(bind.Name);
@@ -167,16 +167,16 @@ internal sealed class GesLinkedProgram
     private static GameEventScriptBinaryBindEntry[] BuildIdIndexedBindTable(GameEventScriptProgram program, GameEventScriptBinaryBindKind kind)
     {
         var maxId = -1;
-        foreach (var entry in program.BindTable.Entries)
+        foreach (var entry in program.Bindings.Entries)
             if (entry.Kind == kind && entry.Id != ushort.MaxValue && entry.Id > maxId) maxId = entry.Id;
         if (maxId < 0) return [];
         var result = new GameEventScriptBinaryBindEntry[maxId + 1];
-        foreach (var entry in program.BindTable.Entries)
+        foreach (var entry in program.Bindings.Entries)
             if (entry.Kind == kind && entry.Id != ushort.MaxValue) result[entry.Id] = entry;
         return result;
     }
 
-    private static string[] BuildStringPool(GameEventScriptTextTable table)
+    private static string[] BuildStringPool(GameEventScriptStringConstantSegment table)
     {
         var strings = new string[table.Slices.Length];
         for (var index = 0; index < strings.Length; index++) strings[index] = table.Resolve((ushort)index);
@@ -187,7 +187,7 @@ internal sealed class GesLinkedProgram
     {
         ushort requiredRegisterCount = 0;
         ushort requiredCallStackDepth = 0;
-        foreach (var bind in program.BindTable.Entries)
+        foreach (var bind in program.Bindings.Entries)
         {
             if (bind.Kind is not (MessageHandler or MessageNameHandler)) continue;
             requiredRegisterCount = Math.Max(requiredRegisterCount, bind.RequiredRegisterCount);

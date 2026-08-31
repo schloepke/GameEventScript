@@ -11,34 +11,66 @@ namespace StepH.GameEventScript.Api;
 
 public sealed class GameEventScriptProgram
 {
-    public GameEventScriptProgram(
-        GameEventScriptBinaryHeader header,
+    internal GameEventScriptProgram(
+        ushort formatVersion,
         string moduleName,
+        ulong programVersion,
         ushort requiredRegisterCount,
         ushort requiredCallStackDepth,
-        GameEventScriptTextTable textConstantTable,
-        GameEventScriptUInt16Table uint16ConstantTable,
-        GameEventScriptBinaryBindTable bindTable,
-        IReadOnlyList<GameEventScriptBytecodeInstruction> instructionTable)
+        GameEventScriptStringConstantSegment stringConstantSegment,
+        GameEventScriptUInt16IndexListSegment uint16IndexListSegment,
+        GameEventScriptBindingSegment bindingSegment,
+        GameEventScriptCodeSegment codeSegment,
+        GameEventScriptDebugSymbolsSegment? debugSymbolsSegment = null,
+        GameEventScriptSourceMapSegment? sourceMapSegment = null,
+        GameEventScriptSourceArchiveSegment? sourceArchiveSegment = null,
+        GameEventScriptBuildMetadataSegment? buildMetadataSegment = null,
+        IReadOnlyList<GameEventScriptOpaqueSection>? opaqueSections = null)
     {
-        Header = header;
+        FormatVersion = formatVersion;
+        Metadata = new GameEventScriptProgramMetadataSegment(moduleName, requiredRegisterCount, requiredCallStackDepth, programVersion);
+        StringConstants = stringConstantSegment;
+        UInt16IndexLists = uint16IndexListSegment;
+        Bindings = bindingSegment;
+        Code = codeSegment;
+        DebugSymbols = debugSymbolsSegment;
+        SourceMap = sourceMapSegment;
+        SourceArchive = sourceArchiveSegment;
+        BuildMetadata = buildMetadataSegment;
+        OpaqueSections = new GameEventScriptReadOnlyArray<GameEventScriptOpaqueSection>(opaqueSections);
+    }
+
+    public ushort FormatVersion { get; }
+    public GameEventScriptProgramMetadataSegment Metadata { get; }
+    public string ModuleName => Metadata.ModuleName;
+    public ulong ProgramVersion => Metadata.ProgramVersion;
+    public ushort RequiredRegisterCount => Metadata.RequiredRegisterCount;
+    public ushort RequiredCallStackDepth => Metadata.RequiredCallStackDepth;
+    public GameEventScriptStringConstantSegment StringConstants { get; }
+    public GameEventScriptUInt16IndexListSegment UInt16IndexLists { get; }
+    public GameEventScriptBindingSegment Bindings { get; }
+    public GameEventScriptCodeSegment Code { get; }
+    public GameEventScriptDebugSymbolsSegment? DebugSymbols { get; }
+    public GameEventScriptSourceMapSegment? SourceMap { get; }
+    public GameEventScriptSourceArchiveSegment? SourceArchive { get; }
+    public GameEventScriptBuildMetadataSegment? BuildMetadata { get; }
+    public GameEventScriptReadOnlyArray<GameEventScriptOpaqueSection> OpaqueSections { get; }
+}
+
+public readonly struct GameEventScriptProgramMetadataSegment
+{
+    public GameEventScriptProgramMetadataSegment(string moduleName, ushort requiredRegisterCount, ushort requiredCallStackDepth, ulong programVersion)
+    {
         ModuleName = moduleName ?? string.Empty;
         RequiredRegisterCount = requiredRegisterCount;
         RequiredCallStackDepth = requiredCallStackDepth;
-        TextConstantTable = textConstantTable;
-        Uint16ConstantTable = uint16ConstantTable;
-        BindTable = bindTable;
-        InstructionTable = new GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction>(instructionTable);
+        ProgramVersion = programVersion;
     }
 
-    public GameEventScriptBinaryHeader Header { get; }
     public string ModuleName { get; }
     public ushort RequiredRegisterCount { get; }
     public ushort RequiredCallStackDepth { get; }
-    public GameEventScriptTextTable TextConstantTable { get; }
-    public GameEventScriptUInt16Table Uint16ConstantTable { get; }
-    public GameEventScriptBinaryBindTable BindTable { get; }
-    public GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction> InstructionTable { get; }
+    public ulong ProgramVersion { get; }
 }
 
 /// <summary>
@@ -72,36 +104,62 @@ public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
     internal T[] UnsafeItems => _items ?? [];
 }
 
-public readonly struct GameEventScriptBinaryHeader
+public static class GameEventScriptBinaryFormat
 {
-    [Flags]
-    public enum GameEventScriptBinaryFlags : ushort
-    {
-        None = 0,
-        Optimization = 1 << 0,
-        Debug = 1 << 1,
-    }
-
-    public const uint Magic = 0x42534547; // "GESB"
-
-    public ushort Version { get; init; }
-    public GameEventScriptBinaryFlags Flags { get; init; }
+    public const ushort Version = 1;
     public const uint HeaderSize = 16;
-    public uint FileSize { get; init; }
+    public const uint SectionHeaderSize = 12;
+    public const byte MagicG = (byte)'G';
+    public const byte MagicE = (byte)'E';
+    public const byte MagicS = (byte)'S';
+    public const byte MagicB = (byte)'B';
 }
 
-public readonly struct GameEventScriptTextTable
+[Flags]
+public enum GameEventScriptSectionFlags : ushort
+{
+    None = 0,
+    Required = 0x0001,
+    CompressionMask = 0x00F0
+}
+
+public enum GameEventScriptSectionType : ushort
+{
+    ProgramMetadata = 0x0001,
+    StringConstants = 0x0002,
+    UInt16IndexLists = 0x0003,
+    Bindings = 0x0004,
+    Code = 0x0010,
+    DebugSymbols = 0x0020,
+    SourceMap = 0x0021,
+    SourceArchive = 0x0022,
+    BuildMetadata = 0x0030,
+    ReservedSignature = 0x0040,
+    NamedCustom = 0xFFFE
+}
+
+[Flags]
+public enum GameEventScriptDebugInfoOptions : byte
+{
+    None = 0,
+    DebugSymbols = 1 << 0,
+    SourceMap = 1 << 1,
+    SourceArchive = 1 << 2,
+    All = DebugSymbols | SourceMap | SourceArchive
+}
+
+public readonly struct GameEventScriptStringConstantSegment
 {
     public readonly struct SliceEntry
     {
-        public ushort Start { get; init; }
-        public ushort Length { get; init; }
+        public int Start { get; init; }
+        public int Length { get; init; }
     }
 
     private readonly GameEventScriptReadOnlyArray<SliceEntry> _slices;
     private readonly GameEventScriptReadOnlyArray<byte> _data;
 
-    public GameEventScriptTextTable(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
+    public GameEventScriptStringConstantSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<byte> data)
     {
         _slices = new GameEventScriptReadOnlyArray<SliceEntry>(slices);
         _data = new GameEventScriptReadOnlyArray<byte>(data);
@@ -114,11 +172,11 @@ public readonly struct GameEventScriptTextTable
     public string Resolve(ushort index) => Encoding.UTF8.GetString(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
 }
 
-public readonly struct GameEventScriptUInt16Slice
+public readonly struct GameEventScriptUInt16IndexList
 {
     private readonly ushort[]? _data;
 
-    internal GameEventScriptUInt16Slice(ushort[] data, int start, int length)
+    internal GameEventScriptUInt16IndexList(ushort[] data, int start, int length)
     {
         _data = data;
         Start = start;
@@ -132,18 +190,18 @@ public readonly struct GameEventScriptUInt16Slice
     public ushort this[int index] => _data![Start + index];
 }
 
-public readonly struct GameEventScriptUInt16Table
+public readonly struct GameEventScriptUInt16IndexListSegment
 {
     public readonly struct SliceEntry
     {
-        public ushort Start { get; init; }
-        public ushort Length { get; init; }
+        public int Start { get; init; }
+        public int Length { get; init; }
     }
 
     private readonly GameEventScriptReadOnlyArray<SliceEntry> _slices;
     private readonly GameEventScriptReadOnlyArray<ushort> _data;
 
-    public GameEventScriptUInt16Table(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
+    public GameEventScriptUInt16IndexListSegment(IReadOnlyList<SliceEntry> slices, IReadOnlyList<ushort> data)
     {
         _slices = new GameEventScriptReadOnlyArray<SliceEntry>(slices);
         _data = new GameEventScriptReadOnlyArray<ushort>(data);
@@ -152,10 +210,10 @@ public readonly struct GameEventScriptUInt16Table
     public GameEventScriptReadOnlyArray<SliceEntry> Slices => _slices;
     public GameEventScriptReadOnlyArray<ushort> Data => _data;
 
-    public GameEventScriptUInt16Slice Resolve(ushort index) => new(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
+    public GameEventScriptUInt16IndexList Resolve(ushort index) => new(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
 }
 
-public readonly struct GameEventScriptBinaryBindTable
+public readonly struct GameEventScriptBindingSegment
 {
     
     public readonly struct GameEventScriptBinaryBindEntry(
@@ -195,7 +253,7 @@ public readonly struct GameEventScriptBinaryBindTable
 
     private readonly GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry> _entries;
 
-    public GameEventScriptBinaryBindTable(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
+    public GameEventScriptBindingSegment(IReadOnlyList<GameEventScriptBinaryBindEntry>? entries)
     {
         _entries = new GameEventScriptReadOnlyArray<GameEventScriptBinaryBindEntry>(entries);
         EntryCount = ToEntryCount(_entries.Count);
@@ -207,6 +265,134 @@ public readonly struct GameEventScriptBinaryBindTable
 
     private static ushort ToEntryCount(int count) => count > ushort.MaxValue ? throw new ArgumentOutOfRangeException(nameof(count), "GameEventScriptProgram tables cannot exceed 65535 entries.") : checked((ushort)count);
 
+}
+
+public readonly struct GameEventScriptCodeSegment
+{
+    private readonly GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction> _instructions;
+
+    public GameEventScriptCodeSegment(IReadOnlyList<GameEventScriptBytecodeInstruction>? instructions)
+        => _instructions = new GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction>(instructions);
+
+    public int Count => _instructions.Count;
+    public int Length => _instructions.Count;
+    public GameEventScriptBytecodeInstruction this[int index] => _instructions[index];
+    public GameEventScriptReadOnlyArray<GameEventScriptBytecodeInstruction> Instructions => _instructions;
+}
+
+public enum GameEventScriptDebugSymbolKind : byte
+{
+    Parameter = 1,
+    Local = 2
+}
+
+public readonly record struct GameEventScriptDebugSymbol(
+    GameEventScriptDebugSymbolKind Kind,
+    ushort RegisterId,
+    string Name,
+    uint CodeStart,
+    uint CodeLength);
+
+public sealed class GameEventScriptDebugSymbolsSegment
+{
+    public GameEventScriptDebugSymbolsSegment(IReadOnlyList<GameEventScriptDebugSymbol>? symbols)
+        => Symbols = new GameEventScriptReadOnlyArray<GameEventScriptDebugSymbol>(symbols);
+
+    public GameEventScriptReadOnlyArray<GameEventScriptDebugSymbol> Symbols { get; }
+}
+
+public sealed class GameEventScriptSourceMapSource
+{
+    public GameEventScriptSourceMapSource(uint sourceId, string sourceName, uint sourceByteLength, IReadOnlyList<byte> sha256, IReadOnlyList<uint> lineStartByteOffsets)
+    {
+        SourceId = sourceId;
+        SourceName = sourceName ?? string.Empty;
+        SourceByteLength = sourceByteLength;
+        Sha256 = new GameEventScriptReadOnlyArray<byte>(sha256);
+        LineStartByteOffsets = new GameEventScriptReadOnlyArray<uint>(lineStartByteOffsets);
+    }
+
+    public uint SourceId { get; }
+    public string SourceName { get; }
+    public uint SourceByteLength { get; }
+    public GameEventScriptReadOnlyArray<byte> Sha256 { get; }
+    public GameEventScriptReadOnlyArray<uint> LineStartByteOffsets { get; }
+}
+
+public readonly record struct GameEventScriptSourceMapEntry(
+    uint CodeStart,
+    uint CodeLength,
+    uint SourceId,
+    uint SourceStartByteOffset,
+    uint SourceByteLength);
+
+public sealed class GameEventScriptSourceMapSegment
+{
+    public GameEventScriptSourceMapSegment(IReadOnlyList<GameEventScriptSourceMapSource>? sources, IReadOnlyList<GameEventScriptSourceMapEntry>? entries)
+    {
+        Sources = new GameEventScriptReadOnlyArray<GameEventScriptSourceMapSource>(sources);
+        Entries = new GameEventScriptReadOnlyArray<GameEventScriptSourceMapEntry>(entries);
+    }
+
+    public GameEventScriptReadOnlyArray<GameEventScriptSourceMapSource> Sources { get; }
+    public GameEventScriptReadOnlyArray<GameEventScriptSourceMapEntry> Entries { get; }
+}
+
+public sealed class GameEventScriptSourceArchiveEntry
+{
+    private readonly GameEventScriptReadOnlyArray<byte> _utf8Content;
+
+    public GameEventScriptSourceArchiveEntry(uint sourceId, string sourceName, IReadOnlyList<byte> utf8Content)
+    {
+        SourceId = sourceId;
+        SourceName = sourceName ?? string.Empty;
+        _utf8Content = new GameEventScriptReadOnlyArray<byte>(utf8Content);
+    }
+
+    public uint SourceId { get; }
+    public string SourceName { get; }
+    public GameEventScriptReadOnlyArray<byte> Utf8Content => _utf8Content;
+    public string ResolveText() => Encoding.UTF8.GetString(_utf8Content.UnsafeItems);
+}
+
+public sealed class GameEventScriptSourceArchiveSegment
+{
+    public GameEventScriptSourceArchiveSegment(IReadOnlyList<GameEventScriptSourceArchiveEntry>? sources)
+        => Sources = new GameEventScriptReadOnlyArray<GameEventScriptSourceArchiveEntry>(sources);
+
+    public GameEventScriptReadOnlyArray<GameEventScriptSourceArchiveEntry> Sources { get; }
+}
+
+public sealed class GameEventScriptBuildMetadataSegment
+{
+    public GameEventScriptBuildMetadataSegment(string compilerId, string compilerVersion)
+    {
+        CompilerId = compilerId ?? string.Empty;
+        CompilerVersion = compilerVersion ?? string.Empty;
+    }
+
+    public string CompilerId { get; }
+    public string CompilerVersion { get; }
+}
+
+public sealed class GameEventScriptOpaqueSection
+{
+    private readonly GameEventScriptReadOnlyArray<byte> _rawPayload;
+
+    public GameEventScriptOpaqueSection(ushort sectionType, GameEventScriptSectionFlags flags, ushort sectionVersion, IReadOnlyList<byte> rawPayload, int originalOrdinal)
+    {
+        SectionType = sectionType;
+        Flags = flags;
+        SectionVersion = sectionVersion;
+        _rawPayload = new GameEventScriptReadOnlyArray<byte>(rawPayload);
+        OriginalOrdinal = originalOrdinal;
+    }
+
+    public ushort SectionType { get; }
+    public GameEventScriptSectionFlags Flags { get; }
+    public ushort SectionVersion { get; }
+    public GameEventScriptReadOnlyArray<byte> RawPayload => _rawPayload;
+    public int OriginalOrdinal { get; }
 }
 
 public enum GameEventScriptBinaryBindKind : byte

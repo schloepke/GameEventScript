@@ -3,6 +3,10 @@
 This document lists the current `GameEventScriptBytecodeOpCode` values and how
 each opcode uses the compact linear instruction shape.
 
+The `.gesb` CodeSegment encoding is defined independently in `GesbFormatV1.md`.
+Its fields are written one by one in little-endian order; the CLR layout shown
+below is an in-memory runtime view and never defines the file format.
+
 ## Instruction Word
 
 `GameEventScriptBytecodeInstruction` is currently a fixed 16-byte explicit-layout
@@ -25,7 +29,7 @@ public struct GameEventScriptBytecodeInstruction
     [FieldOffset(4)]  public ushort ConditionRegister;
     [FieldOffset(4)]  public ushort StringIndex;
     [FieldOffset(4)]  public ushort SecondaryListIndex;
-    [FieldOffset(4)]  public ushort ExternalReferenceIndex;
+    [FieldOffset(4)]  public ushort BindId;
     [FieldOffset(4)]  public short ImmediateX;
     [FieldOffset(4)]  public ushort Index;
     [FieldOffset(4)]  public short Count;
@@ -60,7 +64,7 @@ The byte layout is:
 | `0` | `OpCode` | `OpCode` | Opcode tag, backed by `byte`. |
 | `1` | `UnitAndFlags` | `UnitAndFlags` | Low 5 bits carry the numeric unit id; high 3 bits are reserved flags. |
 | `2..3` | `DestinationRegister` / `MessageDestination` | `DestinationRegister` | Destination/result register or static outbound-message bind id. |
-| `4..5` | `XRegister` / `ConditionRegister` / `StringIndex` / `SecondaryListIndex` / `ExternalReferenceIndex` / `ImmediateX` / `Index` / `Count` | primary X bytes | First primary operand, signed immediate, unsigned index, or table index. |
+| `4..5` | `XRegister` / `ConditionRegister` / `StringIndex` / `SecondaryListIndex` / `BindId` / `ImmediateX` / `Index` / `Count` | primary X bytes | First primary operand, signed immediate, unsigned index, or table index. |
 | `6..7` | `YRegister` / `TargetAddress` / `EntryAddress` / `ListIndex` / `TypeOperand` / `ImmediateY` | primary Y bytes | Second primary operand, target/entry address, type operand, or primary list index. |
 | `8..9` | `AU` / `AS` | `I64`/`Payload`/`F64` bytes `0..1` | Payload word bytes `0..1`, or first payload 16-bit operand. |
 | `10..11` | `BU` / `BS` | `I64`/`Payload`/`F64` bytes `2..3` | Payload word bytes `2..3`, or second payload 16-bit operand. |
@@ -103,7 +107,7 @@ view instead of exposing the overlapping runtime fields:
   and `Y`. These fields are stored through semantic aliases such as
   `DestinationRegister`, `MessageDestination`, `XRegister`, `YRegister`, `ConditionRegister`,
   `TargetAddress`, `EntryAddress`, `StringIndex`, `ListIndex`,
-  `SecondaryListIndex`, `ExternalReferenceIndex`, `TypeOperand`, `Count`,
+  `SecondaryListIndex`, `BindId`, `TypeOperand`, `Count`,
   `ImmediateX`, `ImmediateY`, and `Index`.
 - **Primary signed 16-bit operand view:** `ImmediateX` and `ImmediateY` are available for
   compact signed immediates in the primary word.
@@ -199,7 +203,7 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x06 | `JumpIfNothing` | - | - | `ConditionRegister` | `TargetAddress` | - | Branches when `X.Kind` is `Nothing`. |
 | 0x07 | `Call` | optional `NormalizeResultAsPredicate` | result register | - | `EntryAddress`=callable/predicate | - | Enters a VM-owned local call frame at a known code address. Arguments are the contiguous staged sequence immediately before the call. With `NormalizeResultAsPredicate`, the returned value is normalized to boolean or `nothing`. |
 | 0x08 | `CreateSeries` | - | result register | - | `TypeOperand`=series kind | - | Creates a built-in mathematical series. Supported kinds are `Fibonacci` and `Factorial`. |
-| 0x09 | `CallExternal` | optional `NormalizeResultAsPredicate` | result register | `ExternalReferenceIndex` | `ListIndex`=argument register-list index | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
+| 0x09 | `CallExternal` | optional `NormalizeResultAsPredicate` | result register | `BindId` | `ListIndex`=argument register-list index | - | Calls a dynamically bound host extension. With `NormalizeResultAsPredicate`, the result is normalized to boolean or `nothing`. |
 | 0x0A | `ReturnVoid` | - | - | - | - | - | Returns no value from the current frame; normal calls map this to DSL `nothing`. |
 | 0x0B | `ReturnValue` | - | - | `XRegister`=return | - | - | Returns the value in `X` from the current frame. |
 | 0x0C | `EmitMessage` | - | `MessageDestination`=outbound message bind id | - | `ListIndex`=argument register-list index | - | Emits a statically shaped message without tags. |
@@ -254,9 +258,9 @@ nibble is a format convention, not a second runtime dispatch step.
 | 0x3D | `CreateRangeIterator` | - | iterator register | `XRegister`=from | `YRegister`=to | - | Creates a VM-internal range iterator with default step `+1`. |
 | 0x3E | `CreateRangeIteratorWithStep` | - | iterator register | `XRegister`=from | `YRegister`=to | `AU`=step register | Creates a VM-internal range iterator with an explicit step. |
 | 0x3F | `CreateRangeIteratorShort` | - | iterator register | `ImmediateX`=from | `ImmediateY`=to | `AS`=step | Creates a compact literal range iterator. |
-| 0x40 | `CreateRecord` | - | result register | `ExternalReferenceIndex`=record bind id | - | - | Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside the constructor. |
+| 0x40 | `CreateRecord` | - | result register | `BindId`=record bind id | - | - | Calls the record constructor bind with staged constructor-parameter values; computed fields are derived inside the constructor. |
 | 0x41 | `CreateRecordValue` | - | result register | `XRegister`=map | `TypeOperand`=record type string | - | Creates the concrete custom record value from the constructor-produced field map. |
-| 0x42 | `CreateExternalType` | - | result register | `ExternalReferenceIndex`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
+| 0x42 | `CreateExternalType` | - | result register | `BindId`=external type constructor reference | `ListIndex`=argument names | - | Constructs a host-bound external type value from named staged argument values. |
 | 0x43 | `HasValue` | - | result register | `XRegister`=operand | - | - | Semantic value check; exact complement of `IsEmpty`. |
 | 0x44 | `IsEmpty` | - | result register | `XRegister`=operand | - | - | Semantic emptiness check; true for `nothing`, `NaN`, and empty text/collections. |
 | 0x45 | `Default` | - | result register | `XRegister`=left | `YRegister`=right | - | Presence/default operator. |

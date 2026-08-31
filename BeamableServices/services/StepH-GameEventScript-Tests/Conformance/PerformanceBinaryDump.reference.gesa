@@ -10,8 +10,6 @@ cases=5
 //  Module: PerformanceMath
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
-//
-//  Disassembled at <stable>
 // -------------------------------------------------------------------------------
 // Script:
 //
@@ -36,7 +34,7 @@ cases=5
 
 .gesb 1
 .module "PerformanceMath"
-.flags optimization
+.program-version 0
 
 
 .segment text
@@ -45,11 +43,15 @@ T_value:			.text "value"
 T_Start:			.text "Start"
 T_result:			.text "result"
 T_Done:				.text "Done"
+T_PerformanceMath:	.text "PerformanceMath"
 
 
 .segment lists
 
-Args_0:				.registers [r10]
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+U16_2:				.u16 [2]
+Args_3:				.registers [r10]
 
 
 .segment bind
@@ -60,6 +62,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_result] // "Done(
 
 .segment code
 
+// compiler-generated
 Start:				 // handler Start(value)
 					RegisterLocals #11
 					LoadInteger r11, #5
@@ -81,7 +84,7 @@ Start:				 // handler Start(value)
 					Subtract r9, r8, r11
 					LoadInteger r11, #5
 					IntegerDivide r10, r9, r11
-					EmitMessage Outbound_Done, Args_0 // "Done(result)"
+					EmitMessage Outbound_Done, Args_3 // "Done(result)"
 					ReturnVoid
 
 
@@ -93,8 +96,6 @@ Start:				 // handler Start(value)
 //  Module: PerformanceRanges
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
-//
-//  Disassembled at <stable>
 // -------------------------------------------------------------------------------
 // Script:
 //
@@ -112,7 +113,7 @@ Start:				 // handler Start(value)
 
 .gesb 1
 .module "PerformanceRanges"
-.flags optimization
+.program-version 0
 
 
 .segment text
@@ -121,11 +122,14 @@ T_Start:			.text "Start"
 T_total:			.text "total"
 T_count:			.text "count"
 T_Done:				.text "Done"
+T_PerformanceRanges:	.text "PerformanceRanges"
 
 
 .segment lists
 
-Args_0:				.registers [r2, r3]
+U16_0:				.u16 []
+U16_1:				.u16 [1, 2]
+Args_2:				.registers [r2, r3]
 
 
 .segment bind
@@ -136,6 +140,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_count] /
 
 .segment code
 
+// compiler-generated
 Start:				 // handler Start()
 					RegisterLocals #8
 					ListBuilderCreate r4
@@ -160,7 +165,7 @@ Start_19:			IteratorClose r4
 					Jump Start_22
 Start_21:			LoadNothing r2
 Start_22:			Count r3, r0
-					EmitMessage Outbound_Done, Args_0 // "Done(total, count)"
+					EmitMessage Outbound_Done, Args_2 // "Done(total, count)"
 					ReturnVoid
 
 
@@ -172,8 +177,6 @@ Start_22:			Count r3, r0
 //  Module: PerformanceTypes
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
-//
-//  Disassembled at <stable>
 // -------------------------------------------------------------------------------
 // Script:
 //
@@ -196,7 +199,7 @@ Start_22:			Count r3, r0
 
 .gesb 1
 .module "PerformanceTypes"
-.flags optimization
+.program-version 0
 
 
 .segment text
@@ -211,12 +214,16 @@ T_isSample:			.text "isSample"
 T_Done:				.text "Done"
 T_ok:				.text "ok"
 T_value:			.text "value"
+T_PerformanceTypes:	.text "PerformanceTypes"
 
 
 .segment lists
 
-Args_0:				.registers [r2, r3, r1, r4]
-Keys_1:				.texts [T_value, T_label, T_doubled] // "value", "label", "doubled"
+U16_0:				.u16 []
+U16_1:				.u16 [1, 2]
+U16_2:				.u16 [4, 2, 5, 6]
+Args_3:				.registers [r2, r3, r1, r4]
+Keys_4:				.texts [T_value, T_label, T_doubled] // "value", "label", "doubled"
 
 
 .segment bind
@@ -228,6 +235,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_doubled, T_label,
 
 .segment code
 
+// compiler-generated
 Start:				 // handler Start()
 					RegisterLocals #5
 					StageInteger #21
@@ -237,7 +245,7 @@ Start:				 // handler Start()
 					MemberAccess r2, T_doubled, r0 // "doubled"
 					MemberAccess r3, T_label, r0 // "label"
 					CheckCustomType r4, r0, T_sample // "sample"
-					EmitMessage Outbound_Done, Args_0 // "Done(doubled, label, textNumber, isSample)"
+					EmitMessage Outbound_Done, Args_3 // "Done(doubled, label, textNumber, isSample)"
 					ReturnVoid
 
 record_sample:		 // record sample(_, label)
@@ -250,7 +258,7 @@ record_sample:		 // record sample(_, label)
 					StageRegister r0
 					StageRegister r1
 					StageRegister r2
-					CreateMap r3, Keys_1 // "value", "label", "doubled"
+					CreateMap r3, Keys_4 // "value", "label", "doubled"
 					CreateRecordValue r4, r3, T_sample // "sample"
 					ReturnValue r4
 
@@ -263,8 +271,6 @@ record_sample:		 // record sample(_, label)
 //  Module: PerformancePipelines
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
-//
-//  Disassembled at <stable>
 // -------------------------------------------------------------------------------
 // Script:
 //
@@ -284,7 +290,7 @@ record_sample:		 // record sample(_, label)
 
 .gesb 1
 .module "PerformancePipelines"
-.flags optimization
+.program-version 0
 
 
 .segment text
@@ -294,11 +300,14 @@ T_directTotal:		.text "directTotal"
 T_streamTotal:		.text "streamTotal"
 T_streamCount:		.text "streamCount"
 T_Done:				.text "Done"
+T_PerformancePipelines:	.text "PerformancePipelines"
 
 
 .segment lists
 
-Args_0:				.registers [r2, r3, r4]
+U16_0:				.u16 []
+U16_1:				.u16 [1, 2, 3]
+Args_2:				.registers [r2, r3, r4]
 
 
 .segment bind
@@ -309,6 +318,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_directTotal, T_st
 
 .segment code
 
+// compiler-generated
 Start:				 // handler Start()
 					RegisterLocals #11
 					StageInteger #1
@@ -379,7 +389,7 @@ Start_60:			IteratorNext r7, r5, Start_66
 Start_66:			IteratorClose r5
 					Jump Start_69
 Start_68:			LoadNothing r4
-Start_69:			EmitMessage Outbound_Done, Args_0 // "Done(directTotal, streamTotal, streamCount)"
+Start_69:			EmitMessage Outbound_Done, Args_2 // "Done(directTotal, streamTotal, streamCount)"
 					ReturnVoid
 
 
@@ -391,8 +401,6 @@ Start_69:			EmitMessage Outbound_Done, Args_0 // "Done(directTotal, streamTotal,
 //  Module: EnginePerformance
 //  Type: Game Event Script Assembler
 //  Format version: 1.0
-//
-//  Disassembled at <stable>
 // -------------------------------------------------------------------------------
 // Script:
 //
@@ -427,7 +435,7 @@ Start_69:			EmitMessage Outbound_Done, Args_0 // "Done(directTotal, streamTotal,
 
 .gesb 1
 .module "EnginePerformance"
-.flags optimization
+.program-version 0
 
 
 .segment text
@@ -449,14 +457,19 @@ T_Success:			.text "Success"
 T_message:			.text "message"
 T_hello:			.text "hello"
 T_world:			.text "world"
+T_EnginePerformance:	.text "EnginePerformance"
 
 
 .segment lists
 
-Shape_0:			.texts [T_Success, T_message, T_value] // "Success", "message", "value"
-Args_1:				.registers [r16, r8]
-Args_2:				.registers [r16, r5]
-Args_3:				.registers [r1, r2, r3, r7, r4, r5, r6, r15]
+U16_0:				.u16 [0]
+U16_1:				.u16 []
+U16_2:				.u16 [2]
+U16_3:				.u16 [4, 5, 6, 7, 8, 9, 10, 11]
+Shape_4:			.texts [T_Success, T_message, T_value] // "Success", "message", "value"
+Args_5:				.registers [r16, r8]
+Args_6:				.registers [r16, r5]
+Args_7:				.registers [r1, r2, r3, r7, r4, r5, r6, r15]
 
 
 .segment bind
@@ -468,6 +481,7 @@ Outbound_Done:		.bind OutboundMessage id=0 name=T_Done args=[T_total, T_average,
 
 .segment code
 
+// compiler-generated
 Start:				 // handler Start(values)
 					RegisterLocals #22
 					IteratorCreateOrJump r16, r0, Start_21
@@ -571,11 +585,11 @@ Start_97:			LoadInteger r16, #100, unit:meter
 					JumpIfNotTrue r17, Start_107
 					Add r8, r5, r6
 					Divide r9, r5, r6
-					LoadHandler r10, Shape_0 // "Success", "message", "value"
+					LoadHandler r10, Shape_4 // "Success", "message", "value"
 					LoadText r16, T_hello // "hello"
-					BindHandler r11, r10, Args_1
+					BindHandler r11, r10, Args_5
 					LoadText r16, T_world // "world"
-					LoadMessage r12, Shape_0, Args_2 // "Success", "message", "value"
+					LoadMessage r12, Shape_4, Args_6 // "Success", "message", "value"
 Start_107:			CreateRangeIteratorShort r16, #1, #16, #1
 Start_108:			IteratorNext r13, r16, Start_134
 					IteratorCreateOrJump r17, r0, Start_132
@@ -626,7 +640,7 @@ Start_152:			IteratorClose r16
 					LoadInteger r15, #0
 					Jump Start_157
 Start_156:			LoadNothing r15
-Start_157:			EmitMessage Outbound_Done, Args_3 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
+Start_157:			EmitMessage Outbound_Done, Args_7 // "Done(total, average, oddCount, directOddScaled, first, scaled, folded, workTotal)"
 					ReturnVoid
 
 predicate_high:		 // predicate high(value)

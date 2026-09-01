@@ -4,59 +4,42 @@ Deine drei Punkte sind richtig, reichen aber noch nicht ganz. Vor allem fehlen s
 
 Wichtig: Der physische Umzug ins Monorepo muss nicht warten, bis alle Punkte fertig sind. Sinnvoll ist, zuerst Struktur und gemeinsame Verträge anzulegen und die weitere Portabilitätsarbeit anschließend direkt im Monorepo durchzuführen.
 
-Ich habe nur analysiert und nichts geändert.
-
 ## 1. `.gesb`-Binary vollständig definieren - DONE
 
-Aktuell ist `GameEventScriptProgram` eine gute In-Memory-Vorbereitung, aber noch kein vollständig spezifiziertes Dateiformat. Siehe [GameEventScriptProgram.cs](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/Api/GameEventScriptProgram.cs) und [BytecodeSpec.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/BytecodeSpec.md).
+`.gesb` V1 ist spezifiziert und implementiert. Das normative Containerformat steht
+in [GesbFormatV1.md](StepH-GameEventScript/GesbFormatV1.md); Opcode-Semantik und
+Operandenformen stehen weiterhin in
+[BytecodeSpec.md](StepH-GameEventScript/BytecodeSpec.md) und
+[BytecodeOpcodeShape.md](StepH-GameEventScript/BytecodeOpcodeShape.md).
 
-Benötigt werden:
+Abgeschlossen sind:
 
-- `GameEventScriptProgramWriter`
-- `GameEventScriptProgramReader`
-- vollständiger `GameEventScriptProgramValidator`
-- explizite Endianness
-- exaktes Layout aller Sections
-- Offsets, Counts und Alignment
-- UTF-8-Encoding und ungültige UTF-8-Behandlung
-- Instruktionsencoding unabhängig vom CLR-`StructLayout`
-- IEEE-754-Encoding für Floats
-- maximale Datei-, Tabellen-, String- und Codegrößen
-- Regeln für unbekannte Versionen, Flags, Opcodes und Sections
-- deterministische/canonical Serialisierung
-- `FileSize` korrekt setzen und validieren
-- Entscheidung über Checksumme oder Content-Hash
-- Debug-Segment entweder implementieren oder das momentan nur gesetzte Debug-Flag vorerst entfernen
+- kanonischer Little-Endian-Writer und begrenzter byteorientierter Reader
+- gemeinsamer vollständiger Validator für Reader, Writer und `Host.Load`
+- festes Datei- und Section-Framing ohne CLR-Layout-Abhängigkeit
+- striktes UTF-8, IEEE-754-Binary64 und overflow-sichere Größenlimits
+- stabile Formatfehler für ungültige Header, Sections, Referenzen, Operanden,
+  Sprünge, Calls, Ressourcenmetadaten und Debugdaten
+- azyklische Call-Graph-Validierung auch für geladene, nicht vertrauenswürdige
+  Programme
+- unabhängige optionale Segmente für DebugSymbols, SourceMap, SourceArchive und
+  BuildMetadata
+- Retention unbekannter optionaler Sections sowie kanonisches erneutes Schreiben
+- Golden-, Invalid-, Retention-, Unicode-, Runtime- und JSON-Roundtrip-Tests
 
-Der Validator muss mindestens prüfen:
+Festgelegte Abgrenzungen:
 
-- Magic, Version, Header und Dateigröße
-- alle Tabellen-, Slice- und Stringgrenzen
-- Bind-Arten und IDs
-- Entry-, Jump- und Call-Adressen
-- Opcode und Operandenkombinationen
-- Call-Graph weiterhin azyklisch
-- `RequiredRegisterCount` und `RequiredCallStackDepth`
-- External-, Extension-, Record- und Outbound-Referenzen
-- keine gewöhnlichen `IndexOutOfRangeException` aus beschädigten Dateien
+- V1 enthält keine Datei-Checksumme und keine Authentizitätsgarantie. Der
+  Security-ID-Bereich ist reserviert; Signaturen, Schlüssel und Trust Policy sind
+  getrennte spätere Themen.
+- Bekannte V1-Sections sind unkomprimiert. Codec-Bits sind reserviert und
+  Kompression bleibt eine spätere Erweiterung.
+- Kanonische unkomprimierte Programs schreiben sich byteidentisch erneut.
+  Verschiedene Compiler dürfen jedoch unterschiedlichen semantisch gleichwertigen
+  Bytecode und unterschiedliche Registerbelegungen erzeugen.
 
-Dazu gehören Binary-Conformance-Fixtures:
-
-- Source → erwartete `.gesb`-Bytes
-- Program → Write → Read → gleiches Program
-- Read → Write → byte-identische kanonische Datei
-- abgeschnittene und manipulierte Dateien
-- ungültige Tabellenreferenzen und Sprünge
-- unbekannte Versionen und Flags
-- dieselbe `.gesb`-Datei wird von allen Runtime-Implementierungen ausgeführt
-
-Vorher muss entschieden werden, ob verschiedene Compiler byte-identische Programme erzeugen müssen. Meine Empfehlung:
-
-- Reader/Writer müssen kanonisch und byte-identisch sein.
-- Runtime-Ergebnisse müssen identisch sein.
-- Compiler müssen nicht zwingend dieselbe Registerbelegung erzeugen, solange Semantik und Ressourcenlimits stimmen.
-
-Sonst würden spätere Register- und Liveness-Optimierungen unnötig eingeschränkt.
+Noch fehlende sprachübergreifende `.gesb`-Fixtures werden unter Punkt 5 geführt,
+weil ihre Ausführung erst gemeinsam mit den Runtime-Ports geprüft werden kann.
 
 ## 2. Portable Sprache und Runtime-Semantik festschreiben
 
@@ -217,7 +200,9 @@ Benötigt werden:
 - Observer-Trace-Format
 - Publish-Result-Format
 - Float-Toleranzen
-- Binary-Fixture-Unterstützung
+- Binary-Fixture-Unterstützung mit eingecheckten kanonischen `.gesb`-Dateien und
+  sprachneutralem Manifest für Source, Compileroptionen, ProgramVersion und
+  erwarteten Datei-Hash
 - Trennung zwischen Conformance-JSON und zukünftigem Produkt-/Wire-JSON
 
 ### In JSON zu verschieben
@@ -228,7 +213,10 @@ Benötigt werden:
 - Lists, Maps, Records, Dice, Range, Vector und Point
 - Random-Known-Answer-Tests
 - Compiler-Metadaten
-- `.gesb` Read/Write/Validation
+- `.gesb` Read/Write/Validation einschließlich beschädigter Fixtures und stabiler
+  Formatfehler
+- dieselben eingecheckten `.gesb`-Fixtures in C#, Swift, Kotlin und C++ laden und
+  mit identischen Runtime-Ergebnissen ausführen
 - Direct- und Indirect-Call-Cycles
 - Native-only Host
 - mehrere Hosts mit demselben Program
@@ -460,25 +448,26 @@ Normativ sollten sein:
 3. sprachneutrale Text-, Zahlen-, Fehler- und Ownership-Verträge festlegen.
 4. External-Type-Metadaten von CLR-Bindings trennen.
 5. JSON-Schema und Runner-Vertrag definieren.
-6. Opcode-IDs und Binary-Version 1 einfrieren.
+6. die bereits festgelegte Binary-Version 1 übernehmen und Opcode-IDs über eine
+   zentrale maschinenlesbare Definition stabilisieren.
 7. Beamable/Unity-Abhängigkeit aus dem Core lösen.
 
 ### Phase B – erstes gemeinsames Portierungs-Gate
 
-8. `.gesb` Writer, Reader und Validator implementieren.
-9. Golden- und Invalid-Binary-Fixtures ergänzen.
-10. geordnete JSON-Argumentdarstellung einführen.
-11. portable Registry-Fixtures für Extensions und External Types einführen.
-12. portable C#-Tests in JSON überführen.
-13. C# muss sämtliche neuen Fixtures bestehen.
+8. kanonische Golden- und Invalid-`.gesb`-Fixtures samt sprachneutralem Manifest
+   aus der bestehenden C#-Implementierung erzeugen und einchecken.
+9. geordnete JSON-Argumentdarstellung einführen.
+10. portable Registry-Fixtures für Extensions und External Types einführen.
+11. portable C#-Tests in JSON überführen.
+12. C# muss sämtliche neuen Fixtures bestehen.
 
 ### Phase C – erste zweite Runtime
 
-14. kleinste Runtime, vermutlich Kotlin oder Swift, gegen bestehende `.gesb`-Fixtures implementieren.
-15. Differential Tests gegen C#.
-16. Host- und Runtime-Conformance vollständig herstellen.
-17. Performance-/Allokationsmessung der zweiten Runtime.
-18. danach weitere Sprachen und Compilerportierungen.
+13. kleinste Runtime, vermutlich Kotlin oder Swift, gegen bestehende `.gesb`-Fixtures implementieren.
+14. Differential Tests gegen C#.
+15. Host- und Runtime-Conformance vollständig herstellen.
+16. Performance-/Allokationsmessung der zweiten Runtime.
+17. danach weitere Sprachen und Compilerportierungen.
 
 ## Kein Monorepo-Blocker
 
@@ -495,4 +484,4 @@ Das Conformance-JSON muss allerdings unabhängig davon jetzt stabilisiert werden
 
 Der kritischste Pfad ist damit:
 
-**portabler Semantikvertrag → External-Binding-Trennung → JSON-Schema → `.gesb` v1 + Validator → Golden Fixtures → erste zweite Runtime.**
+**portabler Semantikvertrag → External-Binding-Trennung → JSON-Schema und Runner-Vertrag → portable `.gesb`-Fixtures → erste zweite Runtime.**

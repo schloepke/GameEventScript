@@ -47,6 +47,9 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Native `Subscribe` returns an idempotently detachable `GameEventScriptSubscription`.
 - Each host creates one `GameEventScriptContext`, owns one logical-message ring queue, and lazily creates at most one reusable `GesVmState`.
 - `GameEventScriptVirtualMachine` is a stateless executor; program-specific dynamic links live in `GesLinkedProgram`.
+- External types use a declarative compiler catalog, a separate host runtime
+  registry, and portable `IGameEventScriptExternalValue` instances. CLR-backed
+  implementations remain in `CSharpBridge`.
 - `Receive` and `Emit` are local. `Publish` is local plus one optional synchronous `IGameEventScriptPublishSink`.
 - Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
 - There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
@@ -56,6 +59,31 @@ The project has a portable Game Event Script host/VM architecture with a compact
   and equal-priority host dispatch.
 
 ## Recent Completed Work
+
+### Portable External-Type Boundary
+
+- External type declarations are separated from runtime bindings.
+  `GameEventScriptBuilder.WithExternalTypeCatalog(...)` consumes only portable
+  declarative definitions, while
+  `GameEventScriptHostBuilder.WithExternalTypeRegistry(...)` configures the
+  constructor bindings resolved by `Host.Load`.
+- `GameEventScriptExternalTypeDefinition` no longer contains CLR field readers,
+  delegates, or constructor bindings. Runtime instances cross the Core boundary
+  through `IGameEventScriptExternalValue`.
+- CLR objects, Reflection, Attributes, field readers, constructor invocation,
+  and conversion stay in `CSharpBridge`. Its registry implements both portable
+  inputs only as a C# convenience adapter.
+- JSON conformance uses a manual external-type catalog, runtime registry, and
+  value implementation rather than a reflected C# fixture. Reflection behavior
+  remains covered by separate bridge tests.
+
+Verification after this change:
+
+```text
+1059/1059 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
 
 ### Portable Determinism Semantics
 

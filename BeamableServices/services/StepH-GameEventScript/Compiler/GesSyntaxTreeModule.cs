@@ -16,14 +16,14 @@ internal sealed class GesSyntaxTreeModule
     internal GesSyntaxTreeModule(string moduleName,
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, IReadOnlyDictionary<string, GesCallableDefinition> callables,
         IReadOnlyDictionary<string, IReadOnlyList<EventHandlerNode>> handlers,
-        IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition>? externalTypeDefinitions = null,
+        IGameEventScriptExternalTypeCatalog? externalTypeDefinitions = null,
         IReadOnlyList<GesSourceDocument>? sources = null)
     {
         ModuleName = string.IsNullOrWhiteSpace(moduleName) ? "UnknownModule" : moduleName;
         TypeDefinitions = typeDefinitions ?? throw new ArgumentNullException(nameof(typeDefinitions));
         Callables = callables ?? throw new ArgumentNullException(nameof(callables));
         Handlers = handlers ?? throw new ArgumentNullException(nameof(handlers));
-        ExternalTypeDefinitions = externalTypeDefinitions ?? new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
+        ExternalTypeDefinitions = externalTypeDefinitions ?? GameEventScriptEmptyExternalTypeCatalog.Instance;
         Sources = sources ?? [];
     }
 
@@ -31,7 +31,7 @@ internal sealed class GesSyntaxTreeModule
 
     internal IReadOnlyDictionary<string, TypeDefinitionNode> TypeDefinitions { get; }
 
-    internal IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> ExternalTypeDefinitions { get; }
+    internal IGameEventScriptExternalTypeCatalog ExternalTypeDefinitions { get; }
 
     internal IReadOnlyDictionary<string, GesCallableDefinition> Callables { get; }
 

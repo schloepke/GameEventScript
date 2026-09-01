@@ -2,13 +2,19 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Runtime.Values;
 
-internal sealed class GesExternalObject(object instance, GameEventScriptExternalTypeDefinition definition)
+internal sealed class GesExternalValue
 {
     private GesValueMap? _map;
 
-    internal object Instance { get; } = instance;
+    internal GesExternalValue(IGameEventScriptExternalValue value)
+    {
+        Value = value ?? throw new System.ArgumentNullException(nameof(value));
+        Definition = value.Definition ?? throw new System.ArgumentException("External value does not provide a type definition.", nameof(value));
+    }
 
-    internal GameEventScriptExternalTypeDefinition Definition { get; } = definition;
+    internal IGameEventScriptExternalValue Value { get; }
+
+    internal GameEventScriptExternalTypeDefinition Definition { get; }
 
     internal string CustomTypeName => Definition.Name;
 
@@ -24,7 +30,7 @@ internal sealed class GesExternalObject(object instance, GameEventScriptExternal
         var count = 0;
         foreach (var field in Definition.Fields)
         {
-            var sourceValue = Definition.GetField(field.Name, Instance);
+            var sourceValue = Value.GetField(field.Name);
             if (!sourceValue.HasValue)
             {
                 continue;

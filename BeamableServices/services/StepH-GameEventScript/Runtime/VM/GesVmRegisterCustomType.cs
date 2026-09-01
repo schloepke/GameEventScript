@@ -151,7 +151,7 @@ internal static class GesVmRegisterCustomType
         }
 
         var call = vmState.ExternalTypeConstructorCall;
-        call.BeginCall(vmState, destinationRegister, new GesValueArguments(arguments));
+        call.BeginCall(vmState, destinationRegister, new GesValueArguments(arguments), constructor.Definition.TypeName);
         try
         {
             constructor.Invoke(call);

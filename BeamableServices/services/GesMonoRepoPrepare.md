@@ -127,68 +127,115 @@ festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 
 ## 3. C#-Kopplungen im portablen API/Core auflösen
 
-Nicht jedes C#-Sprachkonstrukt muss entfernt werden. `readonly struct`, `ref`, `init`, `IEnumerable` oder `AggressiveInlining` dürfen interne C#-Implementierungsdetails bleiben. Entscheidend ist, dass sie keinen sprachübergreifenden Vertrag definieren.
+Nicht jedes C#-Sprachkonstrukt muss entfernt werden. `readonly struct`, `ref`,
+`init`, `IEnumerable`, `AggressiveInlining` und auch das interne `object?`-Feld
+der C#-Implementierung von `GesValue` dürfen Implementierungsdetails bleiben.
+Entscheidend ist, dass sie keinen sprachübergreifenden Vertrag definieren und
+keine beliebigen CLR-Objekte in die portable API oder Runtime abstrahiert werden.
 
-Tatsächliche Kopplungen sind dagegen:
+### 3.1 External Types - DONE
 
-### External Types
+Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 
-[GameEventScriptExternalTypes.cs](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/Api/GameEventScriptExternalTypes.cs) enthält im portablen API `object` und `Func<object, GesValue>`. Compilerbeschreibung und ausführbare CLR-Bindings sind vermischt.
+- `IGameEventScriptExternalTypeCatalog` enthält ausschließlich deklarative
+  Typ-, Feld-, Konstruktor-, Parameter- und Signaturdaten.
+- Der Compiler verwendet nur den Katalog; ausführbare Bindings werden weder zur
+  Compilation benötigt noch im Program gespeichert.
+- `IGameEventScriptExternalTypeRegistry` ist die getrennte hostgebundene
+  Linker-Grenze für Konstruktorimporte bei `Host.Load`.
+- `IGameEventScriptExternalValue` bildet Runtime-Werte und Feldzugriff ohne
+  beliebige Plattformobjekte im portablen Core ab.
+- CLR-Objekte, Reflection, Attributes, Reader, Converter und Aufrufe liegen im
+  `CSharpBridge`. Der C#-Adapter kombiniert Katalog und Registry lediglich als
+  Komfortoberfläche.
+- JSON-Conformance verwendet einen manuellen Katalog, eine manuelle Registry und
+  einen manuellen `aim`-Wert; C#-Reflection bleibt in separaten Bridge-Tests.
 
-Benötigte Trennung:
+### 3.2 Native Handler und Lebenszyklus
 
-- portable External-Type-Beschreibung:
-    - Name
-    - Felder
-    - Konstruktoren
-    - Argumentsignaturen
-- hostgebundene Runtime-Implementierung
-- C#-`object`, Reflection, Attributes und Converter ausschließlich im `CSharpBridge`
-- portable manuelle Registry für Conformance-Tests
+Der Core-Host verwendet direkt `Action<GameEventScriptMessage,
+GameEventScriptContext>`. `GameEventScriptInstance` und
+`GameEventScriptSubscription` halten außerdem `Func<bool>`-Closures für Detach
+und Unsubscribe.
 
-Der Compiler sollte nur die deklarative Typbeschreibung benötigen, nicht die CLR-Ausführung.
+Benötigte Schritte:
 
-### Native Handler und Lebenszyklus
+1. Eine portable Native-Handler-Schnittstelle beziehungsweise Handler-Referenz
+   definieren und im Core-Host verwenden.
+2. Bequeme `Action`-Overloads und deren Adapter in den `CSharpBridge`
+   verschieben.
+3. Hostseitige stabile Registrierungs-IDs für Programminstanzen und native
+   Subscriptions einführen.
+4. `GameEventScriptInstance.Detach()` und
+   `GameEventScriptSubscription.Unsubscribe()` über Host plus
+   Registrierungs-ID ausführen, ohne gespeicherte Closures.
+5. Idempotenz und die bestehende Snapshot-Semantik beibehalten: bereits
+   eingereihte Dispatch-Snapshots laufen weiter, spätere Nachrichten sehen die
+   entfernte Registrierung nicht mehr.
+6. API-Snapshot, Native-only-Host-Tests, dynamische Registrierung sowie den
+   CSharpBridge-Auto-Runner entsprechend migrieren.
 
-Der Host verwendet direkt `Action<...>`, während Instance und Subscription intern `Func<bool>`-Closures halten.
+### 3.3 Geordnete Message-Argumente
 
-Besser portierbar wären:
+Die interne Message-Repräsentation ist bereits geordnet. Der portable Vertrag
+wird aber durch `GameEventScriptMessageArguments.Create(IReadOnlyDictionary...)`
+und JSON-`args` als Objekt verletzt, weil dabei Map- beziehungsweise
+Property-Iteration die Signaturreihenfolge bestimmt.
 
-- portable Handler-Schnittstelle beziehungsweise Handler-Referenz
-- Registrierungs-ID statt gespeicherter Detach-Closure
-- `Instance.Detach()` delegiert über Host plus ID
-- komfortable `Action`-Overloads nur als C#-Adapter
+Benötigte Schritte:
 
-Das ist kein unmittelbarer Semantikfehler, erleichtert aber C++ und reduziert versteckte Closure-Allokationen.
+1. Eine explizit geordnete portable Argumentdarstellung für die öffentliche
+   Core-API festlegen. Argumentname und Wert bleiben ein geordnetes Paar; die
+   Reihenfolge ist Teil der Message-Signatur.
+2. Die namebasierte Dictionary-Factory aus dem Core entfernen. Ein
+   Dictionary-Adapter darf nur zusammen mit einer bereits bekannten Signatur
+   Werte nach deren Parameterreihenfolge binden.
+3. C#-Tuple- und Dictionary-Komfortoberflächen bei Bedarf im `CSharpBridge`
+   anbieten, ohne einen eigenen Reihenfolgevertrag zu erzeugen.
+4. Doppelte normalisierte Argumentnamen und andere mehrdeutige Shapes
+   portabel und deterministisch ablehnen.
+5. Alle JSON-Conformance-Messages auf eine geordnete Darstellung migrieren:
 
-### Geordnete Message-Argumente
+   ```json
+   "args": [
+     { "name": "target", "value": { "type": ":text", "value": "t1" } },
+     { "name": "unit", "value": { "type": ":text", "value": "u1" } }
+   ]
+   ```
 
-Das ist ein konkreter Blocker: `GameEventScriptMessageArguments.Create(IReadOnlyDictionary...)` übernimmt die Dictionary-Iteration als Signaturreihenfolge.
+6. Input, erwartete lokale und outbound Messages, verschachtelte Message-Werte
+   sowie externe Emits einheitlich umstellen.
+7. JSON-Conformance für unterschiedliche Argumentreihenfolgen, leere Argumente,
+   doppelte Namen und Signaturmatching ergänzen.
 
-Auch die JSON-Conformance verwendet aktuell JSON-Objekte und deren Property-Reihenfolge. Das ist nicht als portabler Vertrag geeignet.
+### 3.4 Stabiler Fehlervertrag
 
-Benötigt:
+`.gesb`-Formatfehler besitzen bereits stabile Codes. Compile-Fehler sind nur
+teilweise strukturiert; einzelne Compilerpfade, Dynamic Linking und VM-Fehler
+verwenden weiterhin freie englische Texte. Runtime-Fehler sind außerdem nicht
+als strukturierte Ereignisse über Execution Result oder Observer sichtbar.
 
-```
-"args": [
-  { "name": "target", "value": ... },
-  { "name": "unit", "value": ... }
-]
-```
+Benötigte Schritte:
 
-Dictionary-/Map-Convenience kann im jeweiligen Sprachadapter bleiben, darf aber keine Signaturreihenfolge festlegen.
-
-### Fehlervertrag
-
-Compiler-, Decoder-, Linker- und Runtime-Fehler benötigen stabile Codes:
-
-- Fehlerphase
-- Fehlercode
-- Symbolart
-- Source Range
-- optional technische Details
-
-Die Conformance sollte Fehlercodes prüfen, nicht englische `messageContains`-Texte.
+1. Einen sprachneutralen Diagnosevertrag mit stabiler Fehlerphase und stabilem
+   Fehlercode definieren. Mindestens `parse`, `validate`, `compile`, `decode`,
+   `link` und `runtime` müssen eindeutig unterscheidbar sein.
+2. Gemeinsame optionale Diagnosefelder für Symbol, Symbolart, Source Range,
+   Program beziehungsweise Handler und technische Details festlegen. Freier
+   Meldungstext bleibt nur eine menschenlesbare Ergänzung.
+3. Alle Parser-, Validator- und Compilerfehler strukturiert erzeugen; generische
+   `GameEventScriptCompileException(string)`-Pfade aus dem portablen Ablauf
+   entfernen.
+4. `GameEventScriptDynamicLinkException` um stabile Link-Codes und relevante
+   Referenzinformationen erweitern.
+5. VM- und Runtime-Fehler mit stabilen Codes versehen und über einen definierten
+   Observer- beziehungsweise Execution-Vertrag sichtbar machen, ohne den
+   Runtime-Hot-Path unnötig zu allozieren.
+6. Exceptions als C#-Transportmechanismus behandeln; der portable Vertrag sind
+   die Diagnosedaten, nicht die CLR-Exception-Hierarchie.
+7. JSON-Conformance von `messageContains` auf Phase plus Fehlercode und, wo
+   sinnvoll, Source-/Symbolfelder migrieren. Englischer Text darf nicht mehr
+   über Bestehen oder Fehlschlagen eines portablen Tests entscheiden.
 
 ## 4. `GameEventScriptProgram` als wirklich portables Datenmodell härten
 

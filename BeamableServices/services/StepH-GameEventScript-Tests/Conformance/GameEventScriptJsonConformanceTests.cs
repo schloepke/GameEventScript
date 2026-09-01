@@ -549,7 +549,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         {
             var host = GameEventScriptManager.CreateHostBuilder()
                 .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
-                .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+                .WithExternalTypeRegistry(GameEventScriptConformanceRunner.ExternalTypeRegistry)
                 .WithRuntimeLimits(GameEventScriptConformanceRunner.CreateRuntimeLimitsForTest(testCase.Test.RuntimeLimits))
                 .Build();
             return host.Load(binaryBuild.Value);
@@ -713,7 +713,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         var builder = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(GameEventScriptConformanceRunner.CreateRandomForTest(testCase.Test.RandomSequence))
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
-            .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+            .WithExternalTypeRegistry(GameEventScriptConformanceRunner.ExternalTypeRegistry)
             .WithRuntimeLimits(GameEventScriptConformanceRunner.CreateRuntimeLimitsForTest(testCase.Test.RuntimeLimits))
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
                 messageEmitted: emitted,
@@ -759,7 +759,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
             var binary = GesCompiler.Compile(module, compileOptions);
             var host = GameEventScriptManager.CreateHostBuilder()
                 .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
-                .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+                .WithExternalTypeRegistry(GameEventScriptConformanceRunner.ExternalTypeRegistry)
                 .Build();
             _ = host.Load(binary);
         }
@@ -1047,7 +1047,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         {
             var source = test.Programs[index];
             programs[index] = GameEventScriptBuilder.Create()
-                .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+                .WithExternalTypeCatalog(GameEventScriptConformanceRunner.ExternalTypeCatalog)
                 .AddScript(source.Text ?? string.Empty, source.SourceName)
                 .Compile(options);
         }
@@ -1091,7 +1091,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var host = GameEventScriptManager.CreateHostBuilder()
             .WithRandom(random)
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
-            .WithExternalTypes(GameEventScriptConformanceRunner.ExternalTypeRegistry)
+            .WithExternalTypeRegistry(GameEventScriptConformanceRunner.ExternalTypeRegistry)
             .WithRuntimeLimits(runtimeLimits)
             .WithRuntimeObserver(TestRuntimeObserver.ObserveMessages(
                 messageEmitted: message =>

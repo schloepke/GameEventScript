@@ -372,9 +372,9 @@ internal static class GesVmRegisterTypeCastCheck
             case Custom when xValue.ObjectValue is GesCustomObject customObject:
                 dst.SetMap(customObject.Map);
                 return dst;
-            case Custom when xValue.ObjectValue is GesExternalObject externalObject:
+            case Custom when xValue.ObjectValue is GesExternalValue externalValue:
             {
-                var sourceEntries = externalObject.ToMap();
+                var sourceEntries = externalValue.ToMap();
                 var entries = new GesVmMapBuilder(sourceEntries.Length);
                 for (var i = 0; i < sourceEntries.StorageLength; i++)
                 {
@@ -610,7 +610,7 @@ internal static class GesVmRegisterTypeCastCheck
     }
     private static bool IsCustomType(in GesValue value, string typeName)
     {
-        if (value.ObjectValue is GesExternalObject externalObject) return string.Equals(externalObject.CustomTypeName, typeName, StringComparison.Ordinal);
+        if (value.ObjectValue is GesExternalValue externalValue) return string.Equals(externalValue.CustomTypeName, typeName, StringComparison.Ordinal);
         return value.Kind switch
         {
             Custom when value.ObjectValue is GesCustomObject customObject => string.Equals(customObject.TypeName, typeName, StringComparison.Ordinal),

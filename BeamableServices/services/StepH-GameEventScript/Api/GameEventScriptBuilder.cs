@@ -18,7 +18,7 @@ public sealed class GameEventScriptBuilder
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly List<SourceInput> _sources = [];
     private GameEventScriptCompileOptions _options = new();
-    private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
+    private IGameEventScriptExternalTypeCatalog _externalTypeCatalog = GameEventScriptEmptyExternalTypeCatalog.Instance;
 
     /// <summary>
     /// Creates an instance of the GameEventScriptBuilder.
@@ -55,13 +55,13 @@ public sealed class GameEventScriptBuilder
     }
 
     /// <summary>
-    /// Configures external CLR-backed GameEventScript types that may be referenced by the compiled scripts.
+    /// Configures the declarative external GameEventScript types that may be referenced by compiled scripts.
     /// </summary>
-    /// <param name="registry">The external type registry to use during compilation.</param>
+    /// <param name="catalog">The portable external type catalog to use during compilation.</param>
     /// <returns>The current builder instance.</returns>
-    public GameEventScriptBuilder WithExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    public GameEventScriptBuilder WithExternalTypeCatalog(IGameEventScriptExternalTypeCatalog catalog)
     {
-        _externalTypeRegistry = registry ?? throw new ArgumentNullException(nameof(registry));
+        _externalTypeCatalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
         return this;
     }
 
@@ -128,8 +128,7 @@ public sealed class GameEventScriptBuilder
 
         var errors = new GesValidationErrors();
         var typeDefinitions = BuildTypeDefinitionMap(modules, errors);
-        var externalTypeDefinitions = _externalTypeRegistry.Types;
-        var validationTypeDefinitions = BuildValidationTypeDefinitionMap(typeDefinitions, externalTypeDefinitions, modules, errors);
+        var validationTypeDefinitions = BuildValidationTypeDefinitionMap(typeDefinitions, _externalTypeCatalog, modules, errors);
         var predicateDefinitions = BuildPredicateDefinitionMap(modules, errors);
         var functionDefinitions = BuildFunctionDefinitionMap(modules, errors);
         var callables = BuildCallableDefinitionMap(predicateDefinitions, functionDefinitions);
@@ -162,7 +161,7 @@ public sealed class GameEventScriptBuilder
             var source = _sources[index];
             sourceDocuments[index] = new GesSourceDocument(checked((uint)index), string.IsNullOrEmpty(source.SourceName) ? "UnknownSource" : source.SourceName!, source.Text);
         }
-        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions, sourceDocuments);
+        var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, _externalTypeCatalog, sourceDocuments);
         return GesAstOptimizer.Optimize(moduleResult);
     }
 
@@ -252,13 +251,14 @@ public sealed class GameEventScriptBuilder
         return map;
     }
 
-    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes, IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> externalTypes,
+    private static IReadOnlyDictionary<string, TypeDefinitionNode> BuildValidationTypeDefinitionMap(IReadOnlyDictionary<string, TypeDefinitionNode> scriptTypes, IGameEventScriptExternalTypeCatalog externalTypes,
         IReadOnlyList<ParsedScript> modules, GesValidationErrors errors)
     {
-        if (externalTypes.Count == 0) return scriptTypes;
+        if (externalTypes.Types.Count == 0) return scriptTypes;
         var map = new Dictionary<string, TypeDefinitionNode>(scriptTypes, StringComparer.Ordinal);
-        foreach (var externalType in externalTypes.Values)
+        for (var externalTypeIndex = 0; externalTypeIndex < externalTypes.Types.Count; externalTypeIndex++)
         {
+            var externalType = externalTypes.Types[externalTypeIndex];
             if (map.ContainsKey(externalType.Name))
             {
                 var module = FindModuleWithType(modules, externalType.Name);

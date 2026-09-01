@@ -12,10 +12,10 @@ namespace StepH.GameEventScript.CSharpBridge;
 
 public static class GameEventScriptCSharpExternalTypes
 {
-    public static IGameEventScriptExternalTypeRegistry CreateRegistry(params Type[] types)
+    public static GameEventScriptCSharpExternalTypeRegistry CreateRegistry(params Type[] types)
         => CreateRegistry((IEnumerable<Type>)types);
 
-    public static IGameEventScriptExternalTypeRegistry CreateRegistry(IEnumerable<Type> types)
+    public static GameEventScriptCSharpExternalTypeRegistry CreateRegistry(IEnumerable<Type> types)
         => GameEventScriptCSharpExternalTypeRegistry.Create(types);
 }
 
@@ -94,47 +94,65 @@ public sealed class GesParamAttribute : Attribute
     public GameEventScriptBytecodeInstructionUnit Unit { get; }
 }
 
-internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScriptExternalTypeRegistry
+public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScriptExternalTypeCatalog, IGameEventScriptExternalTypeRegistry
 {
-    private GameEventScriptCSharpExternalTypeRegistry(IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> types)
+    private readonly Dictionary<string, GameEventScriptExternalTypeDefinition> _typesByName = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IGameEventScriptExternalTypeConstructor> _constructors = new(StringComparer.Ordinal);
+    private readonly Dictionary<Type, GameEventScriptCSharpExternalTypeBinding> _bindingsByClrType = new();
+    private IReadOnlyList<GameEventScriptExternalTypeDefinition> _types = Array.Empty<GameEventScriptExternalTypeDefinition>();
+
+    private GameEventScriptCSharpExternalTypeRegistry()
     {
-        Types = types ?? throw new ArgumentNullException(nameof(types));
     }
 
-    public IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> Types { get; }
+    public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types => _types;
 
-    public static GameEventScriptCSharpExternalTypeRegistry Create(params Type[] types)
+    internal static GameEventScriptCSharpExternalTypeRegistry Create(params Type[] types)
         => Create((IEnumerable<Type>)types);
 
-    public static GameEventScriptCSharpExternalTypeRegistry Create(IEnumerable<Type> types)
+    internal static GameEventScriptCSharpExternalTypeRegistry Create(IEnumerable<Type> types)
     {
         _ = types ?? throw new ArgumentNullException(nameof(types));
-        var definitions = new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
+        var registry = new GameEventScriptCSharpExternalTypeRegistry();
         foreach (var type in types)
         {
-            var definition = BuildDefinition(type ?? throw new ArgumentException("External type list contains null.", nameof(types)));
-            if (!definitions.TryAdd(definition.Name, definition))
-            {
-                throw new ArgumentException($"External GameEventScript type ':{definition.Name}' is registered more than once.", nameof(types));
-            }
+            registry.RegisterType(type ?? throw new ArgumentException("External type list contains null.", nameof(types)));
         }
 
-        return new GameEventScriptCSharpExternalTypeRegistry(definitions);
+        registry._types = Array.AsReadOnly(registry._typesByName.Values.ToArray());
+        return registry;
+    }
+
+    public GameEventScriptExternalTypeDefinition? Resolve(string typeName)
+    {
+        var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        return _typesByName.TryGetValue(normalized, out var definition) ? definition : null;
     }
 
     public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
     {
         _ = reference ?? throw new ArgumentNullException(nameof(reference));
-        if (Types.TryGetValue(reference.TypeName, out var typeDefinition) &&
-            typeDefinition.ConstructorBindings.TryGetValue(reference.SignatureId, out var constructor))
-        {
-            return constructor;
-        }
-
-        return null;
+        return _constructors.TryGetValue(reference.SignatureId, out var constructor) ? constructor : null;
     }
 
-    private static GameEventScriptExternalTypeDefinition BuildDefinition(Type clrType)
+    internal GesValue ToValue(object? value)
+    {
+        if (value is not null && CreateExternalValue(value) is { } externalValue)
+        {
+            var result = new GesValue();
+            result.SetExternalType(externalValue);
+            return result;
+        }
+
+        return GameEventScriptCSharpExternalTypeValueConverter.ToValue(value);
+    }
+
+    internal IGameEventScriptExternalValue? CreateExternalValue(object value)
+        => _bindingsByClrType.TryGetValue(value.GetType(), out var binding)
+            ? new GameEventScriptCSharpExternalValue(value, binding, this)
+            : null;
+
+    private void RegisterType(Type clrType)
     {
         var typeAttribute = clrType.GetCustomAttribute<GesTypeAttribute>() ??
                             throw new ArgumentException($"CLR type '{clrType.FullName}' must declare GesTypeAttribute.", nameof(clrType));
@@ -142,23 +160,29 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         var fields = BuildFields(clrType);
         var fieldReaders = fields.ToDictionary(
             field => field.Definition.Name,
-            field => field.Reader,
+            field => field,
             StringComparer.Ordinal);
-        var constructors = BuildConstructors(clrType, typeName, fields.Select(field => field.Definition.Name).ToHashSet(StringComparer.Ordinal));
+        var constructors = BuildConstructors(clrType, typeName, fields.Select(field => field.Definition.Name).ToHashSet(StringComparer.Ordinal), this);
 
         var definition = new GameEventScriptExternalTypeDefinition(
             typeName,
             fields.Select(field => field.Definition).ToArray(),
-            constructors.Select(constructor => constructor.Definition).ToArray(),
-            fieldReaders,
-            constructors.ToDictionary(constructor => constructor.Definition.SignatureId, constructor => (IGameEventScriptExternalTypeConstructor)constructor, StringComparer.Ordinal));
-        GameEventScriptCSharpExternalTypeRuntime.Register(clrType, definition);
-        return definition;
+            constructors.Select(constructor => constructor.Definition).ToArray());
+        if (!_typesByName.TryAdd(definition.Name, definition))
+            throw new ArgumentException($"External GameEventScript type ':{definition.Name}' is registered more than once.", nameof(clrType));
+        if (!_bindingsByClrType.TryAdd(clrType, new GameEventScriptCSharpExternalTypeBinding(definition, fieldReaders)))
+            throw new ArgumentException($"CLR type '{clrType.FullName}' is registered more than once.", nameof(clrType));
+        for (var index = 0; index < constructors.Count; index++)
+        {
+            var constructor = constructors[index];
+            if (!_constructors.TryAdd(constructor.Definition.SignatureId, constructor))
+                throw new ArgumentException($"External GameEventScript constructor ':{constructor.Definition.SignatureId}' is registered more than once.", nameof(clrType));
+        }
     }
 
-    private static IReadOnlyList<ExternalFieldBinding> BuildFields(Type clrType)
+    private static IReadOnlyList<GameEventScriptCSharpExternalFieldBinding> BuildFields(Type clrType)
     {
-        var fields = new List<ExternalFieldBinding>();
+        var fields = new List<GameEventScriptCSharpExternalFieldBinding>();
         foreach (var property in clrType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
         {
             var attribute = property.GetCustomAttribute<GesFieldAttribute>();
@@ -197,21 +221,19 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         return fields;
     }
 
-    private static ExternalFieldBinding CreateFieldBinding(GesFieldAttribute attribute, Func<object, object?> reader)
+    private static GameEventScriptCSharpExternalFieldBinding CreateFieldBinding(GesFieldAttribute attribute, Func<object, object?> reader)
     {
         var definition = attribute.Kind is { } kind
             ? new GameEventScriptExternalTypeFieldDefinition(attribute.Name, kind, attribute.Unit)
             : new GameEventScriptExternalTypeFieldDefinition(attribute.Name, attribute.TypeName);
-        return new ExternalFieldBinding(
-            definition,
-            instance =>
-            {
-                var value = GameEventScriptCSharpExternalTypeValueConverter.ToValue(reader(instance));
-                return GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in value, definition);
-            });
+        return new GameEventScriptCSharpExternalFieldBinding(definition, reader);
     }
 
-    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames)
+    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(
+        Type clrType,
+        string typeName,
+        ISet<string> fieldNames,
+        GameEventScriptCSharpExternalTypeRegistry registry)
     {
         var constructors = new List<ReflectionExternalTypeConstructor>();
         foreach (var constructor in clrType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -221,7 +243,7 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
                 continue;
             }
 
-            constructors.Add(BuildConstructorBinding(typeName, fieldNames, constructor, values => constructor.Invoke(values)));
+            constructors.Add(BuildConstructorBinding(typeName, fieldNames, constructor, values => constructor.Invoke(values), registry));
         }
 
         foreach (var method in clrType.GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic))
@@ -236,7 +258,12 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
                 throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' must return a value.");
             }
 
-            constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, values)));
+            if (!clrType.IsAssignableFrom(method.ReturnType))
+            {
+                throw new ArgumentException($"External GameEventScript constructor '{clrType.FullName}.{method.Name}' must return '{clrType.FullName}'.");
+            }
+
+            constructors.Add(BuildConstructorBinding(typeName, fieldNames, method, values => method.Invoke(null, values), registry));
         }
 
         var duplicates = constructors
@@ -254,7 +281,8 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         string typeName,
         ISet<string> fieldNames,
         MethodBase method,
-        Func<object?[], object?> invoke)
+        Func<object?[], object?> invoke,
+        GameEventScriptCSharpExternalTypeRegistry registry)
     {
         var parameters = method.GetParameters()
             .Select(parameter => BuildParameterDefinition(method, fieldNames, parameter))
@@ -262,11 +290,8 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         return new ReflectionExternalTypeConstructor(
             new GameEventScriptExternalTypeConstructorDefinition(typeName, parameters.Select(parameter => parameter.Definition)),
             parameters,
-            values =>
-            {
-                var result = invoke(values);
-                return result;
-            });
+            invoke,
+            registry);
     }
 
     private static ExternalParameterBinding BuildParameterDefinition(MethodBase method, ISet<string> fieldNames, ParameterInfo parameter)
@@ -284,14 +309,13 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
         return new ExternalParameterBinding(definition, parameter.ParameterType);
     }
 
-    private sealed record ExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, GesValue> Reader);
-
     private sealed record ExternalParameterBinding(GameEventScriptExternalTypeParameterDefinition Definition, Type ClrType);
 
     private sealed class ReflectionExternalTypeConstructor(
         GameEventScriptExternalTypeConstructorDefinition definition,
         IReadOnlyList<ExternalParameterBinding> parameters,
-        Func<object?[], object?> invoke) : IGameEventScriptExternalTypeConstructor
+        Func<object?[], object?> invoke,
+        GameEventScriptCSharpExternalTypeRegistry registry) : IGameEventScriptExternalTypeConstructor
     {
         public GameEventScriptExternalTypeConstructorDefinition Definition { get; } = definition;
 
@@ -317,43 +341,44 @@ internal sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScri
                 return;
             }
 
-            if (result is GesValue vmValue)
+            var externalValue = registry.CreateExternalValue(result);
+            if (externalValue is null)
             {
-                call.SetValue(vmValue);
+                call.SetNothing();
                 return;
             }
 
-            if (GameEventScriptCSharpExternalTypeRuntime.TryGetDefinitionForInstance(result, out var externalDefinition))
-            {
-                call.SetExternalCustomType(new GesExternalObject(result, externalDefinition));
-                return;
-            }
-
-            call.SetValue(GameEventScriptCSharpExternalTypeValueConverter.ToValue(result));
+            call.SetExternalValue(externalValue);
         }
     }
 }
 
-internal static class GameEventScriptCSharpExternalTypeRuntime
+internal sealed record GameEventScriptCSharpExternalFieldBinding(
+    GameEventScriptExternalTypeFieldDefinition Definition,
+    Func<object, object?> Reader);
+
+internal sealed class GameEventScriptCSharpExternalTypeBinding(
+    GameEventScriptExternalTypeDefinition definition,
+    IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> fields)
 {
-    private static readonly Dictionary<Type, GameEventScriptExternalTypeDefinition> DefinitionsByClrType = new();
-    private static readonly object Gate = new();
+    internal GameEventScriptExternalTypeDefinition Definition { get; } = definition;
+    internal IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> Fields { get; } = fields;
+}
 
-    public static void Register(Type clrType, GameEventScriptExternalTypeDefinition definition)
-    {
-        lock (Gate)
-        {
-            DefinitionsByClrType[clrType] = definition;
-        }
-    }
+internal sealed class GameEventScriptCSharpExternalValue(
+    object instance,
+    GameEventScriptCSharpExternalTypeBinding binding,
+    GameEventScriptCSharpExternalTypeRegistry registry) : IGameEventScriptExternalValue
+{
+    internal object Instance { get; } = instance;
 
-    public static bool TryGetDefinitionForInstance(object instance, out GameEventScriptExternalTypeDefinition definition)
+    public GameEventScriptExternalTypeDefinition Definition => binding.Definition;
+
+    public GesValue? GetField(string fieldName)
     {
-        var clrType = instance.GetType();
-        lock (Gate)
-        {
-            return DefinitionsByClrType.TryGetValue(clrType, out definition!);
-        }
+        if (!binding.Fields.TryGetValue(fieldName, out var field)) return null;
+        var value = registry.ToValue(field.Reader(Instance));
+        return GameEventScriptExternalTypeValueConverter.CoerceToDeclaredType(in value, field.Definition);
     }
 }
 
@@ -397,13 +422,6 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
                 result.SetMessageHandler(signature);
                 return result;
             }
-        }
-
-        if (GameEventScriptCSharpExternalTypeRuntime.TryGetDefinitionForInstance(value, out var externalDefinition))
-        {
-            var result = new GesValue();
-            result.SetExternalCustomType(new GesExternalObject(value, externalDefinition));
-            return result;
         }
 
         throw new InvalidOperationException($"Cannot convert CLR value of type '{value.GetType().FullName}' to GesValue.");
@@ -513,7 +531,9 @@ internal static class GameEventScriptCSharpExternalTypeValueConverter
     public static object? ToClrExternalObjectValue(in GesValue value, Type objectType)
     {
         _ = objectType ?? throw new ArgumentNullException(nameof(objectType));
-        if (value.ObjectValue is GesExternalObject externalObject && objectType.IsInstanceOfType(externalObject.Instance)) return externalObject.Instance;
+        if (value.ObjectValue is GesExternalValue externalValue &&
+            externalValue.Value is GameEventScriptCSharpExternalValue csharpValue &&
+            objectType.IsInstanceOfType(csharpValue.Instance)) return csharpValue.Instance;
         return null;
     }
 }

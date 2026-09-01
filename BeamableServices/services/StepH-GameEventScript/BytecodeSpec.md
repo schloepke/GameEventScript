@@ -1117,10 +1117,12 @@ to direct opcodes. Series creation is also a direct opcode. All extension call
 arguments, including zero-argument calls, are represented by a concrete argument
 register-list entry in `UShortListPool`.
 
-External type constructors are collected separately in
-`ExternalTypeConstructorReferences` and dynamically bound against the host's
-external type registry. Record constructors and external constructors share the
-same source syntax but must remain distinguishable in portable metadata.
+External type constructors are emitted as `ExternalType` imports in the binding
+segment and dynamically bound against the host's external type runtime registry.
+The compiler validates source against a separate, declarative external type
+catalog; neither that catalog nor executable bindings are stored in the program.
+Record constructors and external constructors share the same source syntax but
+remain distinguishable through their binding kind.
 
 ### Collection DSL
 

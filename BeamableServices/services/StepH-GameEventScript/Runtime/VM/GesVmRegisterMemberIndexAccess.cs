@@ -16,7 +16,7 @@ internal static class GesVmRegisterMemberIndexAccess
             case Custom when obj.ObjectValue is GesCustomObject customObject && customObject.Map.Get(key) is { } value:
                 vmState.SetValue(destinationRegister, in value);
                 return;
-            case Custom when obj.ObjectValue is GesExternalObject externalObject && externalObject.ToMap().Get(key) is { } value:
+            case Custom when obj.ObjectValue is GesExternalValue externalValue && externalValue.ToMap().Get(key) is { } value:
                 vmState.SetValue(destinationRegister, in value);
                 return;
             case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp && vp.GetComponent(key) is { } value:

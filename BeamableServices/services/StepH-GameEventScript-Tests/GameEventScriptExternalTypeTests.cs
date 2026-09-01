@@ -11,6 +11,36 @@ namespace StepH_GameEventScript_Tests;
 public sealed class GameEventScriptExternalTypeTests
 {
     [TestMethod]
+    public void PortableCatalogRejectsDuplicateTypeNames()
+    {
+        var definition = new GameEventScriptExternalTypeDefinition("sample", [], []);
+
+        Assert.ThrowsExactly<ArgumentException>(() =>
+            new GameEventScriptExternalTypeCatalog([definition, definition]));
+    }
+
+    [TestMethod]
+    public void HostRejectsRuntimeRegistryReturningDifferentConstructorDefinition()
+    {
+        var field = new GameEventScriptExternalTypeFieldDefinition("value", GameEventScriptBytecodeTypeKind.Float);
+        var parameter = new GameEventScriptExternalTypeParameterDefinition("value", GameEventScriptBytecodeTypeKind.Float);
+        var definition = new GameEventScriptExternalTypeDefinition(
+            "sample",
+            [field],
+            [new GameEventScriptExternalTypeConstructorDefinition("sample", [parameter])]);
+        var program = GameEventScriptBuilder.Create()
+            .WithExternalTypeCatalog(new GameEventScriptExternalTypeCatalog([definition]))
+            .AddScript("on Start { let value be :sample(value: 1) }")
+            .Compile();
+
+        Assert.ThrowsExactly<GameEventScriptDynamicLinkException>(() =>
+            GameEventScriptHost.CreateBuilder()
+                .WithExternalTypeRegistry(new MismatchedRuntimeRegistry())
+                .Build()
+                .Load(program));
+    }
+
+    [TestMethod]
     public void ExternalTypeConstructorIsPortableAndBoundByHost()
     {
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
@@ -29,7 +59,7 @@ public sealed class GameEventScriptExternalTypeTests
             """;
 
         var bytecode = GameEventScriptBuilder.Create()
-            .WithExternalTypes(registry)
+            .WithExternalTypeCatalog(registry)
             .AddScript(script)
             .Compile();
 
@@ -39,7 +69,7 @@ public sealed class GameEventScriptExternalTypeTests
 
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithExternalTypes(registry)
+            .WithExternalTypeRegistry(registry)
             .Build();
         host.Load(bytecode);
         host.Subscribe("Done", ["isAim", "bearing", "range", "steps", "directionZ", "checksum"], (message, _) => received.Add(message));
@@ -65,7 +95,7 @@ public sealed class GameEventScriptExternalTypeTests
     {
         var registry = GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
         var bytecode = GameEventScriptBuilder.Create()
-            .WithExternalTypes(registry)
+            .WithExternalTypeCatalog(registry)
             .AddScript(
                 """
                 on Start {
@@ -88,7 +118,7 @@ public sealed class GameEventScriptExternalTypeTests
 
         var exception = Assert.ThrowsExactly<GameEventScriptCompileException>(() =>
             GameEventScriptBuilder.Create()
-                .WithExternalTypes(registry)
+                .WithExternalTypeCatalog(registry)
                 .AddScript(
                     """
                     on Start {
@@ -118,13 +148,13 @@ public sealed class GameEventScriptExternalTypeTests
             """;
 
         var bytecode = GameEventScriptBuilder.Create()
-            .WithExternalTypes(registry)
+            .WithExternalTypeCatalog(registry)
             .AddScript(script)
             .Compile();
 
         var received = new List<GameEventScriptMessage>();
         var host = GameEventScriptHost.CreateBuilder()
-            .WithExternalTypes(registry)
+            .WithExternalTypeRegistry(registry)
             .WithRegistry(GameEventScriptCSharpExtensions.CreateRegistry(typeof(AimExtensionFunctions)))
             .Build();
         host.Load(bytecode);
@@ -248,6 +278,22 @@ public sealed class GameEventScriptExternalTypeTests
     {
         [GesFunction("value", GameEventScriptBytecodeTypeKind.Float)]
         public static long Value() => 2;
+    }
+
+    private sealed class MismatchedRuntimeRegistry : IGameEventScriptExternalTypeRegistry
+    {
+        private readonly MismatchedConstructor _constructor = new();
+
+        public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference)
+            => _constructor;
+    }
+
+    private sealed class MismatchedConstructor : IGameEventScriptExternalTypeConstructor
+    {
+        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } =
+            new("different", [new GameEventScriptExternalTypeParameterDefinition("value", GameEventScriptBytecodeTypeKind.Float)]);
+
+        public void Invoke(GesExternalTypeConstructorCall call) => call.SetNothing();
     }
 
 }

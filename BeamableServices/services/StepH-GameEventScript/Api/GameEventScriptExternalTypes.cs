@@ -9,9 +9,50 @@ namespace StepH.GameEventScript.Api;
 
 public interface IGameEventScriptExternalTypeRegistry
 {
-    IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> Types { get; }
-
     IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference);
+}
+
+public interface IGameEventScriptExternalTypeCatalog
+{
+    IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; }
+
+    GameEventScriptExternalTypeDefinition? Resolve(string typeName);
+}
+
+public interface IGameEventScriptExternalValue
+{
+    GameEventScriptExternalTypeDefinition Definition { get; }
+
+    GesValue? GetField(string fieldName);
+}
+
+public sealed class GameEventScriptExternalTypeCatalog : IGameEventScriptExternalTypeCatalog
+{
+    private readonly Dictionary<string, GameEventScriptExternalTypeDefinition> _typesByName;
+
+    public GameEventScriptExternalTypeCatalog(IEnumerable<GameEventScriptExternalTypeDefinition> types)
+    {
+        _ = types ?? throw new ArgumentNullException(nameof(types));
+        var definitions = new List<GameEventScriptExternalTypeDefinition>();
+        _typesByName = new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
+        foreach (var definition in types)
+        {
+            _ = definition ?? throw new ArgumentException("External type catalog contains null.", nameof(types));
+            if (!_typesByName.TryAdd(definition.Name, definition))
+                throw new ArgumentException($"External GameEventScript type ':{definition.Name}' is declared more than once.", nameof(types));
+            definitions.Add(definition);
+        }
+
+        Types = Array.AsReadOnly(definitions.ToArray());
+    }
+
+    public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; }
+
+    public GameEventScriptExternalTypeDefinition? Resolve(string typeName)
+    {
+        var normalized = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
+        return _typesByName.TryGetValue(normalized, out var definition) ? definition : null;
+    }
 }
 
 public interface IGameEventScriptExternalTypeConstructor
@@ -26,6 +67,7 @@ public sealed class GesExternalTypeConstructorCall
     private GesValueArguments _arguments = GesValueArguments.Empty;
     private Runtime.VM.GesVmState? _vmState;
     private ushort _destinationRegister;
+    private string? _expectedTypeName;
     private GesValue _result;
     private bool _hasResult;
 
@@ -44,11 +86,12 @@ public sealed class GesExternalTypeConstructorCall
 
     internal bool HasResult => _hasResult;
 
-    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GesValueArguments arguments)
+    internal void BeginCall(Runtime.VM.GesVmState vmState, ushort destinationRegister, GesValueArguments arguments, string expectedTypeName)
     {
         _vmState = vmState ?? throw new ArgumentNullException(nameof(vmState));
         _destinationRegister = destinationRegister;
         _arguments = arguments;
+        _expectedTypeName = expectedTypeName;
         _result = default;
         _hasResult = false;
     }
@@ -58,67 +101,37 @@ public sealed class GesExternalTypeConstructorCall
         _vmState = null;
         _destinationRegister = 0;
         _arguments = GesValueArguments.Empty;
+        _expectedTypeName = null;
         _result = default;
         _hasResult = false;
     }
 
-    public void SetNothing() => SetValue(GesValue.GesNothing());
+    public void SetNothing()
+    {
+        var value = GesValue.GesNothing();
+        SetValue(in value);
+    }
 
-    public void SetValue(GesValue value)
+    private void SetValue(in GesValue value)
     {
         _hasResult = true;
         _result = value;
         _vmState?.SetValue(_destinationRegister, in value);
     }
 
-    public void SetBoolean(bool value)
+    public void SetExternalValue(IGameEventScriptExternalValue value)
     {
-        _hasResult = true;
-        _result = GesValue.GesBoolean(value);
-        _vmState?.SetBoolean(_destinationRegister, value);
-    }
-
-    public void SetInteger(long value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
-    {
-        _hasResult = true;
-        _result = GesValue.GesInteger(value, unit);
-        _vmState?.SetInteger(_destinationRegister, value, unit);
-    }
-
-    public void SetFloat(double value, GameEventScriptBytecodeInstructionUnit unit = GameEventScriptBytecodeInstructionUnit.UnitNone)
-    {
-        _hasResult = true;
-        _result = GesValue.GesFloat(value, unit);
-        _vmState?.SetFloat(_destinationRegister, value, unit);
-    }
-
-    public void SetPercentage(double ratio)
-    {
-        _hasResult = true;
-        _result = GesValue.GesPercentage(ratio);
-        _vmState?.SetPercentage(_destinationRegister, ratio);
-    }
-
-    public void SetText(string text)
-    {
-        _hasResult = true;
-        _result = GesValue.GesText(text);
-        _vmState?.SetText(_destinationRegister, text);
-    }
-
-    public void SetTag(string tag)
-    {
-        _hasResult = true;
-        _result = GesValue.GesTag(tag);
-        _vmState?.SetTag(_destinationRegister, tag);
-    }
-
-    internal void SetExternalCustomType(Runtime.Values.GesExternalObject value)
-    {
+        _ = value ?? throw new ArgumentNullException(nameof(value));
+        if (_expectedTypeName is not null && !string.Equals(value.Definition.Name, _expectedTypeName, StringComparison.Ordinal))
+        {
+            SetNothing();
+            _vmState?.RaiseError($"External constructor for ':{_expectedTypeName}' returned value of type ':{value.Definition.Name}'.");
+            return;
+        }
         _hasResult = true;
         _result = default;
-        _result.SetExternalCustomType(value);
-        _vmState?.SetExternalCustomType(_destinationRegister, value);
+        _result.SetExternalType(value);
+        _vmState?.SetExternalType(_destinationRegister, value);
     }
 }
 
@@ -128,27 +141,14 @@ public sealed class GameEventScriptExternalTypeDefinition
         string name,
         IEnumerable<GameEventScriptExternalTypeFieldDefinition> fields,
         IEnumerable<GameEventScriptExternalTypeConstructorDefinition> constructors)
-        : this(
-            name,
-            CopyFields(fields ?? throw new ArgumentNullException(nameof(fields))),
-            CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors))),
-            new Dictionary<string, Func<object, GesValue>>(StringComparer.Ordinal),
-            new Dictionary<string, IGameEventScriptExternalTypeConstructor>(StringComparer.Ordinal))
-    {
-    }
-
-    internal GameEventScriptExternalTypeDefinition(
-        string name,
-        IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> fields,
-        IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> constructors,
-        IReadOnlyDictionary<string, Func<object, GesValue>> fieldReaders,
-        IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> constructorBindings)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
-        Fields = fields ?? throw new ArgumentNullException(nameof(fields));
-        Constructors = constructors ?? throw new ArgumentNullException(nameof(constructors));
-        FieldReaders = fieldReaders ?? throw new ArgumentNullException(nameof(fieldReaders));
-        ConstructorBindings = constructorBindings ?? throw new ArgumentNullException(nameof(constructorBindings));
+        var copiedFields = CopyFields(fields ?? throw new ArgumentNullException(nameof(fields)));
+        var copiedConstructors = CopyConstructors(constructors ?? throw new ArgumentNullException(nameof(constructors)));
+        ValidateFields(copiedFields);
+        Fields = Array.AsReadOnly(copiedFields);
+        ValidateConstructors(copiedConstructors);
+        Constructors = Array.AsReadOnly(copiedConstructors);
     }
 
     public string Name { get; }
@@ -157,18 +157,9 @@ public sealed class GameEventScriptExternalTypeDefinition
 
     public IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> Constructors { get; }
 
-    internal IReadOnlyDictionary<string, Func<object, GesValue>> FieldReaders { get; }
-
-    internal IReadOnlyDictionary<string, IGameEventScriptExternalTypeConstructor> ConstructorBindings { get; }
-
     internal bool HasConstructor(IReadOnlyCollection<string> argumentLabels)
     {
         var signatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(Name, argumentLabels);
-        if (ConstructorBindings.ContainsKey(signatureId))
-        {
-            return true;
-        }
-
         for (var index = 0; index < Constructors.Count; index++)
         {
             if (string.Equals(Constructors[index].SignatureId, signatureId, StringComparison.Ordinal))
@@ -180,9 +171,36 @@ public sealed class GameEventScriptExternalTypeDefinition
         return false;
     }
 
-    internal GesValue? GetField(string fieldName, object instance)
+    private void ValidateFields(IReadOnlyList<GameEventScriptExternalTypeFieldDefinition> fields)
     {
-        return FieldReaders.TryGetValue(fieldName, out var reader) ? reader(instance) : null;
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < fields.Count; index++)
+        {
+            if (fields[index] is null)
+                throw new ArgumentException("External type field list contains null.", nameof(fields));
+            if (!names.Add(fields[index].Name))
+                throw new ArgumentException($"External GameEventScript type ':{Name}' declares field '{fields[index].Name}' more than once.", nameof(fields));
+        }
+    }
+
+    private void ValidateConstructors(IReadOnlyList<GameEventScriptExternalTypeConstructorDefinition> constructors)
+    {
+        var signatures = new HashSet<string>(StringComparer.Ordinal);
+        var fieldNames = new HashSet<string>(StringComparer.Ordinal);
+        for (var fieldIndex = 0; fieldIndex < Fields.Count; fieldIndex++) fieldNames.Add(Fields[fieldIndex].Name);
+        for (var index = 0; index < constructors.Count; index++)
+        {
+            var constructor = constructors[index] ?? throw new ArgumentException("External type constructor list contains null.", nameof(constructors));
+            if (!string.Equals(constructor.TypeName, Name, StringComparison.Ordinal))
+                throw new ArgumentException($"External constructor '{constructor.SignatureId}' does not construct type ':{Name}'.", nameof(constructors));
+            if (!signatures.Add(constructor.SignatureId))
+                throw new ArgumentException($"External GameEventScript type ':{Name}' declares constructor '{constructor.SignatureId}' more than once.", nameof(constructors));
+            for (var parameterIndex = 0; parameterIndex < constructor.Parameters.Count; parameterIndex++)
+            {
+                if (!fieldNames.Contains(constructor.Parameters[parameterIndex].Name))
+                    throw new ArgumentException($"External constructor '{constructor.SignatureId}' parameter '{constructor.Parameters[parameterIndex].Name}' is not a declared field.", nameof(constructors));
+            }
+        }
     }
 
     private static GameEventScriptExternalTypeFieldDefinition[] CopyFields(IEnumerable<GameEventScriptExternalTypeFieldDefinition> fields)
@@ -339,7 +357,15 @@ public sealed class GameEventScriptExternalTypeConstructorDefinition
     public GameEventScriptExternalTypeConstructorDefinition(string typeName, IEnumerable<GameEventScriptExternalTypeParameterDefinition> parameters)
     {
         TypeName = GameEventScriptExternalTypeNames.NormalizeTypeName(typeName);
-        Parameters = CopyParameters(parameters ?? throw new ArgumentNullException(nameof(parameters)));
+        var copiedParameters = CopyParameters(parameters ?? throw new ArgumentNullException(nameof(parameters)));
+        var names = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < copiedParameters.Length; index++)
+        {
+            var parameter = copiedParameters[index] ?? throw new ArgumentException("External constructor parameter list contains null.", nameof(parameters));
+            if (!names.Add(parameter.Name))
+                throw new ArgumentException($"External constructor for ':{TypeName}' declares parameter '{parameter.Name}' more than once.", nameof(parameters));
+        }
+        Parameters = Array.AsReadOnly(copiedParameters);
         SignatureId = GameEventScriptExternalTypeConstructorReference.CreateSignatureId(TypeName, CreateParameterNameArray(Parameters));
     }
 
@@ -481,6 +507,19 @@ public sealed class GameEventScriptExternalTypeConstructorReference
     }
 }
 
+internal sealed class GameEventScriptEmptyExternalTypeCatalog : IGameEventScriptExternalTypeCatalog
+{
+    public static readonly GameEventScriptEmptyExternalTypeCatalog Instance = new();
+
+    private GameEventScriptEmptyExternalTypeCatalog()
+    {
+    }
+
+    public IReadOnlyList<GameEventScriptExternalTypeDefinition> Types { get; } = Array.Empty<GameEventScriptExternalTypeDefinition>();
+
+    public GameEventScriptExternalTypeDefinition? Resolve(string typeName) => null;
+}
+
 internal sealed class GameEventScriptEmptyExternalTypeRegistry : IGameEventScriptExternalTypeRegistry
 {
     public static readonly GameEventScriptEmptyExternalTypeRegistry Instance = new();
@@ -488,9 +527,6 @@ internal sealed class GameEventScriptEmptyExternalTypeRegistry : IGameEventScrip
     private GameEventScriptEmptyExternalTypeRegistry()
     {
     }
-
-    public IReadOnlyDictionary<string, GameEventScriptExternalTypeDefinition> Types { get; } =
-        new Dictionary<string, GameEventScriptExternalTypeDefinition>(StringComparer.Ordinal);
 
     public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference) => null;
 }

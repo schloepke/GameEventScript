@@ -8,7 +8,6 @@ using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
 using StepH.GameEventScript.Compiler;
-using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -16,8 +15,10 @@ namespace StepH_GameEventScript_Tests.Conformance;
 internal static class GameEventScriptConformanceRunner
 {
     internal const string VirtualMachineEngine = "virtualmachine";
+    internal static readonly IGameEventScriptExternalTypeCatalog ExternalTypeCatalog =
+        GameEventScriptConformanceExternalTypes.Catalog;
     internal static readonly IGameEventScriptExternalTypeRegistry ExternalTypeRegistry =
-        GameEventScriptCSharpExternalTypes.CreateRegistry(typeof(AimValue));
+        GameEventScriptConformanceExternalTypes.Registry;
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -173,7 +174,7 @@ internal static class GameEventScriptConformanceRunner
         var program = CompileScripts(testCase.Test);
         var host = GameEventScriptManager.CreateHostBuilder()
             .WithRegistry(GameEventScriptConformanceExtensionRegistry.Instance)
-            .WithExternalTypes(ExternalTypeRegistry)
+            .WithExternalTypeRegistry(ExternalTypeRegistry)
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.Test.RuntimeLimits))
             .Build();
 
@@ -489,7 +490,7 @@ internal static class GameEventScriptConformanceRunner
     private static GameEventScriptBuilder CreateScriptBuilder(GameEventScriptConformanceTest test)
     {
         var builder = GameEventScriptManager.CreateScriptBuilder()
-            .WithExternalTypes(ExternalTypeRegistry);
+            .WithExternalTypeCatalog(ExternalTypeCatalog);
         foreach (var source in GetSources(test))
         {
             builder.AddScript(source.Text!, source.SourceName);
@@ -563,39 +564,6 @@ internal static class GameEventScriptConformanceRunner
         }
 
         return GameEventScriptRandomGenerator.FromSequence(randomSequence.Select(value => double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture)).ToArray());
-    }
-
-    [GesType("aim")]
-    private sealed class AimValue
-    {
-        [GesConstruct]
-        public AimValue(
-            [GesParam("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)] double bearing,
-            [GesParam("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] double range,
-            [GesParam("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)] int steps,
-            [GesParam("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)] GesValue direction)
-        {
-            Bearing = bearing;
-            Range = range;
-            Steps = steps;
-            Direction = direction;
-            Checksum = (int)(bearing + range + steps);
-        }
-
-        [GesField("bearing", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitDegree)]
-        public double Bearing { get; }
-
-        [GesField("range", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public double Range { get; }
-
-        [GesField("steps", GameEventScriptBytecodeTypeKind.Float, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public int Steps { get; }
-
-        [GesField("direction", GameEventScriptBytecodeTypeKind.Vector, GameEventScriptBytecodeInstructionUnit.UnitMeter)]
-        public GesValue Direction { get; }
-
-        [GesField("checksum", GameEventScriptBytecodeTypeKind.Float)]
-        public int Checksum { get; }
     }
 
     private static GameEventScriptRuntimeLimits CreateRuntimeLimits(GameEventScriptRuntimeLimitsSpec? spec)

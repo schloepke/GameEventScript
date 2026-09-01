@@ -1324,8 +1324,8 @@ internal static class GesVmRegisterCollectionOperators
             case Custom when a.ObjectValue is GesCustomObject customObject:
                 vmState.SetList(dst, customObject.Map.ValueList);
                 break;
-            case Custom when a.ObjectValue is GesExternalObject externalObject:
-                vmState.SetList(dst, externalObject.ToMap().ValueList);
+            case Custom when a.ObjectValue is GesExternalValue externalValue:
+                vmState.SetList(dst, externalValue.ToMap().ValueList);
                 break;
             default:
                 vmState.SetNothing(dst);
@@ -1343,8 +1343,8 @@ internal static class GesVmRegisterCollectionOperators
             case Custom when a.ObjectValue is GesCustomObject customObject:
                 vmState.SetList(dst, customObject.Map.KeyList);
                 break;
-            case Custom when a.ObjectValue is GesExternalObject externalObject:
-                vmState.SetList(dst, externalObject.ToMap().KeyList);
+            case Custom when a.ObjectValue is GesExternalValue externalValue:
+                vmState.SetList(dst, externalValue.ToMap().KeyList);
                 break;
             default:
                 vmState.SetNothing(dst);
@@ -1362,8 +1362,8 @@ internal static class GesVmRegisterCollectionOperators
             case Custom when a.ObjectValue is GesCustomObject customObject:
                 vmState.SetList(dst, customObject.Map.EntryList);
                 break;
-            case Custom when a.ObjectValue is GesExternalObject externalObject:
-                vmState.SetList(dst, externalObject.ToMap().EntryList);
+            case Custom when a.ObjectValue is GesExternalValue externalValue:
+                vmState.SetList(dst, externalValue.ToMap().EntryList);
                 break;
             default:
                 vmState.SetNothing(dst);

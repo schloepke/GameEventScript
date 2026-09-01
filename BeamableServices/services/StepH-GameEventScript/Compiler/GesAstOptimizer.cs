@@ -13,9 +13,9 @@ internal static class GesAstOptimizer
     public static GesSyntaxTreeModule Optimize(GesSyntaxTreeModule module)
     {
         var knownTypeNames = new HashSet<string>(module.TypeDefinitions.Keys, StringComparer.Ordinal);
-        foreach (var typeName in module.ExternalTypeDefinitions.Keys)
+        for (var externalTypeIndex = 0; externalTypeIndex < module.ExternalTypeDefinitions.Types.Count; externalTypeIndex++)
         {
-            knownTypeNames.Add(typeName);
+            knownTypeNames.Add(module.ExternalTypeDefinitions.Types[externalTypeIndex].Name);
         }
 
         var optimizedTypes = new Dictionary<string, TypeDefinitionNode>(module.TypeDefinitions.Count, StringComparer.Ordinal);

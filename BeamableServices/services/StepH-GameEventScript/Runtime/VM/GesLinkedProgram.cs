@@ -142,8 +142,12 @@ internal sealed class GesLinkedProgram
             var bind = ExternalTypeBinds[bindId];
             if (bind.Kind != ExternalType || bind.Id != bindId) continue;
             var reference = new GameEventScriptExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
-            result[bindId] = registry.Resolve(reference) ?? throw new GameEventScriptDynamicLinkException(
+            var constructor = registry.Resolve(reference) ?? throw new GameEventScriptDynamicLinkException(
                 $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+            if (!string.Equals(constructor.Definition.SignatureId, reference.SignatureId, StringComparison.Ordinal))
+                throw new GameEventScriptDynamicLinkException(
+                    $"GameEventScript external type constructor registry returned '{constructor.Definition.SignatureId}' for requested reference '{reference.SignatureId}'.");
+            result[bindId] = constructor;
         }
 
         return result;

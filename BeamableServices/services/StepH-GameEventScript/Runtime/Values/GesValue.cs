@@ -318,7 +318,7 @@ public struct GesValue : IEquatable<GesValue>
 
     public readonly string? CustomTypeName => ObjectValue switch
     {
-        GesExternalObject externalObject => externalObject.CustomTypeName,
+        GesExternalValue externalValue => externalValue.CustomTypeName,
         GesCustomObject customObject => customObject.TypeName,
         _ => null
     };
@@ -330,7 +330,7 @@ public struct GesValue : IEquatable<GesValue>
     {
         GesValueMap map => map,
         GesCustomObject customObject => customObject.Map,
-        GesExternalObject externalObject => externalObject.ToMap(),
+        GesExternalValue externalValue => externalValue.ToMap(),
         _ => null
     };
 
@@ -545,13 +545,14 @@ public struct GesValue : IEquatable<GesValue>
         ObjectValue = new GesCustomObject(typeName, record);
     }
 
-    internal void SetExternalCustomType(GesExternalObject value)
+    internal void SetExternalType(IGameEventScriptExternalValue value)
     {
+        var externalValue = new GesExternalValue(value);
         Kind = Custom;
         Flags = StorageObjectFlag | HasValueFlag;
         Unit = UnitNone;
-        IntegerValue = value.Definition.Fields.Count;
-        ObjectValue = value;
+        IntegerValue = externalValue.Definition.Fields.Count;
+        ObjectValue = externalValue;
     }
 
     internal void SetRange(long from, long to, long step)

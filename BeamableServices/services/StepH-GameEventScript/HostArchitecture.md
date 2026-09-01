@@ -42,6 +42,27 @@ pointer, registers, frames, stages, random stack, and active message. The host
 reuses this state serially for every script handler and fully resets it after
 completion or failure. VM pooling across hosts is not part of this architecture.
 
+## External Type Boundary
+
+External types use two deliberately separate inputs. Compilation receives an
+`IGameEventScriptExternalTypeCatalog` containing only declarative type, field,
+constructor, parameter, and signature data. It does not contain executable
+bindings. The resulting program stores only portable external-constructor import
+bindings; it never stores the catalog or its definitions.
+
+Host linking receives an `IGameEventScriptExternalTypeRegistry` that resolves a
+constructor import to an `IGameEventScriptExternalTypeConstructor`. A resolved
+constructor must report exactly the definition requested by the import. Runtime
+values cross the portable boundary as `IGameEventScriptExternalValue`, exposing
+their declarative definition and field values without exposing a platform host
+object.
+
+The C# bridge may implement both inputs with one convenience object. Its
+reflection metadata, attributes, CLR instances, field delegates, conversion,
+and constructor invocation remain entirely inside `CSharpBridge`. Portable JSON
+conformance uses a manual catalog, constructor registry, and value
+implementation and therefore does not depend on C# reflection.
+
 ## Message Semantics
 
 - `Receive(message)` captures current subscription snapshots and queues the

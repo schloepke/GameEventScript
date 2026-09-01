@@ -37,7 +37,7 @@ public sealed class GameEventScriptHostBuilder
         return this;
     }
 
-    public GameEventScriptHostBuilder WithExternalTypes(IGameEventScriptExternalTypeRegistry registry)
+    public GameEventScriptHostBuilder WithExternalTypeRegistry(IGameEventScriptExternalTypeRegistry registry)
     {
         _externalTypeRegistry = registry ?? throw new ArgumentNullException(nameof(registry));
         return this;

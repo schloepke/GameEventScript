@@ -2138,7 +2138,7 @@ internal static class GesCompiler
                 return;
             }
 
-            if (module.ExternalTypeDefinitions.ContainsKey(constructor.TypeName))
+            if (module.ExternalTypeDefinitions.Resolve(constructor.TypeName) is not null)
             {
                 var argumentNames = ReadArgumentNames(constructor.Arguments);
                 EmitStageArgumentNodes(constructor.Arguments, context, state);
@@ -2424,7 +2424,7 @@ internal static class GesCompiler
         private GesBindRef ResolveExternalTypeConstructor(string typeName, IReadOnlyList<string> argumentNames)
         {
             var reference = new GameEventScriptExternalTypeConstructorReference(typeName, argumentNames);
-            if (!module.ExternalTypeDefinitions.TryGetValue(reference.TypeName, out var typeDefinition))
+            if (module.ExternalTypeDefinitions.Resolve(reference.TypeName) is not { } typeDefinition)
             {
                 throw new GameEventScriptCompileException($"GameEventScript external type ':{reference.TypeName}' is not registered.");
             }

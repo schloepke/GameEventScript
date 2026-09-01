@@ -9,53 +9,39 @@ below is an in-memory runtime view and never defines the file format.
 
 ## Instruction Word
 
-`GameEventScriptBytecodeInstruction` is currently a fixed 16-byte explicit-layout
-runtime word. The first 8 bytes form the primary instruction word. The second
-8 bytes form an aligned payload word that can be read through different typed
-views. This is intentional: simple VM instructions read only the primary
-operands, while literal loads and wider opcodes read the payload word directly.
+The portable instruction is a logical 16-byte encoded word. Its meaning is the
+six numeric fields `OpCode`, `UnitAndFlags`, `Word0`, `Word1`, `Word2`, and
+`Payload` defined by `.gesb`; it is not an in-memory byte overlay.
+
+The C# runtime keeps the same compact size with a sequential value type:
 
 ```csharp
-[StructLayout(LayoutKind.Explicit, Size = 16)]
+[StructLayout(LayoutKind.Sequential, Size = 16)]
 public struct GameEventScriptBytecodeInstruction
 {
-    [FieldOffset(0)]  public GameEventScriptBytecodeOpCode OpCode; // byte-backed
-    [FieldOffset(1)]  public byte UnitAndFlags;
+    public GameEventScriptBytecodeOpCode OpCode;
+    public byte UnitAndFlags;
+    private ushort _word0;
+    private ushort _word1;
+    private ushort _word2;
+    public ulong Payload;
 
-    [FieldOffset(2)]  public ushort DestinationRegister;
-    [FieldOffset(2)]  public ushort MessageDestination;
-
-    [FieldOffset(4)]  public ushort XRegister;
-    [FieldOffset(4)]  public ushort ConditionRegister;
-    [FieldOffset(4)]  public ushort StringIndex;
-    [FieldOffset(4)]  public ushort SecondaryListIndex;
-    [FieldOffset(4)]  public ushort BindId;
-    [FieldOffset(4)]  public short ImmediateX;
-    [FieldOffset(4)]  public ushort Index;
-    [FieldOffset(4)]  public short Count;
-
-    [FieldOffset(6)]  public ushort YRegister;
-    [FieldOffset(6)]  public ushort TargetAddress;
-    [FieldOffset(6)]  public ushort EntryAddress;
-    [FieldOffset(6)]  public ushort ListIndex;
-    [FieldOffset(6)]  public ushort TypeOperand;
-    [FieldOffset(6)]  public short ImmediateY;
-
-    [FieldOffset(8)]  public ushort AU;
-    [FieldOffset(10)] public ushort BU;
-    [FieldOffset(12)] public ushort CU;
-    [FieldOffset(14)] public ushort DU;
-
-    [FieldOffset(8)]  public short AS;
-    [FieldOffset(10)] public short BS;
-    [FieldOffset(12)] public short CS;
-    [FieldOffset(14)] public short DS;
-
-    [FieldOffset(8)]  public long I64;
-    [FieldOffset(8)]  public ulong Payload;
-    [FieldOffset(8)]  public double F64;
+    // Semantic aliases are numeric properties over the raw words.
+    public ushort DestinationRegister { get; set; } // Word0
+    public ushort XRegister { get; set; }           // Word1
+    public ushort YRegister { get; set; }           // Word2
+    public ushort AU { get; set; }                  // Payload bits 0..15
+    public long I64 { get; set; }                   // Payload two's-complement bits
+    public double F64 { get; set; }                 // Payload Binary64 bits
 }
 ```
+
+The abbreviated properties above illustrate the contract; the implementation
+provides all aliases listed below. Alias getters and setters use numeric casts,
+shifts, and masks. `F64` uses the exact IEEE-754 Binary64 bit conversion. They do
+not reinterpret native memory bytes, so their meaning is identical on little-
+and big-endian processors. The sequential 16-byte C# size remains a runtime
+optimization and never defines the file encoding.
 
 The byte layout is:
 
@@ -66,10 +52,10 @@ The byte layout is:
 | `2..3` | `DestinationRegister` / `MessageDestination` | `DestinationRegister` | Destination/result register or static outbound-message bind id. |
 | `4..5` | `XRegister` / `ConditionRegister` / `StringIndex` / `SecondaryListIndex` / `BindId` / `ImmediateX` / `Index` / `Count` | primary X bytes | First primary operand, signed immediate, unsigned index, or table index. |
 | `6..7` | `YRegister` / `TargetAddress` / `EntryAddress` / `ListIndex` / `TypeOperand` / `ImmediateY` | primary Y bytes | Second primary operand, target/entry address, type operand, or primary list index. |
-| `8..9` | `AU` / `AS` | `I64`/`Payload`/`F64` bytes `0..1` | Payload word bytes `0..1`, or first payload 16-bit operand. |
-| `10..11` | `BU` / `BS` | `I64`/`Payload`/`F64` bytes `2..3` | Payload word bytes `2..3`, or second payload 16-bit operand. |
-| `12..13` | `CU` / `CS` | `I64`/`Payload`/`F64` bytes `4..5` | Payload word bytes `4..5`, or third payload 16-bit operand. |
-| `14..15` | `DU` / `DS` | `I64`/`Payload`/`F64` bytes `6..7` | Payload word bytes `6..7`, or fourth payload 16-bit operand. |
+| `8..9` | `AU` / `AS` | `Payload` bits `0..15` | First payload 16-bit operand. |
+| `10..11` | `BU` / `BS` | `Payload` bits `16..31` | Second payload 16-bit operand. |
+| `12..13` | `CU` / `CS` | `Payload` bits `32..47` | Third payload 16-bit operand. |
+| `14..15` | `DU` / `DS` | `Payload` bits `48..63` | Fourth payload 16-bit operand. |
 
 The instruction word has no sentinel for "unused". Unused fields are
 undefined/ignored. Only the fields documented for a specific opcode may be read
@@ -116,8 +102,8 @@ view instead of exposing the overlapping runtime fields:
 - **Payload 16-bit operand view:** wider instructions use the aligned payload
   word as `AU..DU` or `AS..DS`. The opcode table documents this compactly as
   `AU`=..., `BU`=..., `AS`=..., `BS`=..., and so on.
-- **64-bit integer view:** `LoadInteger` reads `I64` directly. Negative integer
-  values are stored as their normal two's-complement bit pattern.
+- **64-bit integer view:** `LoadInteger` reads `I64` as the signed interpretation
+  of `Payload`. Negative values use their normal two's-complement bit pattern.
 - **64-bit float view:** `LoadFloat` reads `F64` directly. This keeps IEEE-754
   `NaN`, `Infinity`, and `-Infinity` portable as raw double bits.
 - **Unsigned payload view:** `Payload` exposes the raw payload bits for transport

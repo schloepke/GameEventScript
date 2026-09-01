@@ -247,17 +247,23 @@ Regressionstests statt eines weiteren großen Umbaus.
 - Die absichtlich wiederholten Trust-Boundary-Prüfungen sind normativ in
   `PortableProgramModel.md` und `GesbFormatV1.md` festgehalten.
 
-### 4.3 Encoding-Unabhängigkeit absichern
+### 4.3 Encoding-Unabhängigkeit absichern - DONE
 
-- `.gesb` wird ausschließlich durch die normativ spezifizierten Felder und deren
-  feste numerische Werte definiert.
-- CLR-`StructLayout`, Plattform-Endianness, Padding und In-Memory-Overlays dürfen
-  niemals das Dateiformat definieren. Das explizite Instruction-Layout bleibt
-  lediglich ein C#-Implementierungsdetail.
-- Alle formatrelevanten enumähnlichen Werte müssen explizite numerische IDs
-  besitzen.
-- Plattformabhängige Hashwerte sind verboten; spezifizierte kryptographische
-  Hashes wie SHA-256 bleiben erlaubt.
+- `.gesb` wird ausschließlich aus seinen normativ spezifizierten numerischen
+  Feldern kanonisch Little Endian gelesen und geschrieben.
+- Die C#-Instruction verwendet keine überlagerten CLR-Felder mehr. Drei rohe
+  `u16`-Wörter und ein `u64`-Payload bilden die Speicherung; Register-, Index-,
+  Signed-, Aux-, Integer- und Float-Sichten sind numerische Properties mit
+  Casts, Shifts, Masken und exakter Binary64-Bitkonvertierung.
+- Damit sind insbesondere `AU/BU/CU/DU`, `I64` und `F64` unabhängig von nativer
+  Endianness. Das weiterhin 16 Byte große sequenzielle C#-Struct ist nur eine
+  Runtimeoptimierung und keine Formatdefinition.
+- Alle im Program codierten enumähnlichen Werte besitzen explizite numerische
+  IDs; Deklarationsreihenfolge und Sprach-Ordinals sind ohne Bedeutung.
+- Das Program enthält keine Plattform-Hashwerte. Die einzige persistierte
+  Hashart ist das normativ definierte SHA-256 der SourceMap.
+- Der Vertrag ist in `PortableProgramModel.md`, `GesbFormatV1.md` und
+  `BytecodeOpcodeShape.md` festgehalten.
 
 ### 4.4 Regressionstests und Abschluss
 

@@ -114,10 +114,19 @@ layout, CPU endianness, padding, object layout, and overlapping field aliases ar
 implementation details only. Other language ports need not reproduce them in
 memory.
 
-In particular, the C# 16-byte explicit-layout instruction is a compact runtime
-view. Serialization and deserialization read and write the individual V1 fields
-in canonical little-endian order. Raw CLR struct bytes are never a valid shortcut
-for `.gesb` encoding.
+In particular, the C# instruction stores three numeric `u16` words and one
+numeric `u64` payload. Semantic aliases use casts, shifts, masks, and exact
+Binary64 bit conversion rather than overlapping CLR fields. Its sequential
+16-byte size is a compact runtime optimization only. Serialization and
+deserialization read and write the individual V1 fields in canonical
+little-endian order. Raw CLR struct bytes are never a valid shortcut for `.gesb`
+encoding.
+
+All identifiers carried by program bytes have fixed numeric values: section
+types and flags, binding kinds, debug symbol kinds, opcodes, instruction units
+and flags, bytecode type kinds, pattern kinds, and series kinds. A source-language
+enum declaration is only a convenient implementation view of those IDs; ordinal
+position or declaration order is never an encoding rule.
 
 ## Preservation and roundtrip meaning
 

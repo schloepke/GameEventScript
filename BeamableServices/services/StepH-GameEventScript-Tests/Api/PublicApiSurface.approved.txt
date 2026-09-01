@@ -45,36 +45,36 @@ sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
   method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
 struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
   field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
-  field StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind TypeKind
   field System.Byte UnitAndFlags
-  field System.Double F64
-  field System.Int16 AS
-  field System.Int16 BS
-  field System.Int16 CS
-  field System.Int16 Count
-  field System.Int16 DS
-  field System.Int16 ImmediateX
-  field System.Int16 ImmediateY
-  field System.Int64 I64
-  field System.UInt16 AU
-  field System.UInt16 BU
-  field System.UInt16 BindId
-  field System.UInt16 CU
-  field System.UInt16 ConditionRegister
-  field System.UInt16 DU
-  field System.UInt16 DestinationRegister
-  field System.UInt16 EntryAddress
-  field System.UInt16 Index
-  field System.UInt16 ListIndex
-  field System.UInt16 MessageDestination
-  field System.UInt16 SecondaryListIndex
-  field System.UInt16 SecondaryStringIndex
-  field System.UInt16 StringIndex
-  field System.UInt16 TargetAddress
-  field System.UInt16 TypeOperand
-  field System.UInt16 XRegister
-  field System.UInt16 YRegister
   field System.UInt64 Payload
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind TypeKind { get set }
+  property System.Double F64 { get set }
+  property System.Int16 AS { get set }
+  property System.Int16 BS { get set }
+  property System.Int16 CS { get set }
+  property System.Int16 Count { get set }
+  property System.Int16 DS { get set }
+  property System.Int16 ImmediateX { get set }
+  property System.Int16 ImmediateY { get set }
+  property System.Int64 I64 { get set }
+  property System.UInt16 AU { get set }
+  property System.UInt16 BU { get set }
+  property System.UInt16 BindId { get set }
+  property System.UInt16 CU { get set }
+  property System.UInt16 ConditionRegister { get set }
+  property System.UInt16 DU { get set }
+  property System.UInt16 DestinationRegister { get set }
+  property System.UInt16 EntryAddress { get set }
+  property System.UInt16 Index { get set }
+  property System.UInt16 ListIndex { get set }
+  property System.UInt16 MessageDestination { get set }
+  property System.UInt16 SecondaryListIndex { get set }
+  property System.UInt16 SecondaryStringIndex { get set }
+  property System.UInt16 StringIndex { get set }
+  property System.UInt16 TargetAddress { get set }
+  property System.UInt16 TypeOperand { get set }
+  property System.UInt16 XRegister { get set }
+  property System.UInt16 YRegister { get set }
 enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
   enum-field UnitNone = 0
   enum-field UnitDegree = 1

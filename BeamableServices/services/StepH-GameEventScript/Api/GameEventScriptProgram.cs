@@ -482,58 +482,55 @@ public enum GameEventScriptBytecodeSeriesKind : ushort
     Factorial = 0x02,
 }
 
-[StructLayout(LayoutKind.Explicit, Size = 16)]
+[StructLayout(LayoutKind.Sequential, Size = 16)]
 public struct GameEventScriptBytecodeInstruction
 {
     private const byte UnitMask = 0x1F;
     private const byte InstructionFlagMask = 0xE0;
 
-    [FieldOffset(0)] public GameEventScriptBytecodeOpCode OpCode;
+    public GameEventScriptBytecodeOpCode OpCode;
+    public byte UnitAndFlags;
+    private ushort _word0;
+    private ushort _word1;
+    private ushort _word2;
+    public ulong Payload;
 
-    [FieldOffset(1)] public byte UnitAndFlags;
+    public ushort DestinationRegister { readonly get => _word0; set => _word0 = value; }
+    public ushort MessageDestination { readonly get => _word0; set => _word0 = value; }
 
-    [FieldOffset(2)] public ushort DestinationRegister;
-    [FieldOffset(2)] public ushort MessageDestination;
-    
-    [FieldOffset(4)] public short ImmediateX;
-    [FieldOffset(4)] public ushort ConditionRegister;
-    [FieldOffset(4)] public ushort XRegister;
-    [FieldOffset(4)] public ushort StringIndex;
-    [FieldOffset(4)] public ushort SecondaryListIndex;
-    [FieldOffset(4)] public ushort BindId;
-    [FieldOffset(4)] public ushort Index;
-    [FieldOffset(4)] public short Count;
+    public short ImmediateX { readonly get => unchecked((short)_word1); set => _word1 = unchecked((ushort)value); }
+    public ushort ConditionRegister { readonly get => _word1; set => _word1 = value; }
+    public ushort XRegister { readonly get => _word1; set => _word1 = value; }
+    public ushort StringIndex { readonly get => _word1; set => _word1 = value; }
+    public ushort SecondaryListIndex { readonly get => _word1; set => _word1 = value; }
+    public ushort BindId { readonly get => _word1; set => _word1 = value; }
+    public ushort Index { readonly get => _word1; set => _word1 = value; }
+    public short Count { readonly get => unchecked((short)_word1); set => _word1 = unchecked((ushort)value); }
 
-    [FieldOffset(6)] public short ImmediateY;
-    [FieldOffset(6)] public ushort TargetAddress;
-    [FieldOffset(6)] public ushort YRegister;
-    [FieldOffset(6)] public ushort EntryAddress;
-    [FieldOffset(6)] public ushort SecondaryStringIndex;
-    [FieldOffset(6)] public ushort ListIndex;
-    [FieldOffset(6)] public ushort TypeOperand;
-    [FieldOffset(6)] public GameEventScriptBytecodeTypeKind TypeKind;
+    public short ImmediateY { readonly get => unchecked((short)_word2); set => _word2 = unchecked((ushort)value); }
+    public ushort TargetAddress { readonly get => _word2; set => _word2 = value; }
+    public ushort YRegister { readonly get => _word2; set => _word2 = value; }
+    public ushort EntryAddress { readonly get => _word2; set => _word2 = value; }
+    public ushort SecondaryStringIndex { readonly get => _word2; set => _word2 = value; }
+    public ushort ListIndex { readonly get => _word2; set => _word2 = value; }
+    public ushort TypeOperand { readonly get => _word2; set => _word2 = value; }
+    public GameEventScriptBytecodeTypeKind TypeKind { readonly get => (GameEventScriptBytecodeTypeKind)_word2; set => _word2 = (ushort)value; }
 
-    #region Extra Payload for some opcodes
-    
-    [FieldOffset(8)] public ulong Payload;
-    
-    [FieldOffset(8)] public ushort AU;
-    [FieldOffset(8)] public short AS;
+    public ushort AU { readonly get => (ushort)Payload; set => Payload = (Payload & 0xFFFFFFFFFFFF0000UL) | value; }
+    public short AS { readonly get => unchecked((short)AU); set => AU = unchecked((ushort)value); }
+    public ushort BU { readonly get => (ushort)(Payload >> 16); set => Payload = (Payload & 0xFFFFFFFF0000FFFFUL) | ((ulong)value << 16); }
+    public short BS { readonly get => unchecked((short)BU); set => BU = unchecked((ushort)value); }
+    public ushort CU { readonly get => (ushort)(Payload >> 32); set => Payload = (Payload & 0xFFFF0000FFFFFFFFUL) | ((ulong)value << 32); }
+    public short CS { readonly get => unchecked((short)CU); set => CU = unchecked((ushort)value); }
+    public ushort DU { readonly get => (ushort)(Payload >> 48); set => Payload = (Payload & 0x0000FFFFFFFFFFFFUL) | ((ulong)value << 48); }
+    public short DS { readonly get => unchecked((short)DU); set => DU = unchecked((ushort)value); }
 
-    [FieldOffset(10)] public ushort BU;
-    [FieldOffset(10)] public short BS;
-
-    [FieldOffset(12)] public ushort CU;
-    [FieldOffset(12)] public short CS;
-
-    [FieldOffset(14)] public ushort DU;
-    [FieldOffset(14)] public short DS;
-
-    [FieldOffset(8)] public long I64;
-
-    [FieldOffset(8)] public double F64;
-    
-    #endregion
+    public long I64 { readonly get => unchecked((long)Payload); set => Payload = unchecked((ulong)value); }
+    public double F64
+    {
+        readonly get => BitConverter.Int64BitsToDouble(unchecked((long)Payload));
+        set => Payload = unchecked((ulong)BitConverter.DoubleToInt64Bits(value));
+    }
 
     internal GameEventScriptBytecodeInstructionUnit Unit => DecodeUnit(UnitAndFlags);
 

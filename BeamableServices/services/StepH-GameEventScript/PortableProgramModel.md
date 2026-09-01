@@ -80,6 +80,33 @@ be cached back into the program.
 Concurrent read access to a program is permitted. This does not make a host or a
 VM thread-safe; their synchronization contracts are separate.
 
+## Construction and validation boundaries
+
+The portable public API has exactly two program-producing operations:
+
+- the compiler materializes a program from validated source and runs the shared
+  complete program validator before returning it;
+- the reader performs bounded structural decoding and runs the same complete
+  program validator before returning the decoded program.
+
+There is no public free-form `GameEventScriptProgram` constructor or public
+factory that combines arbitrary segments. Public segment constructors are data
+helpers only and cannot create a program. Internal compiler builders and
+test-only friend access are implementation details and do not extend the
+portable construction contract.
+
+Validation is deliberately repeated at output and execution trust boundaries:
+
+- the writer validates before calculating or writing the canonical encoding;
+- `Host.Load` validates before checking host resource limits, resolving any
+  executable binding, allocating VM capacity, registering handlers, or queuing
+  initialization.
+
+This repetition is intentional. A writer and a host must not rely on the claimed
+origin of a program, on a prior validation performed by another component, or on
+language-specific visibility rules. Validation failure leaves the destination
+buffer and host state unchanged.
+
 ## Representation independence
 
 The `.gesb` payload fields define the portable meaning. C# explicit struct

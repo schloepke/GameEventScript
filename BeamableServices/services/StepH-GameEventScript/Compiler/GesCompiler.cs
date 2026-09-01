@@ -13,7 +13,9 @@ internal static class GesCompiler
     {
         _ = module ?? throw new ArgumentNullException(nameof(module));
         var compileOptions = options ?? new GameEventScriptCompileOptions();
-        return new BinaryCompiler(module, compileOptions).Build();
+        var program = new BinaryCompiler(module, compileOptions).Build();
+        GameEventScriptProgramValidator.Validate(program);
+        return program;
     }
 
     private static GameEventScriptCompileException CompileFailure(string code, string message, string? symbol = null)

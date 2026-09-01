@@ -233,14 +233,19 @@ Regressionstests statt eines weiteren großen Umbaus.
 - Der normative Daten-, Ownership- und Immutability-Vertrag steht in
   `StepH-GameEventScript/PortableProgramModel.md`.
 
-### 4.2 Konstruktions- und Validierungsgrenzen absichern
+### 4.2 Konstruktions- und Validierungsgrenzen absichern - DONE
 
-- Programs dürfen öffentlich nur aus Compiler oder Reader entstehen; eine freie
-  öffentliche Konstruktion aus beliebigen Segmenten bleibt ausgeschlossen.
-- Reader liefert nur vollständig validierte Programs.
-- Writer validiert jedes Program vor der Serialisierung.
-- `Host.Load` validiert auch bereits im Speicher befindliche Programs erneut,
-  bevor das hostgebundene Linking beginnt.
+- Compiler und Reader sind die einzigen öffentlichen Program-Erzeugungspfade;
+  eine freie öffentliche Konstruktion aus Segmenten existiert nicht.
+- Neben dem Reader validiert nun auch der Compiler das vollständig materialisierte
+  Ergebnis mit dem gemeinsamen Programvalidator, bevor es zurückgegeben wird.
+- Der Writer validiert vor Größenberechnung oder Ausgabe und schreibt daher keine
+  Bytes eines ungültigen Programs.
+- `Host.Load` validiert erneut, bevor Ressourcen geprüft, Bindings aufgelöst,
+  VM-Speicher vorbereitet, Handler registriert oder Initialisierung eingereiht
+  werden. Ein Fehler lässt den Host unverändert.
+- Die absichtlich wiederholten Trust-Boundary-Prüfungen sind normativ in
+  `PortableProgramModel.md` und `GesbFormatV1.md` festgehalten.
 
 ### 4.3 Encoding-Unabhängigkeit absichern
 

@@ -93,20 +93,25 @@ public static class GameEventScriptProgramWriter
             WriteBuildMetadata(ref writer, program.BuildMetadata);
         }
 
-        var opaque = program.OpaqueSections.UnsafeItems;
-        if (opaque.Length > 1)
+        if (program.OpaqueSections.Count == 1)
         {
-            opaque = (GameEventScriptOpaqueSection[])opaque.Clone();
-            Array.Sort(opaque, static (left, right) => left.OriginalOrdinal.CompareTo(right.OriginalOrdinal));
+            WriteOpaqueSection(ref writer, program.OpaqueSections[0]);
         }
-        for (var index = 0; index < opaque.Length; index++)
+        else if (program.OpaqueSections.Count > 1)
         {
-            var section = opaque[index];
-            WriteSectionHeader(ref writer, section.SectionType, section.Flags, section.RawPayload.Count, section.SectionVersion);
-            writer.WriteBytes(section.RawPayload.UnsafeItems);
+            var opaque = new GameEventScriptOpaqueSection[program.OpaqueSections.Count];
+            for (var index = 0; index < opaque.Length; index++) opaque[index] = program.OpaqueSections[index];
+            Array.Sort(opaque, static (left, right) => left.OriginalOrdinal.CompareTo(right.OriginalOrdinal));
+            for (var index = 0; index < opaque.Length; index++) WriteOpaqueSection(ref writer, opaque[index]);
         }
 
         return writer.Offset;
+    }
+
+    private static void WriteOpaqueSection(ref SpanWriter writer, GameEventScriptOpaqueSection section)
+    {
+        WriteSectionHeader(ref writer, section.SectionType, section.Flags, section.RawPayload.Count, section.SectionVersion);
+        writer.WriteBytes(section.RawPayload.AsSpan());
     }
 
     private static void WriteProgramMetadata(ref SpanWriter writer, GameEventScriptProgram program)
@@ -132,7 +137,7 @@ public static class GameEventScriptProgramWriter
         {
             var slice = segment.Slices[index];
             writer.WriteUInt32(checked((uint)slice.Length));
-            writer.WriteBytes(segment.Data.UnsafeItems.AsSpan(slice.Start, slice.Length));
+            writer.WriteBytes(segment.Data.AsSpan().Slice(slice.Start, slice.Length));
         }
     }
 
@@ -252,7 +257,7 @@ public static class GameEventScriptProgramWriter
             var source = segment.Sources[index];
             writer.WriteString(source.SourceName);
             writer.WriteUInt32(source.SourceByteLength);
-            writer.WriteBytes(source.Sha256.UnsafeItems);
+            writer.WriteBytes(source.Sha256.AsSpan());
             writer.WriteUInt32(checked((uint)source.LineStartByteOffsets.Count));
             for (var line = 0; line < source.LineStartByteOffsets.Count; line++) writer.WriteUInt32(source.LineStartByteOffsets[line]);
         }
@@ -288,7 +293,7 @@ public static class GameEventScriptProgramWriter
             writer.WriteUInt32(source.SourceId);
             writer.WriteString(source.SourceName);
             writer.WriteUInt32(checked((uint)source.Utf8Content.Count));
-            writer.WriteBytes(source.Utf8Content.UnsafeItems);
+            writer.WriteBytes(source.Utf8Content.AsSpan());
         }
     }
 

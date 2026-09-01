@@ -101,7 +101,14 @@ public readonly struct GameEventScriptReadOnlyArray<T> : IReadOnlyList<T>
     public IEnumerator<T> GetEnumerator() => ((IEnumerable<T>)(_items ?? [])).GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    internal T[] UnsafeItems => _items ?? [];
+    internal ReadOnlySpan<T> AsSpan() => _items;
+
+    internal string DecodeUtf8(Encoding encoding, int start, int length)
+    {
+        if (typeof(T) != typeof(byte)) throw new InvalidOperationException("Only byte arrays can be decoded as UTF-8.");
+        var bytes = (byte[])(object)(_items ?? Array.Empty<T>());
+        return encoding.GetString(bytes, start, length);
+    }
 }
 
 public static class GameEventScriptBinaryFormat
@@ -169,14 +176,18 @@ public readonly struct GameEventScriptStringConstantSegment
     public GameEventScriptReadOnlyArray<byte> Data => _data;
 
     public int ResolveSize(ushort index) => _slices[index].Length;
-    public string Resolve(ushort index) => Encoding.UTF8.GetString(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
+    public string Resolve(ushort index)
+    {
+        var slice = _slices[index];
+        return _data.DecodeUtf8(Encoding.UTF8, slice.Start, slice.Length);
+    }
 }
 
 public readonly struct GameEventScriptUInt16IndexList
 {
-    private readonly ushort[]? _data;
+    private readonly GameEventScriptReadOnlyArray<ushort> _data;
 
-    internal GameEventScriptUInt16IndexList(ushort[] data, int start, int length)
+    internal GameEventScriptUInt16IndexList(GameEventScriptReadOnlyArray<ushort> data, int start, int length)
     {
         _data = data;
         Start = start;
@@ -187,7 +198,7 @@ public readonly struct GameEventScriptUInt16IndexList
 
     public int Length { get; }
 
-    public ushort this[int index] => _data![Start + index];
+    public ushort this[int index] => _data[Start + index];
 }
 
 public readonly struct GameEventScriptUInt16IndexListSegment
@@ -210,7 +221,7 @@ public readonly struct GameEventScriptUInt16IndexListSegment
     public GameEventScriptReadOnlyArray<SliceEntry> Slices => _slices;
     public GameEventScriptReadOnlyArray<ushort> Data => _data;
 
-    public GameEventScriptUInt16IndexList Resolve(ushort index) => new(_data.UnsafeItems, _slices[index].Start, _slices[index].Length);
+    public GameEventScriptUInt16IndexList Resolve(ushort index) => new(_data, _slices[index].Start, _slices[index].Length);
 }
 
 public readonly struct GameEventScriptBindingSegment
@@ -352,7 +363,9 @@ public sealed class GameEventScriptSourceArchiveEntry
     public uint SourceId { get; }
     public string SourceName { get; }
     public GameEventScriptReadOnlyArray<byte> Utf8Content => _utf8Content;
-    public string ResolveText() => Encoding.UTF8.GetString(_utf8Content.UnsafeItems);
+    public string ResolveText() => DecodeText(Encoding.UTF8);
+
+    internal string DecodeText(Encoding encoding) => _utf8Content.DecodeUtf8(encoding, 0, _utf8Content.Count);
 }
 
 public sealed class GameEventScriptSourceArchiveSegment

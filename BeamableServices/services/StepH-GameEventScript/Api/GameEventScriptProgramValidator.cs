@@ -43,13 +43,13 @@ public static class GameEventScriptProgramValidator
     private static void ValidateStrings(GameEventScriptStringConstantSegment segment)
     {
         if (segment.Slices.Count > ushort.MaxValue) Throw(GameEventScriptProgramFormatErrorCode.TooManyEntries, "StringConstantSegment exceeds 65535 entries.");
-        var data = segment.Data.UnsafeItems;
+        var data = segment.Data.AsSpan();
         for (var index = 0; index < segment.Slices.Count; index++)
         {
             var slice = segment.Slices[index];
             if ((long)slice.Start + slice.Length > data.Length)
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidPayloadLength, "String slice is outside the segment payload.", (ushort)GameEventScriptSectionType.StringConstants, index);
-            try { _ = StrictUtf8.GetString(data, slice.Start, slice.Length); }
+            try { _ = segment.Data.DecodeUtf8(StrictUtf8, slice.Start, slice.Length); }
             catch (DecoderFallbackException exception)
             {
                 throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidUtf8, "StringConstantSegment contains invalid UTF-8.", sectionType: (ushort)GameEventScriptSectionType.StringConstants, entryIndex: index, innerException: exception);
@@ -291,7 +291,7 @@ public static class GameEventScriptProgramValidator
         var left = strings.Slices[leftIndex];
         var right = strings.Slices[rightIndex];
         if (left.Length != right.Length) return false;
-        var data = strings.Data.UnsafeItems;
+        var data = strings.Data.AsSpan();
         for (var offset = 0; offset < left.Length; offset++)
             if (data[left.Start + offset] != data[right.Start + offset]) return false;
         return true;
@@ -301,7 +301,7 @@ public static class GameEventScriptProgramValidator
     {
         var slice = strings.Slices[stringIndex];
         if (slice.Length == 0) return false;
-        var data = strings.Data.UnsafeItems;
+        var data = strings.Data.AsSpan();
         for (var index = slice.Start; index < slice.Start + slice.Length; index++)
             if (!IsAsciiLetter(data[index])) return false;
         return true;
@@ -317,7 +317,7 @@ public static class GameEventScriptProgramValidator
     {
         var slice = strings.Slices[stringIndex];
         if (slice.Length == 0) return false;
-        var data = strings.Data.UnsafeItems;
+        var data = strings.Data.AsSpan();
         var end = slice.Start + slice.Length;
         if (!IsAsciiLower(data[slice.Start])) return false;
         var index = slice.Start + 1;
@@ -334,13 +334,13 @@ public static class GameEventScriptProgramValidator
     private static bool IsPortableUnlabeled(GameEventScriptStringConstantSegment strings, ushort stringIndex)
     {
         var slice = strings.Slices[stringIndex];
-        return slice.Length == 1 && strings.Data.UnsafeItems[slice.Start] == (byte)'_';
+        return slice.Length == 1 && strings.Data.AsSpan()[slice.Start] == (byte)'_';
     }
 
     private static bool IsPortableExtensionName(GameEventScriptStringConstantSegment strings, ushort stringIndex)
     {
         var slice = strings.Slices[stringIndex];
-        var data = strings.Data.UnsafeItems;
+        var data = strings.Data.AsSpan();
         var separator = -1;
         for (var index = slice.Start; index < slice.Start + slice.Length; index++)
         {
@@ -354,7 +354,7 @@ public static class GameEventScriptProgramValidator
                IsPortableIdentifierRange(data, separator + 1, slice.Start + slice.Length);
     }
 
-    private static bool IsPortableIdentifierRange(byte[] data, int start, int end)
+    private static bool IsPortableIdentifierRange(ReadOnlySpan<byte> data, int start, int end)
     {
         if (start >= end || !IsAsciiLower(data[start])) return false;
         var index = start + 1;
@@ -442,7 +442,7 @@ public static class GameEventScriptProgramValidator
             if (!ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0) Throw(GameEventScriptProgramFormatErrorCode.InvalidSourceArchive, "SourceArchive SourceIds must be unique and names valid non-empty Unicode.", (ushort)GameEventScriptSectionType.SourceArchive, index);
             try
             {
-                var text = StrictUtf8.GetString(source.Utf8Content.UnsafeItems);
+                var text = source.DecodeText(StrictUtf8);
                 if (text.Length > 0 && text[0] == '\uFEFF')
                     Throw(GameEventScriptProgramFormatErrorCode.InvalidSourceArchive, "SourceArchive stores logical source text and must not retain an initial UTF-8 BOM.", (ushort)GameEventScriptSectionType.SourceArchive, index);
             }
@@ -458,6 +458,7 @@ public static class GameEventScriptProgramValidator
         if (map.Sources.Count != archive.Sources.Count)
             Throw(GameEventScriptProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap and SourceArchive must describe the same source set.", (ushort)GameEventScriptSectionType.SourceMap);
         using var sha256 = SHA256.Create();
+        Span<byte> hash = stackalloc byte[32];
         for (var index = 0; index < map.Sources.Count; index++)
         {
             var metadata = map.Sources[index];
@@ -470,16 +471,17 @@ public static class GameEventScriptProgramValidator
             }
             if (!string.Equals(content.SourceName, metadata.SourceName, StringComparison.Ordinal) || content.Utf8Content.Count != metadata.SourceByteLength)
                 Throw(GameEventScriptProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap and SourceArchive metadata do not agree.", (ushort)GameEventScriptSectionType.SourceMap, index);
-            var hash = sha256.ComputeHash(content.Utf8Content.UnsafeItems);
+            if (!sha256.TryComputeHash(content.Utf8Content.AsSpan(), hash, out var hashLength) || hashLength != hash.Length)
+                Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, "SHA-256 could not hash SourceArchive content.", (ushort)GameEventScriptSectionType.SourceMap, index);
             for (var byteIndex = 0; byteIndex < hash.Length; byteIndex++) if (hash[byteIndex] != metadata.Sha256[byteIndex])
                 Throw(GameEventScriptProgramFormatErrorCode.SourceMetadataMismatch, "SourceMap SHA-256 does not match SourceArchive.", (ushort)GameEventScriptSectionType.SourceMap, index);
-            ValidateUtf8Offsets(content.Utf8Content.UnsafeItems, metadata, index);
-            ValidateLogicalLineOffsets(content.Utf8Content.UnsafeItems, metadata, index);
-            ValidateMappingUtf8Offsets(content.Utf8Content.UnsafeItems, map, metadata.SourceId, index);
+            ValidateUtf8Offsets(content.Utf8Content.AsSpan(), metadata, index);
+            ValidateLogicalLineOffsets(content.DecodeText(StrictUtf8), metadata, index);
+            ValidateMappingUtf8Offsets(content.Utf8Content.AsSpan(), map, metadata.SourceId, index);
         }
     }
 
-    private static void ValidateMappingUtf8Offsets(byte[] bytes, GameEventScriptSourceMapSegment map, uint sourceId, int sourceIndex)
+    private static void ValidateMappingUtf8Offsets(ReadOnlySpan<byte> bytes, GameEventScriptSourceMapSegment map, uint sourceId, int sourceIndex)
     {
         for (var index = 0; index < map.Entries.Count; index++)
         {
@@ -492,12 +494,11 @@ public static class GameEventScriptProgramValidator
         }
     }
 
-    private static bool IsUtf8Boundary(byte[] bytes, int offset)
+    private static bool IsUtf8Boundary(ReadOnlySpan<byte> bytes, int offset)
         => offset == 0 || offset == bytes.Length || offset > 0 && offset < bytes.Length && (bytes[offset] & 0xC0) != 0x80;
 
-    private static void ValidateLogicalLineOffsets(byte[] bytes, GameEventScriptSourceMapSource metadata, int entryIndex)
+    private static void ValidateLogicalLineOffsets(string text, GameEventScriptSourceMapSource metadata, int entryIndex)
     {
-        var text = StrictUtf8.GetString(bytes);
         var expected = new List<uint> { 0 };
         for (var utf16Offset = 0; utf16Offset < text.Length; utf16Offset++)
         {
@@ -525,7 +526,7 @@ public static class GameEventScriptProgramValidator
             Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"{role} must be valid non-empty Unicode.", sectionType);
     }
 
-    private static void ValidateUtf8Offsets(byte[] bytes, GameEventScriptSourceMapSource metadata, int entryIndex)
+    private static void ValidateUtf8Offsets(ReadOnlySpan<byte> bytes, GameEventScriptSourceMapSource metadata, int entryIndex)
     {
         for (var index = 0; index < metadata.LineStartByteOffsets.Count; index++)
         {

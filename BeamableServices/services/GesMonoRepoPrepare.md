@@ -41,7 +41,7 @@ Festgelegte Abgrenzungen:
 Noch fehlende sprachübergreifende `.gesb`-Fixtures werden unter Punkt 5 geführt,
 weil ihre Ausführung erst gemeinsam mit den Runtime-Ports geprüft werden kann.
 
-## 2. Portable Sprache und Runtime-Semantik festschreiben
+## 2. Portable Sprache und Runtime-Semantik festschreiben - DONE
 
 Mehrere aktuelle Verhaltensweisen hängen implizit an .NET.
 
@@ -212,26 +212,58 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 
 ## 4. `GameEventScriptProgram` als wirklich portables Datenmodell härten
 
-Die Regel in `AGENTS.md` ist richtig. Zusätzlich sollte sichergestellt werden:
+Der `.gesb`-V1-Umbau hat einen großen Teil dieses Punkts bereits vorweggenommen.
+Das Programmodell besitzt einen internen Konstruktor, seine Tabellen werden
+defensiv kopiert und Reader, Writer sowie `Host.Load` verwenden den vollständigen
+Validator. Die verbleibende Arbeit ist daher ein gezieltes Audit mit
+Regressionstests statt eines weiteren großen Umbaus.
 
-- keine Delegates
-- keine Registries
-- keine CLR-Objekte
-- keine Runtime-Caches
-- keine VM-Referenzen
-- keine AST-Knoten
-- keine platformabhängigen Hashwerte
-- keine Abhängigkeit von C#-Struct-Memory-Layout
-- alle Listen und Tabellen immutable
-- alle enumähnlichen Werte numerisch spezifiziert
-- jedes Program kann vollständig nach `.gesb` geschrieben werden
+### 4.1 Programmodell und Ownership auditieren - DONE
 
-Der öffentliche Konstruktor erlaubt momentan prinzipiell beliebige ungültige Programs. Entweder:
+- Der vollständige Program-Objektgraph enthält ausschließlich feste skalare
+  Werte, Strings sowie immutable Segment-, Tabellen-, Entry- und Payloaddaten,
+  die eine verlustfreie `.gesb`-Repräsentation besitzen.
+- Delegates, Registries, CLR-Objekte, Runtime-Caches, VM-/Host-Referenzen,
+  AST-Knoten und Compilerzustand liegen nachweislich außerhalb des Programs.
+- Alle Sequenzen werden beim Aufbau defensiv kopiert. Der bisherige interne
+  `UnsafeItems`-Arrayzugriff wurde entfernt; Core-Komponenten erhalten für
+  Bulk-Reads nur noch `ReadOnlySpan<T>` oder immutable Slices.
+- Linked Strings, Imports, ID-Indizes und andere Beschleunigungsstrukturen bleiben
+  in `GesLinkedProgram` und werden nicht in das Program zurückgeschrieben.
+- Der normative Daten-, Ownership- und Immutability-Vertrag steht in
+  `StepH-GameEventScript/PortableProgramModel.md`.
 
-- Konstruktion nur intern beziehungsweise über Reader/Compiler, oder
-- jeder `Host.Load` führt zwingend den vollständigen Validator aus.
+### 4.2 Konstruktions- und Validierungsgrenzen absichern
 
-Für untrusted `.gesb` sollte Letzteres ohnehin gelten.
+- Programs dürfen öffentlich nur aus Compiler oder Reader entstehen; eine freie
+  öffentliche Konstruktion aus beliebigen Segmenten bleibt ausgeschlossen.
+- Reader liefert nur vollständig validierte Programs.
+- Writer validiert jedes Program vor der Serialisierung.
+- `Host.Load` validiert auch bereits im Speicher befindliche Programs erneut,
+  bevor das hostgebundene Linking beginnt.
+
+### 4.3 Encoding-Unabhängigkeit absichern
+
+- `.gesb` wird ausschließlich durch die normativ spezifizierten Felder und deren
+  feste numerische Werte definiert.
+- CLR-`StructLayout`, Plattform-Endianness, Padding und In-Memory-Overlays dürfen
+  niemals das Dateiformat definieren. Das explizite Instruction-Layout bleibt
+  lediglich ein C#-Implementierungsdetail.
+- Alle formatrelevanten enumähnlichen Werte müssen explizite numerische IDs
+  besitzen.
+- Plattformabhängige Hashwerte sind verboten; spezifizierte kryptographische
+  Hashes wie SHA-256 bleiben erlaubt.
+
+### 4.4 Regressionstests und Abschluss
+
+- Defensive Kopien und die Immutability verschachtelter Programdaten testen.
+- Testen, dass `GameEventScriptProgram` keinen öffentlichen Konstruktor besitzt.
+- Vollständigen `Compile -> Write -> Read -> Write -> Host.Load`-Roundtrip als
+  portable Grenze absichern.
+- Kanonische Bytes und numerische IDs gegen unbeabsichtigte Abhängigkeiten vom
+  CLR-Memory-Layout schützen.
+- Nach erfolgreichem Audit Punkt 4 als erledigt markieren und das Ergebnis in
+  der normativen Dokumentation beziehungsweise `AGENTS.md` festhalten.
 
 ## 5. JSON-Conformance ausbauen
 

@@ -41,6 +41,8 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Series now use direct VM concepts and `CreateSeries`.
 - `GameEventScriptProgram` is the immutable reusable compiler result.
 - `GameEventScriptProgram` is the portable parsed representation of the `.gesb` V1 binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
+- `StepH-GameEventScript/PortableProgramModel.md` is the normative ownership and
+  permitted-data contract for the immutable program object graph.
 - Compilation includes `DebugSymbols`, `SourceMap`, and `SourceArchive` by default; production or size-sensitive builds opt out explicitly with `GameEventScriptDebugInfoOptions.None`.
 - `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
 - `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.

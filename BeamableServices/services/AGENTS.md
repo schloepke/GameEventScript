@@ -253,6 +253,13 @@ and retain a required pointer here.
   separately; V1 only reserves the security section range and provides no
   authenticity guarantee.
 
+### Deferred editor tooling
+
+- After the Kotlin port is stable, build a dedicated IntelliJ plugin with
+  native `.ges`/`.gesa` support beyond the portable TextMate highlighting and
+  `.region` folding. Keep the portable dump and TextMate bundles free of
+  IntelliJ-specific markers in the meantime.
+
 ### Deferred performance work
 
 - Improve CFG/liveness-based register allocation and reuse of non-overlapping

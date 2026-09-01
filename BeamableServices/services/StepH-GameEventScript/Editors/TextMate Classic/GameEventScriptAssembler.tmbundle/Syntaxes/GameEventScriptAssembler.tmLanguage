@@ -10,10 +10,18 @@
 	</array>
 	<key>firstLineMatch</key>
 	<string>^\s*\.gesb\b</string>
+	<key>foldingStartMarker</key>
+	<string>^\s*\.region(?:\s|$)</string>
+	<key>foldingStopMarker</key>
+	<string>^\s*\.region-end(?:\s|$)</string>
 	<key>name</key>
 	<string>GameEventScript Assembler</string>
 	<key>patterns</key>
 	<array>
+		<dict>
+			<key>include</key>
+			<string>#embedded-source</string>
+		</dict>
 		<dict>
 			<key>include</key>
 			<string>#comments</string>
@@ -62,6 +70,18 @@
 			<key>patterns</key>
 			<array>
 				<dict>
+					<key>match</key>
+					<string>^\s*\.region\s+"(?:\\.|[^"\\])*"\s*$</string>
+					<key>name</key>
+					<string>comment.line.region.begin.gameeventscript.assembler</string>
+				</dict>
+				<dict>
+					<key>match</key>
+					<string>^\s*\.region-end\s+"(?:\\.|[^"\\])*"\s*$</string>
+					<key>name</key>
+					<string>comment.line.region.end.gameeventscript.assembler</string>
+				</dict>
+				<dict>
 					<key>captures</key>
 					<dict>
 						<key>1</key>
@@ -91,16 +111,30 @@
 						<key>2</key>
 						<dict>
 							<key>name</key>
-							<string>support.type.bind-kind.gameeventscript.assembler</string>
+							<string>entity.other.attribute-name.tag.gameeventscript</string>
 						</dict>
 					</dict>
 					<key>match</key>
-					<string>^\s*(\.segment)\s+(bind)\b</string>
+					<string>^\s*(\.segment)\s+(text|lists|bind|code)\b</string>
 					<key>name</key>
 					<string>meta.directive.segment.gameeventscript.assembler</string>
 				</dict>
 				<dict>
-					<key>captures</key>
+					<key>match</key>
+					<string>(?&lt;!\S)\.(?:gesb|module|program-version|text|u16|registers|texts|bind)\b</string>
+					<key>name</key>
+					<string>keyword.control.directive.gameeventscript.assembler</string>
+				</dict>
+			</array>
+		</dict>
+		<key>embedded-source</key>
+		<dict>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>begin</key>
+					<string>^\s*(\.segment)\s+(source)\s+("(?:\\.|[^"\\])*")\s*$</string>
+					<key>beginCaptures</key>
 					<dict>
 						<key>1</key>
 						<dict>
@@ -112,17 +146,65 @@
 							<key>name</key>
 							<string>entity.other.attribute-name.tag.gameeventscript</string>
 						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>string.quoted.double.source-name.gameeventscript.assembler</string>
+						</dict>
 					</dict>
-					<key>match</key>
-					<string>^\s*(\.segment)\s+(text|lists|code)\b</string>
+					<key>contentName</key>
+					<string>meta.embedded.block.gameeventscript.assembler</string>
+					<key>end</key>
+					<string>^(?=\s*\.(?:region-end|segment)\b)</string>
 					<key>name</key>
-					<string>meta.directive.segment.gameeventscript.assembler</string>
+					<string>meta.embedded.source.gameeventscript.assembler</string>
+					<key>patterns</key>
+					<array>
+						<dict>
+							<key>include</key>
+							<string>source.gameeventscript</string>
+						</dict>
+					</array>
 				</dict>
 				<dict>
-					<key>match</key>
-					<string>(?&lt;!\S)\.(?:gesb|module|program-version|text|u16|registers|texts|bind)\b</string>
+					<key>begin</key>
+					<string>^\s*(\.source-line)\s+("(?:\\.|[^"\\])*")\s+(\d+)\s+(\|)\s?</string>
+					<key>beginCaptures</key>
+					<dict>
+						<key>1</key>
+						<dict>
+							<key>name</key>
+							<string>keyword.control.directive.source.gameeventscript.assembler</string>
+						</dict>
+						<key>2</key>
+						<dict>
+							<key>name</key>
+							<string>string.quoted.double.source-name.gameeventscript.assembler</string>
+						</dict>
+						<key>3</key>
+						<dict>
+							<key>name</key>
+							<string>constant.numeric.line.gameeventscript.assembler</string>
+						</dict>
+						<key>4</key>
+						<dict>
+							<key>name</key>
+							<string>punctuation.separator.embedded.gameeventscript.assembler</string>
+						</dict>
+					</dict>
+					<key>contentName</key>
+					<string>meta.embedded.line.gameeventscript.assembler</string>
+					<key>end</key>
+					<string>$</string>
 					<key>name</key>
-					<string>keyword.control.directive.gameeventscript.assembler</string>
+					<string>meta.embedded.source-line.gameeventscript.assembler</string>
+					<key>patterns</key>
+					<array>
+						<dict>
+							<key>include</key>
+							<string>source.gameeventscript</string>
+						</dict>
+					</array>
 				</dict>
 			</array>
 		</dict>

@@ -23,4 +23,10 @@ comments, and strings. Version directives such as `.program-version 42` are
 recognized explicitly. If embedded debug symbols are present in a dump,
 `r20(total)` highlights `r20` as the physical register and `total` as its source
 variable annotation; execution flags such as `NormalizeResultAsPredicate` retain
-their separate constant scope.
+their separate constant scope. Source archives in
+`.segment source "name.ges"` blocks and the source portion of
+`.source-line "name.ges" 4 | source` use the normal GameEventScript source
+grammar. A source segment ends at `.region-end "Name"` or the next `.segment`
+directive. Free `.region "Name"` / `.region-end "Name"` blocks wrap dump
+segments, use a comment scope, and are exposed through the standard TextMate
+folding markers.

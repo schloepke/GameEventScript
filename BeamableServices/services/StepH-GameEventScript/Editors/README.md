@@ -15,4 +15,14 @@ support changes so both editor generations remain semantically identical.
 `.ges` is the only canonical GameEventScript source extension. The assembler
 grammar follows the current dumper output, including `.program-version`, current
 opcodes and bytecode types, and debug-symbol register annotations such as
-`r20(total)`.
+`r20(total)`. Embedded source archives use `.segment source "name.ges"`; its
+content continues until the next `.segment` directive. Mapped source lines use
+`.source-line "name.ges" 4 | source`. Both forms embed the normal
+`source.gameeventscript` grammar in assembler dumps.
+
+The dumper wraps source, text, list, binding, and code segments in free
+`.region "Name"` / `.region-end "Name"` presentation blocks with visible
+comment separators and surrounding blank lines. The assembler grammars render
+the region directives with a comment scope and publish them as TextMate folding
+markers for editors that support grammar-defined folding. Regions do not change
+`.gesb` or runtime semantics.

@@ -99,10 +99,15 @@ public sealed class GameEventScriptBinaryTests
             .Compile()
             .Dump(includeInstructionAddresses: true);
 
-        StringAssert.Contains(dump, "// Source: binary-source-dump.ges");
-        StringAssert.Contains(dump, "//\t\tmodule BinarySourceDump");
-        StringAssert.Contains(dump, "//\t\ton Start {");
-        StringAssert.Contains(dump, "// binary-source-dump.ges:");
+        StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n.region \"Source: binary-source-dump.ges\"\n\n.segment source \"binary-source-dump.ges\"\n\n");
+        StringAssert.Contains(dump, "module BinarySourceDump");
+        StringAssert.Contains(dump, "on Start {");
+        StringAssert.Contains(dump, ".region-end \"Source: binary-source-dump.ges\"\n// -------------------------------------------------------------------------------");
+        StringAssert.Contains(dump, ".region \"Text\"\n\n.segment text");
+        StringAssert.Contains(dump, ".region \"Lists\"\n\n.segment lists");
+        StringAssert.Contains(dump, ".region \"Bindings\"\n\n.segment bind");
+        StringAssert.Contains(dump, ".region \"Code\"\n\n.segment code");
+        StringAssert.Contains(dump, ".source-line \"binary-source-dump.ges\" 3 | on Start {");
         StringAssert.Contains(dump, "// -------------------------------------------------------------------------------\n\n.gesb ");
     }
 

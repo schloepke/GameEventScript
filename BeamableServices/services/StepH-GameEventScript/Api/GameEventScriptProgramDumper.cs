@@ -13,6 +13,7 @@ namespace StepH.GameEventScript.Api;
 public static class GameEventScriptProgramDumper
 {
     private const string CodeIndent = "\t\t\t\t\t";
+    private const string RegionSeparator = "// -------------------------------------------------------------------------------";
     private const ushort NoAddress = 0xFFFF;
 
     /// <summary>
@@ -36,6 +37,7 @@ public static class GameEventScriptProgramDumper
             .Append(".module \"").Append(Escape(program.ModuleName)).AppendLine("\"")
             .Append(".program-version ").Append(program.ProgramVersion.ToString(CultureInfo.InvariantCulture)).AppendLine();
 
+        AppendSourceSegments(builder, program);
         AppendTextSegment(builder, context);
         AppendListSegment(builder, context);
         AppendBindSegment(builder, context);
@@ -46,41 +48,60 @@ public static class GameEventScriptProgramDumper
     private static void AppendHeader(StringBuilder builder, GameEventScriptProgram program)
     {
         builder
-            .AppendLine("// -------------------------------------------------------------------------------")
+            .AppendLine(RegionSeparator)
             .Append("//  Module: ").AppendLine(program.ModuleName)
             .AppendLine("//  Type: Game Event Script Assembler")
             .Append("//  Format version: ").Append(program.FormatVersion.ToString(CultureInfo.InvariantCulture)).AppendLine(".0")
-            .AppendLine("// -------------------------------------------------------------------------------");
-
-        if (program.SourceArchive is not null)
-        {
-            for (var index = 0; index < program.SourceArchive.Sources.Count; index++)
-            {
-                var source = program.SourceArchive.Sources[index];
-                builder
-                    .Append("// Source: ").AppendLine(source.SourceName)
-                    .AppendLine("//");
-                AppendHeaderScript(builder, source.ResolveText());
-                builder
-                    .AppendLine("//")
-                    .AppendLine("// -------------------------------------------------------------------------------");
-            }
-        }
+            .AppendLine(RegionSeparator);
 
         builder.AppendLine();
     }
 
-    private static void AppendHeaderScript(StringBuilder builder, string scriptSource)
+    private static void AppendSourceSegments(StringBuilder builder, GameEventScriptProgram program)
     {
-        foreach (var line in scriptSource.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n'))
+        if (program.SourceArchive is null) return;
+        for (var index = 0; index < program.SourceArchive.Sources.Count; index++)
         {
-            builder.Append("//\t\t").AppendLine(line);
+            var source = program.SourceArchive.Sources[index];
+            var regionName = "Source: " + source.SourceName;
+            AppendRegionStart(builder, regionName);
+            builder.Append(".segment source \"").Append(Escape(source.SourceName)).AppendLine("\"").AppendLine();
+            AppendEmbeddedSource(builder, source.ResolveText());
+            AppendRegionEnd(builder, regionName);
+        }
+    }
+
+    private static void AppendRegionStart(StringBuilder builder, string name)
+    {
+        EnsureBlankLine(builder);
+        builder
+            .AppendLine(RegionSeparator)
+            .Append(".region \"").Append(Escape(name)).AppendLine("\"")
+            .AppendLine();
+    }
+
+    private static void AppendRegionEnd(StringBuilder builder, string name)
+    {
+        EnsureBlankLine(builder);
+        builder
+            .Append(".region-end \"").Append(Escape(name)).AppendLine("\"")
+            .AppendLine(RegionSeparator);
+    }
+
+    private static void AppendEmbeddedSource(StringBuilder builder, string scriptSource)
+    {
+        var normalized = scriptSource.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+        builder.Append(normalized);
+        if (normalized.Length == 0 || normalized[^1] != '\n')
+        {
+            builder.AppendLine();
         }
     }
 
     private static void AppendTextSegment(StringBuilder builder, DisassemblyContext context)
     {
-        builder.AppendLine().AppendLine().AppendLine(".segment text").AppendLine();
+        AppendRegionStart(builder, "Text");
+        builder.AppendLine(".segment text").AppendLine();
         for (var i = 0; i < context.Program.StringConstants.Slices.Length; i++)
         {
             AppendAlignedLabel(builder, context.TextLabel(i))
@@ -88,12 +109,15 @@ public static class GameEventScriptProgramDumper
                 .Append(Escape(context.Program.StringConstants.Resolve(checked((ushort)i))))
                 .AppendLine("\"");
         }
+
+        AppendRegionEnd(builder, "Text");
     }
 
     private static void AppendListSegment(StringBuilder builder, DisassemblyContext context)
     {
         var table = context.Program.UInt16IndexLists;
-        builder.AppendLine().AppendLine().AppendLine(".segment lists").AppendLine();
+        AppendRegionStart(builder, "Lists");
+        builder.AppendLine(".segment lists").AppendLine();
         for (var i = 0; i < table.Slices.Length; i++)
         {
             var label = context.ListLabel(i);
@@ -121,11 +145,14 @@ public static class GameEventScriptProgramDumper
             AppendListComment(builder, context, values, context.GetListRole(i));
             builder.AppendLine();
         }
+
+        AppendRegionEnd(builder, "Lists");
     }
 
     private static void AppendBindSegment(StringBuilder builder, DisassemblyContext context)
     {
-        builder.AppendLine().AppendLine().AppendLine(".segment bind").AppendLine();
+        AppendRegionStart(builder, "Bindings");
+        builder.AppendLine(".segment bind").AppendLine();
         var entries = context.Program.Bindings.Entries;
         for (var i = 0; i < entries.Count; i++)
         {
@@ -166,28 +193,31 @@ public static class GameEventScriptProgramDumper
                 .Append(" // ")
                 .AppendLine(FormatBindSignatureComment(context, entry));
         }
+
+        AppendRegionEnd(builder, "Bindings");
     }
 
     private static void AppendCodeSegment(StringBuilder builder, DisassemblyContext context, bool includeInstructionAddresses)
     {
         var instructions = context.Program.Code.Instructions;
-        builder.AppendLine().AppendLine().AppendLine(".segment code").AppendLine();
+        AppendRegionStart(builder, "Code");
+        builder.AppendLine(".segment code").AppendLine();
         uint? previousSourceId = null;
         var previousSourceLine = -1;
         var previousWasCompilerGenerated = false;
         for (var i = 0; i < instructions.Length; i++)
         {
-            AppendSourceComment(builder, context.Program, checked((uint)i), ref previousSourceId, ref previousSourceLine, ref previousWasCompilerGenerated);
             var hasCodeLabel = context.HasCodeLabel(i);
             var isNamedCodeEntry = hasCodeLabel && context.IsNamedCodeEntry(i);
             var inlineLocalLabel = hasCodeLabel && !isNamedCodeEntry && !includeInstructionAddresses;
+            if (isNamedCodeEntry && i > 0)
+            {
+                EnsureBlankLine(builder);
+            }
+
+            AppendSourceComment(builder, context.Program, checked((uint)i), ref previousSourceId, ref previousSourceLine, ref previousWasCompilerGenerated);
             if (hasCodeLabel && !inlineLocalLabel)
             {
-                if (isNamedCodeEntry && i > 0)
-                {
-                    builder.AppendLine();
-                }
-
                 AppendAlignedLabel(builder, context.CodeLabel(i));
                 if (context.GetCodeLabelComment(i) is { } labelComment)
                 {
@@ -231,6 +261,8 @@ public static class GameEventScriptProgramDumper
             AppendInstructionComment(builder, context, instruction, operands);
             builder.AppendLine();
         }
+
+        AppendRegionEnd(builder, "Code");
     }
 
     private static void AppendSourceComment(
@@ -261,11 +293,30 @@ public static class GameEventScriptProgramDumper
         if (previousSourceId == current.Value.SourceId && previousSourceLine == lineIndex) return;
         previousSourceId = current.Value.SourceId;
         previousSourceLine = lineIndex;
-        builder.Append("// ").Append(source.SourceName).Append(':').Append((lineIndex + 1).ToString(CultureInfo.InvariantCulture)).AppendLine();
+        EnsureBlankLine(builder);
         var sourceText = ResolveSourceText(program.SourceArchive, current.Value.SourceId);
-        if (sourceText is null) return;
-        var line = ReadSourceLine(sourceText, lineIndex);
-        builder.Append("// ").AppendLine(line);
+        builder
+            .Append(".source-line \"")
+            .Append(Escape(source.SourceName))
+            .Append("\" ")
+            .Append((lineIndex + 1).ToString(CultureInfo.InvariantCulture))
+            .Append(" | ");
+        if (sourceText is not null)
+        {
+            builder.Append(ReadSourceLine(sourceText, lineIndex));
+        }
+
+        builder.AppendLine();
+    }
+
+    private static void EnsureBlankLine(StringBuilder builder)
+    {
+        if (builder.Length == 0) return;
+        var index = builder.Length - 1;
+        if (builder[index] == '\n') index--;
+        if (index >= 0 && builder[index] == '\r') index--;
+        if (index < 0 || builder[index] == '\n') return;
+        builder.AppendLine();
     }
 
     private static GameEventScriptSourceMapEntry? FindSourceMapping(GameEventScriptSourceMapSegment? sourceMap, uint codeAddress)

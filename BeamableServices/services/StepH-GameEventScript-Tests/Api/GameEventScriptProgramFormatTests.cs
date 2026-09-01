@@ -334,11 +334,34 @@ public sealed class GameEventScriptProgramFormatTests
         var decoded = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
         var dump = decoded.Dump(includeInstructionAddresses: true);
 
-        StringAssert.Contains(dump, "// Source: main.ges");
-        StringAssert.Contains(dump, "// main.ges:");
+        StringAssert.Contains(dump, ".region \"Source: main.ges\"\n\n.segment source \"main.ges\"\n\n");
+        StringAssert.Contains(dump, ".source-line \"main.ges\" 4 |   let result be value + 1");
         StringAssert.Contains(dump, "let result be value + 1");
         StringAssert.Contains(dump, "Add r1(result), r0(value), r2");
-        Assert.AreEqual(1, dump.ReplaceLineEndings("\n").Split('\n').Count(line => line == "// main.ges:4"));
+        var lines = dump.ReplaceLineEndings("\n").Split('\n');
+        Assert.AreEqual(1, lines.Count(line => line.StartsWith(".source-line \"main.ges\" 4 |", StringComparison.Ordinal)));
+        Assert.AreEqual(5, lines.Count(line => line.StartsWith(".region-end \"", StringComparison.Ordinal)));
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (lines[index].StartsWith(".region \"", StringComparison.Ordinal))
+            {
+                Assert.IsTrue(index > 0 && lines[index - 1] == "// -------------------------------------------------------------------------------", $"Expected a separator before: {lines[index]}");
+                Assert.IsTrue(index + 1 < lines.Length && lines[index + 1].Length == 0, $"Expected a blank line after: {lines[index]}");
+            }
+            else if (lines[index].StartsWith(".region-end \"", StringComparison.Ordinal))
+            {
+                Assert.IsTrue(index > 0 && lines[index - 1].Length == 0, $"Expected a blank line before: {lines[index]}");
+                Assert.IsTrue(index + 1 < lines.Length && lines[index + 1] == "// -------------------------------------------------------------------------------", $"Expected a separator after: {lines[index]}");
+            }
+        }
+
+        for (var index = 0; index < lines.Length; index++)
+        {
+            if (lines[index].StartsWith(".source-line ", StringComparison.Ordinal))
+            {
+                Assert.IsTrue(index > 0 && lines[index - 1].Length == 0, $"Expected a blank line before: {lines[index]}");
+            }
+        }
     }
 
     private static GameEventScriptProgram Compile(GameEventScriptDebugInfoOptions options)

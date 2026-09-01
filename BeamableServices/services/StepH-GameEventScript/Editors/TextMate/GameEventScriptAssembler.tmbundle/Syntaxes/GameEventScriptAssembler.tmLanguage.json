@@ -6,7 +6,12 @@
     "gesa"
   ],
   "firstLineMatch": "^\\s*\\.gesb\\b",
+  "foldingStartMarker": "^\\s*\\.region(?:\\s|$)",
+  "foldingStopMarker": "^\\s*\\.region-end(?:\\s|$)",
   "patterns": [
+    {
+      "include": "#embedded-source"
+    },
     {
       "include": "#comments"
     },
@@ -30,6 +35,57 @@
     }
   ],
   "repository": {
+    "embedded-source": {
+      "patterns": [
+        {
+          "begin": "^\\s*(\\.segment)\\s+(source)\\s+(\"(?:\\\\.|[^\"\\\\])*\")\\s*$",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.segment.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "entity.other.attribute-name.tag.gameeventscript"
+            },
+            "3": {
+              "name": "string.quoted.double.source-name.gameeventscript.assembler"
+            }
+          },
+          "contentName": "meta.embedded.block.gameeventscript.assembler",
+          "end": "^(?=\\s*\\.(?:region-end|segment)\\b)",
+          "name": "meta.embedded.source.gameeventscript.assembler",
+          "patterns": [
+            {
+              "include": "source.gameeventscript"
+            }
+          ]
+        },
+        {
+          "begin": "^\\s*(\\.source-line)\\s+(\"(?:\\\\.|[^\"\\\\])*\")\\s+(\\d+)\\s+(\\|)\\s?",
+          "beginCaptures": {
+            "1": {
+              "name": "keyword.control.directive.source.gameeventscript.assembler"
+            },
+            "2": {
+              "name": "string.quoted.double.source-name.gameeventscript.assembler"
+            },
+            "3": {
+              "name": "constant.numeric.line.gameeventscript.assembler"
+            },
+            "4": {
+              "name": "punctuation.separator.embedded.gameeventscript.assembler"
+            }
+          },
+          "contentName": "meta.embedded.line.gameeventscript.assembler",
+          "end": "$",
+          "name": "meta.embedded.source-line.gameeventscript.assembler",
+          "patterns": [
+            {
+              "include": "source.gameeventscript"
+            }
+          ]
+        }
+      ]
+    },
     "comments": {
       "patterns": [
         {
@@ -40,6 +96,14 @@
     },
     "directives": {
       "patterns": [
+        {
+          "match": "^\\s*\\.region\\s+\"(?:\\\\.|[^\"\\\\])*\"\\s*$",
+          "name": "comment.line.region.begin.gameeventscript.assembler"
+        },
+        {
+          "match": "^\\s*\\.region-end\\s+\"(?:\\\\.|[^\"\\\\])*\"\\s*$",
+          "name": "comment.line.region.end.gameeventscript.assembler"
+        },
         {
           "captures": {
             "1": {
@@ -58,22 +122,10 @@
               "name": "keyword.control.directive.segment.gameeventscript.assembler"
             },
             "2": {
-              "name": "support.type.bind-kind.gameeventscript.assembler"
-            }
-          },
-          "match": "^\\s*(\\.segment)\\s+(bind)\\b",
-          "name": "meta.directive.segment.gameeventscript.assembler"
-        },
-        {
-          "captures": {
-            "1": {
-              "name": "keyword.control.directive.segment.gameeventscript.assembler"
-            },
-            "2": {
               "name": "entity.other.attribute-name.tag.gameeventscript"
             }
           },
-          "match": "^\\s*(\\.segment)\\s+(text|lists|code)\\b",
+          "match": "^\\s*(\\.segment)\\s+(text|lists|bind|code)\\b",
           "name": "meta.directive.segment.gameeventscript.assembler"
         },
         {

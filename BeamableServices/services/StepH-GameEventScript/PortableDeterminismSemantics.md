@@ -46,6 +46,8 @@ Known raw `UInt64` outputs, in generation order:
 | `0` | `99EC5F36CB75F2B4`, `BF6E1F784956452A`, `1A5F849D4933E6E0`, `6AA594F1262D2D2C`, `BBA5AD4A1F842E59`, `FFEF8375D9EBCACA`, `6C160DEED2F54C98`, `8920AD648FC30A3F` |
 | `1` | `B3F2AF6D0FC710C5`, `853B559647364CEA`, `92F89756082A4514`, `642E1C7BC266A3A7`, `B27A48E29A233673`, `24C123126FFDA722`, `123004EF8DF510E6`, `61954DCC47B1E89D` |
 | `-1` | `8F5520D52A7EAD08`, `C476A018CAA1802D`, `81DE31C0D260469E`, `BF658D7E065F3C2F`, `913593FDA1BCA32A`, `BB535E93941BA525`, `5ECDA415C3C6DFDE`, `C487398FC9DE9AE2` |
+| `Int64.MinValue` | `D01BFA9B44A998C3`, `797C6B72FF690D62`, `4576AF98398380B1`, `E5CE401830AAA16C`, `A5EECCC1D5D5EE1A`, `CD43606B62171D67`, `4205C135C5E32535`, `6D11E27BBF34F857` |
+| `Int64.MaxValue` | `0E1C2B4B82E8C0C5`, `19167A27A6E0D81B`, `7B5F1A55D35896BD`, `0D19F02BF9005C90`, `0EEE111B5F85ACA0`, `BB969C534267CF4F`, `BAEC81932902A56E`, `134E81D9C55B497C` |
 
 Inclusive integer sampling first swaps reversed bounds. Equal bounds return that
 value without consuming the stream. Otherwise it computes the inclusive span
@@ -62,24 +64,46 @@ result = minInclusive + offset
 For seed `0`, eight samples from `[-100, 100]` are:
 `16, -95, -9, -45, -76, 43, -62, -21`.
 
-Binary64 sampling derives a unit value from the upper 53 bits:
+`NextFloat(firstBound, secondBound)` orders its two bounds and derives a unit
+value from the upper 53 bits:
 
 ```text
 unit = (nextUInt64 >> 11) * 2^-53
 result = min + (max - min) * unit
 ```
 
-The seeded unit value lies in `[0, 1)`. Reversed bounds are swapped, equal bounds
-do not consume the stream, and a NaN bound returns NaN without consuming it.
-For seed `0`, the first five `[0, 1]` result bit patterns are
+The seeded unit value lies in `[0, 1)`, but the final binary64 multiplication
+and addition can round the result to the upper bound. Consequently the public
+method is not named `NextInclusiveFloat` and callers must not infer the source
+interval from the possible rounded result values.
+
+Reversed bounds are swapped. Equal bounds return the first bound without
+consuming the stream; this also preserves the first bound's signed-zero bit.
+A NaN bound returns NaN without consuming the stream. These no-consumption
+rules apply to seeded generators and to the `FromSequence` test adapter.
+
+For seed `0`, the first five `NextFloat(0, 1)` result bit patterns are
 `3FE33D8BE6D96EBE`, `3FE7EDC3EF092AC8`, `3FBA5F849D4933E0`,
 `3FDAA9653C498B4A`, and `3FE774B5A943F085`.
 
+For seed `0`, `NextFloat(1, 1.0000000000000002)` produces the upper-bound
+bit pattern `3FF0000000000001` through binary64 rounding even though the unit
+sample is less than one.
+
 `Create()` intentionally chooses a non-deterministic seed and therefore has no
 cross-platform output contract. `FromSequence` is a test adapter: supplied
-values are consumed in order and clamped to requested bounds. A conformance
-case must not exhaust its supplied sequence because the fallback stream is not
-part of that adapter's portable contract.
+values are consumed in order and clamped to requested non-collapsed bounds.
+A conformance case must not exhaust its supplied sequence because the fallback
+stream is not part of that adapter's portable contract.
+
+## Seeded random scopes
+
+`random with seed` pushes a newly seeded generator and restores the exact
+previous generator when the statement or expression ends. Scopes may nest;
+each nested scope advances only its own generator. Leaving an inner scope must
+therefore resume its parent at the parent's next value rather than restarting
+or advancing it. The random-generator stack is execution state and is reset
+between message handlers together with the remaining VM state.
 
 ## Equality
 

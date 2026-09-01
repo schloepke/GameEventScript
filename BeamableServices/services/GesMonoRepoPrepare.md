@@ -91,8 +91,6 @@ Der sprachneutrale Vertrag ist in
 [PortableDeterminismSemantics.md](StepH-GameEventScript/PortableDeterminismSemantics.md)
 festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 
-- SplitMix64 plus xoshiro256** sind einschließlich UInt64-Rohsequenzen,
-  rejection-sampled Integerwerten und exakten Binary64-Bitmustern spezifiziert.
 - `:sort` und `:order by` sind aufsteigend wie absteigend stabil; gleiche
   Schlüssel behalten ihre Quellreihenfolge.
 - Maps und Records verwenden Unicode-Scalar-Keyorder; doppelte Map-Keys sind
@@ -105,6 +103,27 @@ festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 - Gleich priorisierte Handler laufen in Registrierungsreihenfolge; bei mehreren
   Programs entspricht sie der Load-Reihenfolge. Dispatch-Snapshots bleiben
   unverändert.
+
+### 2.4 Random - DONE
+
+Der sprachneutrale Random-Vertrag ist ebenfalls in
+[PortableDeterminismSemantics.md](StepH-GameEventScript/PortableDeterminismSemantics.md)
+festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
+
+- SplitMix64 initialisiert den xoshiro256**-Zustand aus dem vollständigen
+  signed Int64 Seed; Zustandsübergang und Wrapping-Operationen sind normativ.
+- Raw-UInt64-, rejection-sampled Integer- und exakte Binary64-Bitvektoren
+  decken Seed `0`, `1`, `-1`, `Int64.MinValue`, `Int64.MaxValue` und Seeds
+  oberhalb von 32 Bit ab.
+- Der vollständige Int64-Bereich, vertauschte und identische Grenzen sowie deren
+  exakter Stream-Verbrauch sind definiert und getestet.
+- Verschachtelte `random with`-Scopes besitzen getrennte Generatoren und setzen
+  die jeweils äußere Sequenz anschließend exakt fort.
+- Die Float-API heißt `NextFloat`: Sie skaliert eine `[0,1)`-Quelle auf die
+  geordneten Bounds. Binary64-Rundung darf dennoch den oberen Bound erzeugen;
+  auch dieser Fall ist mit einem exakten Bitmuster abgesichert.
+- NaN- und identische Bounds verbrauchen weder einen PRNG- noch einen
+  `FromSequence`-Wert.
 
 ## 3. C#-Kopplungen im portablen API/Core auflösen
 

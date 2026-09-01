@@ -61,6 +61,12 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 - SplitMix64 plus xoshiro256** now have language-neutral raw, bounded-integer,
   and Binary64 known-answer vectors.
+- The binary64 API is `NextFloat(firstBound, secondBound)`: it scales a
+  `[0,1)` source, while final binary64 rounding may still produce the upper
+  bound. Equal and NaN bounds consume no seeded or `FromSequence` value.
+- Reversed/equal bounds, full Int64 generation, signed/full-width seeds,
+  upper-bound rounding, and nested `random with` parent-stream restoration now
+  have direct or JSON conformance coverage.
 - Stable sorting, Unicode-scalar map/record order, last-entry-wins duplicate map
   keys, cross-kind equality, strict nested structural equality, iterator order,
   and equal-priority dispatch are one normative contract.
@@ -74,7 +80,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 Verification after this change:
 
 ```text
-1051/1051 non-performance tests passed
+1057/1057 non-performance tests passed
 1/1 zero-allocation hot-path test passed
 1/1 JSON performance reference test passed
 ```

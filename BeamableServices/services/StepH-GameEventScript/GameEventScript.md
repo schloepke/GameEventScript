@@ -249,6 +249,11 @@ random with seed as :number {
 let value be random with 123 (random from 1 to 100)
 ```
 
+Random scopes may be nested. Leaving a nested scope resumes its parent at the
+parent generator's next value. Integer draws include both ordered bounds.
+Binary64 draws use a `[0, 1)` unit source, although binary64 rounding can make
+the scaled result equal the upper bound.
+
 The portable seeded PRNG algorithm, bounded sampling rules, and known-answer
 vectors are specified in
 [PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).

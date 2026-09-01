@@ -20,7 +20,7 @@ internal static class GesVmRegisterRandom
                 {
                     var left = from.FloatValue;
                     var right = to.FloatValue;
-                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), floatUnit);
+                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(left, right), floatUnit);
                     else vmState.SetFloat(destinationRegister, double.NaN);
                 }
                 else vmState.SetFloat(destinationRegister, double.NaN);
@@ -31,14 +31,14 @@ internal static class GesVmRegisterRandom
                 {
                     var left = from.AsNumeric;
                     var right = to.AsNumeric;
-                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), mixedUnit);
+                    if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(left, right), mixedUnit);
                     else vmState.SetFloat(destinationRegister, double.NaN);
                 }
                 else vmState.SetFloat(destinationRegister, double.NaN);
 
                 return;
             case Percentage when to.Kind is Percentage:
-                if (double.IsFinite(from.FloatValue) && double.IsFinite(to.FloatValue)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(from.FloatValue, to.FloatValue));
+                if (double.IsFinite(from.FloatValue) && double.IsFinite(to.FloatValue)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(from.FloatValue, to.FloatValue));
                 else vmState.SetFloat(destinationRegister, double.NaN);
                 return;
             case Percentage when to.Kind is Integer or Float:
@@ -50,7 +50,7 @@ internal static class GesVmRegisterRandom
 
                 var percentageLeft = from.FloatValue;
                 var numericRight = to.AsNumeric;
-                if (double.IsFinite(percentageLeft) && double.IsFinite(numericRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(percentageLeft, numericRight));
+                if (double.IsFinite(percentageLeft) && double.IsFinite(numericRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(percentageLeft, numericRight));
                 else vmState.SetFloat(destinationRegister, double.NaN);
                 return;
             case Integer or Float when to.Kind is Percentage:
@@ -62,7 +62,7 @@ internal static class GesVmRegisterRandom
 
                 var numericLeft = from.AsNumeric;
                 var percentageRight = to.FloatValue;
-                if (double.IsFinite(numericLeft) && double.IsFinite(percentageRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(numericLeft, percentageRight));
+                if (double.IsFinite(numericLeft) && double.IsFinite(percentageRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(numericLeft, percentageRight));
                 else vmState.SetFloat(destinationRegister, double.NaN);
                 return;
             case Nothing:
@@ -83,7 +83,7 @@ internal static class GesVmRegisterRandom
 
                 var fallbackLeft = from.AsNumeric;
                 var fallbackRight = to.AsNumeric;
-                if (double.IsFinite(fallbackLeft) && double.IsFinite(fallbackRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(fallbackLeft, fallbackRight), fallbackUnit);
+                if (double.IsFinite(fallbackLeft) && double.IsFinite(fallbackRight)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(fallbackLeft, fallbackRight), fallbackUnit);
                 else vmState.SetFloat(destinationRegister, double.NaN);
                 return;
         }
@@ -104,7 +104,7 @@ internal static class GesVmRegisterRandom
 
         var left = from.AsNumeric;
         var right = to.AsNumeric;
-        if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextInclusiveFloat(left, right), unit);
+        if (double.IsFinite(left) && double.IsFinite(right)) vmState.SetFloat(destinationRegister, randomGenerator.NextFloat(left, right), unit);
         else vmState.SetFloat(destinationRegister, double.NaN);
     }
 }

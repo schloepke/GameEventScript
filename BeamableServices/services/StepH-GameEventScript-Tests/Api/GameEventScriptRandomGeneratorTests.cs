@@ -29,6 +29,20 @@ public sealed class GameEventScriptRandomGeneratorTests
             0x913593FDA1BCA32AUL, 0xBB535E93941BA525UL,
             0x5ECDA415C3C6DFDEUL, 0xC487398FC9DE9AE2UL
         ]);
+        AssertRawSequence(long.MinValue,
+        [
+            0xD01BFA9B44A998C3UL, 0x797C6B72FF690D62UL,
+            0x4576AF98398380B1UL, 0xE5CE401830AAA16CUL,
+            0xA5EECCC1D5D5EE1AUL, 0xCD43606B62171D67UL,
+            0x4205C135C5E32535UL, 0x6D11E27BBF34F857UL
+        ]);
+        AssertRawSequence(long.MaxValue,
+        [
+            0x0E1C2B4B82E8C0C5UL, 0x19167A27A6E0D81BUL,
+            0x7B5F1A55D35896BDUL, 0x0D19F02BF9005C90UL,
+            0x0EEE111B5F85ACA0UL, 0xBB969C534267CF4FUL,
+            0xBAEC81932902A56EUL, 0x134E81D9C55B497CUL
+        ]);
     }
 
     [TestMethod]
@@ -58,7 +72,7 @@ public sealed class GameEventScriptRandomGeneratorTests
 
         foreach (var expected in expectedBits)
         {
-            var actual = random.NextInclusiveFloat(0d, 1d);
+            var actual = random.NextFloat(0d, 1d);
             Assert.AreEqual(expected, unchecked((ulong)BitConverter.DoubleToInt64Bits(actual)));
         }
     }
@@ -85,8 +99,58 @@ public sealed class GameEventScriptRandomGeneratorTests
             intSeed.NextInclusiveInteger(long.MinValue, long.MaxValue),
             longSeed.NextInclusiveInteger(long.MinValue, long.MaxValue));
         Assert.AreEqual(
-            intSeed.NextInclusiveFloat(-10, 10),
-            longSeed.NextInclusiveFloat(-10, 10));
+            intSeed.NextFloat(-10, 10),
+            longSeed.NextFloat(-10, 10));
+    }
+
+    [TestMethod]
+    public void ReversedBoundsProduceTheOrderedBoundSequence()
+    {
+        var orderedInteger = GameEventScriptRandomGenerator.FromSeed(0L);
+        var reversedInteger = GameEventScriptRandomGenerator.FromSeed(0L);
+        Assert.AreEqual(
+            orderedInteger.NextInclusiveInteger(-100, 100),
+            reversedInteger.NextInclusiveInteger(100, -100));
+
+        var orderedFloat = GameEventScriptRandomGenerator.FromSeed(0L);
+        var reversedFloat = GameEventScriptRandomGenerator.FromSeed(0L);
+        Assert.AreEqual(
+            orderedFloat.NextFloat(-10d, 20d),
+            reversedFloat.NextFloat(20d, -10d));
+    }
+
+    [TestMethod]
+    public void EqualAndNaNBoundsDoNotConsumeTheSeededStream()
+    {
+        var expected = GameEventScriptRandomGenerator.FromSeed(0L)
+            .NextInclusiveInteger(long.MinValue, long.MaxValue);
+        var actual = GameEventScriptRandomGenerator.FromSeed(0L);
+
+        Assert.AreEqual(7L, actual.NextInclusiveInteger(7L, 7L));
+        Assert.AreEqual(3.5d, actual.NextFloat(3.5d, 3.5d));
+        Assert.IsTrue(double.IsNaN(actual.NextFloat(double.NaN, 1d)));
+        Assert.AreEqual(expected, actual.NextInclusiveInteger(long.MinValue, long.MaxValue));
+    }
+
+    [TestMethod]
+    public void EqualAndNaNBoundsDoNotConsumeTheTestSequence()
+    {
+        var random = GameEventScriptRandomGenerator.FromSequence(17d, 0.75d);
+
+        Assert.AreEqual(7L, random.NextInclusiveInteger(7L, 7L));
+        Assert.AreEqual(3.5d, random.NextFloat(3.5d, 3.5d));
+        Assert.IsTrue(double.IsNaN(random.NextFloat(double.NaN, 1d)));
+        Assert.AreEqual(17L, random.NextInclusiveInteger(0L, 100L));
+        Assert.AreEqual(0.75d, random.NextFloat(0d, 1d));
+    }
+
+    [TestMethod]
+    public void Binary64ScalingMayRoundToTheUpperBound()
+    {
+        var random = GameEventScriptRandomGenerator.FromSeed(0L);
+        var upperBound = Math.BitIncrement(1d);
+
+        Assert.AreEqual(upperBound, random.NextFloat(1d, upperBound));
     }
 
     private static void AssertRawSequence(long seed, IReadOnlyList<ulong> expected)

@@ -667,7 +667,7 @@ struct StepH.GameEventScript.Api.GameEventScriptPublishResult
   property System.Boolean OutboundAccepted { get }
   property System.Boolean OutboundAttempted { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
-  method System.Double NextInclusiveFloat(System.Double minInclusive, System.Double maxInclusive)
+  method System.Double NextFloat(System.Double firstBound, System.Double secondBound)
   method System.Int64 NextInclusiveInteger(System.Int64 minInclusive, System.Int64 maxInclusive)
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator Create()
   method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int32 seed)

@@ -124,7 +124,7 @@ internal static class GesVmRegisterTakeDrop
             return;
         }
 
-        var threshold = randomGenerator.NextInclusiveFloat(0d, totalWeight);
+        var threshold = randomGenerator.NextFloat(0d, totalWeight);
         double cumulative = 0d;
         var selected = items.Length - 1;
         for (var i = 0; i < items.Length; i++)
@@ -185,7 +185,7 @@ internal static class GesVmRegisterTakeDrop
         var remainingCount = itemCount;
         for (var target = 0; target < selectedCount && remainingCount > 0 && totalWeight > 0d; target++)
         {
-            var threshold = randomGenerator.NextInclusiveFloat(0d, totalWeight);
+            var threshold = randomGenerator.NextFloat(0d, totalWeight);
             double cumulative = 0d;
             var selected = remainingCount - 1;
             for (var i = 0; i < remainingCount; i++)

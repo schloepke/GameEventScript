@@ -81,7 +81,7 @@ internal static class GesVmRegisterBooleanLogic
         }
         else
         {
-            vmState.SetBoolean(dstRegister, vmState.RandomGenerator.NextInclusiveFloat(0, 1.0) < ratio);
+            vmState.SetBoolean(dstRegister, vmState.RandomGenerator.NextFloat(0, 1.0) < ratio);
         }
     }
 }

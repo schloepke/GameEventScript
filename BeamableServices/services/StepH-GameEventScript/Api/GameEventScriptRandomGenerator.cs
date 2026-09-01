@@ -101,41 +101,45 @@ public sealed class GameEventScriptRandomGenerator
     public long NextInclusiveInteger(long minInclusive, long maxInclusive)
     {
         if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
+        if (minInclusive == maxInclusive) return minInclusive;
         if (DequeueSequenceValue() is { } queuedValue)
         {
             return Math.Min(Math.Max(ToLongSaturated(queuedValue), minInclusive), maxInclusive);
         }
 
-        if (minInclusive == maxInclusive) return minInclusive;
         var span = unchecked((ulong)(maxInclusive - minInclusive) + 1UL);
         var offset = NextUInt64Below(span);
         return unchecked(minInclusive + (long)offset);
     }
 
     /// <summary>
-    /// Generates a random double value within the specified inclusive range.
+    /// Generates a binary64 value between two bounds.
+    /// The generator draws a unit value from the half-open interval [0, 1) and
+    /// scales it to the ordered bounds. Binary64 rounding may nevertheless
+    /// produce the upper bound.
     /// </summary>
-    /// <param name="minInclusive">
-    /// The minimum value of the range, inclusive.
+    /// <param name="firstBound">
+    /// The first accepted bound. Bounds are swapped when this value is greater
+    /// than <paramref name="secondBound"/>.
     /// </param>
-    /// <param name="maxInclusive">
-    /// The maximum value of the range, inclusive.
+    /// <param name="secondBound">
+    /// The second accepted bound.
     /// </param>
     /// <returns>
-    /// A random double value that is greater than or equal to <paramref name="minInclusive"/>
-    /// and less than or equal to <paramref name="maxInclusive"/>.
+    /// A binary64 value between the ordered bounds. Equal bounds are returned
+    /// and NaN bounds produce NaN; neither case consumes the random stream.
     /// </returns>
-    public double NextInclusiveFloat(double minInclusive, double maxInclusive)
+    public double NextFloat(double firstBound, double secondBound)
     {
-        if (double.IsNaN(minInclusive) || double.IsNaN(maxInclusive)) return double.NaN;
-        if (minInclusive > maxInclusive) (minInclusive, maxInclusive) = (maxInclusive, minInclusive);
+        if (double.IsNaN(firstBound) || double.IsNaN(secondBound)) return double.NaN;
+        if (firstBound > secondBound) (firstBound, secondBound) = (secondBound, firstBound);
+        if (firstBound == secondBound) return firstBound;
         if (DequeueSequenceValue() is { } queuedValue)
         {
-            return Math.Min(Math.Max(queuedValue, minInclusive), maxInclusive);
+            return Math.Min(Math.Max(queuedValue, firstBound), secondBound);
         }
 
-        if (minInclusive == maxInclusive) return minInclusive;
-        return minInclusive + (maxInclusive - minInclusive) * NextUnitDouble();
+        return firstBound + (secondBound - firstBound) * NextUnitDouble();
     }
 
     private GameEventScriptRandomGenerator(long seed)

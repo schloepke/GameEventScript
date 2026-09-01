@@ -809,22 +809,6 @@ internal static class GesAstOptimizer
             GameEventScriptBytecodeTypeKind.Map or
             GameEventScriptBytecodeTypeKind.Dice;
 
-    private static GesValue? CreateCheckedInteger(
-        long left,
-        long right,
-        GameEventScriptBytecodeInstructionUnit unit,
-        Func<long, long, long> operation)
-    {
-        try
-        {
-            return GesValue.GesInteger(operation(left, right), unit);
-        }
-        catch (OverflowException)
-        {
-            return null;
-        }
-    }
-
     private static GesValue? FoldAdd(
         GesValue left,
         GesValue right,
@@ -835,7 +819,9 @@ internal static class GesAstOptimizer
             right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             left.Unit == right.Unit)
         {
-            return CreateCheckedInteger(left.IntegerValue, right.IntegerValue, left.Unit, static (leftValue, rightValue) => checked(leftValue + rightValue));
+            return GameEventScriptNumber.AddExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+                ? GesValue.GesInteger(integerResult, left.Unit)
+                : GesValue.GesFloat((double)left.IntegerValue + right.IntegerValue, left.Unit);
         }
 
         if (left.Unit == right.Unit &&
@@ -868,7 +854,9 @@ internal static class GesAstOptimizer
             right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             left.Unit == right.Unit)
         {
-            return CreateCheckedInteger(left.IntegerValue, right.IntegerValue, left.Unit, static (leftValue, rightValue) => checked(leftValue - rightValue));
+            return GameEventScriptNumber.SubtractExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+                ? GesValue.GesInteger(integerResult, left.Unit)
+                : GesValue.GesFloat((double)left.IntegerValue - right.IntegerValue, left.Unit);
         }
 
         if (left.Unit == right.Unit &&
@@ -902,7 +890,9 @@ internal static class GesAstOptimizer
         {
             if (left.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone && right.Unit == GameEventScriptBytecodeInstructionUnit.UnitNone)
             {
-                return CreateCheckedInteger(left.IntegerValue, right.IntegerValue, GameEventScriptBytecodeInstructionUnit.UnitNone, static (leftValue, rightValue) => checked(leftValue * rightValue));
+                return GameEventScriptNumber.MultiplyExact(left.IntegerValue, right.IntegerValue) is { } integerResult
+                    ? GesValue.GesInteger(integerResult)
+                    : GesValue.GesFloat((double)left.IntegerValue * right.IntegerValue);
             }
 
             if (ProductUnit(left.Unit, right.Unit) is { } productUnit)
@@ -979,9 +969,7 @@ internal static class GesAstOptimizer
         }
 
         if (preferInteger &&
-            number >= long.MinValue &&
-            number <= long.MaxValue &&
-            Math.Truncate(number) == number)
+            GameEventScriptNumber.CanRepresentAsInteger(number))
         {
             return GesValue.GesInteger((long)number, unit);
         }
@@ -1094,21 +1082,7 @@ internal static class GesAstOptimizer
             ? new UnitFloatLiteralExpressionNode(value, valueUnit.ToTypeName())
             : new FloatLiteralExpressionNode(value);
 
-    private static long ToIntegerSaturated(double number)
-    {
-        if (double.IsNaN(number)) return 0;
-        if (double.IsPositiveInfinity(number) || number > long.MaxValue) return long.MaxValue;
-        if (double.IsNegativeInfinity(number) || number < long.MinValue) return long.MinValue;
-        return (long)Math.Truncate(number);
-    }
+    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
 
-    private static double RoundHalfTowardZero(double value)
-    {
-        var sign = Math.Sign(value);
-        var absolute = Math.Abs(value);
-        var floor = Math.Floor(absolute);
-        var fraction = absolute - floor;
-        var roundedAbsolute = fraction > 0.5d ? floor + 1d : floor;
-        return sign < 0 ? -roundedAbsolute : roundedAbsolute;
-    }
+    private static double RoundHalfTowardZero(double value) => GameEventScriptNumber.RoundHalfTowardZero(value);
 }

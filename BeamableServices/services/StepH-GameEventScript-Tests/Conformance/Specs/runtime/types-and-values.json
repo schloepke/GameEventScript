@@ -1205,7 +1205,7 @@
                 },
                 "radians": {
                   "type": ":float",
-                  "value": "3.1415926535897932384626433833"
+                  "value": "3.14159265358979332384626433833"
                 },
                 "degrees": {
                   "type": ":float",
@@ -2726,7 +2726,7 @@
                 },
                 "piAlias": {
                   "type": ":float",
-                  "value": "3.14159265358979"
+                  "value": "3.141592653589793"
                 },
                 "piGreater": {
                   "type": ":boolean",
@@ -2734,7 +2734,7 @@
                 },
                 "piTag": {
                   "type": ":float",
-                  "value": "3.14159265358979"
+                  "value": "3.141592653589793"
                 },
                 "projectionAlias": {
                   "type": ":integer",
@@ -3252,6 +3252,52 @@
                 "listCount": { "type": ":integer", "value": "4" },
                 "listSecond": { "type": ":text", "value": "\ud83d\ude00" },
                 "hugeIndex": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "portable integer boundaries division modulo and rounding",
+      "script": "on Start(maximum, minimum, exactLarge, positiveInfinity, negativeInfinity) {\n  emit Done(exactAdd: exactLarge + 1, exactMultiply: exactLarge * 1, addOverflow: maximum + 1, subtractOverflow: minimum - 1, multiplyOverflow: maximum * 2, divNegativeLeft: -7 div 3, divNegativeRight: 7 div -3, divBothNegative: -7 div -3, modNegativeLeft: -7 mod 3, modNegativeRight: 7 mod -3, remNegativeLeft: -7 rem 3, remNegativeRight: 7 rem -3, floorPositiveInfinity: floor positiveInfinity, ceilNegativeInfinity: ceil negativeInfinity, truncateNegative: truncate -12.9, halfEvenPositive: round half even 12.5, halfEvenOdd: round half even 13.5, halfUpNegative: round half up -12.5, halfDownNegative: round half down -12.5)\n}",
+      "maxFloatUlps": 0,
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "maximum": { "type": ":integer", "value": "9223372036854775807" },
+              "minimum": { "type": ":integer", "value": "-9223372036854775808" },
+              "exactLarge": { "type": ":integer", "value": "9007199254740993" },
+              "positiveInfinity": { "type": ":float", "value": "Infinity" },
+              "negativeInfinity": { "type": ":float", "value": "-Infinity" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "exactAdd": { "type": ":integer", "value": "9007199254740994" },
+                "exactMultiply": { "type": ":integer", "value": "9007199254740993" },
+                "addOverflow": { "type": ":float", "value": "9.223372036854776e18" },
+                "subtractOverflow": { "type": ":integer", "value": "-9223372036854775808" },
+                "multiplyOverflow": { "type": ":float", "value": "1.8446744073709552e19" },
+                "divNegativeLeft": { "type": ":integer", "value": "-3" },
+                "divNegativeRight": { "type": ":integer", "value": "-3" },
+                "divBothNegative": { "type": ":integer", "value": "2" },
+                "modNegativeLeft": { "type": ":integer", "value": "2" },
+                "modNegativeRight": { "type": ":integer", "value": "-2" },
+                "remNegativeLeft": { "type": ":integer", "value": "-1" },
+                "remNegativeRight": { "type": ":integer", "value": "1" },
+                "floorPositiveInfinity": { "type": ":integer", "value": "9223372036854775807" },
+                "ceilNegativeInfinity": { "type": ":integer", "value": "-9223372036854775808" },
+                "truncateNegative": { "type": ":integer", "value": "-12" },
+                "halfEvenPositive": { "type": ":integer", "value": "12" },
+                "halfEvenOdd": { "type": ":integer", "value": "14" },
+                "halfUpNegative": { "type": ":integer", "value": "-13" },
+                "halfDownNegative": { "type": ":integer", "value": "-12" }
               }
             }
           ]

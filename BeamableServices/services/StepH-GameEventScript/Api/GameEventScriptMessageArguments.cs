@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
@@ -194,14 +195,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values[index];
 
-    private static long ToIntegerSaturated(double number)
-    {
-        if (double.IsNaN(number)) return 0;
-        var truncated = Math.Truncate(number);
-        if (truncated > long.MaxValue) return long.MaxValue;
-        if (truncated < long.MinValue) return long.MinValue;
-        return (long)truncated;
-    }
+    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
 
     private static GameEventScriptMessageArguments CreateOrderedCore(string[] names, GesValue[] values)
     {

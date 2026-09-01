@@ -21,22 +21,22 @@ internal static class GesVmRegisterCompare
             case Integer when b.Kind is Integer:
                 return a.Unit == b.Unit && a.IntegerValue == b.IntegerValue;
             case Float or Percentage when b.Kind is Float or Percentage:
-                return a.Unit == b.Unit && DoubleEqualsUlp(a.FloatValue, b.FloatValue);
+                return a.Unit == b.Unit && GameEventScriptNumber.EqualsWithinUlps(a.FloatValue, b.FloatValue, GameEventScriptNumber.RuntimeEqualityUlps);
             case Integer or Float or Percentage when b.Kind is Integer or Float or Percentage:
-                return a.Unit == b.Unit && DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
+                return a.Unit == b.Unit && GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case Text or Tag when b.Kind is Text or Tag:
-                if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
+                if(a.IsNumeric && b.IsNumeric) return GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
                 return string.Equals(a.TextValue, b.TextValue, StringComparison.Ordinal);
             case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesValueVectorPoint av && b.ObjectValue is GesValueVectorPoint bv:
-                return a.Unit == b.Unit && a.Kind == b.Kind && DoubleEqualsUlp(av.X, bv.X) && DoubleEqualsUlp(av.Y, bv.Y) && DoubleEqualsUlp(av.Z, bv.Z);
+                return a.Unit == b.Unit && a.Kind == b.Kind && GameEventScriptNumber.EqualsWithinUlps(av.X, bv.X, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Y, bv.Y, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Z, bv.Z, GameEventScriptNumber.RuntimeEqualityUlps);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:
                 return Sum(al) == Sum(bl);
             case Dice when b.Kind == Integer && a.ObjectValue is int[] al:
                 return !b.HasUnit && Sum(al) == b.IntegerValue;
             case Dice when b.IsNumeric && a.ObjectValue is int[] al:
-                return !b.HasUnit && DoubleEqualsUlp(Sum(al), b.AsNumeric);
+                return !b.HasUnit && GameEventScriptNumber.EqualsWithinUlps(Sum(al), b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case not Dice when a.IsNumeric && b.Kind is Dice && b.ObjectValue is int[] bl:
-                return !a.HasUnit && DoubleEqualsUlp(Sum(bl), a.AsNumeric);
+                return !a.HasUnit && GameEventScriptNumber.EqualsWithinUlps(Sum(bl), a.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case Handler when b.Kind is Handler && a.ObjectValue is GameEventScriptMessageSignature asig && b.ObjectValue is GameEventScriptMessageSignature bsig:
                 return asig.Equals(bsig);
             case Message when b.Kind is Message && a.ObjectValue is GameEventScriptMessage amsg && b.ObjectValue is GameEventScriptMessage bmsg:
@@ -53,7 +53,7 @@ internal static class GesVmRegisterCompare
             case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeInteger ar && b.ObjectValue is GesValueRangeInteger br:
                 return ar.From == br.From && ar.To == br.To && ar.Step == br.Step;
             case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeFloat ar && b.ObjectValue is GesValueRangeFloat br:
-                return DoubleEqualsUlp(ar.From, br.From) && DoubleEqualsUlp(ar.To, br.To) && DoubleEqualsUlp(ar.Step, br.Step);
+                return GameEventScriptNumber.EqualsWithinUlps(ar.From, br.From, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(ar.To, br.To, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(ar.Step, br.Step, GameEventScriptNumber.RuntimeEqualityUlps);
             case Series when b.Kind is Series && a.ObjectValue is GesSeries aseries && b.ObjectValue is GesSeries bseries:
                 return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
             case Map when b.Kind is Map && a.ObjectValue is GesValueMap am && b.ObjectValue is GesValueMap bm:
@@ -65,7 +65,7 @@ internal static class GesVmRegisterCompare
             case Custom when b.Kind is Map && a.ObjectValue is GesCustomObject ac && b.ObjectValue is GesValueMap bm:
                 return EqualMaps(ac.Map, bm);
             default:
-                if(a.IsNumeric && b.IsNumeric) return DoubleEqualsUlp(a.AsNumeric, b.AsNumeric);
+                if(a.IsNumeric && b.IsNumeric) return GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
                 return false;
         }
     }
@@ -221,18 +221,5 @@ internal static class GesVmRegisterCompare
                 vmState.SetBoolean(destinationRegister, false);
                 return;
         }
-    }
-    private static bool DoubleEqualsUlp(double a, double b)
-    {
-        var aBits = BitConverter.DoubleToInt64Bits(a);
-        var bBits = BitConverter.DoubleToInt64Bits(b);
-        
-        if(double.IsNaN(a) || double.IsNaN(b)) return false;
-        // ReSharper disable once CompareOfFloatsByEqualityOperator
-        if (double.IsInfinity(a) || double.IsInfinity(b)) return a == b;
-        if (aBits == bBits) return true;
-        if (aBits < 0) aBits = long.MinValue - aBits;
-        if (bBits < 0) bBits = long.MinValue - bBits;
-        return (aBits > bBits ? (ulong)(aBits - bBits) : (ulong)(bBits - aBits)) <= 2;
     }
 }

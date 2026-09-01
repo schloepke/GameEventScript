@@ -729,7 +729,7 @@
     {
       "kind": "scriptApi",
       "name": "math intrinsics and series creation",
-      "script": "module AtomicMathIntrinsicsAndSeries\non Start(value) {\n  let natural be from 2 to 11 step 3\n  let fib be series fibonacci\n  let fact be series factorial\n  let naturalZero be natural[1]\n  let naturalThree be natural[4]\n  let fibSeven be fib[:term 7]\n  let factFive be fact[:term 5]\n  emit Done(floorBare: floor value, ceilCall: ceil(value), truncateNegative: truncate -10.7, halfEven: round half even 12.5, halfUp: round half up -12.5, halfDown: round half down -12.5, wrapDegree: wrap degree 370°, radians: rad 180°, degrees: deg 3.141592653589793, naturalIsSeries: natural is :series, naturalZero: naturalZero, naturalThree: naturalThree, fibSeven: fibSeven, factFive: factFive, floorPredicate: nothing)\n}",
+      "script": "module AtomicMathIntrinsicsAndSeries\non Start(value) {\n  let natural be from 2 to 11 step 3\n  let fib be series fibonacci\n  let fact be series factorial\n  let naturalZero be natural[1]\n  let naturalThree be natural[4]\n  let fibSeven be fib[:term 7]\n  let factFive be fact[:term 5]\n  emit Done(floorBare: floor value, ceilCall: ceil(value), truncateNegative: truncate -10.7, halfEven: round half even 12.5, halfUp: round half up -12.5, halfDown: round half down -12.5, wrapDegree: wrap degree 370°, radians: rad 180°, degrees: deg 3.1415926535897933, naturalIsSeries: natural is :series, naturalZero: naturalZero, naturalThree: naturalThree, fibSeven: fibSeven, factFive: factFive, floorPredicate: nothing)\n}",
       "steps": [
         {
           "input": {
@@ -795,7 +795,7 @@
                 },
                 "radians": {
                   "type": ":float",
-                  "value": "3.14159265358979"
+                  "value": "3.141592653589793"
                 },
                 "truncateNegative": {
                   "type": ":integer",

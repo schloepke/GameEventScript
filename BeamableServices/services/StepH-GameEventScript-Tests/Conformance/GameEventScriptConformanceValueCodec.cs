@@ -4,12 +4,15 @@ using System.Text.Json.Nodes;
 using System.Text.Json.Serialization.Metadata;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 
 internal static class GameEventScriptConformanceValueCodec
 {
+    public const int DefaultMaxFloatUlps = 4096;
+
     private static readonly JsonSerializerOptions CompactJsonOptions = new()
     {
         TypeInfoResolver = new DefaultJsonTypeInfoResolver(),
@@ -119,6 +122,125 @@ internal static class GameEventScriptConformanceValueCodec
     public static string ToCanonicalJson(GesValue value)
         => ToValueJson(value).ToJsonString(CompactJsonOptions);
 
+    public static bool ConformanceEquals(
+        IReadOnlyList<GameEventScriptMessage> expected,
+        IReadOnlyList<GameEventScriptMessage> actual,
+        int maxFloatUlps)
+    {
+        if (expected.Count != actual.Count) return false;
+        var tolerance = (ulong)Math.Max(0, maxFloatUlps);
+        for (var index = 0; index < expected.Count; index++)
+        {
+            if (!ConformanceEquals(expected[index], actual[index], tolerance)) return false;
+        }
+
+        return true;
+    }
+
+    private static bool ConformanceEquals(GameEventScriptMessage expected, GameEventScriptMessage actual, ulong maxFloatUlps)
+    {
+        if (!string.Equals(expected.Name, actual.Name, StringComparison.Ordinal) ||
+            expected.Tags.Count != actual.Tags.Count ||
+            expected.Arguments.Count != actual.Arguments.Count)
+        {
+            return false;
+        }
+
+        for (var index = 0; index < expected.Tags.Count; index++)
+        {
+            if (!string.Equals(expected.Tags[index], actual.Tags[index], StringComparison.Ordinal)) return false;
+        }
+
+        for (var index = 0; index < expected.Arguments.Count; index++)
+        {
+            var name = expected.Arguments.NameAt(index);
+            if (!actual.Arguments.ContainsKey(name) ||
+                !ConformanceEquals(expected.Arguments.ValueAt(index), actual.Arguments[name], maxFloatUlps))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private static bool ConformanceEquals(GesValue expected, GesValue actual, ulong maxFloatUlps)
+    {
+        if (expected.ValueKind != actual.ValueKind) return false;
+
+        switch (expected.ValueKind)
+        {
+            case GameEventScriptBytecodeTypeKind.Nothing:
+                return true;
+            case GameEventScriptBytecodeTypeKind.Integer:
+                return expected.ValueUnit == actual.ValueUnit && expected.AsInteger() == actual.AsInteger();
+            case GameEventScriptBytecodeTypeKind.Float:
+                return (!double.IsFinite(expected.AsNumber()) || expected.ValueUnit == actual.ValueUnit) &&
+                       GameEventScriptNumber.EqualsWithinUlps(expected.AsNumber(), actual.AsNumber(), maxFloatUlps);
+            case GameEventScriptBytecodeTypeKind.Percentage:
+                return GameEventScriptNumber.EqualsWithinUlps(expected.AsNumber(), actual.AsNumber(), maxFloatUlps);
+            case GameEventScriptBytecodeTypeKind.Boolean:
+                return expected.AsBoolean() == actual.AsBoolean();
+            case GameEventScriptBytecodeTypeKind.Text:
+            case GameEventScriptBytecodeTypeKind.Tag:
+                return string.Equals(expected.AsText(), actual.AsText(), StringComparison.Ordinal);
+            case GameEventScriptBytecodeTypeKind.Vector:
+            case GameEventScriptBytecodeTypeKind.Point:
+                return expected.ValueUnit == actual.ValueUnit &&
+                       GameEventScriptNumber.EqualsWithinUlps(expected.X, actual.X, maxFloatUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(expected.Y, actual.Y, maxFloatUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(expected.Z, actual.Z, maxFloatUlps);
+            case GameEventScriptBytecodeTypeKind.List:
+            {
+                var expectedItems = expected.AsList();
+                var actualItems = actual.AsList();
+                if (expectedItems.Length != actualItems.Length) return false;
+                for (var index = 0; index < expectedItems.Length; index++)
+                {
+                    if (!ConformanceEquals(expectedItems[index], actualItems[index], maxFloatUlps)) return false;
+                }
+
+                return true;
+            }
+            case GameEventScriptBytecodeTypeKind.Map:
+            case GameEventScriptBytecodeTypeKind.Custom:
+            {
+                if (expected.ValueKind == GameEventScriptBytecodeTypeKind.Custom &&
+                    !string.Equals(expected.CustomTypeName, actual.CustomTypeName, StringComparison.Ordinal)) return false;
+                var expectedMap = expected.AsMap();
+                var actualMap = actual.AsMap();
+                if (expectedMap is null || actualMap is null || expectedMap.Length != actualMap.Length) return false;
+                for (var index = 0; index < expectedMap.StorageLength; index++)
+                {
+                    var key = expectedMap.KeyAt(index);
+                    if (actualMap.Get(key) is not { } actualValue ||
+                        !ConformanceEquals(expectedMap.ValueAt(index), actualValue, maxFloatUlps)) return false;
+                }
+
+                return true;
+            }
+            case GameEventScriptBytecodeTypeKind.Dice:
+                return expected.AsDice().SequenceEqual(actual.AsDice());
+            case GameEventScriptBytecodeTypeKind.Range:
+                var expectedFrom = expected.IntegerRange?.From ?? expected.FloatRange?.From;
+                var expectedTo = expected.IntegerRange?.To ?? expected.FloatRange?.To;
+                var expectedStep = expected.IntegerRange?.Step ?? expected.FloatRange?.Step;
+                var actualFrom = actual.IntegerRange?.From ?? actual.FloatRange?.From;
+                var actualTo = actual.IntegerRange?.To ?? actual.FloatRange?.To;
+                var actualStep = actual.IntegerRange?.Step ?? actual.FloatRange?.Step;
+                return expectedFrom is { } leftFrom && expectedTo is { } leftTo && expectedStep is { } leftStep &&
+                       actualFrom is { } rightFrom && actualTo is { } rightTo && actualStep is { } rightStep &&
+                       GameEventScriptNumber.EqualsWithinUlps(leftFrom, rightFrom, maxFloatUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(leftTo, rightTo, maxFloatUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(leftStep, rightStep, maxFloatUlps);
+            case GameEventScriptBytecodeTypeKind.Message:
+                return expected.Message is { } expectedMessage && actual.Message is { } actualMessage &&
+                       ConformanceEquals(expectedMessage, actualMessage, maxFloatUlps);
+            default:
+                return expected.Equals(actual);
+        }
+    }
+
     public static JsonObject ToMessageJson(GameEventScriptMessage message)
     {
         var node = new JsonObject
@@ -221,7 +343,7 @@ internal static class GameEventScriptConformanceValueCodec
             "NaN" => GesValue.GesNothing(),
             "Infinity" => GesValue.GesFloat(double.PositiveInfinity, unit),
             "-Infinity" => GesValue.GesFloat(double.NegativeInfinity, unit),
-            _ => GesValue.GesFloat(double.Parse(value, NumberStyles.Number, CultureInfo.InvariantCulture), unit)
+            _ => GesValue.GesFloat(double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture), unit)
         };
     }
 
@@ -440,13 +562,7 @@ internal static class GameEventScriptConformanceValueCodec
     private static string ToCanonicalTypeName(string typeName)
         => typeName.StartsWith(":", StringComparison.Ordinal) ? typeName : ":" + typeName;
 
-    private static string FormatFloat(double value)
-    {
-        if (double.IsPositiveInfinity(value)) return "Infinity";
-        if (double.IsNegativeInfinity(value)) return "-Infinity";
-        if (double.IsNaN(value)) return "NaN";
-        return value == 0d ? "0" : value.ToString("0.############################", CultureInfo.InvariantCulture);
-    }
+    private static string FormatFloat(double value) => GameEventScriptNumber.FormatCanonicalFloat(value);
 
     private static JsonElement RequireObjectProperty(JsonElement element, string propertyName, string description)
     {
@@ -543,7 +659,7 @@ internal static class GameEventScriptConformanceValueCodec
         => element.ValueKind switch
         {
             JsonValueKind.Number when element.TryGetDouble(out var number) => number,
-            JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var textNumber) => textNumber,
+            JsonValueKind.String when double.TryParse(element.GetString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var textNumber) => textNumber,
             _ => throw new InvalidOperationException($"Invalid {description}; expected double string or JSON number.")
         };
 

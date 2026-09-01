@@ -37,6 +37,8 @@ public sealed class GameEventScriptConformanceTest
 
     public int? WarmupIterations { get; set; }
 
+    public int? MaxFloatUlps { get; set; }
+
     public bool DumpBinary { get; set; }
 
     public bool BinaryRoundTrip { get; set; }
@@ -137,6 +139,8 @@ public sealed class GameEventScriptApiStepSpec
     public int? OpcodeBudget { get; set; }
 
     public bool? ExpectedPaused { get; set; }
+
+    public int? MaxFloatUlps { get; set; }
 }
 
 public sealed class GameEventScriptCompileOptionsSpec

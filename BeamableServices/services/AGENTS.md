@@ -54,6 +54,27 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Number Semantics
+
+- Signed-64 arithmetic, overflow fallback, binary64-to-integer saturation,
+  midpoint rounding, negative `div`/`mod`/`rem`, NaN/Infinity/zero handling, and
+  two-ULP runtime equality now use one explicit language-neutral number core.
+- Compiler constant folding and VM execution share the same rules, including
+  exact integer operations above `2^53` and the exclusive binary64 `2^63`
+  boundary.
+- Conformance JSON now writes shortest roundtrip binary64 decimals with canonical
+  exponents and compares finite floats with configurable `maxFloatUlps` (default
+  4096; zero is exact).
+- The normative contract is `StepH-GameEventScript/PortableNumberSemantics.md`.
+
+Verification after this change:
+
+```text
+1041/1041 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
 ### Portable Text and Unicode Semantics
 
 - Source input is a valid Unicode-scalar sequence; file input is strict UTF-8,

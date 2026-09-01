@@ -64,22 +64,28 @@ umgesetzt:
 - JSON-Conformance deckt Supplementary-Plane-Zeichen, kombinierende Zeichen,
   Scalar-Sortierung und unzulässige Unicode-Namen/Whitespace ab.
 
-### Zahlen
+### 2.2 Zahlen - DONE
 
-Festzulegen sind:
+Der sprachneutrale Vertrag ist in
+[PortableNumberSemantics.md](StepH-GameEventScript/PortableNumberSemantics.md)
+festgeschrieben und in Compiler, VM, Value-Modell sowie JSON-Conformance
+umgesetzt:
 
-- Integer-Overflow
-- Float-zu-Integer-Konvertierung
-- `NaN`, Infinity und negative Null
-- Rundungsregeln
-- Division und Modulo mit negativen Zahlen
-- Verhalten transzendenter Funktionen
-- Vergleichstoleranz beziehungsweise ULP-Toleranz in Conformance-Tests
-- kanonische JSON-Floatdarstellung
+- Int64-Operationen erkennen Überlauf ohne CLR-Checked-Kontext und wechseln bei
+  Überlauf definiert auf Binary64; exakte Werte oberhalb `2^53` bleiben integer.
+- Float-zu-Integer-Konvertierung nutzt explizite `2^63`-Grenzen, Truncation und
+  Sättigung.
+- NaN, Infinity, negative Null und alle Rundungsmodi sind festgelegt.
+- `div`, `mod` und `rem` besitzen definierte Regeln für negative Operanden.
+- Transzendente Funktionen verwenden die Plattform-Binary64-Mathematik mit
+  konfigurierbarer ULP-Toleranz in JSON-Tests; Runtime-Gleichheit bleibt bei zwei
+  ULPs.
+- Conformance-Floats verwenden kürzeste Roundtrip-Dezimaldarstellung mit
+  kanonischem Exponenten statt eines C#-spezifischen festen Formats.
+- Grenzfälle liegen sowohl als direkte Low-Level-Tests als auch als portable
+  JSON-Conformance vor.
 
-Die jetzige C#-Formatierung mit einem festen `ToString`-Format ist kein ausreichender sprachneutraler Vertrag.
-
-### Determinismus
+### 2.3 Determinismus
 
 Zusätzliche Verträge:
 

@@ -370,7 +370,7 @@ public struct GesValue : IEquatable<GesValue>
         }
 
         // ReSharper disable once CompareOfFloatsByEqualityOperator
-        if (double.IsFinite(value) && value is >= long.MinValue and <= long.MaxValue && value == Math.Truncate(value))
+        if (GameEventScriptNumber.CanRepresentAsInteger(value))
         {
             var intValue = (long)value;
             Kind = Integer;
@@ -395,6 +395,7 @@ public struct GesValue : IEquatable<GesValue>
             SetNothing();
             return;
         }
+        ratio = GameEventScriptNumber.CanonicalizeZero(ratio);
         if (double.IsFinite(ratio))
         {
             Kind = Percentage;
@@ -438,6 +439,15 @@ public struct GesValue : IEquatable<GesValue>
 
     internal void SetVector(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
+        if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
+        {
+            SetNothing();
+            return;
+        }
+
+        x = GameEventScriptNumber.CanonicalizeZero(x);
+        y = GameEventScriptNumber.CanonicalizeZero(y);
+        z = GameEventScriptNumber.CanonicalizeZero(z);
         Kind = Vector;
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
@@ -446,16 +456,19 @@ public struct GesValue : IEquatable<GesValue>
     }
 
     internal void SetVector(GesValueVectorPoint vector, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
-    {
-        Kind = Vector;
-        Flags = StorageObjectFlag | HasValueFlag | (vector.X is 0 or double.NaN && vector.Y is 0 or double.NaN && vector.Z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
-        Unit = unit;
-        IntegerValue = 0;
-        ObjectValue = vector;
-    }
+        => SetVector(vector.X, vector.Y, vector.Z, unit);
 
     internal void SetPoint(double x, double y, double z, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
     {
+        if (double.IsNaN(x) || double.IsNaN(y) || double.IsNaN(z))
+        {
+            SetNothing();
+            return;
+        }
+
+        x = GameEventScriptNumber.CanonicalizeZero(x);
+        y = GameEventScriptNumber.CanonicalizeZero(y);
+        z = GameEventScriptNumber.CanonicalizeZero(z);
         Kind = Point;
         Flags = StorageObjectFlag | HasValueFlag | (x is 0 or double.NaN && y is 0 or double.NaN && z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
         Unit = unit;
@@ -464,13 +477,7 @@ public struct GesValue : IEquatable<GesValue>
     }
 
     internal void SetPoint(GesValueVectorPoint point, GameEventScriptBytecodeInstructionUnit unit = UnitNone)
-    {
-        Kind = Point;
-        Flags = StorageObjectFlag | HasValueFlag | (point.X is 0 or double.NaN && point.Y is 0 or double.NaN && point.Z is 0 or double.NaN ? IsFalseFlag : IsTrueFlag);
-        Unit = unit;
-        IntegerValue = 0;
-        ObjectValue = point;
-    }
+        => SetPoint(point.X, point.Y, point.Z, unit);
 
     internal void SetDice(int[] values)
     {
@@ -546,6 +553,9 @@ public struct GesValue : IEquatable<GesValue>
             return;
         }
 
+        from = GameEventScriptNumber.CanonicalizeZero(from);
+        to = GameEventScriptNumber.CanonicalizeZero(to);
+        step = GameEventScriptNumber.CanonicalizeZero(step);
         Kind = GameEventScriptBytecodeTypeKind.Range;
         Unit = UnitNone;
         if (step == 0 || (step > 0 && from > to) || (step < 0 && from < to))
@@ -660,14 +670,7 @@ public struct GesValue : IEquatable<GesValue>
         return sum;
     }
 
-    private static long ToIntegerSaturated(double number)
-    {
-        if (double.IsNaN(number)) return 0;
-        var truncated = Math.Truncate(number);
-        if (truncated > long.MaxValue) return long.MaxValue;
-        if (truncated < long.MinValue) return long.MinValue;
-        return (long)truncated;
-    }
+    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
     internal GesNumericWithUnit AsNumericWithUnit()
         => new(AsNumeric, Unit);
 
@@ -859,7 +862,7 @@ public struct GesValue : IEquatable<GesValue>
         Nothing => string.Empty,
         Integer => FormatNumber(IntegerValue, Unit),
         Float => FormatNumber(FloatValue, Unit),
-        Percentage => $"{(FloatValue * 100d).ToString("0.############################", CultureInfo.InvariantCulture)}%",
+        Percentage => $"{GameEventScriptNumber.FormatCanonicalFloat(FloatValue * 100d)}%",
         GameEventScriptBytecodeTypeKind.Boolean => IsTrue ? "True" : "False",
         Text => TextValue,
         Tag => ":" + TextValue,
@@ -883,7 +886,7 @@ public struct GesValue : IEquatable<GesValue>
             : value.ToString(CultureInfo.InvariantCulture);
     private static string FormatNumber(double value, GameEventScriptBytecodeInstructionUnit unit)
     {
-        var formatted = value.ToString("0.############################", CultureInfo.InvariantCulture);
+        var formatted = GameEventScriptNumber.FormatCanonicalFloat(value);
         return unit.IsNumericUnit() ? $"{formatted}{unit.ToSuffix()}" : formatted;
     }
     private static string FormatTriplet(string typeName, GesValueVectorPoint triplet, GameEventScriptBytecodeInstructionUnit unit)
@@ -936,5 +939,5 @@ public struct GesValue : IEquatable<GesValue>
     private static string FormatRange(double from, double to, double step)
         => $"range[{FormatRangeComponent(from)} to {FormatRangeComponent(to)} step {FormatRangeComponent(step)}]";
     private static string FormatRangeComponent(double value)
-        => value.ToString("0.############################", CultureInfo.InvariantCulture);
+        => GameEventScriptNumber.FormatCanonicalFloat(value);
 }

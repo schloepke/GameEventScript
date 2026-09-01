@@ -734,9 +734,7 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
         IReadOnlyList<GameEventScriptMessage> actual)
     {
         var expected = (expectedPublished ?? []).Select(GameEventScriptConformanceValueCodec.DecodeMessage).ToArray();
-        var expectedJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(expected);
-        var actualJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(actual);
-        if (expectedJson == actualJson)
+        if (GameEventScriptConformanceValueCodec.ConformanceEquals(expected, actual, ResolveMaxFloatUlps(testCase, stepIndex)))
         {
             return;
         }
@@ -1203,9 +1201,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
     {
         diff = string.Empty;
         var expected = (expectedPublished ?? []).Select(GameEventScriptConformanceValueCodec.DecodeMessage).ToArray();
-        var expectedJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(expected);
-        var actualJson = GameEventScriptConformanceValueCodec.ToCanonicalJson(actual);
-        if (expectedJson == actualJson)
+        if (GameEventScriptConformanceValueCodec.ConformanceEquals(expected, actual, ResolveMaxFloatUlps(testCase, stepIndex)))
         {
             return true;
         }
@@ -1214,6 +1210,14 @@ public abstract class GameEventScriptJsonConformanceTestBase
             ? BuildMessageDiff(testCase, stepIndex, label, expected, actual)
             : $"expectedMessages={expected.Length}, actualMessages={actual.Count}";
         return false;
+    }
+
+    protected static int ResolveMaxFloatUlps(GameEventScriptConformanceCase testCase, int stepIndex)
+    {
+        var stepValue = stepIndex >= 0 && testCase.Test.Steps is { } steps && stepIndex < steps.Count
+            ? steps[stepIndex].MaxFloatUlps
+            : null;
+        return Math.Max(0, stepValue ?? testCase.Test.MaxFloatUlps ?? GameEventScriptConformanceValueCodec.DefaultMaxFloatUlps);
     }
 
     private static bool TryMatchRuntimeLimits(

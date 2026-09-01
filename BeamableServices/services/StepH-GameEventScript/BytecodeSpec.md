@@ -751,6 +751,8 @@ produces a unitless result, and all other quantity powers write numeric `NaN`
 unless a direct source operand is `nothing`.
 
 Numeric opcodes preserve value families where the source language does:
+the portable overflow, conversion, binary64, rounding, division/modulo, and ULP
+rules are normative in [`PortableNumberSemantics.md`](PortableNumberSemantics.md).
 `Abs` keeps percentages as `Percentage`, keeps quantity units on numeric
 quantities, and finite exactly integral numeric results are represented as
 integer values when they fit signed 64-bit.

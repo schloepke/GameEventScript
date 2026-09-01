@@ -63,7 +63,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return dst;
             case Integer:
                 var integerNumber = xValue.AsNumeric;
-                if (double.IsFinite(integerNumber) && integerNumber is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)integerNumber, xValue.Kind is Integer or Float ? xValue.Unit : UnitNone);
+                if (GameEventScriptNumber.CanRepresentAsInteger(integerNumber)) dst.SetInteger((long)integerNumber, xValue.Kind is Integer or Float ? xValue.Unit : UnitNone);
                 else dst.SetNothing();
                 return dst;
             case Float:
@@ -236,7 +236,7 @@ internal static class GesVmRegisterTypeCastCheck
         }
 
         var number = xValue.AsNumeric;
-        vmState.SetBoolean(destinationRegister, double.IsFinite(number) && number is >= long.MinValue and <= long.MaxValue && number == Math.Truncate(number));
+        vmState.SetBoolean(destinationRegister, GameEventScriptNumber.CanRepresentAsInteger(number));
     }
     internal static void GesVmCheckFractional(this GesVmState vmState, ushort destinationRegister, in GesValue xValue)
     {

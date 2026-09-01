@@ -1,4 +1,5 @@
 using System;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
 
@@ -165,13 +166,7 @@ public sealed class GameEventScriptRandomGenerator
         return _sequence[_sequenceIndex++];
     }
 
-    private static long ToLongSaturated(double value) => value switch
-    {
-        double.NaN => 0,
-        <= long.MinValue => long.MinValue,
-        >= long.MaxValue => long.MaxValue,
-        _ => (long)Math.Truncate(value)
-    };
+    private static long ToLongSaturated(double value) => GameEventScriptNumber.ToIntegerSaturated(value);
 
     private void Seed(long seed)
     {

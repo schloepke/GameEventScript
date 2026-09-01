@@ -49,9 +49,9 @@ public readonly struct GesValueSlice
         return value.Kind switch
         {
             GameEventScriptBytecodeTypeKind.Integer => value.IntegerValue,
-            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => ToIntegerSaturated(value.FloatValue),
+            GameEventScriptBytecodeTypeKind.Float or GameEventScriptBytecodeTypeKind.Percentage => GameEventScriptNumber.ToIntegerSaturated(value.FloatValue),
             GameEventScriptBytecodeTypeKind.Boolean => value.IsTrue ? 1 : 0,
-            _ => ToIntegerSaturated(value.AsNumeric)
+            _ => GameEventScriptNumber.ToIntegerSaturated(value.AsNumeric)
         };
     }
 
@@ -95,13 +95,4 @@ public readonly struct GesValueSlice
     public double GetZ(int index) => _values![Start + index].ObjectValue is GesValueVectorPoint vector ? vector.Z : 0d;
 
     internal ref readonly GesValue VmValueAt(int index) => ref _values![Start + index];
-
-    private static long ToIntegerSaturated(double number)
-    {
-        if (double.IsNaN(number)) return 0;
-        var truncated = Math.Truncate(number);
-        if (truncated > long.MaxValue) return long.MaxValue;
-        if (truncated < long.MinValue) return long.MinValue;
-        return (long)truncated;
-    }
 }

@@ -23,7 +23,11 @@ internal static class GesVmRegisterMath
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (SameUnit(in a, in b) is { } unit) dst.SetInteger(a.IntegerValue + b.IntegerValue, unit);
+                if (SameUnit(in a, in b) is { } unit)
+                {
+                    if (GameEventScriptNumber.AddExact(a.IntegerValue, b.IntegerValue) is { } integerResult) dst.SetInteger(integerResult, unit);
+                    else dst.SetFloat((double)a.IntegerValue + b.IntegerValue, unit);
+                }
                 else dst.SetFloat(double.NaN);
                 break;
             case Float when b.Kind is Float:
@@ -133,7 +137,11 @@ internal static class GesVmRegisterMath
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (SameUnit(in a, in b) is { } unit) vmState.SetInteger(dst, a.IntegerValue - b.IntegerValue, unit);
+                if (SameUnit(in a, in b) is { } unit)
+                {
+                    if (GameEventScriptNumber.SubtractExact(a.IntegerValue, b.IntegerValue) is { } integerResult) vmState.SetInteger(dst, integerResult, unit);
+                    else vmState.SetFloat(dst, (double)a.IntegerValue - b.IntegerValue, unit);
+                }
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Float when b.Kind is Float:
@@ -466,7 +474,11 @@ internal static class GesVmRegisterMath
         switch (a.Kind)
         {
             case Integer when b.Kind is Integer:
-                if (ProductUnit(in a, in b) is { } unit) vmState.SetFloat(dst, (double)a.IntegerValue * b.IntegerValue, unit);
+                if (ProductUnit(in a, in b) is { } unit)
+                {
+                    if (GameEventScriptNumber.MultiplyExact(a.IntegerValue, b.IntegerValue) is { } integerResult) vmState.SetInteger(dst, integerResult, unit);
+                    else vmState.SetFloat(dst, (double)a.IntegerValue * b.IntegerValue, unit);
+                }
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Float when b.Kind is Float:
@@ -851,9 +863,8 @@ internal static class GesVmRegisterMath
             case Integer when b.Kind is Integer:
                 if (QuotientUnit(in a, in b) is { } integerUnit)
                 {
-                    var result = Math.Floor((double)a.IntegerValue / b.IntegerValue);
-                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, integerUnit);
-                    else dst.SetFloat(result, integerUnit);
+                    if (GameEventScriptNumber.FloorDivideExact(a.IntegerValue, b.IntegerValue) is { } integerResult) dst.SetInteger(integerResult, integerUnit);
+                    else dst.SetFloat(Math.Floor((double)a.IntegerValue / b.IntegerValue), integerUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -862,8 +873,7 @@ internal static class GesVmRegisterMath
                 if (QuotientUnit(in a, in b) is { } floatUnit)
                 {
                     var result = Math.Floor(a.FloatValue / b.FloatValue);
-                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, floatUnit);
-                    else dst.SetFloat(result, floatUnit);
+                    dst.SetFloat(result, floatUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -872,8 +882,7 @@ internal static class GesVmRegisterMath
                 if (QuotientUnit(in a, in b) is { } mixedUnit)
                 {
                     var result = Math.Floor(a.AsNumeric / b.AsNumeric);
-                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, mixedUnit);
-                    else dst.SetFloat(result, mixedUnit);
+                    dst.SetFloat(result, mixedUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -882,8 +891,7 @@ internal static class GesVmRegisterMath
                 if (QuotientUnit(in a, in b) is { } percentageRightUnit)
                 {
                     var result = Math.Floor(a.AsNumeric / b.FloatValue);
-                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageRightUnit);
-                    else dst.SetFloat(result, percentageRightUnit);
+                    dst.SetFloat(result, percentageRightUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -892,8 +900,7 @@ internal static class GesVmRegisterMath
                 if (QuotientUnit(in a, in b) is { } percentageLeftUnit)
                 {
                     var result = Math.Floor(a.FloatValue / b.AsNumeric);
-                    if (double.IsFinite(result) && result is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)result, percentageLeftUnit);
-                    else dst.SetFloat(result, percentageLeftUnit);
+                    dst.SetFloat(result, percentageLeftUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -937,8 +944,7 @@ internal static class GesVmRegisterMath
         }
 
         var floorResult = Math.Floor(left / right);
-        if (double.IsFinite(floorResult) && floorResult is >= long.MinValue and <= long.MaxValue) dst.SetInteger((long)floorResult, unit);
-        else dst.SetFloat(floorResult, unit);
+        dst.SetFloat(floorResult, unit);
         return dst;
     }
     internal static void GesVmModulo(this GesVmState vmState, ushort destinationRegister, in GesValue a, in GesValue b)
@@ -961,18 +967,7 @@ internal static class GesVmRegisterMath
                         return dst;
                     }
 
-                    long integerModuloResult;
-                    if (a.IntegerValue == long.MinValue && rightInteger == -1)
-                    {
-                        integerModuloResult = 0;
-                    }
-                    else
-                    {
-                        integerModuloResult = a.IntegerValue % rightInteger;
-                        if (integerModuloResult != 0 && (integerModuloResult < 0 && rightInteger > 0 || integerModuloResult > 0 && rightInteger < 0)) integerModuloResult += rightInteger;
-                    }
-
-                    dst.SetInteger(integerModuloResult, integerUnit);
+                    dst.SetInteger(GameEventScriptNumber.Modulo(a.IntegerValue, rightInteger), integerUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -1087,10 +1082,7 @@ internal static class GesVmRegisterMath
                         return dst;
                     }
 
-                    var integerRemainderResult = a.IntegerValue == long.MinValue && rightInteger == -1
-                        ? 0
-                        : a.IntegerValue % rightInteger;
-                    dst.SetInteger(integerRemainderResult, integerUnit);
+                    dst.SetInteger(GameEventScriptNumber.Remainder(a.IntegerValue, rightInteger), integerUnit);
                 }
                 else dst.SetFloat(double.NaN);
 
@@ -1950,12 +1942,7 @@ internal static class GesVmRegisterMath
         }
 
         var value = a.AsNumeric;
-        var sign = Math.Sign(value);
-        var absolute = Math.Abs(value);
-        var floor = Math.Floor(absolute);
-        var fraction = absolute - floor;
-        var roundedAbsolute = fraction > 0.5d ? floor + 1d : floor;
-        vmState.SetInteger(destinationRegister, ToIntegerSaturated(sign < 0 ? -roundedAbsolute : roundedAbsolute));
+        vmState.SetInteger(destinationRegister, ToIntegerSaturated(GameEventScriptNumber.RoundHalfTowardZero(value)));
     }
     internal static void GesVmDegreeToRadians(this GesVmState vmState, ushort destinationRegister, in GesValue a)
     {
@@ -2028,13 +2015,7 @@ internal static class GesVmRegisterMath
         if (wrapped < 0d) wrapped += 360d;
         vmState.SetFloat(destinationRegister, wrapped == 360d ? 0d : wrapped, UnitDegree);
     }
-    private static long ToIntegerSaturated(double number)
-    {
-        if (double.IsNaN(number)) return 0;
-        if (double.IsPositiveInfinity(number) || number > long.MaxValue) return long.MaxValue;
-        if (double.IsNegativeInfinity(number) || number < long.MinValue) return long.MinValue;
-        return (long)Math.Truncate(number);
-    }
+    private static long ToIntegerSaturated(double number) => GameEventScriptNumber.ToIntegerSaturated(number);
     internal static void GesVmTerm(this GesVmState vmState, ushort destinationRegister, in GesValue source, in GesValue termValue)
     {
         var dst = GesVmTerm(in source, in termValue, vmState);
@@ -2052,25 +2033,8 @@ internal static class GesVmRegisterMath
                 ret = true;
                 break;
             case Float or Percentage:
-                switch (termValue.FloatValue)
-                {
-                    case double.NaN:
-                        index = 0;
-                        ret = false;
-                        break;
-                    case <= long.MinValue:
-                        index = long.MinValue;
-                        ret = true;
-                        break;
-                    case >= long.MaxValue:
-                        index = long.MaxValue;
-                        ret = true;
-                        break;
-                    default:
-                        index = (long)termValue.FloatValue;
-                        ret = true;
-                        break;
-                }
+                ret = !double.IsNaN(termValue.FloatValue);
+                index = ret ? GameEventScriptNumber.ToIntegerSaturated(termValue.FloatValue) : 0;
 
                 break;
             case GameEventScriptBytecodeTypeKind.Boolean:
@@ -2080,25 +2044,9 @@ internal static class GesVmRegisterMath
             default:
                 if (termValue.IsNumeric)
                 {
-                    switch (termValue.AsNumeric)
-                    {
-                        case Double.NaN:
-                            index = 0;
-                            ret = false;
-                            break;
-                        case <= long.MinValue:
-                            index = long.MinValue;
-                            ret = true;
-                            break;
-                        case >= long.MaxValue:
-                            index = long.MaxValue;
-                            ret = true;
-                            break;
-                        default:
-                            index = (long)termValue.AsNumeric;
-                            ret = true;
-                            break;
-                    }
+                    var numeric = termValue.AsNumeric;
+                    ret = !double.IsNaN(numeric);
+                    index = ret ? GameEventScriptNumber.ToIntegerSaturated(numeric) : 0;
 
                     break;
                 }

@@ -453,6 +453,12 @@ record :unit as {
 
 ### Numbers
 
+The normative cross-language rules for Int64 overflow, binary64 special values,
+rounding, negative division/modulo, ULP comparison, transcendental functions,
+and canonical conformance JSON are defined in
+[`PortableNumberSemantics.md`](PortableNumberSemantics.md). Implementations must
+not inherit these semantics from host-language overflow or formatting defaults.
+
 `:number` is the source-level numeric type. Runtime values are represented as
 integer when a finite result is exactly integral and fits signed 64-bit;
 otherwise they are represented as IEEE 754 double precision. Equality uses a

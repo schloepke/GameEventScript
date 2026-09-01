@@ -95,7 +95,7 @@ internal static class GameEventScriptVmStateDumper
             builder
                 .Append("  #").Append(index.ToString(CultureInfo.InvariantCulture))
                 .Append(' ')
-                .Append(argument.Key)
+                .Append(argument.Name)
                 .Append(": kind=")
                 .Append(value.Kind)
                 .Append(" value=\"")

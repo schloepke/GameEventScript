@@ -11,22 +11,31 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "index": {
-                  "type": ":nothing"
+                {
+                  "name": "index",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -40,22 +49,31 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "index": {
-                  "type": ":nothing"
+                {
+                  "name": "index",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -69,22 +87,31 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "index": {
-                  "type": ":nothing"
+                {
+                  "name": "index",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -98,22 +125,31 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "index": {
-                  "type": ":nothing"
+                {
+                  "name": "index",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -127,22 +163,31 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "index": {
-                  "type": ":nothing"
+                {
+                  "name": "index",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -156,30 +201,45 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "first": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "second": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "second",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -193,30 +253,45 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "first": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "second": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "second",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -230,37 +305,55 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "memberX": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "memberX",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "1"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexFirst": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "1"
+                {
+                  "name": "indexFirst",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "1"
+                  }
                 },
-                "indexThird": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "3"
+                {
+                  "name": "indexThird",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "3"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -274,37 +367,55 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "memberY": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "memberY",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "5"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexFirst": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "4"
+                {
+                  "name": "indexFirst",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "4"
+                  }
                 },
-                "indexThird": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "6"
+                {
+                  "name": "indexThird",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "6"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -318,34 +429,52 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "first": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "dynamicSecond": {
-                  "type": ":integer",
-                  "value": "20"
+                {
+                  "name": "dynamicSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 },
-                "third": {
-                  "type": ":integer",
-                  "value": "30"
+                {
+                  "name": "third",
+                  "value": {
+                    "type": ":integer",
+                    "value": "30"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -359,38 +488,59 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "memberName": {
-                  "type": ":text",
-                  "value": "Ada"
+              "args": [
+                {
+                  "name": "memberName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexText": {
-                  "type": ":text",
-                  "value": "Ada"
+                {
+                  "name": "indexText",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "indexTag": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "indexTag",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "dynamicText": {
-                  "type": ":text",
-                  "value": "Ada"
+                {
+                  "name": "dynamicText",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "indexMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "indexMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -409,30 +559,45 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "first": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "third": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "third",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -446,38 +611,59 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "member": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "member",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "first": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "third": {
-                  "type": ":integer",
-                  "value": "20"
+                {
+                  "name": "third",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 },
-                "descendingSecond": {
-                  "type": ":integer",
-                  "value": "15"
+                {
+                  "name": "descendingSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "15"
+                  }
                 },
-                "fractionalSecond": {
-                  "type": ":float",
-                  "value": "2"
+                {
+                  "name": "fractionalSecond",
+                  "value": {
+                    "type": ":float",
+                    "value": "2"
+                  }
                 },
-                "indexZero": {
-                  "type": ":nothing"
+                {
+                  "name": "indexZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -491,38 +677,59 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "memberName": {
-                  "type": ":text",
-                  "value": "Ping"
+              "args": [
+                {
+                  "name": "memberName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "memberArg": {
-                  "type": ":integer",
-                  "value": "7"
+                {
+                  "name": "memberArg",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexName": {
-                  "type": ":text",
-                  "value": "Ping"
+                {
+                  "name": "indexName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "indexArg": {
-                  "type": ":text",
-                  "value": "orc"
+                {
+                  "name": "indexArg",
+                  "value": {
+                    "type": ":text",
+                    "value": "orc"
+                  }
                 },
-                "indexMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "indexMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -536,38 +743,59 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "memberName": {
-                  "type": ":text",
-                  "value": "Ping"
+              "args": [
+                {
+                  "name": "memberName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "memberParam": {
-                  "type": ":text",
-                  "value": "amount"
+                {
+                  "name": "memberParam",
+                  "value": {
+                    "type": ":text",
+                    "value": "amount"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexName": {
-                  "type": ":text",
-                  "value": "Ping"
+                {
+                  "name": "indexName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "indexParam": {
-                  "type": ":text",
-                  "value": "target"
+                {
+                  "name": "indexParam",
+                  "value": {
+                    "type": ":text",
+                    "value": "target"
+                  }
                 },
-                "indexMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "indexMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -581,38 +809,59 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "memberName": {
-                  "type": ":text",
-                  "value": "Ada"
+              "args": [
+                {
+                  "name": "memberName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexText": {
-                  "type": ":text",
-                  "value": "Ada"
+                {
+                  "name": "indexText",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "indexTag": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "indexTag",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "indexMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "indexMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "isUnit": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isUnit",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -626,42 +875,63 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "invalidProperty": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "listDynamic",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 },
-                "listDynamic": {
-                  "type": ":integer",
-                  "value": "20"
+                {
+                  "name": "mapText",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "mapTag": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "mapTag",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "mapText": {
-                  "type": ":text",
-                  "value": "Ada"
+                {
+                  "name": "vectorDynamic",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "2"
+                  }
                 },
-                "pointDynamic": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "6"
+                {
+                  "name": "pointDynamic",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "6"
+                  }
                 },
-                "textDynamic": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "textDynamic",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 },
-                "vectorDynamic": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "2"
+                {
+                  "name": "invalidProperty",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -675,7 +945,7 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
@@ -683,42 +953,66 @@
               "tags": [
                 "radio"
               ],
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "7"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "memberName": {
-                  "type": ":text",
-                  "value": "Ping"
+              "args": [
+                {
+                  "name": "memberName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "memberTag": {
-                  "type": ":tag",
-                  "value": "radio"
+                {
+                  "name": "memberTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "radio"
+                  }
                 },
-                "memberMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "memberMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexName": {
-                  "type": ":text",
-                  "value": "Ping"
+                {
+                  "name": "indexName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "indexTag": {
-                  "type": ":tag",
-                  "value": "radio"
+                {
+                  "name": "indexTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "radio"
+                  }
                 },
-                "indexMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "indexMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "indexOut": {
-                  "type": ":nothing"
+                {
+                  "name": "indexOut",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

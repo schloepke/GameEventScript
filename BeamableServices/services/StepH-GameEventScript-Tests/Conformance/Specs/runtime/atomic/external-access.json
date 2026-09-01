@@ -11,22 +11,28 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "21"
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Done",
-              "args": {
+            "args": [
+              {
+                "name": "value",
                 "value": {
                   "type": ":integer",
                   "value": "21"
                 }
               }
+            ]
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "21"
+                  }
+                }
+              ]
             }
           ]
         }
@@ -40,22 +46,28 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "21"
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Done",
-              "args": {
+            "args": [
+              {
+                "name": "value",
                 "value": {
                   "type": ":integer",
                   "value": "21"
                 }
               }
+            ]
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "21"
+                  }
+                }
+              ]
             }
           ]
         }
@@ -69,30 +81,42 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":text",
-                "value": "u_1"
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
               },
-              "target": {
-                "type": ":text",
-                "value": "t_1"
+              {
+                "name": "target",
+                "value": {
+                  "type": ":text",
+                  "value": "t_1"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Shoot",
-              "args": {
-                "target": {
-                  "type": ":text",
-                  "value": "t_1"
+              "args": [
+                {
+                  "name": "unit",
+                  "value": {
+                    "type": ":text",
+                    "value": "u_1"
+                  }
                 },
-                "unit": {
-                  "type": ":text",
-                  "value": "u_1"
+                {
+                  "name": "target",
+                  "value": {
+                    "type": ":text",
+                    "value": "t_1"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -106,21 +130,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":text",
-                "value": "u_1"
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
               },
-              "hp": {
-                "type": ":integer",
-                "value": "10"
+              {
+                "name": "hp",
+                "value": {
+                  "type": ":integer",
+                  "value": "10"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -134,255 +164,133 @@
         {
           "input": {
             "name": "Echo",
-            "args": {
-              "nothingValue": {
-                "type": ":nothing"
-              },
-              "falseValue": {
-                "type": ":boolean",
-                "value": false
-              },
-              "trueValue": {
-                "type": ":boolean",
-                "value": true
-              },
-              "integerValue": {
-                "type": ":integer",
-                "value": "42"
-              },
-              "floatValue": {
-                "type": ":float",
-                "value": "10.75"
-              },
-              "infinityValue": {
-                "type": ":float",
-                "value": "Infinity"
-              },
-              "unitInteger": {
-                "type": ":integer",
-                "value": "7",
-                "unit": ":meter"
-              },
-              "unitFloat": {
-                "type": ":float",
-                "value": "90",
-                "unit": ":degree"
-              },
-              "percentageValue": {
-                "type": ":percentage",
-                "value": "0.25"
-              },
-              "textValue": {
-                "type": ":text",
-                "value": "Hello"
-              },
-              "emptyText": {
-                "type": ":text",
-                "value": ""
-              },
-              "tagValue": {
-                "type": ":tag",
-                "value": "ready"
-              },
-              "vectorValue": {
-                "type": ":vector",
-                "x": "1.5",
-                "y": "-2",
-                "z": "3"
-              },
-              "unitVector": {
-                "type": ":vector",
-                "x": "1",
-                "y": "2",
-                "z": "3",
-                "unit": ":meter"
-              },
-              "pointValue": {
-                "type": ":point",
-                "x": "4",
-                "y": "5",
-                "z": "6"
-              },
-              "unitPoint": {
-                "type": ":point",
-                "x": "7",
-                "y": "8",
-                "z": "9",
-                "unit": ":meter"
-              },
-              "listValue": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":text",
-                    "value": "two"
-                  },
-                  {
-                    "type": ":tag",
-                    "value": "three"
-                  }
-                ]
-              },
-              "emptyList": {
-                "type": ":list",
-                "items": []
-              },
-              "mapValue": {
-                "type": ":map",
-                "entries": {
-                  "alpha": {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  "beta": {
-                    "type": ":text",
-                    "value": "two"
-                  }
-                }
-              },
-              "emptyMap": {
-                "type": ":map",
-                "entries": {}
-              },
-              "customValue": {
-                "type": ":Unit",
-                "entries": {
-                  "hp": {
-                    "type": ":integer",
-                    "value": "7"
-                  },
-                  "name": {
-                    "type": ":text",
-                    "value": "Knight"
-                  }
-                }
-              },
-              "diceValue": {
-                "type": ":dice",
-                "rolls": [
-                  6,
-                  5,
-                  2
-                ]
-              },
-              "rangeValue": {
-                "type": ":range",
-                "from": "1",
-                "to": "3",
-                "step": "1"
-              },
-              "floatRangeValue": {
-                "type": ":range",
-                "from": "1.5",
-                "to": "3.5",
-                "step": "0.5"
-              },
-              "nestedMessage": {
-                "type": ":message",
-                "message": {
-                  "name": "Nested",
-                  "tags": [
-                    "inner",
-                    "debug"
-                  ],
-                  "args": {
-                    "amount": {
-                      "type": ":integer",
-                      "value": "12"
-                    },
-                    "payload": {
-                      "type": ":text",
-                      "value": "ok"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Done",
-              "args": {
-                "nothingValue": {
+            "args": [
+              {
+                "name": "nothingValue",
+                "value": {
                   "type": ":nothing"
-                },
-                "falseValue": {
+                }
+              },
+              {
+                "name": "falseValue",
+                "value": {
                   "type": ":boolean",
                   "value": false
-                },
-                "trueValue": {
+                }
+              },
+              {
+                "name": "trueValue",
+                "value": {
                   "type": ":boolean",
                   "value": true
-                },
-                "integerValue": {
+                }
+              },
+              {
+                "name": "integerValue",
+                "value": {
                   "type": ":integer",
                   "value": "42"
-                },
-                "floatValue": {
+                }
+              },
+              {
+                "name": "floatValue",
+                "value": {
                   "type": ":float",
                   "value": "10.75"
-                },
-                "infinityValue": {
+                }
+              },
+              {
+                "name": "infinityValue",
+                "value": {
                   "type": ":float",
                   "value": "Infinity"
-                },
-                "unitInteger": {
+                }
+              },
+              {
+                "name": "unitInteger",
+                "value": {
                   "type": ":integer",
                   "value": "7",
                   "unit": ":meter"
-                },
-                "unitFloat": {
+                }
+              },
+              {
+                "name": "unitFloat",
+                "value": {
                   "type": ":float",
                   "value": "90",
                   "unit": ":degree"
-                },
-                "percentageValue": {
+                }
+              },
+              {
+                "name": "percentageValue",
+                "value": {
                   "type": ":percentage",
                   "value": "0.25"
-                },
-                "textValue": {
+                }
+              },
+              {
+                "name": "textValue",
+                "value": {
                   "type": ":text",
                   "value": "Hello"
-                },
-                "emptyText": {
+                }
+              },
+              {
+                "name": "emptyText",
+                "value": {
                   "type": ":text",
                   "value": ""
-                },
-                "tagValue": {
+                }
+              },
+              {
+                "name": "tagValue",
+                "value": {
                   "type": ":tag",
                   "value": "ready"
-                },
-                "vectorValue": {
+                }
+              },
+              {
+                "name": "vectorValue",
+                "value": {
                   "type": ":vector",
                   "x": "1.5",
                   "y": "-2",
                   "z": "3"
-                },
-                "unitVector": {
+                }
+              },
+              {
+                "name": "unitVector",
+                "value": {
                   "type": ":vector",
                   "x": "1",
                   "y": "2",
                   "z": "3",
                   "unit": ":meter"
-                },
-                "pointValue": {
+                }
+              },
+              {
+                "name": "pointValue",
+                "value": {
                   "type": ":point",
                   "x": "4",
                   "y": "5",
                   "z": "6"
-                },
-                "unitPoint": {
+                }
+              },
+              {
+                "name": "unitPoint",
+                "value": {
                   "type": ":point",
                   "x": "7",
                   "y": "8",
                   "z": "9",
                   "unit": ":meter"
-                },
-                "listValue": {
+                }
+              },
+              {
+                "name": "listValue",
+                "value": {
                   "type": ":list",
                   "items": [
                     {
@@ -398,12 +306,18 @@
                       "value": "three"
                     }
                   ]
-                },
-                "emptyList": {
+                }
+              },
+              {
+                "name": "emptyList",
+                "value": {
                   "type": ":list",
                   "items": []
-                },
-                "mapValue": {
+                }
+              },
+              {
+                "name": "mapValue",
+                "value": {
                   "type": ":map",
                   "entries": {
                     "alpha": {
@@ -415,12 +329,18 @@
                       "value": "two"
                     }
                   }
-                },
-                "emptyMap": {
+                }
+              },
+              {
+                "name": "emptyMap",
+                "value": {
                   "type": ":map",
                   "entries": {}
-                },
-                "customValue": {
+                }
+              },
+              {
+                "name": "customValue",
+                "value": {
                   "type": ":Unit",
                   "entries": {
                     "hp": {
@@ -432,28 +352,40 @@
                       "value": "Knight"
                     }
                   }
-                },
-                "diceValue": {
+                }
+              },
+              {
+                "name": "diceValue",
+                "value": {
                   "type": ":dice",
                   "rolls": [
                     6,
                     5,
                     2
                   ]
-                },
-                "rangeValue": {
+                }
+              },
+              {
+                "name": "rangeValue",
+                "value": {
                   "type": ":range",
                   "from": "1",
                   "to": "3",
                   "step": "1"
-                },
-                "floatRangeValue": {
+                }
+              },
+              {
+                "name": "floatRangeValue",
+                "value": {
                   "type": ":range",
                   "from": "1.5",
                   "to": "3.5",
                   "step": "0.5"
-                },
-                "nestedMessage": {
+                }
+              },
+              {
+                "name": "nestedMessage",
+                "value": {
                   "type": ":message",
                   "message": {
                     "name": "Nested",
@@ -461,19 +393,279 @@
                       "inner",
                       "debug"
                     ],
-                    "args": {
-                      "amount": {
-                        "type": ":integer",
-                        "value": "12"
+                    "args": [
+                      {
+                        "name": "amount",
+                        "value": {
+                          "type": ":integer",
+                          "value": "12"
+                        }
                       },
-                      "payload": {
-                        "type": ":text",
-                        "value": "ok"
+                      {
+                        "name": "payload",
+                        "value": {
+                          "type": ":text",
+                          "value": "ok"
+                        }
                       }
-                    }
+                    ]
                   }
                 }
               }
+            ]
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "falseValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
+                },
+                {
+                  "name": "trueValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
+                },
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "42"
+                  }
+                },
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "10.75"
+                  }
+                },
+                {
+                  "name": "infinityValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "Infinity"
+                  }
+                },
+                {
+                  "name": "unitInteger",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "unitFloat",
+                  "value": {
+                    "type": ":float",
+                    "value": "90",
+                    "unit": ":degree"
+                  }
+                },
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.25"
+                  }
+                },
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":text",
+                    "value": "Hello"
+                  }
+                },
+                {
+                  "name": "emptyText",
+                  "value": {
+                    "type": ":text",
+                    "value": ""
+                  }
+                },
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":tag",
+                    "value": "ready"
+                  }
+                },
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1.5",
+                    "y": "-2",
+                    "z": "3"
+                  }
+                },
+                {
+                  "name": "unitVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5",
+                    "z": "6"
+                  }
+                },
+                {
+                  "name": "unitPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "7",
+                    "y": "8",
+                    "z": "9",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "two"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "three"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "emptyList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
+                },
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "alpha": {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      "beta": {
+                        "type": ":text",
+                        "value": "two"
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "emptyMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
+                },
+                {
+                  "name": "customValue",
+                  "value": {
+                    "type": ":Unit",
+                    "entries": {
+                      "hp": {
+                        "type": ":integer",
+                        "value": "7"
+                      },
+                      "name": {
+                        "type": ":text",
+                        "value": "Knight"
+                      }
+                    }
+                  }
+                },
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5,
+                      2
+                    ]
+                  }
+                },
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "3",
+                    "step": "1"
+                  }
+                },
+                {
+                  "name": "floatRangeValue",
+                  "value": {
+                    "type": ":range",
+                    "from": "1.5",
+                    "to": "3.5",
+                    "step": "0.5"
+                  }
+                },
+                {
+                  "name": "nestedMessage",
+                  "value": {
+                    "type": ":message",
+                    "message": {
+                      "name": "Nested",
+                      "tags": [
+                        "inner",
+                        "debug"
+                      ],
+                      "args": [
+                        {
+                          "name": "amount",
+                          "value": {
+                            "type": ":integer",
+                            "value": "12"
+                          }
+                        },
+                        {
+                          "name": "payload",
+                          "value": {
+                            "type": ":text",
+                            "value": "ok"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
             }
           ]
         }
@@ -487,12 +679,12 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "LocalZero",
-              "args": {}
+              "args": []
             },
             {
               "name": "LocalTagged",
@@ -500,16 +692,19 @@
                 "local",
                 "visible"
               ],
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "OutZero",
-              "args": {}
+              "args": []
             },
             {
               "name": "OutTagged",
@@ -517,22 +712,28 @@
                 "radio",
                 "command"
               ],
-              "args": {
-                "kind": {
-                  "type": ":tag",
-                  "value": "fire"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedOutboundPublished": [
             {
               "name": "OutZero",
-              "args": {}
+              "args": []
             },
             {
               "name": "OutTagged",
@@ -540,16 +741,22 @@
                 "radio",
                 "command"
               ],
-              "args": {
-                "kind": {
-                  "type": ":tag",
-                  "value": "fire"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -563,21 +770,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "DynamicEmit",
-              "args": {
-                "label": {
-                  "type": ":text",
-                  "value": "local"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "local"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "DynamicEmit",
@@ -585,29 +798,41 @@
                 "alpha",
                 "beta"
               ],
-              "args": {
-                "label": {
-                  "type": ":text",
-                  "value": "local"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "local"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "DynamicPublish",
-              "args": {
-                "label": {
-                  "type": ":text",
-                  "value": "bus"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "bus"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "DynamicPublish",
@@ -616,31 +841,43 @@
                 "alpha",
                 "beta"
               ],
-              "args": {
-                "label": {
-                  "type": ":text",
-                  "value": "bus"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "bus"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedOutboundPublished": [
             {
               "name": "DynamicPublish",
-              "args": {
-                "label": {
-                  "type": ":text",
-                  "value": "bus"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "bus"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "DynamicPublish",
@@ -649,16 +886,22 @@
                 "alpha",
                 "beta"
               ],
-              "args": {
-                "label": {
-                  "type": ":text",
-                  "value": "bus"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "bus"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -672,55 +915,70 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Local",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Remote",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Seen",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "ShouldNotRun",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedOutboundPublished": [
             {
               "name": "Remote",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -734,79 +992,127 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "10.75"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "10.75"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "ceilCall": {
-                  "type": ":integer",
-                  "value": "11"
+              "args": [
+                {
+                  "name": "floorBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "degrees": {
-                  "type": ":float",
-                  "value": "180",
-                  "unit": ":degree"
+                {
+                  "name": "ceilCall",
+                  "value": {
+                    "type": ":integer",
+                    "value": "11"
+                  }
                 },
-                "factFive": {
-                  "type": ":integer",
-                  "value": "120"
+                {
+                  "name": "truncateNegative",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-10"
+                  }
                 },
-                "fibSeven": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "halfEven",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 },
-                "floorBare": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "halfUp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-13"
+                  }
                 },
-                "floorPredicate": {
-                  "type": ":nothing"
+                {
+                  "name": "halfDown",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-12"
+                  }
                 },
-                "halfDown": {
-                  "type": ":integer",
-                  "value": "-12"
+                {
+                  "name": "wrapDegree",
+                  "value": {
+                    "type": ":float",
+                    "value": "10",
+                    "unit": ":degree"
+                  }
                 },
-                "halfEven": {
-                  "type": ":integer",
-                  "value": "12"
+                {
+                  "name": "radians",
+                  "value": {
+                    "type": ":float",
+                    "value": "3.141592653589793"
+                  }
                 },
-                "halfUp": {
-                  "type": ":integer",
-                  "value": "-13"
+                {
+                  "name": "degrees",
+                  "value": {
+                    "type": ":float",
+                    "value": "180",
+                    "unit": ":degree"
+                  }
                 },
-                "naturalIsSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "naturalIsSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "naturalThree": {
-                  "type": ":integer",
-                  "value": "11"
+                {
+                  "name": "naturalZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "naturalZero": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "naturalThree",
+                  "value": {
+                    "type": ":integer",
+                    "value": "11"
+                  }
                 },
-                "radians": {
-                  "type": ":float",
-                  "value": "3.141592653589793"
+                {
+                  "name": "fibSeven",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "truncateNegative": {
-                  "type": ":integer",
-                  "value": "-10"
+                {
+                  "name": "factFive",
+                  "value": {
+                    "type": ":integer",
+                    "value": "120"
+                  }
                 },
-                "wrapDegree": {
-                  "type": ":float",
-                  "value": "10",
-                  "unit": ":degree"
+                {
+                  "name": "floorPredicate",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -820,157 +1126,235 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "10.75"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "10.75"
+                }
               },
-              "heading": {
-                "type": ":float",
-                "value": "350",
-                "unit": ":degree"
+              {
+                "name": "heading",
+                "value": {
+                  "type": ":float",
+                  "value": "350",
+                  "unit": ":degree"
+                }
               },
-              "target": {
-                "type": ":float",
-                "value": "10",
-                "unit": ":degree"
+              {
+                "name": "target",
+                "value": {
+                  "type": ":float",
+                  "value": "10",
+                  "unit": ":degree"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "echoBoolean": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "echoDice": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    4,
-                    2
-                  ]
-                },
-                "echoFloat": {
-                  "type": ":float",
-                  "value": "12.5"
-                },
-                "echoInteger": {
-                  "type": ":integer",
-                  "value": "12"
-                },
-                "echoList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "two"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "three"
-                    }
-                  ]
-                },
-                "echoMap": {
-                  "type": ":map",
-                  "entries": {
-                    "alpha": {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    "beta": {
-                      "type": ":text",
-                      "value": "two"
-                    }
+              "args": [
+                {
+                  "name": "floored",
+                  "value": {
+                    "type": ":float",
+                    "value": "10"
                   }
                 },
-                "echoMessage": {
-                  "type": ":message",
-                  "message": {
-                    "name": "Ping",
-                    "args": {
-                      "amount": {
+                {
+                  "name": "flooredCall",
+                  "value": {
+                    "type": ":float",
+                    "value": "10"
+                  }
+                },
+                {
+                  "name": "maxed",
+                  "value": {
+                    "type": ":float",
+                    "value": "8"
+                  }
+                },
+                {
+                  "name": "turn",
+                  "value": {
+                    "type": ":float",
+                    "value": "20",
+                    "unit": ":degree"
+                  }
+                },
+                {
+                  "name": "northPredicate",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
+                },
+                {
+                  "name": "vectorTotal",
+                  "value": {
+                    "type": ":float",
+                    "value": "6",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "echoNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "echoBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
+                },
+                {
+                  "name": "echoInteger",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
+                },
+                {
+                  "name": "echoFloat",
+                  "value": {
+                    "type": ":float",
+                    "value": "12.5"
+                  }
+                },
+                {
+                  "name": "echoPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.25"
+                  }
+                },
+                {
+                  "name": "echoMeter",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "echoText",
+                  "value": {
+                    "type": ":text",
+                    "value": "hello"
+                  }
+                },
+                {
+                  "name": "echoTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "ready"
+                  }
+                },
+                {
+                  "name": "echoVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "echoPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5",
+                    "z": "6",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "echoList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
                         "type": ":integer",
-                        "value": "7"
+                        "value": "1"
                       },
-                      "label": {
+                      {
                         "type": ":text",
-                        "value": "ok"
+                        "value": "two"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "three"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "echoMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "alpha": {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      "beta": {
+                        "type": ":text",
+                        "value": "two"
                       }
                     }
                   }
                 },
-                "echoMeter": {
-                  "type": ":integer",
-                  "value": "10",
-                  "unit": ":meter"
+                {
+                  "name": "echoDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      4,
+                      2
+                    ]
+                  }
                 },
-                "echoNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "echoMessage",
+                  "value": {
+                    "type": ":message",
+                    "message": {
+                      "name": "Ping",
+                      "args": [
+                        {
+                          "name": "amount",
+                          "value": {
+                            "type": ":integer",
+                            "value": "7"
+                          }
+                        },
+                        {
+                          "name": "label",
+                          "value": {
+                            "type": ":text",
+                            "value": "ok"
+                          }
+                        }
+                      ]
+                    }
+                  }
                 },
-                "echoPercentage": {
-                  "type": ":percentage",
-                  "value": "0.25"
-                },
-                "echoPoint": {
-                  "type": ":point",
-                  "x": "4",
-                  "y": "5",
-                  "z": "6",
-                  "unit": ":meter"
-                },
-                "echoPredicate": {
-                  "type": ":nothing"
-                },
-                "echoTag": {
-                  "type": ":tag",
-                  "value": "ready"
-                },
-                "echoText": {
-                  "type": ":text",
-                  "value": "hello"
-                },
-                "echoVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3",
-                  "unit": ":meter"
-                },
-                "floored": {
-                  "type": ":float",
-                  "value": "10"
-                },
-                "flooredCall": {
-                  "type": ":float",
-                  "value": "10"
-                },
-                "maxed": {
-                  "type": ":float",
-                  "value": "8"
-                },
-                "northPredicate": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "turn": {
-                  "type": ":float",
-                  "value": "20",
-                  "unit": ":degree"
-                },
-                "vectorTotal": {
-                  "type": ":float",
-                  "value": "6",
-                  "unit": ":meter"
+                {
+                  "name": "echoPredicate",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

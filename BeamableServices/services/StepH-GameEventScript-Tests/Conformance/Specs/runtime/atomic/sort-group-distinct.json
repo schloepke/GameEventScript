@@ -11,79 +11,124 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "booleanValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "diceValue": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    5,
-                    3
-                  ]
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "emptyDiceValue": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "emptyListValue": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    }
-                  ]
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "mapValue": {
-                  "type": ":nothing"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "nothingValue": {
-                  "type": ":nothing"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      }
+                    ]
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "emptyListValue",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5,
+                      3
+                    ]
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "emptyDiceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -97,101 +142,176 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "booleanValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "factionLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "boolFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "factionFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "boolLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "factionSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "boolSecond": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "parityLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceValue": {
-                  "type": ":nothing"
+                {
+                  "name": "parityFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "emptyLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "paritySecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "factionFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "boolLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "factionLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "boolFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "factionSecond": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "boolSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "alpha"
+                  }
                 },
-                "mapValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "beta"
+                  }
                 },
-                "nothingValue": {
-                  "type": ":nothing"
+                {
+                  "name": "emptyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "parityFirst": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "parityLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "paritySecond": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textFirst": {
-                  "type": ":text",
-                  "value": "alpha"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textSecond": {
-                  "type": ":text",
-                  "value": "beta"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -205,77 +325,125 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "boolFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+              "args": [
+                {
+                  "name": "iteratorLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "boolLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "iteratorFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "boolSecond": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "iteratorSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "byFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "iteratorThird",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "byLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "byLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "bySecond": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "byFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "diceFirst": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "bySecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "diceLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "boolLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceSecond": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "boolFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "diceThird": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "boolSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "emptyByLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "diceLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "emptyLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "diceFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "iteratorFirst": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "diceSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "iteratorLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "diceThird",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "iteratorSecond": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "emptyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "iteratorThird": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "emptyByLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -289,211 +457,361 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "asc_1": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "asc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "asc_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "asc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "asc_3": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "asc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "asc_4": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "asc_4",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "desc_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "desc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "desc_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "desc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "desc_3": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "desc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "desc_4": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "desc_4",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "dice_1": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "text_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "alpha"
+                  }
                 },
-                "dice_2": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "text_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "alpha"
+                  }
                 },
-                "dice_3": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "text_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "beta"
+                  }
                 },
-                "diceAscIsList": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tag_1",
+                  "value": {
+                    "type": ":tag",
+                    "value": "gamma"
+                  }
                 },
-                "diceDesc_1": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "tag_2",
+                  "value": {
+                    "type": ":tag",
+                    "value": "beta"
+                  }
                 },
-                "diceDesc_2": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "tag_3",
+                  "value": {
+                    "type": ":tag",
+                    "value": "alpha"
+                  }
                 },
-                "diceDesc_3": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "unit_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1",
+                    "unit": ":meter"
+                  }
                 },
-                "diceDescIsList": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unit_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2",
+                    "unit": ":meter"
+                  }
                 },
-                "emptyDiceLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "unit_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3",
+                    "unit": ":meter"
+                  }
                 },
-                "emptyListLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "emptyListLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "emptyIteratorLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "dice_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "floatRange_1": {
-                  "type": ":float",
-                  "value": "2.5"
+                {
+                  "name": "dice_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "floatRange_2": {
-                  "type": ":float",
-                  "value": "3"
+                {
+                  "name": "dice_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "floatRange_3": {
-                  "type": ":float",
-                  "value": "3.5"
+                {
+                  "name": "diceAscIsList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceDesc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "mapValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceDesc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "nothingValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceDesc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "range_1": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "diceDescIsList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "range_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "emptyDiceLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "range_3": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "range_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "rangeAscIsRange": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "range_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "rangeDesc_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "range_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "rangeDesc_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "rangeAscIsRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeDesc_3": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "rangeDesc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "rangeDescIsRange": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeDesc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "iterator_1": {
-                  "type": ":integer",
-                  "value": "-3"
+                {
+                  "name": "rangeDesc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "iterator_2": {
-                  "type": ":integer",
-                  "value": "-2"
+                {
+                  "name": "rangeDescIsRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "iterator_3": {
-                  "type": ":integer",
-                  "value": "-1"
+                {
+                  "name": "floatRange_1",
+                  "value": {
+                    "type": ":float",
+                    "value": "2.5"
+                  }
                 },
-                "iteratorDesc_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "floatRange_2",
+                  "value": {
+                    "type": ":float",
+                    "value": "3"
+                  }
                 },
-                "iteratorDesc_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "floatRange_3",
+                  "value": {
+                    "type": ":float",
+                    "value": "3.5"
+                  }
                 },
-                "iteratorDesc_3": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "iterator_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-3"
+                  }
                 },
-                "tag_1": {
-                  "type": ":tag",
-                  "value": "gamma"
+                {
+                  "name": "iterator_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-2"
+                  }
                 },
-                "tag_2": {
-                  "type": ":tag",
-                  "value": "beta"
+                {
+                  "name": "iterator_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-1"
+                  }
                 },
-                "tag_3": {
-                  "type": ":tag",
-                  "value": "alpha"
+                {
+                  "name": "iteratorDesc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "iteratorDesc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "text_1": {
-                  "type": ":text",
-                  "value": "alpha"
+                {
+                  "name": "iteratorDesc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "text_2": {
-                  "type": ":text",
-                  "value": "alpha"
+                {
+                  "name": "emptyIteratorLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "text_3": {
-                  "type": ":text",
-                  "value": "beta"
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unit_1": {
-                  "type": ":integer",
-                  "value": "1",
-                  "unit": ":meter"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unit_2": {
-                  "type": ":integer",
-                  "value": "2",
-                  "unit": ":meter"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unit_3": {
-                  "type": ":integer",
-                  "value": "3",
-                  "unit": ":meter"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -507,155 +825,269 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "dice_1": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "hpAsc_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "dice_2": {
-                  "type": ":nothing"
+                {
+                  "name": "hpAsc_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "dice_3": {
-                  "type": ":nothing"
+                {
+                  "name": "hpAsc_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "emptyLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "hpAsc_4",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "emptyIteratorLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "hpDesc_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "faction_1": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "hpDesc_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "faction_2": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "hpDesc_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "faction_3": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "hpDesc_4",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "faction_4": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "faction_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "hpAsc_1": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "faction_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "hpAsc_2": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "faction_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "hpAsc_3": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "faction_4",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "hpAsc_4": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "values_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "hpDesc_1": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "values_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "hpDesc_2": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "values_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "hpDesc_3": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "text_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "hpDesc_4": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "text_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "bb"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "text_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "ccc"
+                  }
                 },
-                "mapValue": {
-                  "type": ":nothing"
+                {
+                  "name": "emptyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "nothingValue": {
-                  "type": ":nothing"
+                {
+                  "name": "dice_1",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "range_1": {
-                  "type": ":nothing"
+                {
+                  "name": "dice_2",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "range_2": {
-                  "type": ":nothing"
+                {
+                  "name": "dice_3",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "range_3": {
-                  "type": ":nothing"
+                {
+                  "name": "range_1",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "iterator_1": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "range_2",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "iterator_2": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "range_3",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "iterator_3": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "iterator_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "iterator_4": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "iterator_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "iteratorHp_1": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "iterator_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "iteratorHp_2": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "iterator_4",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "iteratorHp_3": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "iteratorHp_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "iteratorHp_4": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "iteratorHp_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "text_1": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "iteratorHp_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "text_2": {
-                  "type": ":text",
-                  "value": "bb"
+                {
+                  "name": "iteratorHp_4",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "text_3": {
-                  "type": ":text",
-                  "value": "ccc"
+                {
+                  "name": "emptyIteratorLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "values_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "values_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "values_3": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -669,129 +1101,216 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "diceFiveLen": {
-                  "type": ":integer",
-                  "value": "0"
+              "args": [
+                {
+                  "name": "meleeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceSixFirst": {
-                  "type": ":nothing",
-                  "value": ""
+                {
+                  "name": "meleeFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "emptyLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "meleeSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "emptyListLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "rangedLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "emptyMapLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "rangedFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "emptyIteratorLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "rangedSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "evenFirst": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "oddLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "evenLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "oddFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "falseFirst": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "evenLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "falseLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "evenFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "mapOneFirst": {
-                  "type": ":text",
-                  "value": "z"
+                {
+                  "name": "trueLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "mapOneLen": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "trueFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "mapTwoFirst": {
-                  "type": ":text",
-                  "value": "aa"
+                {
+                  "name": "falseLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "mapTwoLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "falseFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "mapTwoSecond": {
-                  "type": ":text",
-                  "value": "bb"
+                {
+                  "name": "emptyListLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "meleeFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "mapOneLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "meleeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "mapOneFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "z"
+                  }
                 },
-                "meleeSecond": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "mapTwoLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "oddFirst": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "mapTwoFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "aa"
+                  }
                 },
-                "oddLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "mapTwoSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "bb"
+                  }
                 },
-                "rangeEvenLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "emptyMapLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "rangedFirst": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "iteratorMeleeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "rangedLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "iteratorRangedSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Scout"
+                  }
                 },
-                "rangedSecond": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "emptyIteratorLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "iteratorMeleeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "diceFiveLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "iteratorRangedSecond": {
-                  "type": ":text",
-                  "value": "Scout"
+                {
+                  "name": "diceSixFirst",
+                  "value": {
+                    "type": ":nothing",
+                    "value": ""
+                  }
                 },
-                "textALen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "rangeEvenLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "trueFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "textALen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "trueLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "emptyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -800,30 +1319,63 @@
     {
       "kind": "scriptApi",
       "name": "text and map ordering follows unicode scalar order",
-      "script": "module AtomicUnicodeScalarSort\non Start(values) {\n  let sorted be ['\ue000', '\ud800\udc00'][:sort ascending]\n  emit Done(firstText: sorted[1], secondText: sorted[2], firstMapValue: values[:first], lastMapValue: values[:last])\n}",
+      "script": "module AtomicUnicodeScalarSort\non Start(values) {\n  let sorted be ['', '𐀀'][:sort ascending]\n  emit Done(firstText: sorted[1], secondText: sorted[2], firstMapValue: values[:first], lastMapValue: values[:last])\n}",
       "steps": [
         {
           "input": {
             "name": "Start",
-            "args": {
-              "values": {
-                "type": ":map",
-                "entries": {
-                  "\ud800\udc00": { "type": ":integer", "value": "2" },
-                  "\ue000": { "type": ":integer", "value": "1" }
+            "args": [
+              {
+                "name": "values",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "𐀀": {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    "": {
+                      "type": ":integer",
+                      "value": "1"
+                    }
+                  }
                 }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "firstText": { "type": ":text", "value": "\ue000" },
-                "secondText": { "type": ":text", "value": "\ud800\udc00" },
-                "firstMapValue": { "type": ":integer", "value": "1" },
-                "lastMapValue": { "type": ":integer", "value": "2" }
-              }
+              "args": [
+                {
+                  "name": "firstText",
+                  "value": {
+                    "type": ":text",
+                    "value": ""
+                  }
+                },
+                {
+                  "name": "secondText",
+                  "value": {
+                    "type": ":text",
+                    "value": "𐀀"
+                  }
+                },
+                {
+                  "name": "firstMapValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
+                },
+                {
+                  "name": "lastMapValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
+                }
+              ]
             }
           ]
         }

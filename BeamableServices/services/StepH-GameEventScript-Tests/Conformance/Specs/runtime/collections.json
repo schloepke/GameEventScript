@@ -10,86 +10,110 @@
         {
           "input": {
             "name": "Compute",
-            "args": {
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "a"
-                      },
-                      "points": {
-                        "type": ":integer",
-                        "value": "3"
+            "args": [
+              {
+                "name": "items",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "a"
+                        },
+                        "points": {
+                          "type": ":integer",
+                          "value": "3"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "b"
+                        },
+                        "points": {
+                          "type": ":integer",
+                          "value": "-1"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "c"
+                        },
+                        "points": {
+                          "type": ":integer",
+                          "value": "4"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "b"
-                      },
-                      "points": {
-                        "type": ":integer",
-                        "value": "-1"
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "c"
-                      },
-                      "points": {
-                        "type": ":integer",
-                        "value": "4"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "average": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "nameCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "counted": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "positiveCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "highest": {
-                  "type": ":text",
-                  "value": "c"
+                {
+                  "name": "total",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "lowest": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "counted",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "nameCount": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "average",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "positiveCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "highest",
+                  "value": {
+                    "type": ":text",
+                    "value": "c"
+                  }
                 },
-                "total": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "lowest",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -103,67 +127,94 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "values": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "3"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "4"
-                  }
-                ]
+            "args": [
+              {
+                "name": "values",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    }
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "filterSelectSum": {
-                  "type": ":integer",
-                  "value": "21"
+              "args": [
+                {
+                  "name": "filterSelectSum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "21"
+                  }
                 },
-                "filterCount": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "filterCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "firstSelected": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "firstSelected",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "lastSelected": {
-                  "type": ":integer",
-                  "value": "14"
+                {
+                  "name": "lastSelected",
+                  "value": {
+                    "type": ":integer",
+                    "value": "14"
+                  }
                 },
-                "singleSelected": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "singleSelected",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "sorted_1": {
-                  "type": ":integer",
-                  "value": "-4"
+                {
+                  "name": "sorted_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-4"
+                  }
                 },
-                "sorted_2": {
-                  "type": ":integer",
-                  "value": "-3"
+                {
+                  "name": "sorted_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-3"
+                  }
                 },
-                "sorted_3": {
-                  "type": ":integer",
-                  "value": "-2"
+                {
+                  "name": "sorted_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -177,126 +228,162 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "A"
-                      },
-                      "points": {
-                        "type": ":integer",
-                        "value": "3"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      },
-                      "role": {
-                        "type": ":tag",
-                        "value": "tank"
+            "args": [
+              {
+                "name": "items",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "A"
+                        },
+                        "points": {
+                          "type": ":integer",
+                          "value": "3"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        },
+                        "role": {
+                          "type": ":tag",
+                          "value": "tank"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "B"
+                        },
+                        "points": {
+                          "type": ":integer",
+                          "value": "12"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": false
+                        },
+                        "role": {
+                          "type": ":tag",
+                          "value": "boss"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "C"
+                        },
+                        "points": {
+                          "type": ":integer",
+                          "value": "7"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        },
+                        "role": {
+                          "type": ":tag",
+                          "value": "scout"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "B"
-                      },
-                      "points": {
-                        "type": ":integer",
-                        "value": "12"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": false
-                      },
-                      "role": {
-                        "type": ":tag",
-                        "value": "boss"
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "C"
-                      },
-                      "points": {
-                        "type": ":integer",
-                        "value": "7"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      },
-                      "role": {
-                        "type": ":tag",
-                        "value": "scout"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "hasAny": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "hasAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "allValid": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "allValid",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "firstTwoCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "firstTwoCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "withoutLastCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "withoutLastCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "firstAlive": {
-                  "type": ":text",
-                  "value": "A"
+                {
+                  "name": "firstAlive",
+                  "value": {
+                    "type": ":text",
+                    "value": "A"
+                  }
                 },
-                "lastAlive": {
-                  "type": ":text",
-                  "value": "C"
+                {
+                  "name": "lastAlive",
+                  "value": {
+                    "type": ":text",
+                    "value": "C"
+                  }
                 },
-                "singleBoss": {
-                  "type": ":text",
-                  "value": "B"
+                {
+                  "name": "singleBoss",
+                  "value": {
+                    "type": ":text",
+                    "value": "B"
+                  }
                 },
-                "weakest": {
-                  "type": ":text",
-                  "value": "A"
+                {
+                  "name": "weakest",
+                  "value": {
+                    "type": ":text",
+                    "value": "A"
+                  }
                 },
-                "strongest": {
-                  "type": ":text",
-                  "value": "B"
+                {
+                  "name": "strongest",
+                  "value": {
+                    "type": ":text",
+                    "value": "B"
+                  }
                 },
-                "topItem": {
-                  "type": ":text",
-                  "value": "B"
+                {
+                  "name": "topItem",
+                  "value": {
+                    "type": ":text",
+                    "value": "B"
+                  }
                 },
-                "lowItem": {
-                  "type": ":text",
-                  "value": "A"
+                {
+                  "name": "lowItem",
+                  "value": {
+                    "type": ":text",
+                    "value": "A"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -313,33 +400,48 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "anyEarly": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "anyEarly",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "allEarlyFalse": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "allEarlyFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "firstEarly": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "firstEarly",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "firstSelected": {
-                  "type": ":integer",
-                  "value": "11"
+                {
+                  "name": "firstSelected",
+                  "value": {
+                    "type": ":integer",
+                    "value": "11"
+                  }
                 },
-                "containsLast": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "containsLast",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ],
           "unexpectedRuntimeLimits": [
@@ -356,53 +458,68 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "points": {
-                        "type": ":integer",
-                        "value": "3"
+            "args": [
+              {
+                "name": "items",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "points": {
+                          "type": ":integer",
+                          "value": "3"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "points": {
+                          "type": ":integer",
+                          "value": "7"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "points": {
-                        "type": ":integer",
-                        "value": "7"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "anyKnownFalse": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "anyKnownFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "allKnownFalse": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "allKnownFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "anyUnknown": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "anyUnknown",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "allUnknown": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "allUnknown",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -416,83 +533,92 @@
         {
           "input": {
             "name": "Nested",
-            "args": {
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "points": {
-                        "type": ":list",
-                        "items": [
-                          {
-                            "type": ":map",
-                            "entries": {
-                              "x": {
-                                "type": ":integer",
-                                "value": "1"
+            "args": [
+              {
+                "name": "items",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "points": {
+                          "type": ":list",
+                          "items": [
+                            {
+                              "type": ":map",
+                              "entries": {
+                                "x": {
+                                  "type": ":integer",
+                                  "value": "1"
+                                }
+                              }
+                            },
+                            {
+                              "type": ":map",
+                              "entries": {
+                                "x": {
+                                  "type": ":integer",
+                                  "value": "2"
+                                }
                               }
                             }
-                          },
-                          {
-                            "type": ":map",
-                            "entries": {
-                              "x": {
-                                "type": ":integer",
-                                "value": "2"
+                          ]
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "points": {
+                          "type": ":list",
+                          "items": [
+                            {
+                              "type": ":map",
+                              "entries": {
+                                "x": {
+                                  "type": ":integer",
+                                  "value": "1"
+                                }
+                              }
+                            },
+                            {
+                              "type": ":map",
+                              "entries": {
+                                "x": {
+                                  "type": ":integer",
+                                  "value": "0"
+                                }
                               }
                             }
-                          }
-                        ]
+                          ]
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "points": {
-                        "type": ":list",
-                        "items": [
-                          {
-                            "type": ":map",
-                            "entries": {
-                              "x": {
-                                "type": ":integer",
-                                "value": "1"
-                              }
-                            }
-                          },
-                          {
-                            "type": ":map",
-                            "entries": {
-                              "x": {
-                                "type": ":integer",
-                                "value": "0"
-                              }
-                            }
-                          }
-                        ]
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "first": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "second": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "second",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -506,90 +632,108 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "id": {
-                        "type": ":tag",
-                        "value": "rook"
-                      },
-                      "name": {
-                        "type": ":text",
-                        "value": "Rook A"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "4"
+            "args": [
+              {
+                "name": "items",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "id": {
+                          "type": ":tag",
+                          "value": "rook"
+                        },
+                        "name": {
+                          "type": ":text",
+                          "value": "Rook A"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "4"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "id": {
+                          "type": ":tag",
+                          "value": "mage"
+                        },
+                        "name": {
+                          "type": ":text",
+                          "value": "Mage"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "7"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "id": {
+                          "type": ":tag",
+                          "value": "rook"
+                        },
+                        "name": {
+                          "type": ":text",
+                          "value": "Rook B"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "9"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "id": {
-                        "type": ":tag",
-                        "value": "mage"
-                      },
-                      "name": {
-                        "type": ":text",
-                        "value": "Mage"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "7"
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "id": {
-                        "type": ":tag",
-                        "value": "rook"
-                      },
-                      "name": {
-                        "type": ":text",
-                        "value": "Rook B"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "9"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "rookHp": {
-                  "type": ":integer",
-                  "value": "9"
+              "args": [
+                {
+                  "name": "rookHp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 },
-                "mageHp": {
-                  "type": ":integer",
-                  "value": "7"
+                {
+                  "name": "mageHp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "rookName": {
-                  "type": ":text",
-                  "value": "Rook B"
+                {
+                  "name": "rookName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook B"
+                  }
                 },
-                "mageName": {
-                  "type": ":text",
-                  "value": "Mage"
+                {
+                  "name": "mageName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Mage"
+                  }
                 },
-                "count": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -603,163 +747,220 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "values": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "3"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "3"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  }
-                ]
+            "args": [
+              {
+                "name": "values",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                }
               },
-              "units": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Knight"
-                      },
-                      "faction": {
-                        "type": ":text",
-                        "value": "melee"
-                      },
-                      "priority": {
-                        "type": ":integer",
-                        "value": "2"
+              {
+                "name": "units",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Knight"
+                        },
+                        "faction": {
+                          "type": ":text",
+                          "value": "melee"
+                        },
+                        "priority": {
+                          "type": ":integer",
+                          "value": "2"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Rook"
+                        },
+                        "faction": {
+                          "type": ":text",
+                          "value": "melee"
+                        },
+                        "priority": {
+                          "type": ":integer",
+                          "value": "3"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Archer"
+                        },
+                        "faction": {
+                          "type": ":text",
+                          "value": "ranged"
+                        },
+                        "priority": {
+                          "type": ":integer",
+                          "value": "1"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Rook"
-                      },
-                      "faction": {
-                        "type": ":text",
-                        "value": "melee"
-                      },
-                      "priority": {
-                        "type": ":integer",
-                        "value": "3"
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Archer"
-                      },
-                      "faction": {
-                        "type": ":text",
-                        "value": "ranged"
-                      },
-                      "priority": {
-                        "type": ":integer",
-                        "value": "1"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "first": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "asc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "last": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "asc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "distinctCount": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "asc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "asc_1": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "desc_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "asc_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "desc_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "asc_3": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "desc_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "desc_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "priority_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "desc_2": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "priority_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "desc_3": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "priority_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "priority_1": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "priority_2": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "last",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "priority_3": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "distinctCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "distinct_1": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "distinct_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "distinct_2": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "distinct_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "melee_1": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "melee_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "melee_2": {
-                  "type": ":text",
-                  "value": "Rook"
+                {
+                  "name": "melee_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Rook"
+                  }
                 },
-                "ranged_1": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "ranged_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -773,103 +974,172 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "appended": {
-                  "type": ":integer",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "appended",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "prepended": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "prepended",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "mergedList": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "mergedList",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "leftOnlyLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "common_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "leftOnlySecond": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "common_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "mergedAge": {
-                  "type": ":integer",
-                  "value": "33"
+                {
+                  "name": "leftOnlyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "mergedCity": {
-                  "type": ":text",
-                  "value": "Somewhere"
+                {
+                  "name": "leftOnlySecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "zipOneLeft": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "enemyFlag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "zipOneRight": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "visibleIn",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "zipTwoLeft": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "missingIn",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "zipTwoRight": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "numericLookup",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "zipLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "numericIn",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "common_1": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "mixedEnemy",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "common_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "mixedHp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "enemyFlag": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mergedAge",
+                  "value": {
+                    "type": ":integer",
+                    "value": "33"
+                  }
                 },
-                "visibleIn": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mergedCity",
+                  "value": {
+                    "type": ":text",
+                    "value": "Somewhere"
+                  }
                 },
-                "missingIn": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "minusAgeMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "numericLookup": {
-                  "type": ":nothing"
+                {
+                  "name": "minusAgeName",
+                  "value": {
+                    "type": ":text",
+                    "value": "Mark"
+                  }
                 },
-                "numericIn": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "zipOneLeft",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "mixedEnemy": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "zipOneRight",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "mixedHp": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "zipTwoLeft",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 },
-                "minusAgeMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "zipTwoRight",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "minusAgeName": {
-                  "type": ":text",
-                  "value": "Mark"
+                {
+                  "name": "zipLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -883,110 +1153,149 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "units": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "faction": {
-                        "type": ":text",
-                        "value": "rook"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      },
-                      "owner": {
-                        "type": ":map",
-                        "entries": {
-                          "team": {
-                            "type": ":text",
-                            "value": "red"
+            "args": [
+              {
+                "name": "units",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "faction": {
+                          "type": ":text",
+                          "value": "rook"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        },
+                        "owner": {
+                          "type": ":map",
+                          "entries": {
+                            "team": {
+                              "type": ":text",
+                              "value": "red"
+                            }
+                          }
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "faction": {
+                          "type": ":text",
+                          "value": "human"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        },
+                        "owner": {
+                          "type": ":map",
+                          "entries": {
+                            "team": {
+                              "type": ":text",
+                              "value": "blue"
+                            }
                           }
                         }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "faction": {
-                        "type": ":text",
-                        "value": "human"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      },
-                      "owner": {
-                        "type": ":map",
-                        "entries": {
-                          "team": {
-                            "type": ":text",
-                            "value": "blue"
-                          }
-                        }
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "invalidReverse": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "reverse_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "hasTwo": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "reverse_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "hasAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "reverse_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "hasAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "invalidReverse",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textContains": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasTwo",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "textContainsAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "dictContains": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasRook": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textContains",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasNestedOwner": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textContainsAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "reverse_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "dictContains",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "reverse_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "hasRook",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "reverse_3": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "hasNestedOwner",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1000,148 +1309,202 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "player": {
-                "type": ":map",
-                "entries": {
-                  "age": {
-                    "type": ":integer",
-                    "value": "25"
-                  },
-                  "name": {
-                    "type": ":text",
-                    "value": "Mark"
+            "args": [
+              {
+                "name": "player",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "age": {
+                      "type": ":integer",
+                      "value": "25"
+                    },
+                    "name": {
+                      "type": ":text",
+                      "value": "Mark"
+                    }
                   }
                 }
               },
-              "values": {
-                "type": ":map",
-                "entries": {
-                  "a": {
-                    "type": ":integer",
-                    "value": "10"
-                  },
-                  "b": {
-                    "type": ":integer",
-                    "value": "20"
-                  },
-                  "c": {
-                    "type": ":integer",
-                    "value": "30"
+              {
+                "name": "values",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "a": {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    "b": {
+                      "type": ":integer",
+                      "value": "20"
+                    },
+                    "c": {
+                      "type": ":integer",
+                      "value": "30"
+                    }
                   }
                 }
               },
-              "maybeTarget": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":text",
-                    "value": "boss"
-                  }
-                ]
+              {
+                "name": "maybeTarget",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":text",
+                      "value": "boss"
+                    }
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "SeenKey",
-              "args": {
-                "key": {
-                  "type": ":tag",
-                  "value": "age"
+              "args": [
+                {
+                  "name": "key",
+                  "value": {
+                    "type": ":tag",
+                    "value": "age"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "25"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "25"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenKey",
-              "args": {
-                "key": {
-                  "type": ":tag",
-                  "value": "name"
+              "args": [
+                {
+                  "name": "key",
+                  "value": {
+                    "type": ":tag",
+                    "value": "name"
+                  }
                 },
-                "value": {
-                  "type": ":text",
-                  "value": "Mark"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":text",
+                    "value": "Mark"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenValue",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenValue",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "20"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenValue",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "30"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "30"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenEntry",
-              "args": {
-                "key": {
-                  "type": ":tag",
-                  "value": "age"
+              "args": [
+                {
+                  "name": "key",
+                  "value": {
+                    "type": ":tag",
+                    "value": "age"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "25"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "25"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenEntry",
-              "args": {
-                "key": {
-                  "type": ":tag",
-                  "value": "name"
+              "args": [
+                {
+                  "name": "key",
+                  "value": {
+                    "type": ":tag",
+                    "value": "name"
+                  }
                 },
-                "value": {
-                  "type": ":text",
-                  "value": "Mark"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":text",
+                    "value": "Mark"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "keyCount": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "keyCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "valueCount": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "valueCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "maybeCount": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "maybeCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "entryCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "entryCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

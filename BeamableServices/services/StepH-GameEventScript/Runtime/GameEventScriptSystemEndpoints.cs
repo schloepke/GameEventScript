@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
 
@@ -27,6 +26,9 @@ internal static class GameEventScriptSystemEndpoints
         => GameEventScriptMessage.Create(InitializationName);
 
     public static GameEventScriptMessage CreateMessageDispatchMessage(GameEventScriptMessage original)
-        => GameEventScriptMessage.Create(original.Name, new Dictionary<string, GesValue> { [MessageArgumentName] = GesValue.GesMessage(original) }, original.Tags);
+        => GameEventScriptMessage.Create(
+            original.Name,
+            [new GameEventScriptMessageArgument(MessageArgumentName, GesValue.GesMessage(original))],
+            original.Tags);
 
 }

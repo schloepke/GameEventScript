@@ -17,24 +17,30 @@
         {
           "input": {
             "name": "Roll",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Result",
-              "args": {
-                "randomValue": {
-                  "type": ":integer",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "randomValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "diceValue": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    5
-                  ]
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5
+                    ]
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -54,40 +60,46 @@
         {
           "input": {
             "name": "Roll",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Rolled",
-              "args": {
-                "value": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    1
-                  ]
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      1
+                    ]
+                  }
                 }
-              }
+              ]
             }
           ]
         },
         {
           "input": {
             "name": "Roll",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Rolled",
-              "args": {
-                "value": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    2
-                  ]
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      2
+                    ]
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -107,82 +119,103 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "units": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "A"
-                      },
-                      "weight": {
-                        "type": ":integer",
-                        "value": "1"
+            "args": [
+              {
+                "name": "units",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "A"
+                        },
+                        "weight": {
+                          "type": ":integer",
+                          "value": "1"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "B"
+                        },
+                        "weight": {
+                          "type": ":integer",
+                          "value": "3"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "C"
+                        },
+                        "weight": {
+                          "type": ":integer",
+                          "value": "6"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "B"
-                      },
-                      "weight": {
-                        "type": ":integer",
-                        "value": "3"
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "C"
-                      },
-                      "weight": {
-                        "type": ":integer",
-                        "value": "6"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "alwaysHit": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "alwaysHit",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "neverHit": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "neverHit",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "quarterHit": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "quarterHit",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "weightedTarget": {
-                  "type": ":text",
-                  "value": "C"
+                {
+                  "name": "weightedTarget",
+                  "value": {
+                    "type": ":text",
+                    "value": "C"
+                  }
                 },
-                "weighted_1": {
-                  "type": ":text",
-                  "value": "A"
+                {
+                  "name": "weighted_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "A"
+                  }
                 },
-                "weighted_2": {
-                  "type": ":text",
-                  "value": "C"
+                {
+                  "name": "weighted_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "C"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -204,111 +237,144 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "enemies": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Rook"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": false
+            "args": [
+              {
+                "name": "enemies",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Rook"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": false
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Orc"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Mage"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Knight"
+                        },
+                        "alive": {
+                          "type": ":boolean",
+                          "value": true
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Orc"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Mage"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Knight"
-                      },
-                      "alive": {
-                        "type": ":boolean",
-                        "value": true
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               },
-              "seed": {
-                "type": ":integer",
-                "value": "42"
+              {
+                "name": "seed",
+                "value": {
+                  "type": ":integer",
+                  "value": "42"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "target": {
-                  "type": ":text",
-                  "value": "Orc"
+              "args": [
+                {
+                  "name": "hand_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "seededSame": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hand_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "hand_1": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "hand_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "hand_2": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "rest_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "hand_3": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "rest_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "rest_1": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "target",
+                  "value": {
+                    "type": ":text",
+                    "value": "Orc"
+                  }
                 },
-                "rest_2": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "random_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "Orc"
+                  }
                 },
-                "random_1": {
-                  "type": ":text",
-                  "value": "Orc"
+                {
+                  "name": "random_2",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "random_2": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "seededSame",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -322,17 +388,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "valuePresent": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "valuePresent",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -346,39 +415,60 @@
         {
           "input": {
             "name": "Roll",
-            "args": {
-              "low": {
-                "type": ":integer",
-                "value": "9"
+            "args": [
+              {
+                "name": "low",
+                "value": {
+                  "type": ":integer",
+                  "value": "9"
+                }
               },
-              "high": {
-                "type": ":integer",
-                "value": "2"
+              {
+                "name": "high",
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "valuePresent": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "valuePresent",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "nothingValue": {
-                  "type": ":nothing"
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "invalidValue": {
-                  "type": ":float",
-                  "value": "NaN"
+                {
+                  "name": "invalidValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "NaN"
+                  }
                 },
-                "shuffledTags": {
-                  "type": ":nothing"
+                {
+                  "name": "shuffledTags",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "drawnTag": {
-                  "type": ":nothing"
+                {
+                  "name": "drawnTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -397,25 +487,34 @@
         {
           "input": {
             "name": "Roll",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "integerValue": {
-                  "type": ":integer",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "floatValue": {
-                  "type": ":float",
-                  "value": "0.25"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "0.25"
+                  }
                 },
-                "mixedValue": {
-                  "type": ":float",
-                  "value": "1.5"
+                {
+                  "name": "mixedValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "1.5"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -429,21 +528,27 @@
         {
           "input": {
             "name": "Roll",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "maxValue": {
-                  "type": ":integer",
-                  "value": "9223372036854775807"
+              "args": [
+                {
+                  "name": "maxValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9223372036854775807"
+                  }
                 },
-                "negativeValue": {
-                  "type": ":integer",
-                  "value": "-9223372036854775807"
+                {
+                  "name": "negativeValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-9223372036854775807"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -460,17 +565,20 @@
         {
           "input": {
             "name": "Mixed",
-            "args": {
-              "high": {
-                "type": ":integer",
-                "value": "3"
+            "args": [
+              {
+                "name": "high",
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Passed",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -484,49 +592,76 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "highLen": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "highLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "highFirst": {
-                  "type": ":integer",
-                  "value": "9223372036854775806"
+                {
+                  "name": "highFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9223372036854775806"
+                  }
                 },
-                "highSecond": {
-                  "type": ":integer",
-                  "value": "9223372036854775807"
+                {
+                  "name": "highSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9223372036854775807"
+                  }
                 },
-                "highContainsMax": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "highContainsMax",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "highContainsBefore": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "highContainsBefore",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "lowLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "lowLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "lowFirst": {
-                  "type": ":integer",
-                  "value": "-9223372036854775808"
+                {
+                  "name": "lowFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-9223372036854775808"
+                  }
                 },
-                "lowSecond": {
-                  "type": ":integer",
-                  "value": "-9223372036854775807"
+                {
+                  "name": "lowSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "-9223372036854775807"
+                  }
                 },
-                "lowContainsMin": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "lowContainsMin",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -540,180 +675,261 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "values": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "4"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "5"
-                  }
-                ]
+            "args": [
+              {
+                "name": "values",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Full",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Full",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Full",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Direct",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Direct",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Direct",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Indirect",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Indirect",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Indirect",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "isRange": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "descendingFirst": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "descendingFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "descendingSecond": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "descendingSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "descendingThird": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "descendingThird",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "zeroLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "zeroLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "tagCount": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "square_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "tagsHasZero": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "square_5",
+                  "value": {
+                    "type": ":integer",
+                    "value": "25"
+                  }
                 },
-                "tagsHasOne": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "filtered_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "doubledFirst": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "filtered_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "36"
+                  }
                 },
-                "doubledSecond": {
-                  "type": ":integer",
-                  "value": "8"
+                {
+                  "name": "tagCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "filteredLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "tagsHasZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasZero": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagsHasOne",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasOne": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "doubledFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "square_1": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "doubledSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "8"
+                  }
                 },
-                "square_5": {
-                  "type": ":integer",
-                  "value": "25"
+                {
+                  "name": "filteredLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "filtered_1": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "hasZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "filtered_3": {
-                  "type": ":integer",
-                  "value": "36"
+                {
+                  "name": "hasOne",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -730,25 +946,34 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1000000"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1000000"
+                  }
                 },
-                "contains": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "contains",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "fractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "fractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ],
           "unexpectedRuntimeLimits": [
@@ -768,17 +993,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "count": {
-                  "type": ":integer",
-                  "value": "0"
+              "args": [
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedRuntimeLimits": [
@@ -800,35 +1028,44 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Tick",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Tick",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Tick",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedRuntimeLimits": [
@@ -850,17 +1087,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "count": {
-                  "type": ":integer",
-                  "value": "0"
+              "args": [
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedRuntimeLimits": [
@@ -902,94 +1142,130 @@
         {
           "input": {
             "name": "Roll",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "baseDice": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    5,
-                    3,
-                    2
-                  ]
+              "args": [
+                {
+                  "name": "baseDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5,
+                      3,
+                      2
+                    ]
+                  }
                 },
-                "baseLen": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "baseLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "base_1": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "base_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "base_2": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "base_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "base_3": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "base_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "base_4": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "base_4",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceTotal": {
-                  "type": ":dice",
-                  "rolls": [
-                    4,
-                    1,
-                    1
-                  ]
+                {
+                  "name": "kept",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      4
+                    ]
+                  }
                 },
-                "dropped": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    3,
-                    2
-                  ]
+                {
+                  "name": "dropped",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      3,
+                      2
+                    ]
+                  }
                 },
-                "emptyDropLen": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "resorted",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "6"
+                      }
+                    ]
+                  }
                 },
-                "kept": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    4
-                  ]
+                {
+                  "name": "emptyDropLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "resorted": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "5"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "6"
-                    }
-                  ]
+                {
+                  "name": "takeTooManyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "takeTooManyLen": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "diceTotal",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      4,
+                      1,
+                      1
+                    ]
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1003,204 +1279,285 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "pairRoll": {
-                "type": ":dice",
-                "rolls": [
-                  6,
-                  6,
-                  4,
-                  3,
-                  2
-                ]
+            "args": [
+              {
+                "name": "pairRoll",
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6,
+                    4,
+                    3,
+                    2
+                  ]
+                }
               },
-              "tripleRoll": {
-                "type": ":dice",
-                "rolls": [
-                  6,
-                  6,
-                  6,
-                  4,
-                  3
-                ]
+              {
+                "name": "tripleRoll",
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6,
+                    6,
+                    4,
+                    3
+                  ]
+                }
               },
-              "fullHouseRoll": {
-                "type": ":dice",
-                "rolls": [
-                  5,
-                  5,
-                  5,
-                  2,
-                  2
-                ]
+              {
+                "name": "fullHouseRoll",
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    5,
+                    5,
+                    5,
+                    2,
+                    2
+                  ]
+                }
               },
-              "straightRoll": {
-                "type": ":dice",
-                "rolls": [
-                  6,
-                  6,
-                  5,
-                  4,
-                  3,
-                  2
-                ]
+              {
+                "name": "straightRoll",
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6,
+                    5,
+                    4,
+                    3,
+                    2
+                  ]
+                }
               },
-              "sixRoll": {
-                "type": ":dice",
-                "rolls": [
-                  4,
-                  4,
-                  4,
-                  4,
-                  4,
-                  4
-                ]
+              {
+                "name": "sixRoll",
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    4,
+                    4,
+                    4,
+                    4,
+                    4,
+                    4
+                  ]
+                }
               },
-              "sevenRoll": {
-                "type": ":dice",
-                "rolls": [
-                  6,
-                  6,
-                  6,
-                  6,
-                  6,
-                  6,
-                  6
-                ]
+              {
+                "name": "sevenRoll",
+                "value": {
+                  "type": ":dice",
+                  "rolls": [
+                    6,
+                    6,
+                    6,
+                    6,
+                    6,
+                    6,
+                    6
+                  ]
+                }
               },
-              "cards": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":text",
-                    "value": "King"
-                  },
-                  {
-                    "type": ":text",
-                    "value": "King"
-                  },
-                  {
-                    "type": ":text",
-                    "value": "King"
-                  },
-                  {
-                    "type": ":text",
-                    "value": "Queen"
-                  },
-                  {
-                    "type": ":text",
-                    "value": "Queen"
-                  }
-                ]
+              {
+                "name": "cards",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":text",
+                      "value": "King"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "King"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "King"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "Queen"
+                    },
+                    {
+                      "type": ":text",
+                      "value": "Queen"
+                    }
+                  ]
+                }
               },
-              "orderedCards": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "3"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "4"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "5"
-                  }
-                ]
+              {
+                "name": "orderedCards",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    }
+                  ]
+                }
               },
-              "plainText": {
-                "type": ":text",
-                "value": "Hello"
+              {
+                "name": "plainText",
+                "value": {
+                  "type": ":text",
+                  "value": "Hello"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "hasPair": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "hasPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasPairOfSix": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasPairOfSix",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "pairHasThree": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "pairHasThree",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "tripleHasThree": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tripleHasThree",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tripleHasThreeSix": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tripleHasThreeSix",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasSixKind": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasSixKind",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasSevenSix": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasSevenSix",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasFullHouse": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasFullHouse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasStraight": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasStraight",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listKingTriple": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listKingTriple",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listFullHouse": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listFullHouse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "orderedStraight": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "orderedStraight",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "textPair": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "textPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "pairTakeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "pairTakeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "fullHouseFirst": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "fullHouseFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "straightFirst": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "straightFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "missingPairFirst": {
-                  "type": ":text",
-                  "value": "fallback"
+                {
+                  "name": "missingPairFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "fallback"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

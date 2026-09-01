@@ -29,7 +29,7 @@ internal static class GameEventScriptConformanceValueCodec
     {
         RequireObject(element, "message");
         var name = RequireString(element, "name", "message name");
-        var args = new Dictionary<string, GesValue>(StringComparer.Ordinal);
+        GameEventScriptMessageArgument[] args = [];
 
         if (TryGetProperty(element, "args", out var argsElement))
         {
@@ -43,15 +43,22 @@ internal static class GameEventScriptConformanceValueCodec
         return GameEventScriptMessage.Create(name, args, tags);
     }
 
-    public static Dictionary<string, GesValue> DecodeArguments(JsonElement element)
+    public static GameEventScriptMessageArgument[] DecodeArguments(JsonElement element)
     {
-        RequireObject(element, "message args");
-        var args = new Dictionary<string, GesValue>(StringComparer.Ordinal);
-        foreach (var property in element.EnumerateObject())
+        if (element.ValueKind != JsonValueKind.Array)
         {
-            args[property.Name] = DecodeValue(property.Value);
+            throw new InvalidOperationException("message args must be an ordered JSON array.");
         }
 
+        var args = new GameEventScriptMessageArgument[element.GetArrayLength()];
+        var index = 0;
+        foreach (var entry in element.EnumerateArray())
+        {
+            RequireObject(entry, "message argument");
+            var name = RequireString(entry, "name", "message argument name");
+            var value = DecodeValue(RequireObjectProperty(entry, "value", "message argument value"));
+            args[index++] = new GameEventScriptMessageArgument(name, value);
+        }
         return args;
     }
 
@@ -153,9 +160,8 @@ internal static class GameEventScriptConformanceValueCodec
 
         for (var index = 0; index < expected.Arguments.Count; index++)
         {
-            var name = expected.Arguments.NameAt(index);
-            if (!actual.Arguments.ContainsKey(name) ||
-                !ConformanceEquals(expected.Arguments.ValueAt(index), actual.Arguments[name], maxFloatUlps))
+            if (!string.Equals(expected.Arguments.NameAt(index), actual.Arguments.NameAt(index), StringComparison.Ordinal) ||
+                !ConformanceEquals(expected.Arguments.ValueAt(index), actual.Arguments.ValueAt(index), maxFloatUlps))
             {
                 return false;
             }
@@ -259,19 +265,15 @@ internal static class GameEventScriptConformanceValueCodec
             node["tags"] = tags;
         }
 
-        var args = new JsonObject();
+        var args = new JsonArray();
         var arguments = message.Arguments;
-        var sortedIndices = new int[arguments.Count];
-        for (var index = 0; index < sortedIndices.Length; index++)
+        for (var index = 0; index < arguments.Count; index++)
         {
-            sortedIndices[index] = index;
-        }
-
-        Array.Sort(sortedIndices, (left, right) => string.CompareOrdinal(arguments.NameAt(left), arguments.NameAt(right)));
-        for (var index = 0; index < sortedIndices.Length; index++)
-        {
-            var argumentIndex = sortedIndices[index];
-            args[arguments.NameAt(argumentIndex)] = ToValueJson(arguments.ValueAt(argumentIndex));
+            args.Add(new JsonObject
+            {
+                ["name"] = arguments.NameAt(index),
+                ["value"] = ToValueJson(arguments.ValueAt(index))
+            });
         }
 
         node["args"] = args;

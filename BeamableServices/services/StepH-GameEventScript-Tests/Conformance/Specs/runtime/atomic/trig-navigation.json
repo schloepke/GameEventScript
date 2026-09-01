@@ -11,68 +11,113 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "acosOne": {
-                  "type": ":float",
-                  "value": "0"
+              "args": [
+                {
+                  "name": "sinZero",
+                  "value": {
+                    "type": ":float",
+                    "value": "0"
+                  }
                 },
-                "asinOne": {
-                  "type": ":float",
-                  "value": "1.5707963267949"
+                {
+                  "name": "sinParen",
+                  "value": {
+                    "type": ":float",
+                    "value": "0"
+                  }
                 },
-                "atanTwoQuarter": {
-                  "type": ":float",
-                  "value": "0.785398163397448"
+                {
+                  "name": "sinDegree",
+                  "value": {
+                    "type": ":float",
+                    "value": "1"
+                  }
                 },
-                "atanTwoZero": {
-                  "type": ":float",
-                  "value": "0"
+                {
+                  "name": "cosPi",
+                  "value": {
+                    "type": ":float",
+                    "value": "-1"
+                  }
                 },
-                "atanOne": {
-                  "type": ":float",
-                  "value": "0.785398163397448"
+                {
+                  "name": "tanZero",
+                  "value": {
+                    "type": ":float",
+                    "value": "0"
+                  }
                 },
-                "cosPi": {
-                  "type": ":float",
-                  "value": "-1"
+                {
+                  "name": "asinOne",
+                  "value": {
+                    "type": ":float",
+                    "value": "1.5707963267949"
+                  }
                 },
-                "invalidDomain": {
-                  "type": ":nothing"
+                {
+                  "name": "acosOne",
+                  "value": {
+                    "type": ":float",
+                    "value": "0"
+                  }
                 },
-                "invalidTag": {
-                  "type": ":nothing"
+                {
+                  "name": "atanOne",
+                  "value": {
+                    "type": ":float",
+                    "value": "0.785398163397448"
+                  }
                 },
-                "invalidText": {
-                  "type": ":nothing"
+                {
+                  "name": "atanTwoQuarter",
+                  "value": {
+                    "type": ":float",
+                    "value": "0.785398163397448"
+                  }
                 },
-                "invalidUnit": {
-                  "type": ":nothing"
+                {
+                  "name": "atanTwoZero",
+                  "value": {
+                    "type": ":float",
+                    "value": "0"
+                  }
                 },
-                "missing": {
-                  "type": ":nothing"
+                {
+                  "name": "invalidUnit",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "sinDegree": {
-                  "type": ":float",
-                  "value": "1"
+                {
+                  "name": "invalidText",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "sinParen": {
-                  "type": ":float",
-                  "value": "0"
+                {
+                  "name": "invalidTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "sinZero": {
-                  "type": ":float",
-                  "value": "0"
+                {
+                  "name": "invalidDomain",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tanZero": {
-                  "type": ":float",
-                  "value": "0"
+                {
+                  "name": "missing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -86,66 +131,105 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "coordinateDistanceTwo": {
-                  "type": ":float",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "hypotTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "5"
+                  }
                 },
-                "coordinateDistanceThree": {
-                  "type": ":float",
-                  "value": "7"
+                {
+                  "name": "hypotThree",
+                  "value": {
+                    "type": ":float",
+                    "value": "13"
+                  }
                 },
-                "coordinateDistanceSquaredTwo": {
-                  "type": ":float",
-                  "value": "25"
+                {
+                  "name": "hypotUnit",
+                  "value": {
+                    "type": ":float",
+                    "unit": ":meter",
+                    "value": "5"
+                  }
                 },
-                "coordinateDistanceSquaredThree": {
-                  "type": ":float",
-                  "value": "49"
+                {
+                  "name": "hypotMismatch",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "hypotTwo": {
-                  "type": ":float",
-                  "value": "5"
+                {
+                  "name": "scalarDistance",
+                  "value": {
+                    "type": ":float",
+                    "unit": ":meter",
+                    "value": "6"
+                  }
                 },
-                "hypotThree": {
-                  "type": ":float",
-                  "value": "13"
+                {
+                  "name": "coordinateDistanceTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "5"
+                  }
                 },
-                "hypotMismatch": {
-                  "type": ":nothing"
+                {
+                  "name": "coordinateDistanceThree",
+                  "value": {
+                    "type": ":float",
+                    "value": "7"
+                  }
                 },
-                "hypotUnit": {
-                  "type": ":float",
-                  "unit": ":meter",
-                  "value": "5"
+                {
+                  "name": "pointDistance",
+                  "value": {
+                    "type": ":float",
+                    "unit": ":meter",
+                    "value": "5"
+                  }
                 },
-                "invalidTextDistance": {
-                  "type": ":nothing"
+                {
+                  "name": "scalarDistanceSquared",
+                  "value": {
+                    "type": ":float",
+                    "value": "36"
+                  }
                 },
-                "pointDistance": {
-                  "type": ":float",
-                  "unit": ":meter",
-                  "value": "5"
+                {
+                  "name": "coordinateDistanceSquaredTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "25"
+                  }
                 },
-                "pointDistanceSquared": {
-                  "type": ":float",
-                  "value": "25"
+                {
+                  "name": "coordinateDistanceSquaredThree",
+                  "value": {
+                    "type": ":float",
+                    "value": "49"
+                  }
                 },
-                "scalarDistance": {
-                  "type": ":float",
-                  "unit": ":meter",
-                  "value": "6"
+                {
+                  "name": "pointDistanceSquared",
+                  "value": {
+                    "type": ":float",
+                    "value": "25"
+                  }
                 },
-                "scalarDistanceSquared": {
-                  "type": ":float",
-                  "value": "36"
+                {
+                  "name": "invalidTextDistance",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -159,89 +243,140 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "angleTwo": {
-                  "type": ":float",
-                  "value": "1.5707963267949"
+              "args": [
+                {
+                  "name": "lengthObject",
+                  "value": {
+                    "type": ":float",
+                    "value": "14"
+                  }
                 },
-                "angleThree": {
-                  "type": ":float",
-                  "value": "1.5707963267949"
+                {
+                  "name": "lengthTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "25"
+                  }
                 },
-                "angleObject": {
-                  "type": ":float",
-                  "value": "1.5707963267949"
+                {
+                  "name": "lengthThree",
+                  "value": {
+                    "type": ":float",
+                    "value": "9"
+                  }
                 },
-                "angleZero": {
-                  "type": ":nothing"
+                {
+                  "name": "normalizeObject",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0.6",
+                    "y": "0",
+                    "z": "0.8"
+                  }
                 },
-                "crossTwo": {
-                  "type": ":float",
-                  "value": "1"
+                {
+                  "name": "normalizeTwo",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0.6",
+                    "y": "0.8",
+                    "z": "0"
+                  }
                 },
-                "crossThree": {
-                  "type": ":vector",
-                  "x": "0",
-                  "y": "0",
-                  "z": "1"
+                {
+                  "name": "normalizeThree",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0",
+                    "y": "0.6",
+                    "z": "0.8"
+                  }
                 },
-                "crossObject": {
-                  "type": ":vector",
-                  "x": "0",
-                  "y": "0",
-                  "z": "1"
+                {
+                  "name": "normalizeZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "dotTwo": {
-                  "type": ":float",
-                  "value": "11"
+                {
+                  "name": "dotObject",
+                  "value": {
+                    "type": ":float",
+                    "value": "32"
+                  }
                 },
-                "dotThree": {
-                  "type": ":float",
-                  "value": "32"
+                {
+                  "name": "dotTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "11"
+                  }
                 },
-                "dotObject": {
-                  "type": ":float",
-                  "value": "32"
+                {
+                  "name": "dotThree",
+                  "value": {
+                    "type": ":float",
+                    "value": "32"
+                  }
                 },
-                "lengthTwo": {
-                  "type": ":float",
-                  "value": "25"
+                {
+                  "name": "crossObject",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0",
+                    "y": "0",
+                    "z": "1"
+                  }
                 },
-                "lengthThree": {
-                  "type": ":float",
-                  "value": "9"
+                {
+                  "name": "crossTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "1"
+                  }
                 },
-                "lengthObject": {
-                  "type": ":float",
-                  "value": "14"
+                {
+                  "name": "crossThree",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0",
+                    "y": "0",
+                    "z": "1"
+                  }
                 },
-                "normalizeTwo": {
-                  "type": ":vector",
-                  "x": "0.6",
-                  "y": "0.8",
-                  "z": "0"
+                {
+                  "name": "angleObject",
+                  "value": {
+                    "type": ":float",
+                    "value": "1.5707963267949"
+                  }
                 },
-                "normalizeThree": {
-                  "type": ":vector",
-                  "x": "0",
-                  "y": "0.6",
-                  "z": "0.8"
+                {
+                  "name": "angleTwo",
+                  "value": {
+                    "type": ":float",
+                    "value": "1.5707963267949"
+                  }
                 },
-                "normalizeObject": {
-                  "type": ":vector",
-                  "x": "0.6",
-                  "y": "0",
-                  "z": "0.8"
+                {
+                  "name": "angleThree",
+                  "value": {
+                    "type": ":float",
+                    "value": "1.5707963267949"
+                  }
                 },
-                "normalizeZero": {
-                  "type": ":nothing"
+                {
+                  "name": "angleZero",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

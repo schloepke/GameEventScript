@@ -335,7 +335,7 @@ public sealed class GameEventScriptHostSteppingTests
         var seen = new List<string>();
         var host = GameEventScriptHost.CreateBuilder().Build();
         host.SubscribeMessageName("Ping", (message, _) => seen.Add(message.SignatureId));
-        host.Receive(Create("Ping", ("amount", GesValue.GesInteger(7))));
+        host.Receive(GameEventScriptCSharpMessage.Create("Ping", ("amount", GesValue.GesInteger(7))));
         host.RunToCompletion();
         CollectionAssert.AreEqual(new[] { "Ping(amount)" }, seen);
     }

@@ -10,12 +10,12 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -29,17 +29,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -53,25 +56,34 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "lines": {
-                  "type": ":integer",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "lines",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "values": {
-                  "type": ":integer",
-                  "value": "20"
+                {
+                  "name": "values",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 },
-                "result": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -85,31 +97,40 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "2"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "2"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Next",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -126,24 +147,24 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Loop",
-              "args": {}
+              "args": []
             },
             {
               "name": "Start",
-              "args": {}
+              "args": []
             },
             {
               "name": "Loop",
-              "args": {}
+              "args": []
             },
             {
               "name": "Start",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -160,20 +181,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "A",
-              "args": {}
+              "args": []
             },
             {
               "name": "B",
-              "args": {}
+              "args": []
             },
             {
               "name": "C",
-              "args": {}
+              "args": []
             }
           ],
           "expectedRuntimeLimits": [
@@ -193,52 +214,67 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "first": {
-                "type": ":boolean",
-                "value": false
+            "args": [
+              {
+                "name": "first",
+                "value": {
+                  "type": ":boolean",
+                  "value": false
+                }
               },
-              "second": {
-                "type": ":boolean",
-                "value": true
+              {
+                "name": "second",
+                "value": {
+                  "type": ":boolean",
+                  "value": true
+                }
               },
-              "items": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  }
-                ]
+              {
+                "name": "items",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    }
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Two",
-              "args": {}
+              "args": []
             },
             {
               "name": "Item",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -252,39 +288,48 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "values": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "5"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "9"
-                  }
-                ]
+            "args": [
+              {
+                "name": "values",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "9"
+                    }
+                  ]
+                }
               },
-              "threshold": {
-                "type": ":integer",
-                "value": "7"
+              {
+                "name": "threshold",
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Passed",
-              "args": {
-                "count": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -298,24 +343,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "FalseBranch",
-              "args": {}
+              "args": []
             },
             {
               "name": "ExplicitFalse",
-              "args": {}
+              "args": []
             },
             {
               "name": "Done",
-              "args": {
-                "unknown": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "unknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -329,64 +377,109 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "notUnknown": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "notUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "falseAndUnknown": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "falseAndUnknown",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "unknownAndFalse": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "unknownAndFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "trueAndUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "trueAndUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unknownAndTrue": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownAndTrue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unknownAndUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownAndUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "trueOrUnknown": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "trueOrUnknown",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "unknownOrTrue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unknownOrTrue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "falseOrUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "falseOrUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unknownOrFalse": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownOrFalse",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unknownOrUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownOrUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "trueXorFalse": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "trueXorFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "trueXorTrue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "trueXorTrue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "unknownXorTrue": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownXorTrue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "unknownXorUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownXorUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -400,29 +493,41 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "skippedAnd": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "skippedAnd",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "skippedOr": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "skippedOr",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "evaluatedAnd": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "evaluatedAnd",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "evaluatedOr": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "evaluatedOr",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -436,64 +541,103 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "skipped": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "skipped",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "unicodeSkipped": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unicodeSkipped",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "unicodeEvaluated": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unicodeEvaluated",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "unicodeSingleSkipped": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unicodeSingleSkipped",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "unicodeSingleEvaluated": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unicodeSingleEvaluated",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rightAssoc": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rightAssoc",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "absorbedChain": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "absorbedChain",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "notHit": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "notHit",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "absorbed": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "absorbed",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "applied": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "applied",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "failed": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "failed",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "unknownResolved": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "unknownResolved",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "unknownBlocked": {
-                  "type": ":nothing"
+                {
+                  "name": "unknownBlocked",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -507,26 +651,32 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "20"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -540,12 +690,12 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "IfFalse",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -559,12 +709,12 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Different",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -578,22 +728,28 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "text": {
-                "type": ":text",
-                "value": "ab"
+            "args": [
+              {
+                "name": "text",
+                "value": {
+                  "type": ":text",
+                  "value": "ab"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Found",
-              "args": {
-                "value": {
-                  "type": ":text",
-                  "value": "a"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

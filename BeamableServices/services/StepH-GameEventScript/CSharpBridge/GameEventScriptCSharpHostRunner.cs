@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
@@ -182,4 +183,96 @@ public static class GameEventScriptCSharpHostExtensions
 
     private static GameEventScriptHost RequireHost(GameEventScriptHost? host)
         => host ?? throw new ArgumentNullException(nameof(host));
+}
+
+/// <summary>
+/// C#-specific message construction conveniences. Portable code uses ordered
+/// <see cref="GameEventScriptMessageArgument"/> values directly.
+/// </summary>
+public static class GameEventScriptCSharpMessage
+{
+    public static GameEventScriptMessage Create(
+        string name,
+        params (string name, GesValue value)[] arguments)
+        => GameEventScriptMessage.Create(name, ToOrdered(arguments));
+
+    public static GameEventScriptMessage Create(
+        string name,
+        IEnumerable<string>? tags,
+        params (string name, GesValue value)[] arguments)
+        => GameEventScriptMessage.Create(name, ToOrdered(arguments), tags);
+
+    public static GameEventScriptMessage Create(
+        GameEventScriptMessageSignature signature,
+        IReadOnlyDictionary<string, GesValue> arguments,
+        IEnumerable<string>? tags = null)
+    {
+        _ = signature ?? throw new ArgumentNullException(nameof(signature));
+        _ = arguments ?? throw new ArgumentNullException(nameof(arguments));
+        if (arguments.Count != signature.Parameters.Count)
+        {
+            throw new ArgumentException($"Message signature '{signature.SignatureId}' expects {signature.Parameters.Count} argument(s) but received {arguments.Count}.", nameof(arguments));
+        }
+
+        var ordered = new GameEventScriptMessageArgument[signature.Parameters.Count];
+        for (var index = 0; index < signature.Parameters.Count; index++)
+        {
+            var parameter = signature.Parameters[index];
+            if (string.Equals(parameter, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                throw new ArgumentException("Dictionary binding cannot represent unlabeled message parameters.", nameof(signature));
+            }
+
+            if (!arguments.TryGetValue(parameter, out var value))
+            {
+                throw new ArgumentException($"Message argument '{parameter}' required by signature '{signature.SignatureId}' is missing.", nameof(arguments));
+            }
+
+            ordered[index] = new GameEventScriptMessageArgument(parameter, value);
+        }
+
+        return GameEventScriptMessage.Create(signature.Name, ordered, tags);
+    }
+
+    internal static GameEventScriptMessageArgument[] ToOrdered((string name, GesValue value)[] arguments)
+    {
+        _ = arguments ?? throw new ArgumentNullException(nameof(arguments));
+        var ordered = new GameEventScriptMessageArgument[arguments.Length];
+        for (var index = 0; index < arguments.Length; index++)
+        {
+            ordered[index] = new GameEventScriptMessageArgument(arguments[index].name, arguments[index].value);
+        }
+
+        return ordered;
+    }
+}
+
+public static class GameEventScriptCSharpContextExtensions
+{
+    public static bool Emit(
+        this GameEventScriptContext context,
+        string message,
+        params (string name, GesValue value)[] arguments)
+        => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(message, arguments));
+
+    public static bool Emit(
+        this GameEventScriptContext context,
+        GameEventScriptMessageSignature signature,
+        IReadOnlyDictionary<string, GesValue> arguments)
+        => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(signature, arguments));
+
+    public static GameEventScriptPublishResult Publish(
+        this GameEventScriptContext context,
+        string message,
+        params (string name, GesValue value)[] arguments)
+        => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(message, arguments));
+
+    public static GameEventScriptPublishResult Publish(
+        this GameEventScriptContext context,
+        GameEventScriptMessageSignature signature,
+        IReadOnlyDictionary<string, GesValue> arguments)
+        => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(signature, arguments));
+
+    private static GameEventScriptContext RequireContext(GameEventScriptContext? context)
+        => context ?? throw new ArgumentNullException(nameof(context));
 }

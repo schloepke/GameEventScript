@@ -11,45 +11,72 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "diceTerm": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "naturalZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "factFive": {
-                  "type": ":integer",
-                  "value": "120"
+                {
+                  "name": "naturalThree",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "fibSeven": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "oddFour",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 },
-                "invalidText": {
-                  "type": ":nothing"
+                {
+                  "name": "fibSeven",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "listTerm": {
-                  "type": ":nothing"
+                {
+                  "name": "factFive",
+                  "value": {
+                    "type": ":integer",
+                    "value": "120"
+                  }
                 },
-                "naturalThree": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "invalidText",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "naturalZero": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "listTerm",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "oddFour": {
-                  "type": ":integer",
-                  "value": "9"
+                {
+                  "name": "diceTerm",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeTerm": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeTerm",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -63,60 +90,81 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "diceFirst": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    5
-                  ]
+              "args": [
+                {
+                  "name": "firstNaturals",
+                  "value": {
+                    "type": ":range",
+                    "from": "0",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "firstNaturals": {
-                  "type": ":range",
-                  "from": "0",
-                  "to": "3",
-                  "step": "1"
+                {
+                  "name": "firstOdd",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "5",
+                    "step": "2"
+                  }
                 },
-                "firstOdd": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "5",
-                  "step": "2"
+                {
+                  "name": "listFirst",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      }
+                    ]
+                  }
                 },
-                "floatRangeFirst": {
-                  "type": ":range",
-                  "from": "1.5",
-                  "to": "2",
-                  "step": "0.5"
+                {
+                  "name": "diceFirst",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5
+                    ]
+                  }
                 },
-                "invalid": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeFirst",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "listFirst": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    }
-                  ]
+                {
+                  "name": "floatRangeFirst",
+                  "value": {
+                    "type": ":range",
+                    "from": "1.5",
+                    "to": "2",
+                    "step": "0.5"
+                  }
                 },
-                "rangeFirst": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "3",
-                  "step": "1"
+                {
+                  "name": "invalid",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -130,54 +178,75 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "diceDrop": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    1
-                  ]
+              "args": [
+                {
+                  "name": "droppedIsSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "droppedIsSeries": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "droppedZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "droppedTwo": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "droppedTwo",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "droppedZero": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "listDrop",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      }
+                    ]
+                  }
                 },
-                "invalid": {
-                  "type": ":nothing"
+                {
+                  "name": "diceDrop",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      1
+                    ]
+                  }
                 },
-                "listDrop": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    }
-                  ]
+                {
+                  "name": "rangeDrop",
+                  "value": {
+                    "type": ":range",
+                    "from": "3",
+                    "to": "5",
+                    "step": "1"
+                  }
                 },
-                "rangeDrop": {
-                  "type": ":range",
-                  "from": "3",
-                  "to": "5",
-                  "step": "1"
+                {
+                  "name": "invalid",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -191,48 +260,63 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "descendingLast": {
-                  "type": ":range",
-                  "from": "3",
-                  "to": "1",
-                  "step": "-2"
+              "args": [
+                {
+                  "name": "seriesLast",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "diceLast": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    1
-                  ]
+                {
+                  "name": "listLast",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      }
+                    ]
+                  }
                 },
-                "listLast": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    }
-                  ]
+                {
+                  "name": "diceLast",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      1
+                    ]
+                  }
                 },
-                "rangeLast": {
-                  "type": ":range",
-                  "from": "4",
-                  "to": "5",
-                  "step": "1"
+                {
+                  "name": "rangeLast",
+                  "value": {
+                    "type": ":range",
+                    "from": "4",
+                    "to": "5",
+                    "step": "1"
+                  }
                 },
-                "seriesLast": {
-                  "type": ":nothing"
+                {
+                  "name": "descendingLast",
+                  "value": {
+                    "type": ":range",
+                    "from": "3",
+                    "to": "1",
+                    "step": "-2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -246,48 +330,63 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "descendingDropLast": {
-                  "type": ":range",
-                  "from": "5",
-                  "to": "3",
-                  "step": "-2"
+              "args": [
+                {
+                  "name": "seriesDropLast",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "diceDropLast": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    5
-                  ]
+                {
+                  "name": "listDropLast",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      }
+                    ]
+                  }
                 },
-                "listDropLast": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    }
-                  ]
+                {
+                  "name": "diceDropLast",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5
+                    ]
+                  }
                 },
-                "rangeDropLast": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "3",
-                  "step": "1"
+                {
+                  "name": "rangeDropLast",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "seriesDropLast": {
-                  "type": ":nothing"
+                {
+                  "name": "descendingDropLast",
+                  "value": {
+                    "type": ":range",
+                    "from": "5",
+                    "to": "3",
+                    "step": "-2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

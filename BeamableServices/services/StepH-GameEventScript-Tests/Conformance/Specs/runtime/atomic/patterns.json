@@ -11,97 +11,160 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "booleanValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "floatValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "percentageValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "vectorValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "pointValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listPairOfThree": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listPairOfThree",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listPairOfFour": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listPairOfFour",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listTextPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listTextPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listTextMissing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listTextMissing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listTagPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listTagPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "dicePair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "dicePair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "dicePairOfSix": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "dicePairOfSix",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "dicePairOfFive": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "dicePairOfFive",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceNoPair": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "diceNoPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -115,112 +178,184 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "mapValue": {
-                  "type": ":nothing"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listPairLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "listPairLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "listPairFirst": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listPairFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listPairSecond": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listPairSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listThreeLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listThreeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listThreeFirst": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listThreeFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listThreeThird": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listThreeThird",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listPairOfThreeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "listPairOfThreeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "listPairOfThreeFirst": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listPairOfThreeFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listPairOfFour": {
-                  "type": ":nothing"
+                {
+                  "name": "listPairOfFour",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textPairLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "textPairLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "textPairFirst": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "textPairFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "textPairSecond": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "textPairSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "tagPairLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "tagPairLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "tagPairFirst": {
-                  "type": ":tag",
-                  "value": "fire"
+                {
+                  "name": "tagPairFirst",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 },
-                "tagPairSecond": {
-                  "type": ":tag",
-                  "value": "fire"
+                {
+                  "name": "tagPairSecond",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 },
-                "dicePair": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    6
-                  ]
+                {
+                  "name": "dicePair",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      6
+                    ]
+                  }
                 },
-                "diceThree": {
-                  "type": ":dice",
-                  "rolls": [
-                    5,
-                    5,
-                    5
-                  ]
+                {
+                  "name": "diceThree",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      5,
+                      5,
+                      5
+                    ]
+                  }
                 },
-                "dicePairOfSix": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    6
-                  ]
+                {
+                  "name": "dicePairOfSix",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      6
+                    ]
+                  }
                 },
-                "diceNoTriple": {
-                  "type": ":nothing"
+                {
+                  "name": "diceNoTriple",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -234,106 +369,169 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "diceFullHas": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "diceFullHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceNotFullHas": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "diceNotFullHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceStraightHas": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceStraightHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceNotStraightHas": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "diceNotStraightHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listFullHas": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listFullHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listNotFullHas": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listNotFullHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listStraightHas": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listStraightHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listNotStraightHas": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listNotStraightHas",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceFullTaken": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    6,
-                    6,
-                    5,
-                    5
-                  ]
+                {
+                  "name": "diceFullTaken",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      6,
+                      6,
+                      5,
+                      5
+                    ]
+                  }
                 },
-                "diceFullMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "diceFullMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "diceStraightTaken": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    5,
-                    4,
-                    3,
-                    2
-                  ]
+                {
+                  "name": "diceStraightTaken",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      5,
+                      4,
+                      3,
+                      2
+                    ]
+                  }
                 },
-                "diceStraightMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "diceStraightMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listFullLen": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "listFullLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "listFull_1": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "listFull_1",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "listFull_3": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "listFull_3",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "listFull_4": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "listFull_4",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 },
-                "listStraightLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listStraightLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listStraight_1": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listStraight_1",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listStraight_2": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "listStraight_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "listStraight_3": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "listStraight_3",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "listStraightMissing": {
-                  "type": ":nothing"
+                {
+                  "name": "listStraightMissing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -347,69 +545,105 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "listStreamHasPair": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "listStreamHasPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listStreamTakeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "listStreamTakeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "listStreamTakeFirst": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "listStreamTakeFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "listStreamTakeSecond": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "listStreamTakeSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "diceStreamHasPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceStreamHasPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceStreamTakeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "diceStreamTakeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceStreamTakeFirst": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "diceStreamTakeFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "diceStreamTakeSecond": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "diceStreamTakeSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "textStreamHasPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textStreamHasPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "textStreamTake": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":text",
-                      "value": "a"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "a"
-                    }
-                  ]
+                {
+                  "name": "textStreamTake",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":text",
+                        "value": "a"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "a"
+                      }
+                    ]
+                  }
                 },
-                "rangeStreamHasPair": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "rangeStreamHasPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "rangeStreamTake": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeStreamTake",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

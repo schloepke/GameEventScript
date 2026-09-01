@@ -10,107 +10,128 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":map",
-                "entries": {
-                  "name": {
-                    "type": ":text",
-                    "value": "Ada"
-                  },
-                  "hp": {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  "maxHp": {
-                    "type": ":integer",
-                    "value": "5"
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "name": {
+                      "type": ":text",
+                      "value": "Ada"
+                    },
+                    "hp": {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    "maxHp": {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   }
                 }
               },
-              "units": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Ada"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "2"
-                      },
-                      "maxHp": {
-                        "type": ":integer",
-                        "value": "5"
+              {
+                "name": "units",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Ada"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "2"
+                        },
+                        "maxHp": {
+                          "type": ":integer",
+                          "value": "5"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Bert"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "4"
+                        },
+                        "maxHp": {
+                          "type": ":integer",
+                          "value": "4"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Cara"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "1"
+                        },
+                        "maxHp": {
+                          "type": ":integer",
+                          "value": "3"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Bert"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "4"
-                      },
-                      "maxHp": {
-                        "type": ":integer",
-                        "value": "4"
-                      }
-                    }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Cara"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "1"
-                      },
-                      "maxHp": {
-                        "type": ":integer",
-                        "value": "3"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "byCall": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "byCall",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "byPredicate": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "byPredicate",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "woundedCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "woundedCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "first": {
-                  "type": ":text",
-                  "value": "Ada"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ada"
+                  }
                 },
-                "second": {
-                  "type": ":text",
-                  "value": "Cara"
+                {
+                  "name": "second",
+                  "value": {
+                    "type": ":text",
+                    "value": "Cara"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -124,64 +145,79 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":map",
-                "entries": {
-                  "name": {
-                    "type": ":text",
-                    "value": "NoHp"
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "name": {
+                      "type": ":text",
+                      "value": "NoHp"
+                    }
                   }
                 }
               },
-              "units": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "NoHp"
+              {
+                "name": "units",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "NoHp"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "name": {
+                          "type": ":text",
+                          "value": "Healthy"
+                        },
+                        "hp": {
+                          "type": ":integer",
+                          "value": "5"
+                        },
+                        "maxHp": {
+                          "type": ":integer",
+                          "value": "5"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "name": {
-                        "type": ":text",
-                        "value": "Healthy"
-                      },
-                      "hp": {
-                        "type": ":integer",
-                        "value": "5"
-                      },
-                      "maxHp": {
-                        "type": ":integer",
-                        "value": "5"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "byCall": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "byCall",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "byPredicate": {
-                  "type": ":nothing"
+                {
+                  "name": "byPredicate",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "woundedCount": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "woundedCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -195,38 +231,56 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "2"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "2"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "byWord": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "byWord",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "byBang": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "byBang",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "byType": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "byType",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "byEmpty": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "byEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "byCompare": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "byCompare",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -240,42 +294,63 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "9"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "9"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "lessThan": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "lessThan",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "moreThan": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "moreThan",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "orLess": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "orLess",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "orMore": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "orMore",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "atMost": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "atMost",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "atLeast": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "atLeast",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -289,31 +364,37 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":map",
-                "entries": {
-                  "alive": {
-                    "type": ":boolean",
-                    "value": true
-                  },
-                  "hidden": {
-                    "type": ":boolean",
-                    "value": false
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "alive": {
+                      "type": ":boolean",
+                      "value": true
+                    },
+                    "hidden": {
+                      "type": ":boolean",
+                      "value": false
+                    }
                   }
                 }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "targetable": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "targetable",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -327,29 +408,41 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "byPredicateCallTwo": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "byPredicateCallTwo",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "byPredicateCallZero": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "byPredicateCallZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "byFunction": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "byFunction",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "byPredicateOperator": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "byPredicateOperator",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -363,30 +456,42 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "left": {
-                "type": ":integer",
-                "value": "7"
+            "args": [
+              {
+                "name": "left",
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               },
-              "right": {
-                "type": ":integer",
-                "value": "4"
+              {
+                "name": "right",
+                "value": {
+                  "type": ":integer",
+                  "value": "4"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "ok": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "ok",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "reversed": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "reversed",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -400,43 +505,61 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "2"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "2"
+                }
               },
-              "hp": {
-                "type": ":map",
-                "entries": {
-                  "current": {
-                    "type": ":float",
-                    "value": "4"
+              {
+                "name": "hp",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "current": {
+                      "type": ":float",
+                      "value": "4"
+                    }
                   }
                 }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "handlerValue": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "handlerValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "ok": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "ok",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "boosted": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "boosted",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "current": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "current",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -459,70 +582,85 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":map",
-                "entries": {
-                  "hp": {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  "maxHp": {
-                    "type": ":integer",
-                    "value": "5"
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":map",
+                  "entries": {
+                    "hp": {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    "maxHp": {
+                      "type": ":integer",
+                      "value": "5"
+                    }
                   }
                 }
               },
-              "units": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "hp": {
-                        "type": ":integer",
-                        "value": "2"
-                      },
-                      "maxHp": {
-                        "type": ":integer",
-                        "value": "5"
+              {
+                "name": "units",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "hp": {
+                          "type": ":integer",
+                          "value": "2"
+                        },
+                        "maxHp": {
+                          "type": ":integer",
+                          "value": "5"
+                        }
+                      }
+                    },
+                    {
+                      "type": ":map",
+                      "entries": {
+                        "hp": {
+                          "type": ":integer",
+                          "value": "5"
+                        },
+                        "maxHp": {
+                          "type": ":integer",
+                          "value": "5"
+                        }
                       }
                     }
-                  },
-                  {
-                    "type": ":map",
-                    "entries": {
-                      "hp": {
-                        "type": ":integer",
-                        "value": "5"
-                      },
-                      "maxHp": {
-                        "type": ":integer",
-                        "value": "5"
-                      }
-                    }
-                  }
-                ]
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "anyWounded": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "anyWounded",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "candidateCount": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "candidateCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "maximum": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "maximum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

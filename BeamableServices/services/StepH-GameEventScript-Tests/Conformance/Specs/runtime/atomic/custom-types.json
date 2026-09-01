@@ -11,186 +11,237 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "current": {
-                  "type": ":integer",
-                  "value": "100"
-                },
-                "gauge": {
-                  "type": ":gauge",
-                  "entries": {
-                    "current": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "maximum": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "percentage": {
-                      "type": ":percentage",
-                      "value": "0.01"
+              "args": [
+                {
+                  "name": "gauge",
+                  "value": {
+                    "type": ":gauge",
+                    "entries": {
+                      "current": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "maximum": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "percentage": {
+                        "type": ":percentage",
+                        "value": "0.01"
+                      }
                     }
                   }
                 },
-                "gaugeList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "current",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "gaugeListLength": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "percentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.01"
+                  }
                 },
-                "gaugeFromMap": {
-                  "type": ":gauge",
-                  "entries": {
-                    "current": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "maximum": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "percentage": {
-                      "type": ":percentage",
-                      "value": "0.01"
+                {
+                  "name": "gaugeFromMap",
+                  "value": {
+                    "type": ":gauge",
+                    "entries": {
+                      "current": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "maximum": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "percentage": {
+                        "type": ":percentage",
+                        "value": "0.01"
+                      }
                     }
                   }
                 },
-                "fromMapCurrent": {
-                  "type": ":integer",
-                  "value": "100"
+                {
+                  "name": "fromMapCurrent",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "fromMapIsGauge": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "fromMapPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.01"
+                  }
                 },
-                "fromMapPercentage": {
-                  "type": ":percentage",
-                  "value": "0.01"
+                {
+                  "name": "fromMapIsGauge",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "gaugeMap": {
-                  "type": ":map",
-                  "entries": {
-                    "current": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "maximum": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "percentage": {
-                      "type": ":percentage",
-                      "value": "0.01"
+                {
+                  "name": "gaugeList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
+                },
+                {
+                  "name": "gaugeListLength",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
+                },
+                {
+                  "name": "gaugeMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "current": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "maximum": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "percentage": {
+                        "type": ":percentage",
+                        "value": "0.01"
+                      }
                     }
                   }
                 },
-                "isAim": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "mapCurrent",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "isGauge": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.01"
+                  }
                 },
-                "mapCurrent": {
-                  "type": ":integer",
-                  "value": "100"
+                {
+                  "name": "recordKeys",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":tag",
+                        "value": "current"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "maximum"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "percentage"
+                      }
+                    ]
+                  }
                 },
-                "mapPercentage": {
-                  "type": ":percentage",
-                  "value": "0.01"
+                {
+                  "name": "recordValues",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      {
+                        "type": ":percentage",
+                        "value": "0.01"
+                      }
+                    ]
+                  }
                 },
-                "percentage": {
-                  "type": ":percentage",
-                  "value": "0.01"
-                },
-                "recordEntries": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "current"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "100"
+                {
+                  "name": "recordEntries",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "current"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "100"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "maximum"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "100"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "percentage"
+                          },
+                          "value": {
+                            "type": ":percentage",
+                            "value": "0.01"
+                          }
                         }
                       }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "maximum"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "100"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "percentage"
-                        },
-                        "value": {
-                          "type": ":percentage",
-                          "value": "0.01"
-                        }
-                      }
-                    }
-                  ]
+                    ]
+                  }
                 },
-                "recordKeys": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":tag",
-                      "value": "current"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "maximum"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "percentage"
-                    }
-                  ]
+                {
+                  "name": "isGauge",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "recordValues": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    {
-                      "type": ":percentage",
-                      "value": "0.01"
-                    }
-                  ]
+                {
+                  "name": "isAim",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -204,222 +255,267 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "base": {
-                  "type": ":integer",
-                  "value": "10"
-                },
-                "bonus": {
-                  "type": ":integer",
-                  "value": "3"
-                },
-                "cap": {
-                  "type": ":integer",
-                  "value": "10"
-                },
-                "entries": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "base"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "10"
-                        }
+              "args": [
+                {
+                  "name": "stat",
+                  "value": {
+                    "type": ":stat",
+                    "entries": {
+                      "base": {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      "bonus": {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      "cap": {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      "label": {
+                        "type": ":text",
+                        "value": "hp"
+                      },
+                      "total": {
+                        "type": ":integer",
+                        "value": "13"
                       }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "bonus"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "3"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "cap"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "10"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "label"
-                        },
-                        "value": {
-                          "type": ":text",
-                          "value": "hp"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "total"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "13"
-                        }
-                      }
-                    }
-                  ]
-                },
-                "isGauge": {
-                  "type": ":boolean",
-                  "value": false
-                },
-                "isStat": {
-                  "type": ":boolean",
-                  "value": true
-                },
-                "keys": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":tag",
-                      "value": "base"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "bonus"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "cap"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "label"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "total"
-                    }
-                  ]
-                },
-                "label": {
-                  "type": ":text",
-                  "value": "hp"
-                },
-                "listLen": {
-                  "type": ":integer",
-                  "value": "0"
-                },
-                "map": {
-                  "type": ":map",
-                  "entries": {
-                    "base": {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    "bonus": {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    "cap": {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    "label": {
-                      "type": ":text",
-                      "value": "hp"
-                    },
-                    "total": {
-                      "type": ":integer",
-                      "value": "13"
                     }
                   }
                 },
-                "mapTotal": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "base",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "nothing": {
-                  "type": ":nothing"
+                {
+                  "name": "cap",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "stat": {
-                  "type": ":stat",
-                  "entries": {
-                    "base": {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    "bonus": {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    "cap": {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    "label": {
-                      "type": ":text",
-                      "value": "hp"
-                    },
-                    "total": {
-                      "type": ":integer",
-                      "value": "13"
+                {
+                  "name": "bonus",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
+                },
+                {
+                  "name": "total",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
+                },
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "hp"
+                  }
+                },
+                {
+                  "name": "map",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "base": {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      "bonus": {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      "cap": {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      "label": {
+                        "type": ":text",
+                        "value": "hp"
+                      },
+                      "total": {
+                        "type": ":integer",
+                        "value": "13"
+                      }
                     }
                   }
                 },
-                "total": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "mapTotal",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "values": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "hp"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "13"
-                    }
-                  ]
+                {
+                  "name": "listLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
+                },
+                {
+                  "name": "keys",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":tag",
+                        "value": "base"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "bonus"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "cap"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "label"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "total"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "values",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "hp"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "13"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "entries",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "base"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "10"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "bonus"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "3"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "cap"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "10"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "label"
+                          },
+                          "value": {
+                            "type": ":text",
+                            "value": "hp"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "total"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "13"
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "isStat",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
+                },
+                {
+                  "name": "isGauge",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
+                },
+                {
+                  "name": "nothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -433,246 +529,288 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "aim": {
-                  "type": ":aim",
-                  "entries": {
-                    "bearing": {
-                      "type": ":float",
-                      "unit": ":degree",
-                      "value": "90"
-                    },
-                    "checksum": {
-                      "type": ":integer",
-                      "value": "106"
-                    },
-                    "direction": {
-                      "type": ":vector",
-                      "unit": ":meter",
-                      "x": "1",
-                      "y": "2",
-                      "z": "3"
-                    },
-                    "range": {
-                      "type": ":float",
-                      "unit": ":meter",
-                      "value": "12"
-                    },
-                    "steps": {
-                      "type": ":integer",
-                      "unit": ":meter",
-                      "value": "4"
+              "args": [
+                {
+                  "name": "aim",
+                  "value": {
+                    "type": ":aim",
+                    "entries": {
+                      "bearing": {
+                        "type": ":float",
+                        "unit": ":degree",
+                        "value": "90"
+                      },
+                      "checksum": {
+                        "type": ":integer",
+                        "value": "106"
+                      },
+                      "direction": {
+                        "type": ":vector",
+                        "unit": ":meter",
+                        "x": "1",
+                        "y": "2",
+                        "z": "3"
+                      },
+                      "range": {
+                        "type": ":float",
+                        "unit": ":meter",
+                        "value": "12"
+                      },
+                      "steps": {
+                        "type": ":integer",
+                        "unit": ":meter",
+                        "value": "4"
+                      }
                     }
                   }
                 },
-                "aimList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "bearing",
+                  "value": {
+                    "type": ":float",
+                    "unit": ":degree",
+                    "value": "90"
+                  }
                 },
-                "aimListLength": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "checksum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "106"
+                  }
                 },
-                "aimMap": {
-                  "type": ":map",
-                  "entries": {
-                    "bearing": {
-                      "type": ":float",
-                      "unit": ":degree",
-                      "value": "90"
-                    },
-                    "checksum": {
-                      "type": ":integer",
-                      "value": "106"
-                    },
-                    "direction": {
-                      "type": ":vector",
-                      "unit": ":meter",
-                      "x": "1",
-                      "y": "2",
-                      "z": "3"
-                    },
-                    "range": {
-                      "type": ":float",
-                      "unit": ":meter",
-                      "value": "12"
-                    },
-                    "steps": {
-                      "type": ":integer",
-                      "unit": ":meter",
-                      "value": "4"
+                {
+                  "name": "directionZ",
+                  "value": {
+                    "type": ":float",
+                    "unit": ":meter",
+                    "value": "3"
+                  }
+                },
+                {
+                  "name": "aimList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
+                },
+                {
+                  "name": "aimListLength",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
+                },
+                {
+                  "name": "aimMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "bearing": {
+                        "type": ":float",
+                        "unit": ":degree",
+                        "value": "90"
+                      },
+                      "checksum": {
+                        "type": ":integer",
+                        "value": "106"
+                      },
+                      "direction": {
+                        "type": ":vector",
+                        "unit": ":meter",
+                        "x": "1",
+                        "y": "2",
+                        "z": "3"
+                      },
+                      "range": {
+                        "type": ":float",
+                        "unit": ":meter",
+                        "value": "12"
+                      },
+                      "steps": {
+                        "type": ":integer",
+                        "unit": ":meter",
+                        "value": "4"
+                      }
                     }
                   }
                 },
-                "bearing": {
-                  "type": ":float",
-                  "unit": ":degree",
-                  "value": "90"
+                {
+                  "name": "mapChecksum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "106"
+                  }
                 },
-                "checksum": {
-                  "type": ":integer",
-                  "value": "106"
+                {
+                  "name": "mapDirectionZ",
+                  "value": {
+                    "type": ":float",
+                    "unit": ":meter",
+                    "value": "3"
+                  }
                 },
-                "directionZ": {
-                  "type": ":float",
-                  "unit": ":meter",
-                  "value": "3"
+                {
+                  "name": "aimKeys",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":tag",
+                        "value": "bearing"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "checksum"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "direction"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "range"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "steps"
+                      }
+                    ]
+                  }
                 },
-                "isAim": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "aimValues",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":float",
+                        "unit": ":degree",
+                        "value": "90"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "106"
+                      },
+                      {
+                        "type": ":vector",
+                        "unit": ":meter",
+                        "x": "1",
+                        "y": "2",
+                        "z": "3"
+                      },
+                      {
+                        "type": ":float",
+                        "unit": ":meter",
+                        "value": "12"
+                      },
+                      {
+                        "type": ":integer",
+                        "unit": ":meter",
+                        "value": "4"
+                      }
+                    ]
+                  }
                 },
-                "isGauge": {
-                  "type": ":boolean",
-                  "value": false
-                },
-                "mapChecksum": {
-                  "type": ":integer",
-                  "value": "106"
-                },
-                "mapDirectionZ": {
-                  "type": ":float",
-                  "unit": ":meter",
-                  "value": "3"
-                },
-                "aimEntries": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "bearing"
-                        },
-                        "value": {
-                          "type": ":float",
-                          "unit": ":degree",
-                          "value": "90"
+                {
+                  "name": "aimEntries",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "bearing"
+                          },
+                          "value": {
+                            "type": ":float",
+                            "unit": ":degree",
+                            "value": "90"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "checksum"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "106"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "direction"
+                          },
+                          "value": {
+                            "type": ":vector",
+                            "unit": ":meter",
+                            "x": "1",
+                            "y": "2",
+                            "z": "3"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "range"
+                          },
+                          "value": {
+                            "type": ":float",
+                            "unit": ":meter",
+                            "value": "12"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "steps"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "unit": ":meter",
+                            "value": "4"
+                          }
                         }
                       }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "checksum"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "106"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "direction"
-                        },
-                        "value": {
-                          "type": ":vector",
-                          "unit": ":meter",
-                          "x": "1",
-                          "y": "2",
-                          "z": "3"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "range"
-                        },
-                        "value": {
-                          "type": ":float",
-                          "unit": ":meter",
-                          "value": "12"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "steps"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "unit": ":meter",
-                          "value": "4"
-                        }
-                      }
-                    }
-                  ]
+                    ]
+                  }
                 },
-                "aimKeys": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":tag",
-                      "value": "bearing"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "checksum"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "direction"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "range"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "steps"
-                    }
-                  ]
+                {
+                  "name": "isAim",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "aimValues": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":float",
-                      "unit": ":degree",
-                      "value": "90"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "106"
-                    },
-                    {
-                      "type": ":vector",
-                      "unit": ":meter",
-                      "x": "1",
-                      "y": "2",
-                      "z": "3"
-                    },
-                    {
-                      "type": ":float",
-                      "unit": ":meter",
-                      "value": "12"
-                    },
-                    {
-                      "type": ":integer",
-                      "unit": ":meter",
-                      "value": "4"
-                    }
-                  ]
+                {
+                  "name": "isGauge",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -686,46 +824,61 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "current": {
-                  "type": ":integer",
-                  "value": "100"
-                },
-                "gauge": {
-                  "type": ":gauge",
-                  "entries": {
-                    "current": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "maximum": {
-                      "type": ":integer",
-                      "value": "100"
-                    },
-                    "percentage": {
-                      "type": ":percentage",
-                      "value": "0.01"
+              "args": [
+                {
+                  "name": "gauge",
+                  "value": {
+                    "type": ":gauge",
+                    "entries": {
+                      "current": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "maximum": {
+                        "type": ":integer",
+                        "value": "100"
+                      },
+                      "percentage": {
+                        "type": ":percentage",
+                        "value": "0.01"
+                      }
                     }
                   }
                 },
-                "isGauge": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "current",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "maximum": {
-                  "type": ":integer",
-                  "value": "100"
+                {
+                  "name": "maximum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "percentage": {
-                  "type": ":percentage",
-                  "value": "0.01"
+                {
+                  "name": "percentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.01"
+                  }
+                },
+                {
+                  "name": "isGauge",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }

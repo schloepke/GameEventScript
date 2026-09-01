@@ -16,61 +16,100 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":integer",
-                  "value": "0"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":nothing"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "tagValue": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "pointValue": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "listValue": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "mapValue": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceValue": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -84,97 +123,160 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "booleanTrue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "booleanTrue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "booleanFalse": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "booleanFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "integerZero": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "integerZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "floatPositive": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "floatPositive",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "percentageZero": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "percentageZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "textEmpty": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "textEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "infinityValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagNanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "negativeInfinityValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "infinityValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorZero": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "negativeInfinityValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "pointZero": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "vectorZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "pointZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listEmpty": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "mapEmpty": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceEmpty": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "tagNanValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -188,97 +290,160 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "booleanTrue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanTrue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "booleanFalse": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerZero": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "integerZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "floatPositive": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "floatPositive",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "percentageZero": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "percentageZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textEmpty": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "infinityValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "tagNanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "negativeInfinityValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "infinityValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "vectorZero": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "negativeInfinityValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "pointZero": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "vectorZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "pointZero",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listEmpty": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapEmpty": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "mapEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceEmpty": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "diceEmpty",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagNanValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -292,144 +457,210 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":text",
-                  "value": "fallback"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":text",
+                    "value": "fallback"
+                  }
                 },
-                "booleanTrue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "booleanTrue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "booleanFalse": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerZero": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "integerZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "floatPositive": {
-                  "type": ":float",
-                  "value": "10.5"
+                {
+                  "name": "floatPositive",
+                  "value": {
+                    "type": ":float",
+                    "value": "10.5"
+                  }
                 },
-                "percentageZero": {
-                  "type": ":percentage",
-                  "value": "0"
+                {
+                  "name": "percentageZero",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0"
+                  }
                 },
-                "textValue": {
-                  "type": ":text",
-                  "value": "ab"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":text",
+                    "value": "ab"
+                  }
                 },
-                "textEmpty": {
-                  "type": ":text",
-                  "value": "fallback"
+                {
+                  "name": "textEmpty",
+                  "value": {
+                    "type": ":text",
+                    "value": "fallback"
+                  }
                 },
-                "tagValue": {
-                  "type": ":tag",
-                  "value": "ab"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":tag",
+                    "value": "ab"
+                  }
                 },
-                "tagNanValue": {
-                  "type": ":tag",
-                  "value": "nan"
+                {
+                  "name": "tagNanValue",
+                  "value": {
+                    "type": ":tag",
+                    "value": "nan"
+                  }
                 },
-                "infinityValue": {
-                  "type": ":float",
-                  "value": "Infinity"
+                {
+                  "name": "infinityValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "Infinity"
+                  }
                 },
-                "negativeInfinityValue": {
-                  "type": ":float",
-                  "value": "-Infinity"
+                {
+                  "name": "negativeInfinityValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "-Infinity"
+                  }
                 },
-                "vectorZero": {
-                  "type": ":vector",
-                  "x": "0",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "vectorZero",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "pointZero": {
-                  "type": ":point",
-                  "x": "0",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "pointZero",
+                  "value": {
+                    "type": ":point",
+                    "x": "0",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "listValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    }
-                  ]
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      }
+                    ]
+                  }
                 },
-                "listEmpty": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "9"
-                    }
-                  ]
+                {
+                  "name": "listEmpty",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "9"
+                      }
+                    ]
+                  }
                 },
-                "mapValue": {
-                  "type": ":map",
-                  "entries": {
-                    "name": {
-                      "type": ":text",
-                      "value": "Ada"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "name": {
+                        "type": ":text",
+                        "value": "Ada"
+                      }
                     }
                   }
                 },
-                "mapEmpty": {
-                  "type": ":map",
-                  "entries": {
-                    "fallback": {
-                      "type": ":integer",
-                      "value": "1"
+                {
+                  "name": "mapEmpty",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "fallback": {
+                        "type": ":integer",
+                        "value": "1"
+                      }
                     }
                   }
                 },
-                "diceValue": {
-                  "type": ":dice",
-                  "rolls": [
-                    6,
-                    2
-                  ]
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      6,
+                      2
+                    ]
+                  }
                 },
-                "diceEmpty": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "9"
-                    }
-                  ]
+                {
+                  "name": "diceEmpty",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "9"
+                      }
+                    ]
+                  }
                 },
-                "rangeValue": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "3",
-                  "step": "1"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "rangeEmpty": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "9"
-                    }
-                  ]
+                {
+                  "name": "rangeEmpty",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "9"
+                      }
+                    ]
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -448,66 +679,105 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":nothing"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":nothing"
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "mapValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":tag",
-                      "value": "alpha"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "hp"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "name"
-                    }
-                  ]
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":tag",
+                        "value": "alpha"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "hp"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "name"
+                      }
+                    ]
+                  }
                 },
-                "diceValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -526,66 +796,105 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":nothing"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":nothing"
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "mapValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":text",
-                      "value": "first"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "Ada"
-                    }
-                  ]
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":text",
+                        "value": "first"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "Ada"
+                      }
+                    ]
+                  }
                 },
-                "diceValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -604,93 +913,132 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":nothing"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":nothing"
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "mapValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "alpha"
-                        },
-                        "value": {
-                          "type": ":text",
-                          "value": "first"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "alpha"
+                          },
+                          "value": {
+                            "type": ":text",
+                            "value": "first"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "hp"
+                          },
+                          "value": {
+                            "type": ":integer",
+                            "value": "10"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "key": {
+                            "type": ":tag",
+                            "value": "name"
+                          },
+                          "value": {
+                            "type": ":text",
+                            "value": "Ada"
+                          }
                         }
                       }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "hp"
-                        },
-                        "value": {
-                          "type": ":integer",
-                          "value": "10"
-                        }
-                      }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "key": {
-                          "type": ":tag",
-                          "value": "name"
-                        },
-                        "value": {
-                          "type": ":text",
-                          "value": "Ada"
-                        }
-                      }
-                    }
-                  ]
+                    ]
+                  }
                 },
-                "diceValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -709,64 +1057,103 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "floatValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "percentageValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "pointValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -785,64 +1172,103 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "floatValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "percentageValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "pointValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "listValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "diceValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -861,64 +1287,103 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "floatValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "percentageValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "pointValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -932,103 +1397,172 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingAny": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingAny",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "nothingAll": {
-                  "type": ":nothing"
+                {
+                  "name": "nothingAll",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanAny": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "booleanAll": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "textAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "textAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "tagAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "vectorAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "vectorAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "pointAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "pointAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "pointAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "pointAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "listAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listAllMissing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listAllMissing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "mapAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "mapAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "diceAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeAny": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "rangeAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "rangeAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "emptyAny": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "emptyAny",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "emptyAll": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "emptyAll",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1047,64 +1581,103 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "integerValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "floatValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "percentageValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "textValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "tagValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "vectorValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "pointValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "listValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "mapValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "diceValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "rangeValue": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1118,134 +1691,164 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    }
-                  ]
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      }
+                    ]
+                  }
                 },
-                "listDiceValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    }
-                  ]
+                {
+                  "name": "listDiceValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      }
+                    ]
+                  }
                 },
-                "diceListValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    }
-                  ]
+                {
+                  "name": "diceListValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      }
+                    ]
+                  }
                 },
-                "diceValue": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    2,
-                    1
-                  ]
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      2,
+                      1
+                    ]
+                  }
                 },
-                "mapValue": {
-                  "type": ":map",
-                  "entries": {
-                    "hp": {
-                      "type": ":integer",
-                      "value": "12"
-                    },
-                    "mp": {
-                      "type": ":integer",
-                      "value": "5"
-                    },
-                    "name": {
-                      "type": ":text",
-                      "value": "Ada"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "hp": {
+                        "type": ":integer",
+                        "value": "12"
+                      },
+                      "mp": {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      "name": {
+                        "type": ":text",
+                        "value": "Ada"
+                      }
                     }
                   }
                 },
-                "mapKeyListValue": {
-                  "type": ":map",
-                  "entries": {
-                    "alive": {
-                      "type": ":boolean",
-                      "value": true
-                    },
-                    "hp": {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    "mp": {
-                      "type": ":boolean",
-                      "value": true
-                    },
-                    "name": {
-                      "type": ":text",
-                      "value": "Ada"
+                {
+                  "name": "mapKeyListValue",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "alive": {
+                        "type": ":boolean",
+                        "value": true
+                      },
+                      "hp": {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      "mp": {
+                        "type": ":boolean",
+                        "value": true
+                      },
+                      "name": {
+                        "type": ":text",
+                        "value": "Ada"
+                      }
                     }
                   }
                 },
-                "mapInvalidKeyList": {
-                  "type": ":nothing"
+                {
+                  "name": "mapInvalidKeyList",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "diceIntegerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceIntegerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1264,74 +1867,113 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":nothing"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    }
-                  ]
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      }
+                    ]
+                  }
                 },
-                "mapValue": {
-                  "type": ":map",
-                  "entries": {
-                    "hp": {
-                      "type": ":integer",
-                      "value": "10"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "hp": {
+                        "type": ":integer",
+                        "value": "10"
+                      }
                     }
                   }
                 },
-                "diceValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    }
-                  ]
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      }
+                    ]
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1350,80 +1992,119 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "nothingValue": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "booleanValue": {
-                  "type": ":nothing"
+                {
+                  "name": "booleanValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "integerValue": {
-                  "type": ":nothing"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":nothing"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "textValue": {
-                  "type": ":nothing"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "tagValue": {
-                  "type": ":nothing"
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":nothing"
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "pointValue": {
-                  "type": ":nothing"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "listValue": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "left": {
-                          "type": ":integer",
-                          "value": "1"
-                        },
-                        "right": {
-                          "type": ":text",
-                          "value": "a"
+                {
+                  "name": "listValue",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "left": {
+                            "type": ":integer",
+                            "value": "1"
+                          },
+                          "right": {
+                            "type": ":text",
+                            "value": "a"
+                          }
+                        }
+                      },
+                      {
+                        "type": ":map",
+                        "entries": {
+                          "left": {
+                            "type": ":integer",
+                            "value": "2"
+                          },
+                          "right": {
+                            "type": ":text",
+                            "value": "b"
+                          }
                         }
                       }
-                    },
-                    {
-                      "type": ":map",
-                      "entries": {
-                        "left": {
-                          "type": ":integer",
-                          "value": "2"
-                        },
-                        "right": {
-                          "type": ":text",
-                          "value": "b"
-                        }
-                      }
-                    }
-                  ]
+                    ]
+                  }
                 },
-                "mapValue": {
-                  "type": ":nothing"
+                {
+                  "name": "mapValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "diceValue": {
-                  "type": ":nothing"
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "rangeValue": {
-                  "type": ":nothing"
+                {
+                  "name": "rangeValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

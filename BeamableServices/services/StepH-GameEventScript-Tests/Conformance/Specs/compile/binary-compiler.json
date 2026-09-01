@@ -53,26 +53,35 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "6"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "6"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "result": {
-                  "type": ":integer",
-                  "value": "12"
+              "args": [
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 },
-                "text": {
-                  "type": ":text",
-                  "value": "ok"
+                {
+                  "name": "text",
+                  "value": {
+                    "type": ":text",
+                    "value": "ok"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -86,26 +95,35 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "7"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "result": {
-                  "type": ":integer",
-                  "value": "14"
+              "args": [
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":integer",
+                    "value": "14"
+                  }
                 },
-                "status": {
-                  "type": ":tag",
-                  "value": "high"
+                {
+                  "name": "status",
+                  "value": {
+                    "type": ":tag",
+                    "value": "high"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -119,29 +137,41 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "current": {
-                  "type": ":integer",
-                  "value": "100"
+              "args": [
+                {
+                  "name": "current",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "maximum": {
-                  "type": ":integer",
-                  "value": "100"
+                {
+                  "name": "maximum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 },
-                "percentage": {
-                  "type": ":percentage",
-                  "value": "0.01"
+                {
+                  "name": "percentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.01"
+                  }
                 },
-                "isGauge": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isGauge",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -155,41 +185,59 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isAim": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "isAim",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "bearing": {
-                  "type": ":integer",
-                  "value": "90",
-                  "unit": ":degree"
+                {
+                  "name": "bearing",
+                  "value": {
+                    "type": ":integer",
+                    "value": "90",
+                    "unit": ":degree"
+                  }
                 },
-                "range": {
-                  "type": ":integer",
-                  "value": "12",
-                  "unit": ":meter"
+                {
+                  "name": "range",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12",
+                    "unit": ":meter"
+                  }
                 },
-                "steps": {
-                  "type": ":integer",
-                  "value": "4",
-                  "unit": ":meter"
+                {
+                  "name": "steps",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4",
+                    "unit": ":meter"
+                  }
                 },
-                "directionZ": {
-                  "type": ":integer",
-                  "value": "3",
-                  "unit": ":meter"
+                {
+                  "name": "directionZ",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3",
+                    "unit": ":meter"
+                  }
                 },
-                "checksum": {
-                  "type": ":integer",
-                  "value": "106"
+                {
+                  "name": "checksum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "106"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -203,31 +251,43 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "floored": {
-                  "type": ":integer",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "floored",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "vectorTotal": {
-                  "type": ":integer",
-                  "value": "6",
-                  "unit": ":meter"
+                {
+                  "name": "vectorTotal",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6",
+                    "unit": ":meter"
+                  }
                 },
-                "turn": {
-                  "type": ":integer",
-                  "value": "20",
-                  "unit": ":degree"
+                {
+                  "name": "turn",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20",
+                    "unit": ":degree"
+                  }
                 },
-                "normalizedPredicate": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "normalizedPredicate",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -241,38 +301,53 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "unit": {
-                "type": ":text",
-                "value": "u_1"
+            "args": [
+              {
+                "name": "unit",
+                "value": {
+                  "type": ":text",
+                  "value": "u_1"
+                }
               },
-              "target": {
-                "type": ":text",
-                "value": "t_1"
+              {
+                "name": "target",
+                "value": {
+                  "type": ":text",
+                  "value": "t_1"
+                }
               },
-              "hp": {
-                "type": ":integer",
-                "value": "10"
+              {
+                "name": "hp",
+                "value": {
+                  "type": ":integer",
+                  "value": "10"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Shoot",
-              "args": {
-                "unit": {
-                  "type": ":text",
-                  "value": "u_1"
+              "args": [
+                {
+                  "name": "unit",
+                  "value": {
+                    "type": ":text",
+                    "value": "u_1"
+                  }
                 },
-                "target": {
-                  "type": ":text",
-                  "value": "t_1"
+                {
+                  "name": "target",
+                  "value": {
+                    "type": ":text",
+                    "value": "t_1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -286,21 +361,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Ping",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "7"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "kind": {
-                  "type": ":tag",
-                  "value": "fire"
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 }
-              },
+              ],
               "tags": [
                 "radio",
                 "urgent"
@@ -308,40 +389,64 @@
             },
             {
               "name": "Done",
-              "args": {
-                "name": {
-                  "type": ":text",
-                  "value": "Ping"
+              "args": [
+                {
+                  "name": "name",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping"
+                  }
                 },
-                "signature": {
-                  "type": ":text",
-                  "value": "Ping(amount,kind)"
+                {
+                  "name": "signature",
+                  "value": {
+                    "type": ":text",
+                    "value": "Ping(amount,kind)"
+                  }
                 },
-                "amount": {
-                  "type": ":integer",
-                  "value": "7"
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "kind": {
-                  "type": ":tag",
-                  "value": "fire"
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 },
-                "tagCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "tagCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "firstTag": {
-                  "type": ":tag",
-                  "value": "radio"
+                {
+                  "name": "firstTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "radio"
+                  }
                 },
-                "secondTag": {
-                  "type": ":tag",
-                  "value": "urgent"
+                {
+                  "name": "secondTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "urgent"
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -355,17 +460,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Relay",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              },
+              ],
               "tags": [
                 "radio",
                 "relay"
@@ -373,24 +481,30 @@
             },
             {
               "name": "Remote",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "6"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 }
-              },
+              ],
               "tags": [
                 "network"
               ]
             },
             {
               "name": "Relay",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              },
+              ],
               "tags": [
                 "copy"
               ]
@@ -399,24 +513,30 @@
           "expectedOutboundPublished": [
             {
               "name": "Remote",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "6"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 }
-              },
+              ],
               "tags": [
                 "network"
               ]
             },
             {
               "name": "Relay",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              },
+              ],
               "tags": [
                 "copy"
               ]
@@ -433,64 +553,88 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "list"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "list"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "list"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "list"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "range"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "range"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "range"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "range"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -504,29 +648,41 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "count": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "first": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "second": {
-                  "type": ":integer",
-                  "value": "30"
+                {
+                  "name": "second",
+                  "value": {
+                    "type": ":integer",
+                    "value": "30"
+                  }
                 },
-                "third": {
-                  "type": ":integer",
-                  "value": "50"
+                {
+                  "name": "third",
+                  "value": {
+                    "type": ":integer",
+                    "value": "50"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -540,66 +696,84 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "12"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "12"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "result": {
-                  "type": ":tag",
-                  "value": "large"
+              "args": [
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":tag",
+                    "value": "large"
+                  }
                 }
-              }
+              ]
             }
           ]
         },
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "7"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "result": {
-                  "type": ":tag",
-                  "value": "medium"
+              "args": [
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":tag",
+                    "value": "medium"
+                  }
                 }
-              }
+              ]
             }
           ]
         },
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "3"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "3"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "result": {
-                  "type": ":tag",
-                  "value": "small"
+              "args": [
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":tag",
+                    "value": "small"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -613,41 +787,62 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "oneValue": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "oneValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "drawnLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "drawnLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "drawnSecond": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "drawnSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "chosenOne": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "chosenOne",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "chosenLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "chosenLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "randomOne": {
-                  "type": ":integer",
-                  "value": "42"
+                {
+                  "name": "randomOne",
+                  "value": {
+                    "type": ":integer",
+                    "value": "42"
+                  }
                 },
-                "randomLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "randomLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -661,57 +856,90 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "hasDicePair": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "hasDicePair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasListPair": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasListPair",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasPairOfSix": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasPairOfSix",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasPairOfFour": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "hasPairOfFour",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "pairLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "pairLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "fullLen": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "fullLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "straightLen": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "straightLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "listPairLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "listPairLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "pairOfSixLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "pairOfSixLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "pairOfAFirst": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "pairOfAFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 },
-                "tagPairSecond": {
-                  "type": ":tag",
-                  "value": "fire"
+                {
+                  "name": "tagPairSecond",
+                  "value": {
+                    "type": ":tag",
+                    "value": "fire"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -725,49 +953,76 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "firstFaction": {
-                  "type": ":tag",
-                  "value": "melee"
+              "args": [
+                {
+                  "name": "firstFaction",
+                  "value": {
+                    "type": ":tag",
+                    "value": "melee"
+                  }
                 },
-                "thirdFaction": {
-                  "type": ":tag",
-                  "value": "ranged"
+                {
+                  "name": "thirdFaction",
+                  "value": {
+                    "type": ":tag",
+                    "value": "ranged"
+                  }
                 },
-                "distinctLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "distinctLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "distinctFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "distinctFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "distinctSecond": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "distinctSecond",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "meleeLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "meleeLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "rangedFirst": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "rangedFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "ascFirst": {
-                  "type": ":text",
-                  "value": "Archer"
+                {
+                  "name": "ascFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Archer"
+                  }
                 },
-                "descFirst": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "descFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -781,45 +1036,69 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "filteredLen": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "filteredLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "filteredFirst": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "filteredFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "selectedSecond": {
-                  "type": ":integer",
-                  "value": "20"
+                {
+                  "name": "selectedSecond",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 },
-                "capturedFilterFirst": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "capturedFilterFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "capturedSelectThird": {
-                  "type": ":integer",
-                  "value": "103"
+                {
+                  "name": "capturedSelectThird",
+                  "value": {
+                    "type": ":integer",
+                    "value": "103"
+                  }
                 },
-                "chainedLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "chainedLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "chainedFirst": {
-                  "type": ":integer",
-                  "value": "7"
+                {
+                  "name": "chainedFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "chainedThird": {
-                  "type": ":integer",
-                  "value": "9"
+                {
+                  "name": "chainedThird",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -833,37 +1112,55 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "counted": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "counted",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "summed": {
-                  "type": ":integer",
-                  "value": "50"
+                {
+                  "name": "summed",
+                  "value": {
+                    "type": ":integer",
+                    "value": "50"
+                  }
                 },
-                "averaged": {
-                  "type": ":float",
-                  "value": "2.5"
+                {
+                  "name": "averaged",
+                  "value": {
+                    "type": ":float",
+                    "value": "2.5"
+                  }
                 },
-                "chainedSum": {
-                  "type": ":integer",
-                  "value": "9"
+                {
+                  "name": "chainedSum",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 },
-                "weakest": {
-                  "type": ":text",
-                  "value": "Mage"
+                {
+                  "name": "weakest",
+                  "value": {
+                    "type": ":text",
+                    "value": "Mage"
+                  }
                 },
-                "strongest": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "strongest",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -877,33 +1174,48 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "hasHigh": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "hasHigh",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "allPositive": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "allPositive",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "firstAlive": {
-                  "type": ":text",
-                  "value": "Knight"
+                {
+                  "name": "firstAlive",
+                  "value": {
+                    "type": ":text",
+                    "value": "Knight"
+                  }
                 },
-                "lastAlive": {
-                  "type": ":text",
-                  "value": "Guard"
+                {
+                  "name": "lastAlive",
+                  "value": {
+                    "type": ":text",
+                    "value": "Guard"
+                  }
                 },
-                "boss": {
-                  "type": ":text",
-                  "value": "Mage"
+                {
+                  "name": "boss",
+                  "value": {
+                    "type": ":text",
+                    "value": "Mage"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -917,25 +1229,34 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "hasBoss": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "hasBoss",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasNestedHp": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "hasNestedHp",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "hasMissing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "hasMissing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -949,41 +1270,62 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "byIdLen": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "byIdLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "rookTeam": {
-                  "type": ":tag",
-                  "value": "blue"
+                {
+                  "name": "rookTeam",
+                  "value": {
+                    "type": ":tag",
+                    "value": "blue"
+                  }
                 },
-                "mageHp": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "mageHp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "hpRook": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "hpRook",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "hpMage": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "hpMage",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "blueLen": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "blueLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "blueGuard": {
-                  "type": ":integer",
-                  "value": "8"
+                {
+                  "name": "blueGuard",
+                  "value": {
+                    "type": ":integer",
+                    "value": "8"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -997,41 +1339,62 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "chosenBlue": {
-                  "type": ":text",
-                  "value": "High"
+              "args": [
+                {
+                  "name": "chosenBlue",
+                  "value": {
+                    "type": ":text",
+                    "value": "High"
+                  }
                 },
-                "chosenRandomBlue": {
-                  "type": ":text",
-                  "value": "High"
+                {
+                  "name": "chosenRandomBlue",
+                  "value": {
+                    "type": ":text",
+                    "value": "High"
+                  }
                 },
-                "weightedOne": {
-                  "type": ":text",
-                  "value": "High"
+                {
+                  "name": "weightedOne",
+                  "value": {
+                    "type": ":text",
+                    "value": "High"
+                  }
                 },
-                "weightedManyLen": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "weightedManyLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "weightedManyFirst": {
-                  "type": ":text",
-                  "value": "High"
+                {
+                  "name": "weightedManyFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "High"
+                  }
                 },
-                "weightedFilteredLen": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "weightedFilteredLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "weightedFilteredFirst": {
-                  "type": ":text",
-                  "value": "High"
+                {
+                  "name": "weightedFilteredFirst",
+                  "value": {
+                    "type": ":text",
+                    "value": "High"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

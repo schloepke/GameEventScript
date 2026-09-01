@@ -10,32 +10,35 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Local",
-              "args": {}
+              "args": []
             },
             {
               "name": "Remote",
               "tags": [
                 "radio"
               ],
-              "args": {}
+              "args": []
             },
             {
               "name": "Seen",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "ShouldNotRun",
-              "args": {}
+              "args": []
             }
           ],
           "expectedOutboundPublished": [
@@ -44,7 +47,7 @@
               "tags": [
                 "radio"
               ],
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -58,42 +61,54 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "12"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "12"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "High",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "12"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "12"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedOutboundPublished": [
             {
               "name": "High",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "12"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -107,7 +122,7 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
@@ -116,12 +131,15 @@
                 "radio",
                 "command"
               ],
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Signal",
@@ -129,48 +147,63 @@
                 "radio",
                 "blocked"
               ],
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Signal",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Seen",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Seen",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "11"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "11"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Seen",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "103"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "103"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -184,7 +217,7 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
@@ -193,57 +226,84 @@
                 "radio",
                 "encrypted"
               ],
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "7"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Silent",
               "tags": [
                 "silent"
               ],
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Heard",
-              "args": {
-                "firstTag": {
-                  "type": ":tag",
-                  "value": "radio"
+              "args": [
+                {
+                  "name": "name",
+                  "value": {
+                    "type": ":text",
+                    "value": "Unknown"
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "signature",
+                  "value": {
+                    "type": ":text",
+                    "value": "Unknown(value)"
+                  }
                 },
-                "name": {
-                  "type": ":text",
-                  "value": "Unknown"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "secondTag": {
-                  "type": ":tag",
-                  "value": "encrypted"
+                {
+                  "name": "tagCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "signature": {
-                  "type": ":text",
-                  "value": "Unknown(value)"
+                {
+                  "name": "firstTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "radio"
+                  }
                 },
-                "tagCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "secondTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "encrypted"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "7"
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -257,7 +317,7 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
@@ -265,21 +325,27 @@
               "tags": [
                 "radio"
               ],
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Normal",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -293,7 +359,7 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
@@ -302,107 +368,158 @@
                 "radio",
                 "enemy"
               ],
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Damage",
               "tags": [
                 "radio"
               ],
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "kind": {
-                  "type": ":text",
-                  "value": "fire"
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "fire"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Damage",
               "tags": [
                 "silent"
               ],
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "7"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Heard",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "signature",
+                  "value": {
+                    "type": ":text",
+                    "value": "Damage(amount)"
+                  }
                 },
-                "firstTag": {
-                  "type": ":tag",
-                  "value": "radio"
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "signature": {
-                  "type": ":text",
-                  "value": "Damage(amount)"
+                {
+                  "name": "firstTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "radio"
+                  }
                 },
-                "tagCount": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Heard",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "signature",
+                  "value": {
+                    "type": ":text",
+                    "value": "Damage(amount,kind)"
+                  }
                 },
-                "firstTag": {
-                  "type": ":tag",
-                  "value": "radio"
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "signature": {
-                  "type": ":text",
-                  "value": "Damage(amount,kind)"
+                {
+                  "name": "firstTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "radio"
+                  }
                 },
-                "tagCount": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Missed",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "7"
+              "args": [
+                {
+                  "name": "signature",
+                  "value": {
+                    "type": ":text",
+                    "value": "Damage(amount)"
+                  }
                 },
-                "signature": {
-                  "type": ":text",
-                  "value": "Damage(amount)"
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "tag": {
-                  "type": ":tag",
-                  "value": "silent"
+                {
+                  "name": "tag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "silent"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -416,7 +533,7 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
@@ -424,30 +541,39 @@
               "tags": [
                 "radio"
               ],
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "9"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Exact",
-              "args": {
-                "amount": {
-                  "type": ":integer",
-                  "value": "9"
+              "args": [
+                {
+                  "name": "amount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Any",
-              "args": {
-                "signature": {
-                  "type": ":text",
-                  "value": "Damage(amount)"
+              "args": [
+                {
+                  "name": "signature",
+                  "value": {
+                    "type": ":text",
+                    "value": "Damage(amount)"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

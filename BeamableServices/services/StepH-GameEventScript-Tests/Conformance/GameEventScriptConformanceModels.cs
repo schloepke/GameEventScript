@@ -67,6 +67,8 @@ public sealed class GameEventScriptConformanceTest
 
     public int? ExpectedArgumentCount { get; set; }
 
+    public string? ExpectedMessageError { get; set; }
+
     public List<GameEventScriptMessageDefinitionExpectationSpec>? ExpectedMessageDefinitions { get; set; }
 
     public GameEventScriptResourceRequirementExpectationSpec? ExpectedProgramResources { get; set; }

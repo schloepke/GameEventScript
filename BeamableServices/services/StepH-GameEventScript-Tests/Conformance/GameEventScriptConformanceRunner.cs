@@ -198,7 +198,29 @@ internal static class GameEventScriptConformanceRunner
 
         ValidateRequired(signatureSpec.Name, "messageApi signature name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
         var signature = GameEventScriptMessageSignature.Create(signatureSpec.Name!, signatureSpec.Parameters ?? []);
-        var message = GameEventScriptConformanceValueCodec.DecodeMessage(RequireDefined(testCase.Test.Message, "messageApi message", testCase));
+        var messageElement = RequireDefined(testCase.Test.Message, "messageApi message", testCase);
+        GameEventScriptMessage message;
+        try
+        {
+            message = GameEventScriptConformanceValueCodec.DecodeMessage(messageElement);
+        }
+        catch (Exception exception) when (
+            testCase.Test.ExpectedMessageError is { } expectedError &&
+            exception is ArgumentException or InvalidOperationException)
+        {
+            var actualError = exception.Message.Contains("occurs more than once", StringComparison.Ordinal)
+                ? "duplicateArgumentName"
+                : exception.Message.Contains("ordered JSON array", StringComparison.Ordinal)
+                    ? "invalidArgumentsShape"
+                    : "invalidArgument";
+            Assert.AreEqual(expectedError, actualError, $"{testCase}: message error differs.");
+            return;
+        }
+
+        if (testCase.Test.ExpectedMessageError is { } missingError)
+        {
+            Assert.Fail($"{testCase}: expected message error '{missingError}', but message creation succeeded.");
+        }
 
         AssertOptionalEquals(testCase, "signature id", testCase.Test.ExpectedSignatureId, signature.SignatureId);
         AssertOptionalEquals(testCase, "message name", testCase.Test.ExpectedMessageName, message.Name);
@@ -412,19 +434,21 @@ internal static class GameEventScriptConformanceRunner
                     testCase.SuiteFile,
                     testCase.SuiteName,
                     testCase.Test.Name);
-                Dictionary<string, GesValue> args;
+                GameEventScriptMessageArgument[] args;
                 if (emit.ForwardArguments)
                 {
-                    args = new Dictionary<string, GesValue>(message.Arguments.Count, StringComparer.Ordinal);
-                    foreach (var pair in message.Arguments)
+                    args = new GameEventScriptMessageArgument[message.Arguments.Count];
+                    for (var index = 0; index < message.Arguments.Count; index++)
                     {
-                        args[pair.Key] = pair.Value;
+                        args[index] = new GameEventScriptMessageArgument(
+                            message.Arguments.NameAt(index),
+                            message.Arguments.ValueAt(index));
                     }
                 }
                 else
                 {
                     args = emit.Args.ValueKind == JsonValueKind.Undefined
-                        ? new Dictionary<string, GesValue>(StringComparer.Ordinal)
+                        ? []
                         : GameEventScriptConformanceValueCodec.DecodeArguments(emit.Args);
                 }
 

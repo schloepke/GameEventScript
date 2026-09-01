@@ -3,7 +3,6 @@
 using System;
 using System.Collections.Generic;
 using StepH.GameEventScript.Runtime;
-using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
 
@@ -42,15 +41,13 @@ public sealed class GameEventScriptContext
         => !string.IsNullOrWhiteSpace(message.Name) && _host.EmitFromContext(message);
 
     public bool Emit(string message) => Emit(GameEventScriptMessage.Create(message));
-    public bool Emit(string message, IReadOnlyDictionary<string, GesValue> args) => Emit(GameEventScriptMessage.Create(message, args));
-    public bool Emit(string message, params (string name, GesValue value)[] args) => Emit(GameEventScriptMessage.Create(message, args));
+    public bool Emit(string message, IReadOnlyList<GameEventScriptMessageArgument> arguments) => Emit(GameEventScriptMessage.Create(message, arguments));
 
     public GameEventScriptPublishResult Publish(GameEventScriptMessage message)
         => string.IsNullOrWhiteSpace(message.Name) ? default : _host.PublishFromContext(message);
 
     public GameEventScriptPublishResult Publish(string message) => Publish(GameEventScriptMessage.Create(message));
-    public GameEventScriptPublishResult Publish(string message, IReadOnlyDictionary<string, GesValue> args) => Publish(GameEventScriptMessage.Create(message, args));
-    public GameEventScriptPublishResult Publish(string message, params (string name, GesValue value)[] args) => Publish(GameEventScriptMessage.Create(message, args));
+    public GameEventScriptPublishResult Publish(string message, IReadOnlyList<GameEventScriptMessageArgument> arguments) => Publish(GameEventScriptMessage.Create(message, arguments));
 
     internal void BeginHandler() => RuntimeBudget.Reset();
 

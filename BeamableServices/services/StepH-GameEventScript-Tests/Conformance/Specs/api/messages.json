@@ -14,16 +14,22 @@
       },
       "message": {
         "name": "Start",
-        "args": {
-          "b": {
-            "type": ":integer",
-            "value": "2"
+        "args": [
+          {
+            "name": "b",
+            "value": {
+              "type": ":integer",
+              "value": "2"
+            }
           },
-          "a": {
-            "type": ":integer",
-            "value": "1"
+          {
+            "name": "a",
+            "value": {
+              "type": ":integer",
+              "value": "1"
+            }
           }
-        }
+        ]
       },
       "expectedMessageName": "Start",
       "expectedSignatureId": "Start(a,b)",
@@ -43,16 +49,22 @@
       },
       "message": {
         "name": " Shoot ",
-        "args": {
-          "target": {
-            "type": ":integer",
-            "value": "2"
+        "args": [
+          {
+            "name": "target",
+            "value": {
+              "type": ":integer",
+              "value": "2"
+            }
           },
-          "unit": {
-            "type": ":integer",
-            "value": "1"
+          {
+            "name": "unit",
+            "value": {
+              "type": ":integer",
+              "value": "1"
+            }
           }
-        }
+        ]
       },
       "expectedMessageName": "Shoot",
       "expectedSignatureId": "Shoot(unit,target)",
@@ -72,22 +84,94 @@
       },
       "message": {
         "name": "Run",
-        "args": {
-          "target": {
-            "type": ":integer",
-            "value": "2"
+        "args": [
+          {
+            "name": "target",
+            "value": {
+              "type": ":integer",
+              "value": "2"
+            }
           },
-          "unit": {
-            "type": ":integer",
-            "value": "1"
+          {
+            "name": "unit",
+            "value": {
+              "type": ":integer",
+              "value": "1"
+            }
           }
-        }
+        ]
       },
       "expectedMessageName": "Run",
       "expectedSignatureId": "Run(target,unit)",
       "expectedMessageSignatureId": "Run(target,unit)",
       "expectedMatches": true,
       "expectedArgumentCount": 2
+    },
+    {
+      "kind": "messageApi",
+      "name": "empty ordered arguments produce an empty signature",
+      "signature": {
+        "name": "Ready",
+        "parameters": []
+      },
+      "message": {
+        "name": "Ready",
+        "args": []
+      },
+      "expectedSignatureId": "Ready()",
+      "expectedMessageSignatureId": "Ready()",
+      "expectedMatches": true,
+      "expectedArgumentCount": 0
+    },
+    {
+      "kind": "messageApi",
+      "name": "duplicate normalized message argument names are rejected",
+      "signature": {
+        "name": "Score",
+        "parameters": [
+          "score"
+        ]
+      },
+      "message": {
+        "name": "Score",
+        "args": [
+          {
+            "name": "score",
+            "value": {
+              "type": ":integer",
+              "value": "1"
+            }
+          },
+          {
+            "name": " score ",
+            "value": {
+              "type": ":integer",
+              "value": "2"
+            }
+          }
+        ]
+      },
+      "expectedMessageError": "duplicateArgumentName"
+    },
+    {
+      "kind": "messageApi",
+      "name": "message argument objects are rejected because order must be explicit",
+      "signature": {
+        "name": "Score",
+        "parameters": [
+          "score"
+        ]
+      },
+      "message": {
+        "name": "Score",
+        "args": {
+          "score": {
+            "type": ":integer",
+            "value": "1"
+          }
+        }
+      },
+      "expectedMessageError": "invalidArgumentsShape"
     },
     {
       "kind": "compileMetadata",

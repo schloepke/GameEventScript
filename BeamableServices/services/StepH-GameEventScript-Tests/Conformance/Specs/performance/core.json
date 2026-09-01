@@ -13,22 +13,28 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":integer",
-                "value": "10"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":integer",
+                  "value": "10"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "result": {
-                  "type": ":integer",
-                  "value": "29"
+              "args": [
+                {
+                  "name": "result",
+                  "value": {
+                    "type": ":integer",
+                    "value": "29"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -44,21 +50,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "count": {
-                  "type": ":integer",
-                  "value": "100"
+              "args": [
+                {
+                  "name": "total",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10100"
+                  }
                 },
-                "total": {
-                  "type": ":integer",
-                  "value": "10100"
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "100"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -74,29 +86,41 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "doubled": {
-                  "type": ":integer",
-                  "value": "42"
+              "args": [
+                {
+                  "name": "doubled",
+                  "value": {
+                    "type": ":integer",
+                    "value": "42"
+                  }
                 },
-                "isSample": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "label",
+                  "value": {
+                    "type": ":text",
+                    "value": "ok"
+                  }
                 },
-                "label": {
-                  "type": ":text",
-                  "value": "ok"
+                {
+                  "name": "textNumber",
+                  "value": {
+                    "type": ":integer",
+                    "value": "42"
+                  }
                 },
-                "textNumber": {
-                  "type": ":integer",
-                  "value": "42"
+                {
+                  "name": "isSample",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -112,25 +136,34 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "directTotal": {
-                  "type": ":integer",
-                  "value": "55"
+              "args": [
+                {
+                  "name": "directTotal",
+                  "value": {
+                    "type": ":integer",
+                    "value": "55"
+                  }
                 },
-                "streamCount": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "streamTotal",
+                  "value": {
+                    "type": ":integer",
+                    "value": "220"
+                  }
                 },
-                "streamTotal": {
-                  "type": ":integer",
-                  "value": "220"
+                {
+                  "name": "streamCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -150,252 +183,279 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "values": {
-                "type": ":list",
-                "items": [
-                  {
-                    "type": ":integer",
-                    "value": "1"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "2"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "3"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "4"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "5"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "6"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "7"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "8"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "9"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "10"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "11"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "12"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "13"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "14"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "15"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "16"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "17"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "18"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "19"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "20"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "21"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "22"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "23"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "24"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "25"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "26"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "27"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "28"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "29"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "30"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "31"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "32"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "33"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "34"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "35"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "36"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "37"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "38"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "39"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "40"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "41"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "42"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "43"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "44"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "45"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "46"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "47"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "48"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "49"
-                  },
-                  {
-                    "type": ":integer",
-                    "value": "50"
-                  }
-                ]
+            "args": [
+              {
+                "name": "values",
+                "value": {
+                  "type": ":list",
+                  "items": [
+                    {
+                      "type": ":integer",
+                      "value": "1"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "2"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "3"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "4"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "5"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "6"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "7"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "8"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "9"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "10"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "11"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "12"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "13"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "14"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "15"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "16"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "17"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "18"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "19"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "20"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "21"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "22"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "23"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "24"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "25"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "26"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "27"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "28"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "29"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "30"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "31"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "32"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "33"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "34"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "35"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "36"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "37"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "38"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "39"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "40"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "41"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "42"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "43"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "44"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "45"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "46"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "47"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "48"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "49"
+                    },
+                    {
+                      "type": ":integer",
+                      "value": "50"
+                    }
+                  ]
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "average": {
-                  "type": ":float",
-                  "value": "31.024390243902438"
+              "args": [
+                {
+                  "name": "total",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1272"
+                  }
                 },
-                "directOddScaled": {
-                  "type": ":integer",
-                  "value": "22"
+                {
+                  "name": "average",
+                  "value": {
+                    "type": ":float",
+                    "value": "31.024390243902438"
+                  }
                 },
-                "first": {
-                  "type": ":float",
-                  "value": "10.5"
+                {
+                  "name": "oddCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "25"
+                  }
                 },
-                "folded": {
-                  "type": ":float",
-                  "value": "0.6"
+                {
+                  "name": "directOddScaled",
+                  "value": {
+                    "type": ":integer",
+                    "value": "22"
+                  }
                 },
-                "oddCount": {
-                  "type": ":integer",
-                  "value": "25"
+                {
+                  "name": "first",
+                  "value": {
+                    "type": ":float",
+                    "value": "10.5"
+                  }
                 },
-                "scaled": {
-                  "type": ":integer",
-                  "value": "105",
-                  "unit": ":meter"
+                {
+                  "name": "scaled",
+                  "value": {
+                    "type": ":integer",
+                    "value": "105",
+                    "unit": ":meter"
+                  }
                 },
-                "total": {
-                  "type": ":integer",
-                  "value": "1272"
+                {
+                  "name": "folded",
+                  "value": {
+                    "type": ":float",
+                    "value": "0.6"
+                  }
                 },
-                "workTotal": {
-                  "type": ":integer",
-                  "value": "2583"
+                {
+                  "name": "workTotal",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2583"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

@@ -76,6 +76,14 @@ implementation and therefore does not depend on C# reflection.
 
 ## Message Semantics
 
+- Message arguments are ordered `GameEventScriptMessageArgument` name/value
+  pairs. Their order is part of `SignatureId`; neither Core construction nor
+  conformance decoding derives it from a map's iteration order.
+- Named argument labels must be unique after portable normalization. Repeated
+  `_` labels remain valid because they represent distinct positional arguments.
+- C# tuple construction is a `CSharpBridge` convenience. Its dictionary adapter
+  requires a known `GameEventScriptMessageSignature` and binds values in that
+  signature's declared order.
 - `Receive(message)` captures current subscription snapshots and queues the
   message locally. It never invokes the outbound sink.
 - `Emit(message)` does the same from a running handler.
@@ -181,4 +189,6 @@ Host.ExecuteFrame or Host.RunToCompletion -> observed local/outbound messages
 
 The same JSON cases define ordering, tags, initialization, multiple programs,
 frame pause/resume, runtime limits, and Emit/Publish/Receive behavior for every
-language in the monorepo.
+language in the monorepo. Message `args` are always encoded as an ordered array
+of `{ "name": ..., "value": ... }` entries, including nested message values and
+expected local/outbound messages.

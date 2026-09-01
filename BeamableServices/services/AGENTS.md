@@ -55,6 +55,9 @@ The project has a portable Game Event Script host/VM architecture with a compact
   registry, and portable `IGameEventScriptExternalValue` instances. CLR-backed
   implementations remain in `CSharpBridge`.
 - `Receive` and `Emit` are local. `Publish` is local plus one optional synchronous `IGameEventScriptPublishSink`.
+- Message arguments use ordered portable `GameEventScriptMessageArgument`
+  pairs. Core has no tuple/dictionary factory; C# conveniences live in
+  `CSharpBridge`, and dictionary binding requires a known signature.
 - Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
 - There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
 - `StepH-GameEventScript/HostArchitecture.md` is the normative portable responsibility/state-machine document.
@@ -63,6 +66,28 @@ The project has a portable Game Event Script host/VM architecture with a compact
   and equal-priority host dispatch.
 
 ## Recent Completed Work
+
+### Ordered Portable Message Arguments
+
+- Core message construction now consumes ordered
+  `GameEventScriptMessageArgument` pairs. Argument order remains part of the
+  signature and is never derived from dictionary/property iteration.
+- Duplicate named labels are rejected after normalization; repeated `_` labels
+  remain valid positional arguments.
+- Tuple helpers and signature-directed dictionary binding live only in
+  `CSharpBridge`.
+- All conformance input/output, nested message values, and native emits use the
+  ordered JSON `args` array. Equality is position-sensitive.
+
+Verification after this change:
+
+```text
+1067/1067 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+JSON performance allocations and binary dump match the reference; the final
+timing run reported only the long mixed case at 818.3905 ms versus an allowed
+817.833885 ms after an earlier passing run. No allocation regression remains.
+```
 
 ### Portable Native Handlers and ID-Based Lifecycle
 
@@ -330,7 +355,8 @@ and retain a required pointer here.
   enter a deterministic modification queue; snapshot visibility, read-your-writes,
   commit boundary, rollback, observation, persistence, and replication semantics
   remain to be specified.
-- Finalize the JSON/wire message shape later; it is intentionally still open.
+- Finalize the product wire envelope later. The language-port conformance shape
+  is already fixed, including ordered message `args` arrays.
 
 ### Deferred binary-format extensions
 

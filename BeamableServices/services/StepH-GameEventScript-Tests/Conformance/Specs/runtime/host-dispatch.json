@@ -25,39 +25,54 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "playerId": {
-                "type": ":text",
-                "value": "p_1"
+            "args": [
+              {
+                "name": "playerId",
+                "value": {
+                  "type": ":text",
+                  "value": "p_1"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Notify",
-              "args": {
-                "playerId": {
-                  "type": ":text",
-                  "value": "p_1"
+              "args": [
+                {
+                  "name": "playerId",
+                  "value": {
+                    "type": ":text",
+                    "value": "p_1"
+                  }
                 },
-                "count": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "ExternalSeen",
-              "args": {
-                "playerId": {
-                  "type": ":text",
-                  "value": "p_1"
+              "args": [
+                {
+                  "name": "playerId",
+                  "value": {
+                    "type": ":text",
+                    "value": "p_1"
+                  }
                 },
-                "count": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -76,12 +91,15 @@
           "emit": [
             {
               "name": "SeenByExternal",
-              "args": {
-                "marker": {
-                  "type": ":text",
-                  "value": "external"
+              "args": [
+                {
+                  "name": "marker",
+                  "value": {
+                    "type": ":text",
+                    "value": "external"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -90,40 +108,52 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "4"
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Notify",
-              "args": {
+            "args": [
+              {
+                "name": "value",
                 "value": {
                   "type": ":float",
                   "value": "4"
                 }
               }
+            ]
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "4"
+                  }
+                }
+              ]
             },
             {
               "name": "SeenByScript",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenByExternal",
-              "args": {
-                "marker": {
-                  "type": ":text",
-                  "value": "external"
+              "args": [
+                {
+                  "name": "marker",
+                  "value": {
+                    "type": ":text",
+                    "value": "external"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -142,12 +172,15 @@
           "emit": [
             {
               "name": "ExternalFirst",
-              "args": {
-                "order": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "order",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             }
           ]
         },
@@ -159,12 +192,15 @@
           "emit": [
             {
               "name": "ExternalSecond",
-              "args": {
-                "order": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "order",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -173,40 +209,52 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "4"
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Notify",
-              "args": {
+            "args": [
+              {
+                "name": "value",
                 "value": {
                   "type": ":float",
                   "value": "4"
                 }
               }
+            ]
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "4"
+                  }
+                }
+              ]
             },
             {
               "name": "ExternalFirst",
-              "args": {
-                "order": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "order",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "ExternalSecond",
-              "args": {
-                "order": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "order",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -226,12 +274,15 @@
           "emit": [
             {
               "name": "SeenByExternal",
-              "args": {
-                "marker": {
-                  "type": ":text",
-                  "value": "external"
+              "args": [
+                {
+                  "name": "marker",
+                  "value": {
+                    "type": ":text",
+                    "value": "external"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -240,40 +291,52 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "4"
-              }
-            }
-          },
-          "expectedPublished": [
-            {
-              "name": "Notify",
-              "args": {
+            "args": [
+              {
+                "name": "value",
                 "value": {
                   "type": ":float",
                   "value": "4"
                 }
               }
+            ]
+          },
+          "expectedPublished": [
+            {
+              "name": "Notify",
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "4"
+                  }
+                }
+              ]
             },
             {
               "name": "SeenByExternal",
-              "args": {
-                "marker": {
-                  "type": ":text",
-                  "value": "external"
+              "args": [
+                {
+                  "name": "marker",
+                  "value": {
+                    "type": ":text",
+                    "value": "external"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "SeenByScript",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "5"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -308,31 +371,40 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "4"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "4"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Notify",
-              "args": {
-                "value": {
-                  "type": ":float",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "4"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "ExternalOk",
-              "args": {
-                "value": {
-                  "type": ":float",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "4"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -360,40 +432,52 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "2"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "2"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Notify",
-              "args": {
-                "value": {
-                  "type": ":float",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "value": {
-                  "type": ":float",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Final",
-              "args": {
-                "value": {
-                  "type": ":float",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":float",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -416,16 +500,16 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "First",
-              "args": {}
+              "args": []
             },
             {
               "name": "Second",
-              "args": {}
+              "args": []
             }
           ],
           "expectedOutboundPublished": []
@@ -448,11 +532,11 @@
       "expectedInitializationPublished": [
         {
           "name": "FirstReady",
-          "args": {}
+          "args": []
         },
         {
           "name": "SecondReady",
-          "args": {}
+          "args": []
         }
       ],
       "expectedInitializationOutboundPublished": []
@@ -465,37 +549,46 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "opcodeBudget": 1,
           "expectedPaused": true,
           "expectedPublished": [
             {
               "name": "Tick",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Tick",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Tick",
-              "args": {
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ],
           "expectedOutboundPublished": []

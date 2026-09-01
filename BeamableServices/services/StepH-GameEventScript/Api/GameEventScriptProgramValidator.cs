@@ -230,6 +230,7 @@ public static class GameEventScriptProgramValidator
     {
         var list = program.UInt16IndexLists.Resolve(listIndex);
         var textIndexes = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList or GameEventScriptOpcodePrinter.OperandPart.KeyNameList;
+        var validateUniqueArgumentNames = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList;
         for (var index = 0; index < list.Length; index++)
         {
             if (textIndexes && list[index] >= program.StringConstants.Slices.Count) Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Instruction list references a missing string.", (ushort)GameEventScriptSectionType.Code, instructionIndex);
@@ -243,6 +244,12 @@ public static class GameEventScriptProgramValidator
             {
                 InvalidOperand("Argument and key names must use the portable lowercase ASCII identifier grammar.", instructionIndex);
             }
+
+            if (!validateUniqueArgumentNames || (role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList && index == 0) || IsPortableUnlabeled(program.StringConstants, list[index])) continue;
+            var firstArgumentIndex = role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList ? 1 : 0;
+            for (var previous = firstArgumentIndex; previous < index; previous++)
+                if (!IsPortableUnlabeled(program.StringConstants, list[previous]) && StringConstantEquals(program.StringConstants, list[previous], list[index]))
+                    InvalidOperand("Message argument name occurs more than once.", instructionIndex);
         }
     }
 
@@ -272,7 +279,22 @@ public static class GameEventScriptProgramValidator
                 : IsPortableIdentifier(program.StringConstants, indexes[index]);
             if (!valid)
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"{role} does not use the portable ASCII grammar.", (ushort)GameEventScriptSectionType.Bindings, bindingIndex);
+            if (!allowUnlabeled || IsPortableUnlabeled(program.StringConstants, indexes[index])) continue;
+            for (var previous = 0; previous < index; previous++)
+                if (!IsPortableUnlabeled(program.StringConstants, indexes[previous]) && StringConstantEquals(program.StringConstants, indexes[previous], indexes[index]))
+                    Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"{role} occurs more than once.", (ushort)GameEventScriptSectionType.Bindings, bindingIndex);
         }
+    }
+
+    private static bool StringConstantEquals(GameEventScriptStringConstantSegment strings, ushort leftIndex, ushort rightIndex)
+    {
+        var left = strings.Slices[leftIndex];
+        var right = strings.Slices[rightIndex];
+        if (left.Length != right.Length) return false;
+        var data = strings.Data.UnsafeItems;
+        for (var offset = 0; offset < left.Length; offset++)
+            if (data[left.Start + offset] != data[right.Start + offset]) return false;
+        return true;
     }
 
     private static bool IsPortableMessageName(GameEventScriptStringConstantSegment strings, ushort stringIndex)

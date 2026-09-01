@@ -147,7 +147,7 @@ public sealed class GesValueTests
     {
         var intRange = GesValue.GesRange(1, 5, 2);
         var floatRange = GesValue.GesRange(1.5d, 2.5d, 0.5d);
-        var message = GameEventScriptMessage.Create("Ping", ("amount", GesValue.GesInteger(7)));
+        var message = GameEventScriptMessage.Create("Ping", [new("amount", GesValue.GesInteger(7))]);
         var messageValue = GesValue.GesMessage(message);
         var signature = GameEventScriptMessageSignature.Create("Ping", ["amount"]);
         var handler = GesValue.GesHandler(signature);

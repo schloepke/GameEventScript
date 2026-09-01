@@ -11,49 +11,76 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "falseValue": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "nothingValue",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "floatValue": {
-                  "type": ":float",
-                  "value": "12.5"
+                {
+                  "name": "trueValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "integerValue": {
-                  "type": ":integer",
-                  "value": "42"
+                {
+                  "name": "falseValue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "meterValue": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "7"
+                {
+                  "name": "integerValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "42"
+                  }
                 },
-                "nothingValue": {
-                  "type": ":nothing"
+                {
+                  "name": "floatValue",
+                  "value": {
+                    "type": ":float",
+                    "value": "12.5"
+                  }
                 },
-                "percentageValue": {
-                  "type": ":percentage",
-                  "value": "0.25"
+                {
+                  "name": "meterValue",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "7"
+                  }
                 },
-                "tagValue": {
-                  "type": ":tag",
-                  "value": "boss"
+                {
+                  "name": "percentageValue",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.25"
+                  }
                 },
-                "textValue": {
-                  "type": ":text",
-                  "value": "hello"
+                {
+                  "name": "textValue",
+                  "value": {
+                    "type": ":text",
+                    "value": "hello"
+                  }
                 },
-                "trueValue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "tagValue",
+                  "value": {
+                    "type": ":tag",
+                    "value": "boss"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -67,96 +94,135 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "pointValue": {
-                  "type": ":point",
-                  "x": "4",
-                  "y": "5.5",
-                  "z": "6"
+              "args": [
+                {
+                  "name": "vectorValue",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2.5",
+                    "z": "3"
+                  }
                 },
-                "liftedPoint": {
-                  "type": ":point",
-                  "x": "4",
-                  "y": "5.5",
-                  "z": "6"
+                {
+                  "name": "pointValue",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5.5",
+                    "z": "6"
+                  }
                 },
-                "liftedPointWithZ": {
-                  "type": ":point",
-                  "x": "4",
-                  "y": "5.5",
-                  "z": "8"
+                {
+                  "name": "liftedVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2.5",
+                    "z": "3"
+                  }
                 },
-                "liftedVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2.5",
-                  "z": "3"
+                {
+                  "name": "liftedVectorWithZ",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2.5",
+                    "z": "9"
+                  }
                 },
-                "liftedVectorWithZ": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2.5",
-                  "z": "9"
+                {
+                  "name": "vectorFromPoint",
+                  "value": {
+                    "type": ":vector",
+                    "x": "4",
+                    "y": "5.5",
+                    "z": "6"
+                  }
                 },
-                "pointFromVector": {
-                  "type": ":point",
-                  "x": "1",
-                  "y": "2.5",
-                  "z": "3"
+                {
+                  "name": "liftedPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5.5",
+                    "z": "6"
+                  }
                 },
-                "unitLiftedPointWithZ": {
-                  "type": ":point",
-                  "unit": ":meter",
-                  "x": "3",
-                  "y": "4",
-                  "z": "20"
+                {
+                  "name": "liftedPointWithZ",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5.5",
+                    "z": "8"
+                  }
                 },
-                "unitLiftedVector": {
-                  "type": ":vector",
-                  "unit": ":meter",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0"
+                {
+                  "name": "pointFromVector",
+                  "value": {
+                    "type": ":point",
+                    "x": "1",
+                    "y": "2.5",
+                    "z": "3"
+                  }
                 },
-                "unitLiftedVectorWithZ": {
-                  "type": ":vector",
-                  "unit": ":meter",
-                  "x": "3",
-                  "y": "4",
-                  "z": "20"
+                {
+                  "name": "unitVector",
+                  "value": {
+                    "type": ":vector",
+                    "unit": ":meter",
+                    "x": "3",
+                    "y": "4",
+                    "z": "0"
+                  }
                 },
-                "unitPoint": {
-                  "type": ":point",
-                  "unit": ":meter",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0"
+                {
+                  "name": "unitLiftedVector",
+                  "value": {
+                    "type": ":vector",
+                    "unit": ":meter",
+                    "x": "3",
+                    "y": "4",
+                    "z": "0"
+                  }
                 },
-                "unitVector": {
-                  "type": ":vector",
-                  "unit": ":meter",
-                  "x": "3",
-                  "y": "4",
-                  "z": "0"
+                {
+                  "name": "unitLiftedVectorWithZ",
+                  "value": {
+                    "type": ":vector",
+                    "unit": ":meter",
+                    "x": "3",
+                    "y": "4",
+                    "z": "20"
+                  }
                 },
-                "vectorFromPoint": {
-                  "type": ":vector",
-                  "x": "4",
-                  "y": "5.5",
-                  "z": "6"
+                {
+                  "name": "unitPoint",
+                  "value": {
+                    "type": ":point",
+                    "unit": ":meter",
+                    "x": "3",
+                    "y": "4",
+                    "z": "0"
+                  }
                 },
-                "vectorValue": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2.5",
-                  "z": "3"
+                {
+                  "name": "unitLiftedPointWithZ",
+                  "value": {
+                    "type": ":point",
+                    "unit": ":meter",
+                    "x": "3",
+                    "y": "4",
+                    "z": "20"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -170,31 +236,40 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "ascending": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "3",
-                  "step": "1"
+              "args": [
+                {
+                  "name": "ascending",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "descending": {
-                  "type": ":range",
-                  "from": "5",
-                  "to": "1",
-                  "step": "-2"
+                {
+                  "name": "stepped",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "5",
+                    "step": "2"
+                  }
                 },
-                "stepped": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "5",
-                  "step": "2"
+                {
+                  "name": "descending",
+                  "value": {
+                    "type": ":range",
+                    "from": "5",
+                    "to": "1",
+                    "step": "-2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -208,25 +283,31 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "ascending": {
-                  "type": ":range",
-                  "from": "1.5",
-                  "to": "3.5",
-                  "step": "0.5"
+              "args": [
+                {
+                  "name": "ascending",
+                  "value": {
+                    "type": ":range",
+                    "from": "1.5",
+                    "to": "3.5",
+                    "step": "0.5"
+                  }
                 },
-                "descending": {
-                  "type": ":range",
-                  "from": "3.5",
-                  "to": "1.5",
-                  "step": "-0.5"
+                {
+                  "name": "descending",
+                  "value": {
+                    "type": ":range",
+                    "from": "3.5",
+                    "to": "1.5",
+                    "step": "-0.5"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -248,40 +329,52 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "diceValue": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    3,
-                    2,
-                    2,
-                    1,
-                    1
-                  ]
+              "args": [
+                {
+                  "name": "diceValue",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      3,
+                      2,
+                      2,
+                      1,
+                      1
+                    ]
+                  }
                 },
-                "length": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "length",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "constructedDice": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    2,
-                    1
-                  ]
+                {
+                  "name": "constructedDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      2,
+                      1
+                    ]
+                  }
                 },
-                "constructedLength": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "constructedLength",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -295,38 +388,44 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "length": {
-                  "type": ":integer",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "values",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "two"
+                      },
+                      {
+                        "type": ":float",
+                        "value": "3.141592653589793"
+                      },
+                      {
+                        "type": ":boolean",
+                        "value": true
+                      }
+                    ]
+                  }
                 },
-                "values": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "two"
-                    },
-                    {
-                      "type": ":float",
-                      "value": "3.141592653589793"
-                    },
-                    {
-                      "type": ":boolean",
-                      "value": true
-                    }
-                  ]
+                {
+                  "name": "length",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -340,38 +439,44 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "length": {
-                  "type": ":integer",
-                  "value": "4"
-                },
-                "unit": {
-                  "type": ":map",
-                  "entries": {
-                    "alive": {
-                      "type": ":boolean",
-                      "value": true
-                    },
-                    "hp": {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    "name": {
-                      "type": ":text",
-                      "value": "Ada"
-                    },
-                    "role": {
-                      "type": ":tag",
-                      "value": "boss"
+              "args": [
+                {
+                  "name": "unit",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "alive": {
+                        "type": ":boolean",
+                        "value": true
+                      },
+                      "hp": {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      "name": {
+                        "type": ":text",
+                        "value": "Ada"
+                      },
+                      "role": {
+                        "type": ":tag",
+                        "value": "boss"
+                      }
                     }
                   }
+                },
+                {
+                  "name": "length",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -385,61 +490,67 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "length": {
-                  "type": ":integer",
-                  "value": "3"
-                },
-                "squad": {
-                  "type": ":map",
-                  "entries": {
-                    "inventory": {
-                      "type": ":list",
-                      "items": [
-                        {
-                          "type": ":text",
-                          "value": "potion"
-                        },
-                        {
-                          "type": ":text",
-                          "value": "key"
+              "args": [
+                {
+                  "name": "squad",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "inventory": {
+                        "type": ":list",
+                        "items": [
+                          {
+                            "type": ":text",
+                            "value": "potion"
+                          },
+                          {
+                            "type": ":text",
+                            "value": "key"
+                          }
+                        ]
+                      },
+                      "leader": {
+                        "type": ":map",
+                        "entries": {
+                          "hp": {
+                            "type": ":integer",
+                            "value": "10"
+                          },
+                          "name": {
+                            "type": ":text",
+                            "value": "Ada"
+                          }
                         }
-                      ]
-                    },
-                    "leader": {
-                      "type": ":map",
-                      "entries": {
-                        "hp": {
-                          "type": ":integer",
-                          "value": "10"
-                        },
-                        "name": {
-                          "type": ":text",
-                          "value": "Ada"
-                        }
+                      },
+                      "tags": {
+                        "type": ":list",
+                        "items": [
+                          {
+                            "type": ":tag",
+                            "value": "boss"
+                          },
+                          {
+                            "type": ":tag",
+                            "value": "scout"
+                          }
+                        ]
                       }
-                    },
-                    "tags": {
-                      "type": ":list",
-                      "items": [
-                        {
-                          "type": ":tag",
-                          "value": "boss"
-                        },
-                        {
-                          "type": ":tag",
-                          "value": "scout"
-                        }
-                      ]
                     }
                   }
+                },
+                {
+                  "name": "length",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -453,99 +564,105 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "stagedList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":boolean",
-                      "value": false
-                    },
-                    {
-                      "type": ":boolean",
-                      "value": true
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "12"
-                    },
-                    {
-                      "type": ":float",
-                      "value": "12.5"
-                    },
-                    {
-                      "type": ":integer",
-                      "unit": ":meter",
-                      "value": "7"
-                    },
-                    {
-                      "type": ":float",
-                      "unit": ":meter",
-                      "value": "1.5"
-                    },
-                    {
-                      "type": ":percentage",
-                      "value": "0.25"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "txt"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "ready"
-                    }
-                  ]
+              "args": [
+                {
+                  "name": "stagedList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":boolean",
+                        "value": false
+                      },
+                      {
+                        "type": ":boolean",
+                        "value": true
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "12"
+                      },
+                      {
+                        "type": ":float",
+                        "value": "12.5"
+                      },
+                      {
+                        "type": ":integer",
+                        "unit": ":meter",
+                        "value": "7"
+                      },
+                      {
+                        "type": ":float",
+                        "unit": ":meter",
+                        "value": "1.5"
+                      },
+                      {
+                        "type": ":percentage",
+                        "value": "0.25"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "txt"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "ready"
+                      }
+                    ]
+                  }
                 },
-                "stagedMap": {
-                  "type": ":map",
-                  "entries": {
-                    "falseValue": {
-                      "type": ":boolean",
-                      "value": false
-                    },
-                    "floatValue": {
-                      "type": ":float",
-                      "value": "12.5"
-                    },
-                    "integerValue": {
-                      "type": ":integer",
-                      "value": "12"
-                    },
-                    "meterFloat": {
-                      "type": ":float",
-                      "unit": ":meter",
-                      "value": "1.5"
-                    },
-                    "meterInteger": {
-                      "type": ":integer",
-                      "unit": ":meter",
-                      "value": "7"
-                    },
-                    "percentageValue": {
-                      "type": ":percentage",
-                      "value": "0.25"
-                    },
-                    "tagValue": {
-                      "type": ":tag",
-                      "value": "ready"
-                    },
-                    "textValue": {
-                      "type": ":text",
-                      "value": "txt"
-                    },
-                    "trueValue": {
-                      "type": ":boolean",
-                      "value": true
+                {
+                  "name": "stagedMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "falseValue": {
+                        "type": ":boolean",
+                        "value": false
+                      },
+                      "floatValue": {
+                        "type": ":float",
+                        "value": "12.5"
+                      },
+                      "integerValue": {
+                        "type": ":integer",
+                        "value": "12"
+                      },
+                      "meterFloat": {
+                        "type": ":float",
+                        "unit": ":meter",
+                        "value": "1.5"
+                      },
+                      "meterInteger": {
+                        "type": ":integer",
+                        "unit": ":meter",
+                        "value": "7"
+                      },
+                      "percentageValue": {
+                        "type": ":percentage",
+                        "value": "0.25"
+                      },
+                      "tagValue": {
+                        "type": ":tag",
+                        "value": "ready"
+                      },
+                      "textValue": {
+                        "type": ":text",
+                        "value": "txt"
+                      },
+                      "trueValue": {
+                        "type": ":boolean",
+                        "value": true
+                      }
                     }
                   }
                 }
-              }
+              ]
             }
           ]
         }
@@ -559,123 +676,147 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "fromRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "9"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "16"
-                    }
-                  ]
+              "args": [
+                {
+                  "name": "fromRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "9"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "16"
+                      }
+                    ]
+                  }
                 },
-                "filteredRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "6"
-                    }
-                  ]
+                {
+                  "name": "filteredRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "6"
+                      }
+                    ]
+                  }
                 },
-                "fromList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "two"
-                    },
-                    {
-                      "type": ":tag",
-                      "value": "boss"
-                    },
-                    {
-                      "type": ":boolean",
-                      "value": true
-                    }
-                  ]
+                {
+                  "name": "fromList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "two"
+                      },
+                      {
+                        "type": ":tag",
+                        "value": "boss"
+                      },
+                      {
+                        "type": ":boolean",
+                        "value": true
+                      }
+                    ]
+                  }
                 },
-                "fromEmptyList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "fromEmptyList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "fromDice": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "7"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "5"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    }
-                  ]
+                {
+                  "name": "fromDice",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "7"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      }
+                    ]
+                  }
                 },
-                "fromText": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":text",
-                      "value": "a"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "b"
-                    }
-                  ]
+                {
+                  "name": "fromText",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":text",
+                        "value": "a"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "b"
+                      }
+                    ]
+                  }
                 },
-                "fromMap": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "10"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "20"
-                    }
-                  ]
+                {
+                  "name": "fromMap",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "10"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "20"
+                      }
+                    ]
+                  }
                 },
-                "invalidSource": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "invalidSource",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -689,102 +830,120 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "descendingRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "5"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    }
-                  ]
+              "args": [
+                {
+                  "name": "shortRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      }
+                    ]
+                  }
                 },
-                "dynamicRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "5"
-                    }
-                  ]
+                {
+                  "name": "dynamicRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "5"
+                      }
+                    ]
+                  }
                 },
-                "dynamicSteppedRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    }
-                  ]
+                {
+                  "name": "dynamicSteppedRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      }
+                    ]
+                  }
                 },
-                "emptyRange": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "descendingRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      }
+                    ]
+                  }
                 },
-                "floatRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":float",
-                      "value": "1.5"
-                    },
-                    {
-                      "type": ":float",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":float",
-                      "value": "2.5"
-                    }
-                  ]
+                {
+                  "name": "floatRange",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":float",
+                        "value": "1.5"
+                      },
+                      {
+                        "type": ":float",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":float",
+                        "value": "2.5"
+                      }
+                    ]
+                  }
                 },
-                "shortRange": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    }
-                  ]
+                {
+                  "name": "emptyRange",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -798,17 +957,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "count": {
-                  "type": ":integer",
-                  "value": "40"
+              "args": [
+                {
+                  "name": "count",
+                  "value": {
+                    "type": ":integer",
+                    "value": "40"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

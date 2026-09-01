@@ -168,26 +168,17 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - JSON-Conformance verwendet einen manuellen portablen Handler; Native-only-
   Host, dynamische Registrierung und C#-Auto-Runner bleiben separat getestet.
 
-### 3.3 Geordnete Message-Argumente
+### 3.3 Geordnete Message-Argumente - DONE
 
-Die interne Message-Repräsentation ist bereits geordnet. Der portable Vertrag
-wird aber durch `GameEventScriptMessageArguments.Create(IReadOnlyDictionary...)`
-und JSON-`args` als Objekt verletzt, weil dabei Map- beziehungsweise
-Property-Iteration die Signaturreihenfolge bestimmt.
-
-Benötigte Schritte:
-
-1. Eine explizit geordnete portable Argumentdarstellung für die öffentliche
-   Core-API festlegen. Argumentname und Wert bleiben ein geordnetes Paar; die
-   Reihenfolge ist Teil der Message-Signatur.
-2. Die namebasierte Dictionary-Factory aus dem Core entfernen. Ein
-   Dictionary-Adapter darf nur zusammen mit einer bereits bekannten Signatur
-   Werte nach deren Parameterreihenfolge binden.
-3. C#-Tuple- und Dictionary-Komfortoberflächen bei Bedarf im `CSharpBridge`
-   anbieten, ohne einen eigenen Reihenfolgevertrag zu erzeugen.
-4. Doppelte normalisierte Argumentnamen und andere mehrdeutige Shapes
-   portabel und deterministisch ablehnen.
-5. Alle JSON-Conformance-Messages auf eine geordnete Darstellung migrieren:
+- `GameEventScriptMessageArgument` ist das portable immutable Name-/Wert-Paar;
+  `GameEventScriptMessageArguments` und alle Core-Factorys konsumieren explizit
+  geordnete Listen.
+- Dictionary- und Tuple-Factorys sind aus dem Core entfernt. C#-Tuple-Helfer
+  liegen im `CSharpBridge`; dessen Dictionary-Adapter verlangt eine bekannte
+  Signatur und bindet in deren Parameterreihenfolge.
+- Doppelte benannte Labels werden nach Normalisierung deterministisch
+  abgelehnt. Wiederholtes `_` bleibt als positionale Argumentform erlaubt.
+- Sämtliche Conformance-Nachrichten verwenden die geordnete Darstellung:
 
    ```json
    "args": [
@@ -195,11 +186,11 @@ Benötigte Schritte:
      { "name": "unit", "value": { "type": ":text", "value": "u1" } }
    ]
    ```
-
-6. Input, erwartete lokale und outbound Messages, verschachtelte Message-Werte
-   sowie externe Emits einheitlich umstellen.
-7. JSON-Conformance für unterschiedliche Argumentreihenfolgen, leere Argumente,
-   doppelte Namen und Signaturmatching ergänzen.
+- Das gilt für Input, erwartete lokale/outbound Messages, verschachtelte
+  Message-Werte und externe Emits. Der Conformance-Vergleich prüft Namen und
+  Werte positionsgetreu.
+- JSON-Conformance deckt unterschiedliche Reihenfolgen, leere Argumentlisten,
+  doppelte normalisierte Namen und Signaturmatching ab.
 
 ### 3.4 Stabiler Fehlervertrag
 

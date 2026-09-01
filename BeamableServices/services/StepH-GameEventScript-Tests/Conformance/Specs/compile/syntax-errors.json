@@ -298,7 +298,7 @@
     {
       "kind": "compileError",
       "name": "unicode letters are rejected in identifiers",
-      "script": "on Start {\n  let na\u00efve be 1\n  emit Done\n}",
+      "script": "on Start {\n  let naïve be 1\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }
@@ -306,7 +306,7 @@
     {
       "kind": "compileError",
       "name": "unicode whitespace is not portable trivia",
-      "script": "on Start {\n\u00a0 emit Done\n}",
+      "script": "on Start {\n  emit Done\n}",
       "expectedError": {
         "phase": "syntax"
       }

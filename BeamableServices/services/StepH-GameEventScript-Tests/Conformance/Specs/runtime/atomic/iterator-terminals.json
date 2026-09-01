@@ -11,65 +11,104 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "allValues": {
-                  "type": ":integer",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "allValues",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "allValuesBare": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "allValuesBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "diceHigh": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "filteredValues",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "diceBare": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "diceHigh",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "emptyBare": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "diceBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "emptyCount": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "rangeAll",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "filteredValues": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "rangeBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "mapBare": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "mapOverOne",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "mapOverOne": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "mapBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "rangeAll": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "textB",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "rangeBare": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "textBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "textBare": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "emptyCount",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "textB": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "emptyBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -83,99 +122,165 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "averageDice": {
-                  "type": ":integer",
-                  "value": "4"
+              "args": [
+                {
+                  "name": "sumValues",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "averageDiceBare": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "sumValuesBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "averageEmpty": {
-                  "type": ":nothing"
+                {
+                  "name": "sumFiltered",
+                  "value": {
+                    "type": ":integer",
+                    "value": "7"
+                  }
                 },
-                "averageEmptyBare": {
-                  "type": ":nothing"
+                {
+                  "name": "sumDice",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 },
-                "averageFiltered": {
-                  "type": ":float",
-                  "value": "3.5"
+                {
+                  "name": "sumDiceBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 },
-                "averageMap": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "sumRange",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "averageMapBare": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "sumRangeBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "averageRange": {
-                  "type": ":float",
-                  "value": "2.5"
+                {
+                  "name": "sumMap",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "averageRangeBare": {
-                  "type": ":float",
-                  "value": "2.5"
+                {
+                  "name": "sumMapBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "averageValues": {
-                  "type": ":float",
-                  "value": "2.5"
+                {
+                  "name": "sumEmpty",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "averageValuesBare": {
-                  "type": ":float",
-                  "value": "2.5"
+                {
+                  "name": "sumEmptyBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "sumDice": {
-                  "type": ":integer",
-                  "value": "12"
+                {
+                  "name": "averageValues",
+                  "value": {
+                    "type": ":float",
+                    "value": "2.5"
+                  }
                 },
-                "sumDiceBare": {
-                  "type": ":integer",
-                  "value": "12"
+                {
+                  "name": "averageValuesBare",
+                  "value": {
+                    "type": ":float",
+                    "value": "2.5"
+                  }
                 },
-                "sumEmpty": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "averageFiltered",
+                  "value": {
+                    "type": ":float",
+                    "value": "3.5"
+                  }
                 },
-                "sumEmptyBare": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "averageDice",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "sumFiltered": {
-                  "type": ":integer",
-                  "value": "7"
+                {
+                  "name": "averageDiceBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "sumMap": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "averageRange",
+                  "value": {
+                    "type": ":float",
+                    "value": "2.5"
+                  }
                 },
-                "sumMapBare": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "averageRangeBare",
+                  "value": {
+                    "type": ":float",
+                    "value": "2.5"
+                  }
                 },
-                "sumRange": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "averageMap",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "sumRangeBare": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "averageMapBare",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "sumValues": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "averageEmpty",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "sumValuesBare": {
-                  "type": ":integer",
-                  "value": "10"
+                {
+                  "name": "averageEmptyBare",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -189,69 +294,111 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "emptyMax": {
-                  "type": ":nothing"
+              "args": [
+                {
+                  "name": "minValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "emptyMin": {
-                  "type": ":nothing"
+                {
+                  "name": "maxValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "maxBoolean": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "minDice",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 },
-                "maxDice": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "maxDice",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "maxPercentage": {
-                  "type": ":percentage",
-                  "value": "0.25"
+                {
+                  "name": "minRange",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "maxQuantity": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "3"
+                {
+                  "name": "maxRange",
+                  "value": {
+                    "type": ":integer",
+                    "value": "4"
+                  }
                 },
-                "maxRange": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "minPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.05"
+                  }
                 },
-                "maxValue": {
-                  "type": ":integer",
-                  "value": "4"
+                {
+                  "name": "maxPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.25"
+                  }
                 },
-                "minBoolean": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "minQuantity",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "1"
+                  }
                 },
-                "minDice": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "maxQuantity",
+                  "value": {
+                    "type": ":integer",
+                    "unit": ":meter",
+                    "value": "3"
+                  }
                 },
-                "minPercentage": {
-                  "type": ":percentage",
-                  "value": "0.05"
+                {
+                  "name": "minBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "minQuantity": {
-                  "type": ":integer",
-                  "unit": ":meter",
-                  "value": "1"
+                {
+                  "name": "maxBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "minRange": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "emptyMin",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "minValue": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "emptyMax",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -265,33 +412,48 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "strongestHp": {
-                  "type": ":integer",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "weakestId",
+                  "value": {
+                    "type": ":tag",
+                    "value": "mage"
+                  }
                 },
-                "strongestId": {
-                  "type": ":tag",
-                  "value": "rook"
+                {
+                  "name": "weakestHp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "transformedMax": {
-                  "type": ":integer",
-                  "value": "30"
+                {
+                  "name": "strongestId",
+                  "value": {
+                    "type": ":tag",
+                    "value": "rook"
+                  }
                 },
-                "weakestHp": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "strongestHp",
+                  "value": {
+                    "type": ":integer",
+                    "value": "10"
+                  }
                 },
-                "weakestId": {
-                  "type": ":tag",
-                  "value": "mage"
+                {
+                  "name": "transformedMax",
+                  "value": {
+                    "type": ":integer",
+                    "value": "30"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

@@ -11,63 +11,108 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": ""
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPoint": {
-                  "type": ":nothing"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": ""
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":nothing"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -81,85 +126,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -173,72 +272,117 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "1"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "True"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "true"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":percentage",
-                  "value": "1"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "1",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "1",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":tag",
-                  "value": "true"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "True"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -252,85 +396,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -344,73 +542,118 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.12"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "12"
+                  }
                 },
-                "toMeter": {
-                  "type": ":integer",
-                  "value": "12",
-                  "unit": ":meter"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12",
+                    "unit": ":meter"
+                  }
                 },
-                "toNumber": {
-                  "type": ":integer",
-                  "value": "12"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "12",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":percentage",
-                  "value": "0.12"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "12",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "12",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "12"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "12",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -424,85 +667,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -516,73 +813,118 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":float",
+                    "value": "12.5"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.125"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "12.5"
+                  }
                 },
-                "toMeter": {
-                  "type": ":float",
-                  "value": "12.5",
-                  "unit": ":meter"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":float",
+                    "value": "12.5",
+                    "unit": ":meter"
+                  }
                 },
-                "toNumber": {
-                  "type": ":float",
-                  "value": "12.5"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "12.5",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":percentage",
-                  "value": "0.125"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "12.5",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "12.5",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "12.5"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "12.5",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -596,85 +938,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -688,75 +1084,120 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12",
+                    "unit": ":meter"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "12m"
+                  }
                 },
-                "toMeter": {
-                  "type": ":integer",
-                  "value": "12",
-                  "unit": ":meter"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":integer",
+                    "value": "12",
+                    "unit": ":meter"
+                  }
                 },
-                "toNumber": {
-                  "type": ":integer",
-                  "value": "12",
-                  "unit": ":meter"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "12",
+                    "y": "0",
+                    "z": "0",
+                    "unit": ":meter"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "12",
+                    "y": "0",
+                    "z": "0",
+                    "unit": ":meter"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "12",
-                  "y": "0",
-                  "z": "0",
-                  "unit": ":meter"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "12m"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "12",
-                  "y": "0",
-                  "z": "0",
-                  "unit": ":meter"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -770,85 +1211,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -862,71 +1357,116 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":float",
+                    "value": "0.25"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.25"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "25%"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":float",
-                  "value": "0.25"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "0.25",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":percentage",
-                  "value": "0.25"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "0.25",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "0.25",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "25%"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "0.25",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -940,85 +1480,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1032,81 +1626,126 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":text",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "."
-                    },
-                    {
-                      "type": ":text",
-                      "value": "5"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":float",
+                    "value": "12.5"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "12.5"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":float",
-                  "value": "12.5"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPoint": {
-                  "type": ":nothing"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":text",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "."
+                      },
+                      {
+                        "type": ":text",
+                        "value": "5"
+                      }
+                    ]
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "12.5"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":nothing"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1120,85 +1759,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1212,85 +1905,130 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":text",
-                      "value": "h"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "e"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "l"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "l"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "o"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "hello"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "hello"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPoint": {
-                  "type": ":nothing"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":text",
+                        "value": "h"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "e"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "l"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "l"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "o"
+                      }
+                    ]
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":tag",
-                  "value": "hello"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "hello"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":nothing"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1304,85 +2042,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1396,73 +2188,118 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":float",
+                    "value": "3.141592653589793"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.0314159265358979"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "3.141592653589793"
+                  }
                 },
-                "toMeter": {
-                  "type": ":float",
-                  "value": "3.141592653589793",
-                  "unit": ":meter"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":float",
+                    "value": "3.141592653589793",
+                    "unit": ":meter"
+                  }
                 },
-                "toNumber": {
-                  "type": ":float",
-                  "value": "3.141592653589793"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "3.141592653589793",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":percentage",
-                  "value": "0.0314159265358979"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "3.141592653589793",
+                    "y": "0",
+                    "z": "0"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "3.141592653589793",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "3.141592653589793"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "3.141592653589793",
-                  "y": "0",
-                  "z": "0"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1476,85 +2313,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1568,89 +2459,134 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":text",
-                      "value": "c"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "u"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "s"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "t"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "o"
-                    },
-                    {
-                      "type": ":text",
-                      "value": "m"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": ":custom"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "custom"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toPoint": {
-                  "type": ":nothing"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":text",
+                        "value": "c"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "u"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "s"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "t"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "o"
+                      },
+                      {
+                        "type": ":text",
+                        "value": "m"
+                      }
+                    ]
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":tag",
-                  "value": "custom"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": ":custom"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":nothing"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1664,85 +2600,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1756,99 +2746,144 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {
-                    "x": {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    "y": {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    "z": {
-                      "type": ":integer",
-                      "value": "3"
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "vector[x: 1, y: 2, z: 3]"
+                  }
+                },
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
+                },
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
+                },
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "x": {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      "y": {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      "z": {
+                        "type": ":integer",
+                        "value": "3"
+                      }
                     }
                   }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toMeter": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3",
-                  "unit": ":meter"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
-                },
-                "toPercentage": {
-                  "type": ":nothing"
-                },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
-                },
-                "toRange": {
-                  "type": ":nothing"
-                },
-                "toSeries": {
-                  "type": ":nothing"
-                },
-                "toTag": {
-                  "type": ":nothing"
-                },
-                "toText": {
-                  "type": ":text",
-                  "value": "vector[x: 1, y: 2, z: 3]"
-                },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1862,85 +2897,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -1954,99 +3043,144 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "4"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "5"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "6"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {
-                    "x": {
-                      "type": ":integer",
-                      "value": "4"
-                    },
-                    "y": {
-                      "type": ":integer",
-                      "value": "5"
-                    },
-                    "z": {
-                      "type": ":integer",
-                      "value": "6"
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "point[x: 4, y: 5, z: 6]"
+                  }
+                },
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5",
+                    "z": "6",
+                    "unit": ":meter"
+                  }
+                },
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "4",
+                    "y": "5",
+                    "z": "6"
+                  }
+                },
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "4",
+                    "y": "5",
+                    "z": "6"
+                  }
+                },
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "4"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "6"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "x": {
+                        "type": ":integer",
+                        "value": "4"
+                      },
+                      "y": {
+                        "type": ":integer",
+                        "value": "5"
+                      },
+                      "z": {
+                        "type": ":integer",
+                        "value": "6"
+                      }
                     }
                   }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toMeter": {
-                  "type": ":point",
-                  "x": "4",
-                  "y": "5",
-                  "z": "6",
-                  "unit": ":meter"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
-                },
-                "toPercentage": {
-                  "type": ":nothing"
-                },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "4",
-                  "y": "5",
-                  "z": "6"
-                },
-                "toRange": {
-                  "type": ":nothing"
-                },
-                "toSeries": {
-                  "type": ":nothing"
-                },
-                "toTag": {
-                  "type": ":nothing"
-                },
-                "toText": {
-                  "type": ":text",
-                  "value": "point[x: 4, y: 5, z: 6]"
-                },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "4",
-                  "y": "5",
-                  "z": "6"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2060,85 +3194,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2152,86 +3340,131 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    2,
-                    1
-                  ]
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "[1, 2, 3]"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      }
+                    ]
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      2,
+                      1
+                    ]
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "[1, 2, 3]"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2245,85 +3478,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2337,82 +3624,127 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": []
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {
-                    "x": {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    "y": {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    "z": {
-                      "type": ":integer",
-                      "value": "3"
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "map[x: 1, y: 2, z: 3]"
+                  }
+                },
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
+                },
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
+                },
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
+                },
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": []
+                  }
+                },
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {
+                      "x": {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      "y": {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      "z": {
+                        "type": ":integer",
+                        "value": "3"
+                      }
                     }
                   }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
-                },
-                "toPercentage": {
-                  "type": ":nothing"
-                },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
-                },
-                "toRange": {
-                  "type": ":nothing"
-                },
-                "toSeries": {
-                  "type": ":nothing"
-                },
-                "toTag": {
-                  "type": ":nothing"
-                },
-                "toText": {
-                  "type": ":text",
-                  "value": "map[x: 1, y: 2, z: 3]"
-                },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2426,85 +3758,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2518,88 +3904,133 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": [
-                    3,
-                    2,
-                    1
-                  ]
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":integer",
+                    "value": "6"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":percentage",
+                    "value": "0.06"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "dice[3, 2, 1]"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":integer",
-                  "value": "6"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "3",
+                    "y": "2",
+                    "z": "1"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":percentage",
-                  "value": "0.06"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "3",
+                    "y": "2",
+                    "z": "1"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "3",
-                  "y": "2",
-                  "z": "1"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      }
+                    ]
+                  }
                 },
-                "toRange": {
-                  "type": ":nothing"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": [
+                      3,
+                      2,
+                      1
+                    ]
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "dice[3, 2, 1]"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "3",
-                  "y": "2",
-                  "z": "1"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2613,85 +4044,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2705,85 +4190,130 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "toNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toDice": {
-                  "type": ":dice",
-                  "rolls": []
+                {
+                  "name": "toBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "toList": {
-                  "type": ":list",
-                  "items": [
-                    {
-                      "type": ":integer",
-                      "value": "1"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "2"
-                    },
-                    {
-                      "type": ":integer",
-                      "value": "3"
-                    }
-                  ]
+                {
+                  "name": "toNumber",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMap": {
-                  "type": ":map",
-                  "entries": {}
+                {
+                  "name": "toPercentage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toMessage": {
-                  "type": ":nothing"
+                {
+                  "name": "toText",
+                  "value": {
+                    "type": ":text",
+                    "value": "range[1 to 3 step 1]"
+                  }
                 },
-                "toMeter": {
-                  "type": ":nothing"
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "toMeter",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toNumber": {
-                  "type": ":nothing"
+                {
+                  "name": "toVector",
+                  "value": {
+                    "type": ":vector",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
                 },
-                "toPercentage": {
-                  "type": ":nothing"
+                {
+                  "name": "toPoint",
+                  "value": {
+                    "type": ":point",
+                    "x": "1",
+                    "y": "2",
+                    "z": "3"
+                  }
                 },
-                "toPoint": {
-                  "type": ":point",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
+                {
+                  "name": "toList",
+                  "value": {
+                    "type": ":list",
+                    "items": [
+                      {
+                        "type": ":integer",
+                        "value": "1"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "2"
+                      },
+                      {
+                        "type": ":integer",
+                        "value": "3"
+                      }
+                    ]
+                  }
                 },
-                "toRange": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "3",
-                  "step": "1"
+                {
+                  "name": "toMap",
+                  "value": {
+                    "type": ":map",
+                    "entries": {}
+                  }
                 },
-                "toSeries": {
-                  "type": ":nothing"
+                {
+                  "name": "toDice",
+                  "value": {
+                    "type": ":dice",
+                    "rolls": []
+                  }
                 },
-                "toTag": {
-                  "type": ":nothing"
+                {
+                  "name": "toRange",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "toText": {
-                  "type": ":text",
-                  "value": "range[1 to 3 step 1]"
+                {
+                  "name": "toMessage",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "toVector": {
-                  "type": ":vector",
-                  "x": "1",
-                  "y": "2",
-                  "z": "3"
+                {
+                  "name": "toSeries",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2797,85 +4327,139 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "isBoolean": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "isNothing",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isDice": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isBoolean",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isFractional": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isNumeric",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isHandler": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isInteger",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isInteger": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isFractional",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isList": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPercentage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMap": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isText",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMessage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isTag",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isMeter": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMeter",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNothing": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isVector",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isNumeric": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isPoint",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPercentage": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isPoint": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMap",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isRange": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "isDice",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isSeries": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isRange",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "isTag": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isMessage",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isText": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isHandler",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "isVector": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "isSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2889,17 +4473,20 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "toTag": {
-                  "type": ":tag",
-                  "value": "false"
+              "args": [
+                {
+                  "name": "toTag",
+                  "value": {
+                    "type": ":tag",
+                    "value": "false"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -2913,32 +4500,47 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "upperTrue": {
-                  "type": ":tag",
-                  "value": "true"
+              "args": [
+                {
+                  "name": "upperTrue",
+                  "value": {
+                    "type": ":tag",
+                    "value": "true"
+                  }
                 },
-                "lowerTrue": {
-                  "type": ":tag",
-                  "value": "true"
+                {
+                  "name": "lowerTrue",
+                  "value": {
+                    "type": ":tag",
+                    "value": "true"
+                  }
                 },
-                "upperFalse": {
-                  "type": ":tag",
-                  "value": "false"
+                {
+                  "name": "upperFalse",
+                  "value": {
+                    "type": ":tag",
+                    "value": "false"
+                  }
                 },
-                "lowerFalse": {
-                  "type": ":tag",
-                  "value": "false"
+                {
+                  "name": "lowerFalse",
+                  "value": {
+                    "type": ":tag",
+                    "value": "false"
+                  }
                 },
-                "upperWord": {
-                  "type": ":nothing"
+                {
+                  "name": "upperWord",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

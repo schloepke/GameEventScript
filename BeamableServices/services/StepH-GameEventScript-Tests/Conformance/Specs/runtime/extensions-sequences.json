@@ -10,78 +10,123 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "value": {
-                "type": ":float",
-                "value": "10.75"
+            "args": [
+              {
+                "name": "value",
+                "value": {
+                  "type": ":float",
+                  "value": "10.75"
+                }
               },
-              "heading": {
-                "type": ":float",
-                "value": "350",
-                "unit": ":degree"
+              {
+                "name": "heading",
+                "value": {
+                  "type": ":float",
+                  "value": "350",
+                  "unit": ":degree"
+                }
               },
-              "target": {
-                "type": ":float",
-                "value": "10",
-                "unit": ":degree"
+              {
+                "name": "target",
+                "value": {
+                  "type": ":float",
+                  "value": "10",
+                  "unit": ":degree"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "floored": {
-                  "type": ":float",
-                  "value": "10"
+              "args": [
+                {
+                  "name": "floored",
+                  "value": {
+                    "type": ":float",
+                    "value": "10"
+                  }
                 },
-                "flooredCall": {
-                  "type": ":float",
-                  "value": "10"
+                {
+                  "name": "flooredCall",
+                  "value": {
+                    "type": ":float",
+                    "value": "10"
+                  }
                 },
-                "floorPredicate": {
-                  "type": ":nothing"
+                {
+                  "name": "floorPredicate",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "maxed": {
-                  "type": ":float",
-                  "value": "8"
+                {
+                  "name": "maxed",
+                  "value": {
+                    "type": ":float",
+                    "value": "8"
+                  }
                 },
-                "turnA": {
-                  "type": ":float",
-                  "value": "20",
-                  "unit": ":degree"
+                {
+                  "name": "turnA",
+                  "value": {
+                    "type": ":float",
+                    "value": "20",
+                    "unit": ":degree"
+                  }
                 },
-                "turnB": {
-                  "type": ":float",
-                  "value": "20",
-                  "unit": ":degree"
+                {
+                  "name": "turnB",
+                  "value": {
+                    "type": ":float",
+                    "value": "20",
+                    "unit": ":degree"
+                  }
                 },
-                "northA": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "northA",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "northB": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "northB",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "vectorTotal": {
-                  "type": ":float",
-                  "value": "6",
-                  "unit": ":meter"
+                {
+                  "name": "vectorTotal",
+                  "value": {
+                    "type": ":float",
+                    "value": "6",
+                    "unit": ":meter"
+                  }
                 },
-                "valuesIsList": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "valuesIsList",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "valuesLen": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "valuesLen",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "list_2": {
-                  "type": ":integer",
-                  "value": "20"
+                {
+                  "name": "list_2",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -99,86 +144,146 @@
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "fibIsSeries": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "fibIsSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "droppedIsSeries": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "droppedIsSeries",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "noLookup": {
-                  "type": ":nothing"
+                {
+                  "name": "noLookup",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "seriesLen": {
-                  "type": ":nothing"
+                {
+                  "name": "seriesLen",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "badTerm": {
-                  "type": ":nothing"
+                {
+                  "name": "badTerm",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "takeLast": {
-                  "type": ":nothing"
+                {
+                  "name": "takeLast",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "dropLast": {
-                  "type": ":nothing"
+                {
+                  "name": "dropLast",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "filterNothing": {
-                  "type": ":nothing"
+                {
+                  "name": "filterNothing",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 },
-                "bareFirst": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "bareFirst",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "naturalZero": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "naturalZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "naturalThree": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "naturalThree",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "oddFourth": {
-                  "type": ":integer",
-                  "value": "9"
+                {
+                  "name": "oddFourth",
+                  "value": {
+                    "type": ":integer",
+                    "value": "9"
+                  }
                 },
-                "fibZero": {
-                  "type": ":integer",
-                  "value": "0"
+                {
+                  "name": "fibZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "0"
+                  }
                 },
-                "fibOne": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "fibOne",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "fibSeven": {
-                  "type": ":integer",
-                  "value": "13"
+                {
+                  "name": "fibSeven",
+                  "value": {
+                    "type": ":integer",
+                    "value": "13"
+                  }
                 },
-                "droppedZero": {
-                  "type": ":integer",
-                  "value": "5"
+                {
+                  "name": "droppedZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "5"
+                  }
                 },
-                "factZero": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "factZero",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 },
-                "factFive": {
-                  "type": ":integer",
-                  "value": "120"
+                {
+                  "name": "factFive",
+                  "value": {
+                    "type": ":integer",
+                    "value": "120"
+                  }
                 },
-                "firstNaturals": {
-                  "type": ":range",
-                  "from": "0",
-                  "to": "3",
-                  "step": "1"
+                {
+                  "name": "firstNaturals",
+                  "value": {
+                    "type": ":range",
+                    "from": "0",
+                    "to": "3",
+                    "step": "1"
+                  }
                 },
-                "firstOdd": {
-                  "type": ":range",
-                  "from": "1",
-                  "to": "5",
-                  "step": "2"
+                {
+                  "name": "firstOdd",
+                  "value": {
+                    "type": ":range",
+                    "from": "1",
+                    "to": "5",
+                    "step": "2"
+                  }
                 }
-              }
+              ]
             }
           ]
         }

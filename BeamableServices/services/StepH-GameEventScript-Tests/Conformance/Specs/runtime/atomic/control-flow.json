@@ -11,39 +11,48 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Branch",
-              "args": {
-                "name": {
-                  "type": ":text",
-                  "value": "true-then"
+              "args": [
+                {
+                  "name": "name",
+                  "value": {
+                    "type": ":text",
+                    "value": "true-then"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Branch",
-              "args": {
-                "name": {
-                  "type": ":text",
-                  "value": "false-else"
+              "args": [
+                {
+                  "name": "name",
+                  "value": {
+                    "type": ":text",
+                    "value": "false-else"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Branch",
-              "args": {
-                "name": {
-                  "type": ":text",
-                  "value": "missing-else"
+              "args": [
+                {
+                  "name": "name",
+                  "value": {
+                    "type": ":text",
+                    "value": "missing-else"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -57,28 +66,40 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "falseEvaluates": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "trueSkips",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "missingResolves": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "falseEvaluates",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "missingStaysUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "missingResolves",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "trueSkips": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "missingStaysUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -92,28 +113,40 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "falseSkips": {
-                  "type": ":boolean",
-                  "value": false
+              "args": [
+                {
+                  "name": "falseSkips",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "missingResolvesFalse": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "trueEvaluates",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "missingStaysUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "missingResolvesFalse",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "trueEvaluates": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "missingStaysUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -127,32 +160,47 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "falseSkips": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "falseSkips",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "missingResolvesTrue": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "trueEvaluates",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "missingStaysUnknown": {
-                  "type": ":nothing"
+                {
+                  "name": "trueFails",
+                  "value": {
+                    "type": ":boolean",
+                    "value": false
+                  }
                 },
-                "trueEvaluates": {
-                  "type": ":boolean",
-                  "value": true
+                {
+                  "name": "missingResolvesTrue",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 },
-                "trueFails": {
-                  "type": ":boolean",
-                  "value": false
+                {
+                  "name": "missingStaysUnknown",
+                  "value": {
+                    "type": ":nothing"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -166,21 +214,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "firstTrue": {
-                  "type": ":integer",
-                  "value": "20"
+              "args": [
+                {
+                  "name": "firstTrue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "20"
+                  }
                 },
-                "otherwiseValue": {
-                  "type": ":integer",
-                  "value": "40"
+                {
+                  "name": "otherwiseValue",
+                  "value": {
+                    "type": ":integer",
+                    "value": "40"
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -194,90 +248,126 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "list"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "list"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "list"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "list"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "2"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "2"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "range"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "range"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "range"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "range"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "text"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "text"
+                  }
                 },
-                "value": {
-                  "type": ":text",
-                  "value": "a"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":text",
+                    "value": "a"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Item",
-              "args": {
-                "kind": {
-                  "type": ":text",
-                  "value": "text"
+              "args": [
+                {
+                  "name": "kind",
+                  "value": {
+                    "type": ":text",
+                    "value": "text"
+                  }
                 },
-                "value": {
-                  "type": ":text",
-                  "value": "b"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":text",
+                    "value": "b"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -291,12 +381,12 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {}
+              "args": []
             }
           ]
         }
@@ -310,21 +400,27 @@
         {
           "input": {
             "name": "Start",
-            "args": {}
+            "args": []
           },
           "expectedPublished": [
             {
               "name": "Done",
-              "args": {
-                "matched": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "3"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "3"
+                {
+                  "name": "matched",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }
@@ -338,35 +434,47 @@
         {
           "input": {
             "name": "Start",
-            "args": {
-              "seed": {
-                "type": ":integer",
-                "value": "7"
+            "args": [
+              {
+                "name": "seed",
+                "value": {
+                  "type": ":integer",
+                  "value": "7"
+                }
               }
-            }
+            ]
           },
           "expectedPublished": [
             {
               "name": "Roll",
-              "args": {
-                "scope": {
-                  "type": ":text",
-                  "value": "inner"
+              "args": [
+                {
+                  "name": "scope",
+                  "value": {
+                    "type": ":text",
+                    "value": "inner"
+                  }
                 },
-                "value": {
-                  "type": ":integer",
-                  "value": "1"
+                {
+                  "name": "value",
+                  "value": {
+                    "type": ":integer",
+                    "value": "1"
+                  }
                 }
-              }
+              ]
             },
             {
               "name": "Done",
-              "args": {
-                "after": {
-                  "type": ":boolean",
-                  "value": true
+              "args": [
+                {
+                  "name": "after",
+                  "value": {
+                    "type": ":boolean",
+                    "value": true
+                  }
                 }
-              }
+              ]
             }
           ]
         }

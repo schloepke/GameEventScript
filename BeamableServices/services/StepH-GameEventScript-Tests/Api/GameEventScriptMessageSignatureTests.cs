@@ -1,4 +1,5 @@
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH_GameEventScript_Tests.Api;
@@ -23,10 +24,10 @@ public sealed class GameEventScriptMessageSignatureTests
     [TestMethod]
     public void MessagesCompareBySignatureArgumentsAndTags()
     {
-        var left = GameEventScriptMessage.Create("Ping", new Dictionary<string, GesValue> { ["amount"] = GesValue.GesInteger(7) }, ["radio"]);
-        var right = GameEventScriptMessage.Create("Ping", new Dictionary<string, GesValue> { ["amount"] = GesValue.GesInteger(7) }, ["#radio"]);
-        var differentArgument = GameEventScriptMessage.Create("Ping", new Dictionary<string, GesValue> { ["amount"] = GesValue.GesInteger(8) }, ["radio"]);
-        var differentTags = GameEventScriptMessage.Create("Ping", new Dictionary<string, GesValue> { ["amount"] = GesValue.GesInteger(7) }, ["silent"]);
+        var left = GameEventScriptMessage.Create("Ping", [new("amount", GesValue.GesInteger(7))], ["radio"]);
+        var right = GameEventScriptMessage.Create("Ping", [new("amount", GesValue.GesInteger(7))], ["#radio"]);
+        var differentArgument = GameEventScriptMessage.Create("Ping", [new("amount", GesValue.GesInteger(8))], ["radio"]);
+        var differentTags = GameEventScriptMessage.Create("Ping", [new("amount", GesValue.GesInteger(7))], ["silent"]);
 
         Assert.AreEqual(left, right);
         Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
@@ -45,6 +46,60 @@ public sealed class GameEventScriptMessageSignatureTests
         Assert.AreEqual(left, right);
         Assert.AreEqual(left.GetHashCode(), right.GetHashCode());
         Assert.AreNotEqual(left, differentValue);
+    }
+
+    [TestMethod]
+    public void OrderedArgumentsPreserveSignatureOrderAndRejectDuplicateNamedLabels()
+    {
+        var message = GameEventScriptMessage.Create(
+            "Move",
+            [
+                new GameEventScriptMessageArgument("target", GesValue.GesText("t1")),
+                new GameEventScriptMessageArgument("unit", GesValue.GesText("u1"))
+            ]);
+
+        Assert.AreEqual("Move(target,unit)", message.SignatureId);
+        Assert.AreEqual("target", message.Arguments.NameAt(0));
+        Assert.AreEqual("unit", message.Arguments.NameAt(1));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessageSignature.Create("Move", ["target", " target "]));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessage.Create(
+            "Move",
+            [
+                new GameEventScriptMessageArgument("target", GesValue.GesText("t1")),
+                new GameEventScriptMessageArgument(" target ", GesValue.GesText("t2"))
+            ]));
+    }
+
+    [TestMethod]
+    public void RepeatedUnlabeledArgumentsRemainValidAndPositional()
+    {
+        var message = GameEventScriptMessage.Create(
+            "Pair",
+            [
+                new GameEventScriptMessageArgument("_", GesValue.GesInteger(1)),
+                new GameEventScriptMessageArgument(null, GesValue.GesInteger(2))
+            ]);
+
+        Assert.AreEqual("Pair(_,_)", message.SignatureId);
+        Assert.AreEqual(1L, message.Arguments.GetAsInteger(0));
+        Assert.AreEqual(2L, message.Arguments.GetAsInteger(1));
+    }
+
+    [TestMethod]
+    public void CSharpDictionaryAdapterBindsValuesInKnownSignatureOrder()
+    {
+        var signature = GameEventScriptMessageSignature.Create("Move", ["target", "unit"]);
+        var message = GameEventScriptCSharpMessage.Create(
+            signature,
+            new Dictionary<string, GesValue>
+            {
+                ["unit"] = GesValue.GesText("u1"),
+                ["target"] = GesValue.GesText("t1")
+            });
+
+        Assert.AreEqual("Move(target,unit)", message.SignatureId);
+        Assert.AreEqual("t1", message.Arguments.GetAsText(0));
+        Assert.AreEqual("u1", message.Arguments.GetAsText(1));
     }
 
     [TestMethod]

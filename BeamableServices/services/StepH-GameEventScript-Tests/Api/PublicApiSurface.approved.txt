@@ -370,12 +370,10 @@ sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
 sealed class StepH.GameEventScript.Api.GameEventScriptContext
   method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(System.String message)
-  method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> args)
-  method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] args)
+  method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(System.String message, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
   method System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method System.Boolean Emit(System.String message)
-  method System.Boolean Emit(System.String message, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> args)
-  method System.Boolean Emit(System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] args)
+  method System.Boolean Emit(System.String message, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
   property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
   property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
   property StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
@@ -509,13 +507,17 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessage
   method System.Boolean HasTag(System.String tag)
   method System.Int32 GetHashCode()
   method System.String ToString()
-  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
-  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
-  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
   property StepH.GameEventScript.Api.GameEventScriptMessageArguments Arguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
   property System.String Name { get }
   property System.String SignatureId { get }
+struct StepH.GameEventScript.Api.GameEventScriptMessageArgument
+  ctor GameEventScriptMessageArgument(System.String name, StepH.GameEventScript.Runtime.Values.GesValue value)
+  property StepH.GameEventScript.Runtime.Values.GesValue Value { get }
+  property System.String Name { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptMessageArguments
   method StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit UnitAt(System.Int32 index)
   method StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind KindAt(System.Int32 index)
@@ -526,7 +528,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageArguments
   method System.Boolean HasValueAt(System.Int32 index)
   method System.Boolean IsNothingAt(System.Int32 index)
   method System.Boolean IsNumericAt(System.Int32 index)
-  method System.Collections.Generic.IEnumerator<System.Collections.Generic.KeyValuePair<System.String, StepH.GameEventScript.Runtime.Values.GesValue>> GetEnumerator()
+  method System.Collections.Generic.IEnumerator<StepH.GameEventScript.Api.GameEventScriptMessageArgument> GetEnumerator()
   method System.Double GetAsNumber(System.Int32 index)
   method System.Double GetAsNumber(System.String name)
   method System.Int32 IndexOf(System.String name)
@@ -536,7 +538,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptMessageArguments
   method System.String GetAsText(System.String name)
   method System.String NameAt(System.Int32 index)
   method System.String ToString()
-  method static StepH.GameEventScript.Api.GameEventScriptMessageArguments Create(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> values)
+  method static StepH.GameEventScript.Api.GameEventScriptMessageArguments Create(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
   property StepH.GameEventScript.Api.GameEventScriptMessageArguments Empty { get }
   property StepH.GameEventScript.Runtime.Values.GesValue Item { get }
   property StepH.GameEventScript.Runtime.Values.GesValue Item { get }
@@ -844,6 +846,11 @@ interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
   method System.Void MessageEmitted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
   method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptPublishResult result)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions
+  method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+  method static System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
+  method static System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptContext context, System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
 sealed class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder
   method StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry Build()
   method StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder Add(System.Type extensionType)
@@ -875,6 +882,10 @@ sealed class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner
   method System.Boolean Unsubscribe(StepH.GameEventScript.Api.GameEventScriptSubscription subscription)
   method System.Void Dispose()
   method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner Create(StepH.GameEventScript.Api.GameEventScriptHost host)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpMessage
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
 sealed class StepH.GameEventScript.CSharpBridge.GesConstructAttribute
   ctor GesConstructAttribute()
 sealed class StepH.GameEventScript.CSharpBridge.GesExtensionAttribute

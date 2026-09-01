@@ -312,7 +312,7 @@ public sealed class GameEventScriptProgramFormatTests
         var host = GameEventScriptHost.CreateBuilder().Build();
         host.Load(decoded);
         host.Subscribe("Done", new[] { "value" }, (message, _) => received.Add(message.Arguments.GetAsInteger(0)));
-        Assert.IsTrue(host.Receive(GameEventScriptMessage.Create("Start", ("value", GesValue.GesInteger(2)))));
+        Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(2)))));
         host.RunToCompletion();
         CollectionAssert.AreEqual(new long[] { 3 }, received);
     }

@@ -11,10 +11,26 @@ using StepH.GameEventScript.Runtime.Values;
 namespace StepH.GameEventScript.Api;
 
 /// <summary>
+/// One named value in an ordered message argument list.
+/// </summary>
+public readonly struct GameEventScriptMessageArgument
+{
+    public GameEventScriptMessageArgument(string? name, GesValue value)
+    {
+        Name = GameEventScriptMessageSignature.NormalizeParameterName(name);
+        Value = value;
+    }
+
+    public string Name { get; }
+
+    public GesValue Value { get; }
+}
+
+/// <summary>
 /// Ordered message arguments. Argument names are part of the message signature
 /// and therefore preserve source order.
 /// </summary>
-public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyValuePair<string, GesValue>>
+public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEventScriptMessageArgument>
 {
     public static GameEventScriptMessageArguments Empty { get; } = new([], [], []);
 
@@ -128,7 +144,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return -1;
     }
 
-    public IEnumerator<KeyValuePair<string, GesValue>> GetEnumerator() => new PairEnumerator(this);
+    public IEnumerator<GameEventScriptMessageArgument> GetEnumerator() => new PairEnumerator(this);
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
@@ -153,21 +169,20 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         return builder.ToString();
     }
 
-    public static GameEventScriptMessageArguments Create(IReadOnlyDictionary<string, GesValue>? values)
+    public static GameEventScriptMessageArguments Create(IReadOnlyList<GameEventScriptMessageArgument>? arguments)
     {
-        if (values is null || values.Count == 0)
+        if (arguments is null || arguments.Count == 0)
         {
             return Empty;
         }
 
-        var names = new string[values.Count];
-        var vmValues = new GesValue[values.Count];
-        var index = 0;
-        foreach (var pair in values)
+        var names = new string[arguments.Count];
+        var vmValues = new GesValue[arguments.Count];
+        for (var index = 0; index < arguments.Count; index++)
         {
-            names[index] = pair.Key;
-            vmValues[index] = pair.Value;
-            index++;
+            var argument = arguments[index];
+            names[index] = argument.Name;
+            vmValues[index] = argument.Value;
         }
 
         return CreateOrdered(names, vmValues);
@@ -213,6 +228,17 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         for (var index = 0; index < names.Length; index++)
         {
             var normalizedName = GameEventScriptMessageSignature.NormalizeParameterName(names[index]);
+            if (!string.Equals(normalizedName, GameEventScriptMessageSignature.UnlabeledParameterName, StringComparison.Ordinal))
+            {
+                for (var previous = 0; previous < index; previous++)
+                {
+                    if (string.Equals(signatureLabels[previous], normalizedName, StringComparison.Ordinal))
+                    {
+                        throw new ArgumentException($"Message argument name '{normalizedName}' occurs more than once after normalization.", nameof(names));
+                    }
+                }
+            }
+
             signatureLabels[index] = normalizedName;
             names[index] = normalizedName;
         }
@@ -301,11 +327,11 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         }
     }
 
-    private sealed class PairEnumerator(GameEventScriptMessageArguments arguments) : IEnumerator<KeyValuePair<string, GesValue>>
+    private sealed class PairEnumerator(GameEventScriptMessageArguments arguments) : IEnumerator<GameEventScriptMessageArgument>
     {
         private int _index = -1;
 
-        public KeyValuePair<string, GesValue> Current => new(arguments.NameAt(_index), arguments.ValueAt(_index));
+        public GameEventScriptMessageArgument Current => new(arguments.NameAt(_index), arguments.ValueAt(_index));
 
         object IEnumerator.Current => Current;
 

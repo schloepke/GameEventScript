@@ -217,7 +217,9 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
             var index = 0;
             foreach (var parameter in collection)
             {
-                values[index++] = NormalizeParameterName(parameter);
+                var normalized = NormalizeParameterName(parameter);
+                RequireUniqueNamedParameter(values, index, normalized, nameof(parameters));
+                values[index++] = normalized;
             }
 
             return values;
@@ -226,7 +228,9 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
         var list = new List<string>();
         foreach (var parameter in parameters)
         {
-            list.Add(NormalizeParameterName(parameter));
+            var normalized = NormalizeParameterName(parameter);
+            RequireUniqueNamedParameter(list, normalized, nameof(parameters));
+            list.Add(normalized);
         }
 
         if (list.Count == 0)
@@ -242,4 +246,19 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
 
         return result;
     }
+
+    private static void RequireUniqueNamedParameter(IReadOnlyList<string> parameters, int count, string normalized, string parameterName)
+    {
+        if (string.Equals(normalized, UnlabeledParameterName, StringComparison.Ordinal)) return;
+        for (var index = 0; index < count; index++)
+        {
+            if (string.Equals(parameters[index], normalized, StringComparison.Ordinal))
+            {
+                throw new ArgumentException($"Message parameter name '{normalized}' occurs more than once after normalization.", parameterName);
+            }
+        }
+    }
+
+    private static void RequireUniqueNamedParameter(IReadOnlyList<string> parameters, string normalized, string parameterName)
+        => RequireUniqueNamedParameter(parameters, parameters.Count, normalized, parameterName);
 }

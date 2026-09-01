@@ -3460,6 +3460,33 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "cross kind and structural equality are deterministic",
+      "script": "module AtomicDeterministicEquality\nrecord :first as { value: :number }\nrecord :second as { value: :number }\n\non Start {\n  let leftDice as :dice be [6, 4]\n  let rightDice as :dice be [5, 5]\n  let first be :first(value: 10)\n  let sameFirst be :first(value: 10)\n  let second be :second(value: 10)\n  let plain be [value: 10]\n  emit Done(numericCrossKind: 10 = 1000%, diceBySum: leftDice = rightDice, nestedNumericExact: [10] = [1000%], nestedDiceExact: [leftDice] = [rightDice], textTagDifferent: 'same' = #same, sameRecord: first = sameFirst, differentRecordType: first = second, recordMapDifferent: first = plain, mapRecordDifferent: plain = first, mapsIgnoreSourceOrder: [b: 2, a: 1] = [a: 1, b: 2])\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "numericCrossKind": { "type": ":boolean", "value": true },
+                "diceBySum": { "type": ":boolean", "value": true },
+                "nestedNumericExact": { "type": ":boolean", "value": false },
+                "nestedDiceExact": { "type": ":boolean", "value": false },
+                "textTagDifferent": { "type": ":boolean", "value": false },
+                "sameRecord": { "type": ":boolean", "value": true },
+                "differentRecordType": { "type": ":boolean", "value": false },
+                "recordMapDifferent": { "type": ":boolean", "value": false },
+                "mapRecordDifferent": { "type": ":boolean", "value": false },
+                "mapsIgnoreSourceOrder": { "type": ":boolean", "value": true }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

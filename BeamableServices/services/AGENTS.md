@@ -51,8 +51,33 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
 - There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
 - `StepH-GameEventScript/HostArchitecture.md` is the normative portable responsibility/state-machine document.
+- `StepH-GameEventScript/PortableDeterminismSemantics.md` is normative for the
+  seeded PRNG, script/structural equality, stable ordering, iteration/ranges,
+  and equal-priority host dispatch.
 
 ## Recent Completed Work
+
+### Portable Determinism Semantics
+
+- SplitMix64 plus xoshiro256** now have language-neutral raw, bounded-integer,
+  and Binary64 known-answer vectors.
+- Stable sorting, Unicode-scalar map/record order, last-entry-wins duplicate map
+  keys, cross-kind equality, strict nested structural equality, iterator order,
+  and equal-priority dispatch are one normative contract.
+- Range iterators now stop by their overflow-safe precomputed length. They cannot
+  wrap past `Int64` boundaries or repeat forever when a Binary64 step no longer
+  changes a large current value.
+- JSON conformance covers equality and range boundaries; existing JSON cases
+  cover stable direct/iterator ordering, map/record order, and script/native plus
+  multi-program dispatch order.
+
+Verification after this change:
+
+```text
+1051/1051 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
 
 ### Portable Number Semantics
 

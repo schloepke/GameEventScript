@@ -122,6 +122,27 @@ public sealed class GesValueTests
     }
 
     [TestMethod]
+    public void MapOrderingIsScalarOrdinalAndDuplicateKeysUseLastEntry()
+    {
+        var map = GesValue.GesMap(
+            ["\U00010000", "same", "\uE000", "same"],
+            [
+                GesValue.GesInteger(4),
+                GesValue.GesInteger(1),
+                GesValue.GesInteger(3),
+                GesValue.GesInteger(2)
+            ]);
+
+        var view = map.AsMap();
+        Assert.IsNotNull(view);
+        Assert.AreEqual(3, view.Length);
+        Assert.AreEqual("same", view.KeyAt(0));
+        Assert.AreEqual("\uE000", view.KeyAt(1));
+        Assert.AreEqual("\U00010000", view.KeyAt(2));
+        Assert.AreEqual(2L, view.Get("same")!.Value.AsInteger());
+    }
+
+    [TestMethod]
     public void RangesMessagesAndHandlersExposeStoredObjects()
     {
         var intRange = GesValue.GesRange(1, 5, 2);

@@ -719,7 +719,7 @@ kind and uses kind-specific value equality:
 | `Message` | Same signature id, recursively equal arguments, and same tag sequence. |
 | `Handler` | Same handler signature id. |
 | `List` | Same length and ordered recursively equal items. |
-| `Map`/record/custom map-like | Same key set and recursively equal values. |
+| `Map`/record/custom map-like | Same runtime kind, same key set, and structurally equal values. Records additionally require the same declared type. |
 
 Numeric operations must preserve the language distinction between absent input
 and invalid mathematics. For arithmetic, numeric unary operations, `Clamp`, and

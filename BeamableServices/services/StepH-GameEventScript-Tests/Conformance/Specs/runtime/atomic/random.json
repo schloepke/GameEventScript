@@ -66,6 +66,42 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "seeded random matches portable known answer vectors",
+      "maxFloatUlps": 0,
+      "script": "module AtomicSeededRandomKnownAnswers\non Start {\n  random with 0 {\n    emit Integers(a: random from -100 to 100, b: random from -100 to 100, c: random from -100 to 100, d: random from -100 to 100, e: random from -100 to 100, f: random from -100 to 100, g: random from -100 to 100, h: random from -100 to 100)\n  }\n  random with 0 {\n    emit Floats(a: random from 0.0 to 1.0, b: random from 0.0 to 1.0, c: random from 0.0 to 1.0, d: random from 0.0 to 1.0, e: random from 0.0 to 1.0)\n  }\n}",
+      "steps": [
+        {
+          "input": { "name": "Start", "args": {} },
+          "expectedPublished": [
+            {
+              "name": "Integers",
+              "args": {
+                "a": { "type": ":integer", "value": "16" },
+                "b": { "type": ":integer", "value": "-95" },
+                "c": { "type": ":integer", "value": "-9" },
+                "d": { "type": ":integer", "value": "-45" },
+                "e": { "type": ":integer", "value": "-76" },
+                "f": { "type": ":integer", "value": "43" },
+                "g": { "type": ":integer", "value": "-62" },
+                "h": { "type": ":integer", "value": "-21" }
+              }
+            },
+            {
+              "name": "Floats",
+              "args": {
+                "a": { "type": ":float", "value": "0.6012629994179048" },
+                "b": { "type": ":float", "value": "0.7477740925472398" },
+                "c": { "type": ":float", "value": "0.10301998939503632" },
+                "d": { "type": ":float", "value": "0.4165890778296456" },
+                "e": { "type": ":float", "value": "0.7329967790569901" }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

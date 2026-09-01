@@ -249,6 +249,10 @@ random with seed as :number {
 let value be random with 123 (random from 1 to 100)
 ```
 
+The portable seeded PRNG algorithm, bounded sampling rules, and known-answer
+vectors are specified in
+[PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).
+
 ## Expressions and Operators
 
 Expressions are evaluated left to right according to precedence. `and`, `or`,
@@ -552,11 +556,15 @@ Text is not numeric for equality, so `'10.3' = 10.3` is false while
 `('10.3' as :number) = 10.3` is true.
 
 If the numeric view does not apply, exact equality requires the same value kind:
-tags and text compare exact Unicode-scalar sequences, vectors and points compare `x`, `y`, `z`,
+tags and text compare exact Unicode-scalar sequences within their own kind, vectors and points compare `x`, `y`, `z`,
 and unit, ranges compare `from`, `to`, and `step`, series compare signature and
 offset, messages compare signature id, arguments, and tag sequence, handlers
 compare signature id, lists compare ordered items, dice compare ordered rolls,
-and maps/records/custom map-like values compare their key/value pairs.
+and maps/records/custom map-like values compare their key/value pairs. Records
+also require the same declared record type. Nested collection, record, and
+message values use strict structural equality without top-level numeric
+coercion; the complete contract is in
+[PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).
 
 `abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their
@@ -651,6 +659,11 @@ let r be from 1 to 10
 let stepped be from 10 to 0 step -2
 let fractional be from 1.5 to 3.5 step 0.5
 ```
+
+Both bounds are inclusive. A zero step or a step pointing away from the end
+produces an empty range. Integer boundary handling is overflow-safe, and
+floating iterators emit exactly their precomputed finite range length; see
+[PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).
 
 ### Series
 

@@ -85,18 +85,26 @@ umgesetzt:
 - Grenzfälle liegen sowohl als direkte Low-Level-Tests als auch als portable
   JSON-Conformance vor.
 
-### 2.3 Determinismus
+### 2.3 Determinismus - DONE
 
-Zusätzliche Verträge:
+Der sprachneutrale Vertrag ist in
+[PortableDeterminismSemantics.md](StepH-GameEventScript/PortableDeterminismSemantics.md)
+festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 
-- bekannte Testvektoren für den Random Generator
-- Sortierstabilität
-- Map-/Record-Reihenfolge
-- Gleichheit unterschiedlicher Value-Arten
-- Iterator- und Range-Grenzfälle
-- Reihenfolge gleich priorisierter Handler
-
-Der PRNG braucht bekannte Ausgabesequenzen und nicht nur den Nachweis, dass zwei C#-Instanzen mit demselben Seed gleich laufen.
+- SplitMix64 plus xoshiro256** sind einschließlich UInt64-Rohsequenzen,
+  rejection-sampled Integerwerten und exakten Binary64-Bitmustern spezifiziert.
+- `:sort` und `:order by` sind aufsteigend wie absteigend stabil; gleiche
+  Schlüssel behalten ihre Quellreihenfolge.
+- Maps und Records verwenden Unicode-Scalar-Keyorder; doppelte Map-Keys sind
+  deterministisch last-entry-wins.
+- Top-Level-Numeric-Coercion und strikte strukturelle Gleichheit sind getrennt;
+  Cross-Kind-, Dice-, List-, Map- und Record-Fälle liegen in JSON vor.
+- Range-Länge, Richtung, Zero-Step, Int64-Grenzen und nicht fortschreitende
+  Binary64-Iteratoren sind festgelegt. Iteratoren stoppen anhand der
+  vorab berechneten Länge und können an Zahlengrenzen nicht weiterwrappen.
+- Gleich priorisierte Handler laufen in Registrierungsreihenfolge; bei mehreren
+  Programs entspricht sie der Load-Reihenfolge. Dispatch-Snapshots bleiben
+  unverändert.
 
 ## 3. C#-Kopplungen im portablen API/Core auflösen
 

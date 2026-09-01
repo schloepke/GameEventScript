@@ -1718,6 +1718,39 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "range iterators stop at numeric boundaries",
+      "script": "module AtomicRangeIteratorBoundaries\non Start(maximum, minimum, huge) {\n  let maximumRange as :range be from maximum to maximum step 1\n  let minimumRange as :range be from minimum to minimum step -1\n  let hugeRange as :range be from huge to huge step 1.0\n  let wrongAscending as :range be from 3 to 1 step 1\n  let wrongDescending as :range be from 1 to 3 step -1\n  let zeroStep as :range be from 1 to 1 step 0\n  let maximumValues be maximumRange[:select value => value]\n  let minimumValues be minimumRange[:select value => value]\n  let hugeValues be hugeRange[:select value => value]\n  emit Done(maximumCount: maximumValues[:count], maximumValue: maximumValues[1], minimumCount: minimumValues[:count], minimumValue: minimumValues[1], hugeCount: hugeValues[:count], hugeValue: hugeValues[1], wrongAscendingCount: wrongAscending[:count], wrongDescendingCount: wrongDescending[:count], zeroStepCount: zeroStep[:count])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "maximum": { "type": ":integer", "value": "9223372036854775807" },
+              "minimum": { "type": ":integer", "value": "-9223372036854775808" },
+              "huge": { "type": ":float", "value": "1e+308" }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "maximumCount": { "type": ":integer", "value": "1" },
+                "maximumValue": { "type": ":integer", "value": "9223372036854775807" },
+                "minimumCount": { "type": ":integer", "value": "1" },
+                "minimumValue": { "type": ":integer", "value": "-9223372036854775808" },
+                "hugeCount": { "type": ":integer", "value": "1" },
+                "hugeValue": { "type": ":float", "value": "1e+308" },
+                "wrongAscendingCount": { "type": ":integer", "value": "0" },
+                "wrongDescendingCount": { "type": ":integer", "value": "0" },
+                "zeroStepCount": { "type": ":integer", "value": "0" }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -23,21 +23,17 @@ internal readonly struct GesIteratorResult
 internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIterator, IDisposable
 {
     private long _current = from;
+    private long _remaining = GameEventScriptRangeMath.GetLength(from, to, step);
     private bool _disposed = false;
 
     public GesIteratorResult Next()
     {
-        if (_disposed) return default;
+        if (_disposed || _remaining <= 0) return default;
 
-        if (!(step switch
-            {
-                > 0 => _current <= to,
-                < 0 => _current >= to,
-                _ => false
-            })) return default;
         var value = default(GesValue);
         value.SetInteger(_current);
-        _current += step;
+        _remaining--;
+        if (_remaining > 0) _current = unchecked(_current + step);
         return new GesIteratorResult(in value);
     }
 
@@ -50,21 +46,17 @@ internal class GesIntegerRangeIterator(long from, long to, long step) : IGesIter
 internal class GesFloatRangeIterator(double from, double to, double step) : IGesIterator, IDisposable
 {
     private double _current = from;
+    private long _remaining = GameEventScriptRangeMath.GetLength(from, to, step);
     private bool _disposed;
 
     public GesIteratorResult Next()
     {
-        if (_disposed) return default;
+        if (_disposed || _remaining <= 0) return default;
 
-        if (!(step switch
-            {
-                > 0 => _current <= to,
-                < 0 => _current >= to,
-                _ => false
-            })) return default;
         var value = default(GesValue);
         value.SetFloat(_current);
-        _current += step;
+        _remaining--;
+        if (_remaining > 0) _current += step;
         return new GesIteratorResult(in value);
     }
 

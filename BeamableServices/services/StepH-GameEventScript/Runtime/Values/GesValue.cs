@@ -123,8 +123,34 @@ public struct GesValue : IEquatable<GesValue>
 
     public static GesValue GesMap(string[] keys, GesValue[] values)
     {
+        var count = keys.Length < values.Length ? keys.Length : values.Length;
+        var uniqueKeys = new string[count];
+        var uniqueValues = new GesValue[count];
+        var uniqueCount = 0;
+        for (var sourceIndex = 0; sourceIndex < count; sourceIndex++)
+        {
+            var key = keys[sourceIndex];
+            var existingIndex = -1;
+            for (var index = 0; index < uniqueCount; index++)
+            {
+                if (!string.Equals(uniqueKeys[index], key, StringComparison.Ordinal)) continue;
+                existingIndex = index;
+                break;
+            }
+
+            if (existingIndex >= 0)
+            {
+                uniqueValues[existingIndex] = values[sourceIndex];
+                continue;
+            }
+
+            uniqueKeys[uniqueCount] = key;
+            uniqueValues[uniqueCount] = values[sourceIndex];
+            uniqueCount++;
+        }
+
         var value = new GesValue();
-        value.SetMap(new GesValueMap(keys, values, keys.Length < values.Length ? keys.Length : values.Length));
+        value.SetMap(new GesValueMap(uniqueKeys, uniqueValues, uniqueCount));
         return value;
     }
 
@@ -147,7 +173,9 @@ public struct GesValue : IEquatable<GesValue>
             index++;
         }
 
-        return GesMap(keys, values);
+        var value = new GesValue();
+        value.SetMap(new GesValueMap(keys, values, entries.Count));
+        return value;
     }
 
     public static GesValue GesRecord(string typeName, string[] keys, GesValue[] values)

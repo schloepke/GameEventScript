@@ -25,8 +25,7 @@ internal static class GesVmRegisterCompare
             case Integer or Float or Percentage when b.Kind is Integer or Float or Percentage:
                 return a.Unit == b.Unit && GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
             case Text or Tag when b.Kind is Text or Tag:
-                if(a.IsNumeric && b.IsNumeric) return GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
-                return string.Equals(a.TextValue, b.TextValue, StringComparison.Ordinal);
+                return a.Kind == b.Kind && string.Equals(a.TextValue, b.TextValue, StringComparison.Ordinal);
             case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesValueVectorPoint av && b.ObjectValue is GesValueVectorPoint bv:
                 return a.Unit == b.Unit && a.Kind == b.Kind && GameEventScriptNumber.EqualsWithinUlps(av.X, bv.X, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Y, bv.Y, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Z, bv.Z, GameEventScriptNumber.RuntimeEqualityUlps);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:
@@ -45,7 +44,7 @@ internal static class GesVmRegisterCompare
                 if (av.Length != bv.Length) return false;
                 for (var i = 0; i < av.Length; i++)
                 {
-                    if (av[i].Equ(in bv[i])) continue;
+                    if (av[i].EqualsValue(in bv[i])) continue;
                     return false;
                 }
 
@@ -60,10 +59,6 @@ internal static class GesVmRegisterCompare
                 return EqualMaps(am, bm);
             case Custom when b.Kind is Custom && a.ObjectValue is GesCustomObject ac && b.ObjectValue is GesCustomObject bc:
                 return string.Equals(ac.TypeName, bc.TypeName, StringComparison.Ordinal) && EqualMaps(ac.Map, bc.Map);
-            case Map when b.Kind is Custom && a.ObjectValue is GesValueMap am && b.ObjectValue is GesCustomObject bc:
-                return EqualMaps(am, bc.Map);
-            case Custom when b.Kind is Map && a.ObjectValue is GesCustomObject ac && b.ObjectValue is GesValueMap bm:
-                return EqualMaps(ac.Map, bm);
             default:
                 if(a.IsNumeric && b.IsNumeric) return GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
                 return false;
@@ -85,7 +80,7 @@ internal static class GesVmRegisterCompare
                 var bValues = bm.ValueList;
                 for (var i = 0; i < aValues.Length; i++)
                 {
-                    if (aValues[i].Equ(in bValues[i])) continue;
+                    if (aValues[i].EqualsValue(in bValues[i])) continue;
                     return false;
                 }
 

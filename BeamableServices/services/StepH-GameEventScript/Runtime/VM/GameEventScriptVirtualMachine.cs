@@ -10,7 +10,8 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
-internal class GameEventScriptVmException(string message) : GameEventScriptFatalRuntimeException(message);
+internal sealed class GameEventScriptVmException(GameEventScriptDiagnostic diagnostic, Exception? innerException = null)
+    : GameEventScriptFatalRuntimeException(diagnostic, innerException);
 
 internal static class GameEventScriptVirtualMachine
 {
@@ -20,12 +21,17 @@ internal static class GameEventScriptVirtualMachine
         GameEventScriptMessage message,
         bool matchArguments,
         ushort entryAddress,
+        string handlerName,
         GameEventScriptContext context)
     {
-        if (vmState.State is Processing) throw new GameEventScriptVmException("Virtual machine is already processing another message");
+        if (vmState.State is Processing)
+            throw new GameEventScriptVmException(new GameEventScriptDiagnostic(
+                GameEventScriptDiagnosticPhase.Runtime,
+                GameEventScriptDiagnosticCodes.RuntimeVmStateConflict,
+                "Virtual machine is already processing another message."));
         if (vmState.State != Ready) vmState.Reset();
-        if (!vmState.PrepareStateForMessage(program, message, matchArguments, entryAddress, context))
-            vmState.RaiseError("Failed to prepare state for message");
+        if (!vmState.PrepareStateForMessage(program, message, matchArguments, entryAddress, handlerName, context) && vmState.ErrorDiagnostic is null)
+            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimePreparationFailed, "Failed to prepare state for message.");
     }
 
     internal static int RunSlice(GesVmState vmState, GameEventScriptContext context, int maxSteps)
@@ -693,16 +699,24 @@ internal static class GameEventScriptVirtualMachine
                         #endregion
 
                         default:
-                            vmState.RaiseError("Illegal opcode " + nameof(instruction.OpCode) + ". Execution halted.");
+                            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeIllegalOpcode,
+                                "Illegal opcode " + instruction.OpCode + ". Execution halted.");
                             break;
                     }
 
                     opcodesExecuted++;
                 }
             }
-            catch (Exception e)
+            catch (GameEventScriptFatalRuntimeException exception)
             {
-                vmState.RaiseError(e.Message);
+                vmState.RaiseError(exception.Diagnostic, exception.GetType().Name);
+            }
+            catch (Exception exception)
+            {
+                vmState.RaiseError(
+                    GameEventScriptDiagnosticCodes.RuntimeUnhandledFailure,
+                    "Unhandled VM execution failure.",
+                    exception.GetType().Name + ": " + exception.Message);
             }
 
         context.RuntimeBudget.CompleteExecutionSlice(
@@ -710,7 +724,6 @@ internal static class GameEventScriptVirtualMachine
             reservedSteps,
             vmState.State == Processing,
             executionLimitDetail);
-        if (vmState.State != Processing) vmState.Reset();
         return opcodesExecuted;
     }
 }

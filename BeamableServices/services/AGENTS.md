@@ -67,6 +67,27 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Diagnostic Contract
+
+- Added language-neutral `parse`, `validate`, `compile`, `decode`, `link`, and
+  `runtime` diagnostics with stable ASCII codes and optional symbol/source/
+  program/handler context.
+- Parser, validator, compiler, `.gesb` decoding, dynamic linking, native handlers,
+  publish sinks, and VM failures now expose structured data; C# exceptions are
+  transport only.
+- Runtime handler diagnostics flow through the observer and execution result
+  without adding successful hot-path allocations. JSON conformance no longer
+  matches English error text.
+- `StepH-GameEventScript/PortableDiagnostics.md` is normative.
+
+Verification after this change:
+
+```text
+1069/1069 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
 ### Ordered Portable Message Arguments
 
 - Core message construction now consumes ordered

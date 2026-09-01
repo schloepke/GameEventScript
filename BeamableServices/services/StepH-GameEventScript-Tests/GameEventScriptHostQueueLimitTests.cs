@@ -71,5 +71,9 @@ public sealed class GameEventScriptHostQueueLimitTests
 
         public void RuntimeLimitReached(string limitName, string detail, int limit)
             => Limits.Add($"{limitName}:{limit}:{detail}");
+
+        public void RuntimeError(GameEventScriptDiagnostic diagnostic)
+        {
+        }
     }
 }

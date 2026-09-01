@@ -53,6 +53,8 @@ internal class GesVmState
     internal ushort StageLength { get; private set; }
 
     internal string? ErrorMessage { get; private set; }
+    internal GameEventScriptDiagnostic? ErrorDiagnostic { get; private set; }
+    internal string? ActiveHandlerName { get; private set; }
     internal GesLinkedProgram.OutboundMessageSignature[] OutboundMessageSignatures => ActiveProgram!.OutboundMessageSignatures;
     internal GameEventScriptBinaryBindEntry[] RecordConstructors => ActiveProgram!.RecordConstructors;
     internal GameEventScriptBinaryBindEntry[] ExtensionCallBinds => ActiveProgram!.ExtensionCallBinds;
@@ -89,16 +91,20 @@ internal class GesVmState
         if (State != StateValue.Ready) return false;
 
         if (!EnsureRegisterCapacity(required))
-            throw new GameEventScriptVmException(ErrorMessage ?? "VM register capacity could not be prepared.");
+            throw new GameEventScriptVmException(ErrorDiagnostic ?? new GameEventScriptDiagnostic(
+                GameEventScriptDiagnosticPhase.Runtime,
+                GameEventScriptDiagnosticCodes.RuntimeRegisterOverflow,
+                ErrorMessage ?? "VM register capacity could not be prepared."));
         return true;
     }
 
 
-    internal bool PrepareStateForMessage(GesLinkedProgram program, GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, GameEventScriptContext context)
+    internal bool PrepareStateForMessage(GesLinkedProgram program, GameEventScriptMessage message, bool callAsArguments, ushort entryAddress, string handlerName, GameEventScriptContext context)
     {
-        if (State != Ready) return RaiseError("State not ready to receive new messages.");
+        if (State != Ready) return RaiseError(GameEventScriptDiagnosticCodes.RuntimeVmStateConflict, "State not ready to receive new messages.");
         ActiveProgram = program ?? throw new ArgumentNullException(nameof(program));
-        if (entryAddress >= CodeSegmentSize) return RaiseError($"Illegal entry address {entryAddress} for message.");
+        ActiveHandlerName = handlerName;
+        if (entryAddress >= CodeSegmentSize) return RaiseError(GameEventScriptDiagnosticCodes.RuntimePreparationFailed, $"Illegal entry address {entryAddress} for message.");
         InstructionPointer = entryAddress;
         RegisterFrameStart = 0;
         StageLength = 0;
@@ -163,21 +169,37 @@ internal class GesVmState
     
     internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
     {
-        if (RandomGeneratorsPointer >= RandomGenerators.Length) return RaiseError("Random generator stack overflow");
+        if (RandomGeneratorsPointer >= RandomGenerators.Length)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackOverflow, "Random generator stack overflow.");
         RandomGenerators[RandomGeneratorsPointer++] = RandomGenerator;
         RandomGenerator = randomGenerator;
         return true;
     }
     internal bool PopRandom()
     {
-        if (RandomGeneratorsPointer == 0) return RaiseError("Random generator stack underflow");
+        if (RandomGeneratorsPointer == 0)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeRandomStackUnderflow, "Random generator stack underflow.");
         RandomGenerator = RandomGenerators[--RandomGeneratorsPointer];
         return true;
     }
-    internal bool RaiseError(string message)
+    internal bool RaiseError(string code, string message, string? technicalDetails = null)
     {
         State = Error;
         ErrorMessage = message;
+        ErrorDiagnostic = new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Runtime,
+            code,
+            message,
+            ProgramName: ActiveProgram?.Program.ModuleName,
+            HandlerName: ActiveHandlerName,
+            TechnicalDetails: technicalDetails);
+        return false;
+    }
+    internal bool RaiseError(GameEventScriptDiagnostic diagnostic, string? technicalDetails = null)
+    {
+        State = Error;
+        ErrorMessage = diagnostic.Message;
+        ErrorDiagnostic = technicalDetails is null ? diagnostic : diagnostic with { TechnicalDetails = technicalDetails };
         return false;
     }
     internal void Reset()
@@ -195,7 +217,9 @@ internal class GesVmState
         _externalTypeConstructorCall?.EndCall();
         ProcessingMessage = null;
         ActiveProgram = null;
+        ActiveHandlerName = null;
         ErrorMessage = null;
+        ErrorDiagnostic = null;
         State = Ready;
     }
     internal void JumpAddress(ushort address)
@@ -207,7 +231,8 @@ internal class GesVmState
         var nextRegisterFrameStart = RegisterFrameStart + RegisterFrameLength;
         var nextRegisterFrameLength = StageLength;
         if (!EnsureRegisterCapacity(nextRegisterFrameStart + nextRegisterFrameLength)) return false;
-        if (CallStackPointer >= CallStack.Length) return RaiseError("Stack overflow");
+        if (CallStackPointer >= CallStack.Length)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeCallStackOverflow, "Call stack overflow.");
         CallStack[CallStackPointer++] = new CallFrame
         {
             InstructionPointer = InstructionPointer,
@@ -224,11 +249,15 @@ internal class GesVmState
     }
     internal bool CallRecordConstructor(ushort recordId, ushort resultRegister)
     {
-        if (recordId >= RecordConstructors.Length) return RaiseError($"Record constructor '{recordId}' was not found.");
+        if (recordId >= RecordConstructors.Length)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' was not found.");
         var bind = RecordConstructors[recordId];
-        if (bind.Kind != GameEventScriptBinaryBindKind.Record) return RaiseError($"Record constructor '{recordId}' has invalid bind kind.");
-        if (bind.EntryAddress >= CodeSegmentSize) return RaiseError($"Record constructor '{recordId}' has an invalid entry address.");
-        if (StageLength != bind.ArgumentNames.Count) return RaiseError($"Record constructor '{recordId}' has the wrong number of arguments.");
+        if (bind.Kind != GameEventScriptBinaryBindKind.Record)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has invalid bind kind.");
+        if (bind.EntryAddress >= CodeSegmentSize)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has an invalid entry address.");
+        if (StageLength != bind.ArgumentNames.Count)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidRecordConstructor, $"Record constructor '{recordId}' has the wrong number of arguments.");
         return CallAddress(bind.EntryAddress, resultRegister);
     }
     internal void ReturnVoid()
@@ -272,7 +301,16 @@ internal class GesVmState
         if (callFrame.NormalizeResultAsPredicate && result.Kind is not GameEventScriptBytecodeTypeKind.Boolean && !result.IsNothing) result.SetNothing();
         RegisterValues[callFrame.ResultRegisterIndex.Value + RegisterFrameStart] = result;
     }
-    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer() => InstructionPointer >= CodeSegmentSize ? throw new OverflowException() : Program.Code[InstructionPointer++];
+    internal GameEventScriptBytecodeInstruction FetchInstructionAndIncrementInstructionPointer()
+    {
+        if (InstructionPointer < CodeSegmentSize) return Program.Code[InstructionPointer++];
+        throw new GameEventScriptVmException(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Runtime,
+            GameEventScriptDiagnosticCodes.RuntimeInstructionPointerOutOfRange,
+            "Instruction pointer is outside the code segment.",
+            ProgramName: ActiveProgram?.Program.ModuleName,
+            HandlerName: ActiveHandlerName));
+    }
     internal string FetchStringByPointer(ushort index) => StringPool[index];
     internal GameEventScriptUInt16IndexList FetchUInt16SliceTableByPointer(ushort index) => Program.UInt16IndexLists.Resolve(index);
     internal void ModifyLocalRegisters(short registerCount)
@@ -291,7 +329,8 @@ internal class GesVmState
                 var tempRegisterCount = -registerCount;
                 if (RegisterFrameLength < tempRegisterCount)
                 {
-                    RaiseError("Inconsistent register frame length. Cannot remove more registers than are available.");
+                    RaiseError(GameEventScriptDiagnosticCodes.RuntimePreparationFailed,
+                        "Inconsistent register frame length. Cannot remove more registers than are available.");
                 }
                 else
                 {
@@ -362,7 +401,9 @@ internal class GesVmState
     private bool EnsureRegisterCapacity(int requiredRegisters)
     {
         if (requiredRegisters <= RegisterValues.Length) return true;
-        if (requiredRegisters > MaxRegisterCount) return RaiseError($"Register overflow. Required {requiredRegisters} registers but maximum is {MaxRegisterCount}.");
+        if (requiredRegisters > MaxRegisterCount)
+            return RaiseError(GameEventScriptDiagnosticCodes.RuntimeRegisterOverflow,
+                $"Register overflow. Required {requiredRegisters} registers but maximum is {MaxRegisterCount}.");
         var newLength = RegisterValues.Length;
         do
         {

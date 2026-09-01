@@ -1085,6 +1085,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
         var emitted = new List<GameEventScriptMessage>();
         var published = new List<GameEventScriptMessage>();
         var observedRuntimeLimits = new List<TestRuntimeLimitEvent>();
+        var observedRuntimeDiagnostics = new List<GameEventScriptDiagnostic>();
         var lastCapturedVmDump = string.Join(
             Environment.NewLine,
             programs.Select(program => program.Dump(includeInstructionAddresses: true)));
@@ -1102,7 +1103,8 @@ public abstract class GameEventScriptJsonConformanceTestBase
                 {
                     emitted.Add(message);
                 },
-                runtimeLimitReached: (name, detail, limit) => observedRuntimeLimits.Add(new TestRuntimeLimitEvent(name, detail, limit))))
+                runtimeLimitReached: (name, detail, limit) => observedRuntimeLimits.Add(new TestRuntimeLimitEvent(name, detail, limit)),
+                runtimeError: observedRuntimeDiagnostics.Add))
             .WithPublishSink(new TestPublishSink(published.Add))
             .Build();
         for (var programIndex = 0; programIndex < programs.Count; programIndex++) host.Load(programs[programIndex]);
@@ -1131,6 +1133,7 @@ public abstract class GameEventScriptJsonConformanceTestBase
             emitted.Clear();
             published.Clear();
             observedRuntimeLimits.Clear();
+            observedRuntimeDiagnostics.Clear();
             var accepted = host.Receive(GameEventScriptConformanceValueCodec.DecodeMessage(step.Input));
             var paused = false;
             if (step.OpcodeBudget is > 0)
@@ -1177,6 +1180,13 @@ public abstract class GameEventScriptJsonConformanceTestBase
             if (!TryMatchRuntimeLimits(testCase, stepIndex, step, observedRuntimeLimits, out var runtimeLimitDiff))
             {
                 mismatch = $"step {stepIndex + 1}: runtime limits differ.{Environment.NewLine}{runtimeLimitDiff}";
+                debugDump = CaptureVmDump(lastCapturedVmDump);
+                return false;
+            }
+
+            if (!RuntimeDiagnosticsMatch(step.ExpectedRuntimeDiagnostics, observedRuntimeDiagnostics, out var runtimeDiagnosticDiff))
+            {
+                mismatch = $"step {stepIndex + 1}: runtime diagnostics differ.{Environment.NewLine}{runtimeDiagnosticDiff}";
                 debugDump = CaptureVmDump(lastCapturedVmDump);
                 return false;
             }
@@ -1284,6 +1294,43 @@ public abstract class GameEventScriptJsonConformanceTestBase
 
         diff = builder.ToString();
         return diff.Length == 0;
+    }
+
+    private static bool RuntimeDiagnosticsMatch(
+        IReadOnlyList<GameEventScriptExpectedCompileErrorSpec>? expected,
+        IReadOnlyList<GameEventScriptDiagnostic> actual,
+        out string details)
+    {
+        expected ??= [];
+        if (expected.Count != actual.Count)
+        {
+            details = $"expected {expected.Count} diagnostic(s), actual {actual.Count}: " +
+                      string.Join("; ", actual.Select(value => $"{value.Phase}:{value.Code}"));
+            return false;
+        }
+
+        for (var index = 0; index < expected.Count; index++)
+        {
+            var expectedDiagnostic = expected[index];
+            var actualDiagnostic = actual[index];
+            if ((!string.IsNullOrWhiteSpace(expectedDiagnostic.Phase) &&
+                 !string.Equals(expectedDiagnostic.Phase, actualDiagnostic.Phase.ToString(), StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(expectedDiagnostic.Code) &&
+                 !string.Equals(expectedDiagnostic.Code, actualDiagnostic.Code, StringComparison.Ordinal)) ||
+                (!string.IsNullOrWhiteSpace(expectedDiagnostic.ProgramName) &&
+                 !string.Equals(expectedDiagnostic.ProgramName, actualDiagnostic.ProgramName, StringComparison.Ordinal)) ||
+                (!string.IsNullOrWhiteSpace(expectedDiagnostic.HandlerName) &&
+                 !string.Equals(expectedDiagnostic.HandlerName, actualDiagnostic.HandlerName, StringComparison.Ordinal)))
+            {
+                details = $"diagnostic[{index}] expected {expectedDiagnostic.Phase}:{expectedDiagnostic.Code}, " +
+                          $"actual {actualDiagnostic.Phase}:{actualDiagnostic.Code} " +
+                          $"program={actualDiagnostic.ProgramName ?? "-"} handler={actualDiagnostic.HandlerName ?? "-"}.";
+                return false;
+            }
+        }
+
+        details = string.Empty;
+        return true;
     }
 
     private static bool RuntimeLimitMatches(GameEventScriptRuntimeLimitExpectationSpec expected, TestRuntimeLimitEvent actual)

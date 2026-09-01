@@ -6,6 +6,13 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed partial class GesBinaryBuilder
 {
+    private static GameEventScriptCompileException CompileFailure(string code, string message, string? symbol = null)
+        => new(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Compile,
+            code,
+            message,
+            symbol));
+
     private ProgramResourceAnalysis AnalyzeProgramResources(
         IReadOnlyList<PlanItem> items,
         RegisterAllocationResult registerAllocation)
@@ -128,7 +135,7 @@ internal sealed partial class GesBinaryBuilder
             operand.LabelRef.Id >= routineByEntryLabel.Length ||
             routineByEntryLabel[operand.LabelRef.Id] == NoRoutineId)
         {
-            throw new GameEventScriptCompileException(
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidResourceMetadata,
                 $"Routine '{callerName}' calls an address that is not a routine entry point.");
         }
 
@@ -147,7 +154,7 @@ internal sealed partial class GesBinaryBuilder
             _binds[operand.BindRef.Id] is not { Kind: GameEventScriptBinaryBindKind.Record, EntryLabel: { } entryLabel } ||
             routineByEntryLabel[entryLabel.Id] == NoRoutineId)
         {
-            throw new GameEventScriptCompileException(
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidResourceMetadata,
                 $"Routine '{callerName}' references an invalid record-constructor call target.");
         }
 
@@ -182,7 +189,7 @@ internal sealed partial class GesBinaryBuilder
             }
 
             names[^1] = _routines[routineId].Name;
-            throw new GameEventScriptCompileException(
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileCyclicCallGraph,
                 "Recursive calls are not allowed. Cyclic call path: " + string.Join(" -> ", names) + ".");
         }
 
@@ -236,7 +243,7 @@ internal sealed partial class GesBinaryBuilder
 
     private static ushort ToResourceUShort(int value, string name)
         => value is < 0 or > ushort.MaxValue
-            ? throw new GameEventScriptCompileException(
+            ? throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidResourceMetadata,
                 $"The {name} is {value}, but portable GameEventScript resource metadata is limited to {ushort.MaxValue}.")
             : checked((ushort)value);
 

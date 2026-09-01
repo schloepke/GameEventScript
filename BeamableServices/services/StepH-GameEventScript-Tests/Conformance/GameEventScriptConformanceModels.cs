@@ -138,6 +138,8 @@ public sealed class GameEventScriptApiStepSpec
 
     public List<GameEventScriptRuntimeLimitExpectationSpec>? UnexpectedRuntimeLimits { get; set; }
 
+    public List<GameEventScriptExpectedCompileErrorSpec>? ExpectedRuntimeDiagnostics { get; set; }
+
     public int? OpcodeBudget { get; set; }
 
     public bool? ExpectedPaused { get; set; }
@@ -208,15 +210,15 @@ public sealed class GameEventScriptExpectedCompileErrorSpec
 {
     public string? Phase { get; set; }
 
-    public string? Kind { get; set; }
+    public string? Code { get; set; }
 
     public string? Symbol { get; set; }
 
     public string? SymbolKind { get; set; }
 
-    public string? ModuleName { get; set; }
+    public string? ProgramName { get; set; }
 
-    public string? MessageContains { get; set; }
+    public string? HandlerName { get; set; }
 
     public string? SourceName { get; set; }
 

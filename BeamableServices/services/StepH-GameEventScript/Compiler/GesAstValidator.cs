@@ -124,7 +124,7 @@ internal static class GesAstValidator
                 parsedScript,
                 predicateDefinition.Name,
                 GameEventScriptSymbolKind.Predicate,
-                GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
+                GameEventScriptDiagnosticCodes.ValidateDuplicateDefinitionParameter,
                 "Predicate",
                 predicateDefinition.ParameterList,
                 errors);
@@ -167,7 +167,7 @@ internal static class GesAstValidator
                 parsedScript,
                 functionDefinition.Name,
                 GameEventScriptSymbolKind.Function,
-                GameEventScriptCompileErrorKind.DuplicateDefinitionParameter,
+                GameEventScriptDiagnosticCodes.ValidateDuplicateDefinitionParameter,
                 "Function",
                 functionDefinition.ParameterList,
                 errors);
@@ -221,7 +221,7 @@ internal static class GesAstValidator
                 parsedScript,
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.DuplicateHandlerParameter,
+                GameEventScriptDiagnosticCodes.ValidateDuplicateHandlerParameter,
                 "Handler",
                 handler.ParameterList,
                 errors);
@@ -248,7 +248,7 @@ internal static class GesAstValidator
                 "System endpoint 'initialization' must use parameterless syntax",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
                 handler);
             return;
         }
@@ -260,7 +260,7 @@ internal static class GesAstValidator
                 "System endpoint 'initialization' cannot use tag filters",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
                 handler);
         }
     }
@@ -277,7 +277,7 @@ internal static class GesAstValidator
                 "System endpoint 'undeliverable' must use 'as message' syntax",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
                 handler);
             return;
         }
@@ -291,7 +291,7 @@ internal static class GesAstValidator
                 "System endpoint 'undeliverable' must bind a ':message' value",
                 parameter.LocalName,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
                 parameter);
         }
     }
@@ -313,7 +313,7 @@ internal static class GesAstValidator
                 "Message-name handlers expect exactly one message parameter",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
                 handler);
             return;
         }
@@ -327,7 +327,7 @@ internal static class GesAstValidator
                 "Message-name handlers must bind a ':message' value",
                 handler.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.InvalidMessageCase,
+                GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase,
                 handler);
         }
     }
@@ -368,7 +368,7 @@ internal static class GesAstValidator
                         $"Variable '{let.Identifier}' is already declared in the current scope",
                         let.Identifier,
                         GameEventScriptSymbolKind.Variable,
-                        GameEventScriptCompileErrorKind.DuplicateVariable,
+                        GameEventScriptDiagnosticCodes.ValidateDuplicateVariable,
                         let);
                     return;
                 }
@@ -440,7 +440,7 @@ internal static class GesAstValidator
                 $"{declarationKind} '{declarationName}' parameter '{parameter.LocalName}' uses unknown type ':{parameter.DeclaredType}'",
                 parameter.DeclaredType!,
                 GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
                 parameter);
         }
     }
@@ -517,7 +517,7 @@ internal static class GesAstValidator
             $"Predicate '{predicateDefinition.Name}' must return :boolean or nothing; use 'as :boolean' for explicit boolean coercion.",
             predicateDefinition.Name,
             GameEventScriptSymbolKind.Predicate,
-            GameEventScriptCompileErrorKind.InvalidPredicate,
+            GameEventScriptDiagnosticCodes.ValidateInvalidPredicate,
             predicateDefinition.Expression);
     }
 
@@ -547,7 +547,7 @@ internal static class GesAstValidator
             "Seeded random seed must statically resolve to a unitless integer number; cast dynamic seeds explicitly with 'as :number'.",
             "random",
             GameEventScriptSymbolKind.Type,
-            GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+            GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
             seedExpression);
     }
 
@@ -967,7 +967,7 @@ internal static class GesAstValidator
                             $"Predicate '{predicateCall.PredicateName}' must exist and declare exactly one parameter to be used with 'is'",
                             predicateCall.PredicateName,
                             GameEventScriptSymbolKind.Predicate,
-                            GameEventScriptCompileErrorKind.InvalidPredicate);
+                            GameEventScriptDiagnosticCodes.ValidateInvalidPredicate);
                     }
 
                     expression = predicateCall.Value;
@@ -1327,7 +1327,7 @@ internal static class GesAstValidator
                     $"No predicate or function named '{call.Name}' exists",
                     call.Name,
                     GameEventScriptSymbolKind.GlobalDefinition,
-                    GameEventScriptCompileErrorKind.MissingCallable);
+                    GameEventScriptDiagnosticCodes.ValidateMissingCallable);
             }
 
             return;
@@ -1360,7 +1360,7 @@ internal static class GesAstValidator
                 $"{kind} '{name}' argument {index + 1} expects label '{expected}' but received '{actual}'",
                 name,
                 kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
-                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
+                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptDiagnosticCodes.ValidateWrongPredicateArity : GameEventScriptDiagnosticCodes.ValidateWrongFunctionArity);
         }
     }
 
@@ -1673,7 +1673,7 @@ internal static class GesAstValidator
                 "Type ':optional' has been removed; use nothing to represent absence.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
                 sourceNode);
             return;
         }
@@ -1685,7 +1685,7 @@ internal static class GesAstValidator
                 "Type ':set' has been removed; use lists or key-only maps.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
                 sourceNode);
             return;
         }
@@ -1697,7 +1697,7 @@ internal static class GesAstValidator
                 "Type ':uuid' has been removed; use ':text' or ':integer' ids in scripts.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
                 sourceNode);
             return;
         }
@@ -1709,7 +1709,7 @@ internal static class GesAstValidator
                 "Type ':ref' has been removed; future mutation handles will be table/agent based.",
                 typeName,
                 GameEventScriptSymbolKind.Type,
-                GameEventScriptCompileErrorKind.InvalidTypeConstructor,
+                GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor,
                 sourceNode);
         }
     }
@@ -1724,7 +1724,7 @@ internal static class GesAstValidator
             message,
             typeName,
             GameEventScriptSymbolKind.Type,
-            GameEventScriptCompileErrorKind.InvalidTypeConstructor);
+            GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor);
 
     private static void ValidateCallArity(
         ParsedScript parsedScriptContext,
@@ -1741,7 +1741,7 @@ internal static class GesAstValidator
                 $"{kind} '{name}' expects {expectedCount} argument(s) but received {actualCount}",
                 name,
                 kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
-                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptCompileErrorKind.WrongPredicateArity : GameEventScriptCompileErrorKind.WrongFunctionArity);
+                kind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptDiagnosticCodes.ValidateWrongPredicateArity : GameEventScriptDiagnosticCodes.ValidateWrongFunctionArity);
         }
     }
 
@@ -1766,7 +1766,7 @@ internal static class GesAstValidator
                 $"Named argument '{argument.Name}' is declared more than once",
                 symbolName,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.DuplicatePublishArgument,
+                GameEventScriptDiagnosticCodes.ValidateDuplicatePublishArgument,
                 argument);
         }
     }
@@ -1791,7 +1791,7 @@ internal static class GesAstValidator
                 $"Handler literal '{handlerLiteral.Message}' declares parameter '{parameter.LocalName}' more than once",
                 handlerLiteral.Message,
                 GameEventScriptSymbolKind.Handler,
-                GameEventScriptCompileErrorKind.DuplicateHandlerParameter,
+                GameEventScriptDiagnosticCodes.ValidateDuplicateHandlerParameter,
                 parameter);
         }
     }
@@ -1800,7 +1800,7 @@ internal static class GesAstValidator
         ParsedScript parsedScriptContext,
         string declarationName,
         GameEventScriptSymbolKind symbolKind,
-        GameEventScriptCompileErrorKind errorKind,
+        string errorCode,
         string declarationKind,
         IReadOnlyList<ParameterNode> parameters,
         GesValidationErrors errors)
@@ -1820,7 +1820,7 @@ internal static class GesAstValidator
                 $"{declarationKind} '{declarationName}' declares parameter '{parameter.LocalName}' more than once",
                 declarationName,
                 symbolKind,
-                errorKind,
+                errorCode,
                 parameter);
         }
     }
@@ -1843,7 +1843,7 @@ internal static class GesAstValidator
             message,
             symbol,
             symbolKind,
-            GameEventScriptCompileErrorKind.InvalidIdentifierCase);
+            GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase);
     }
 
     private static void ValidateMessageCase(
@@ -1864,7 +1864,7 @@ internal static class GesAstValidator
             message,
             symbol,
             symbolKind,
-            GameEventScriptCompileErrorKind.InvalidMessageCase);
+            GameEventScriptDiagnosticCodes.ValidateInvalidMessageCase);
     }
 
     private static bool IsIdentifierCase(string name)

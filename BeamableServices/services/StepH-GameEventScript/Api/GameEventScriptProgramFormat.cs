@@ -88,10 +88,22 @@ public sealed class GameEventScriptProgramFormatException : Exception
         ByteOffset = byteOffset;
         SectionType = sectionType;
         EntryIndex = entryIndex;
+        Diagnostic = new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Decode,
+            GameEventScriptDiagnosticCodes.Decode(errorCode),
+            message,
+            TechnicalDetails: BuildTechnicalDetails(byteOffset, sectionType, entryIndex));
     }
 
     public GameEventScriptProgramFormatErrorCode ErrorCode { get; }
     public long? ByteOffset { get; }
     public ushort? SectionType { get; }
     public int? EntryIndex { get; }
+    public GameEventScriptDiagnostic Diagnostic { get; }
+
+    private static string? BuildTechnicalDetails(long? byteOffset, ushort? sectionType, int? entryIndex)
+    {
+        if (byteOffset is null && sectionType is null && entryIndex is null) return null;
+        return $"byteOffset={byteOffset?.ToString() ?? "-"};sectionType={sectionType?.ToString() ?? "-"};entryIndex={entryIndex?.ToString() ?? "-"}";
+    }
 }

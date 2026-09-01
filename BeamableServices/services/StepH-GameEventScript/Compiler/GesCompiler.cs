@@ -16,6 +16,13 @@ internal static class GesCompiler
         return new BinaryCompiler(module, compileOptions).Build();
     }
 
+    private static GameEventScriptCompileException CompileFailure(string code, string message, string? symbol = null)
+        => new(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Compile,
+            code,
+            message,
+            symbol));
+
     private sealed class BinaryCompiler(GesSyntaxTreeModule module, GameEventScriptCompileOptions options)
     {
         private readonly GesBinaryBuilder _builder = new GesBinaryBuilder()
@@ -215,7 +222,7 @@ internal static class GesCompiler
         {
             if (values.Count == 0) return fallback;
             if (values.Count == 1) return values[0];
-            throw new GameEventScriptCompileException("Message-name handler can only have one message parameter.");
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidArity, "Message-name handler can only have one message parameter.");
         }
 
         private void EmitRecordConstructors()
@@ -392,7 +399,7 @@ internal static class GesCompiler
                     }
 
                     default:
-                        throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support statement node '{statement.GetType().Name}'.");
+                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support statement node '{statement.GetType().Name}'.");
                 }
             }
         }
@@ -639,7 +646,7 @@ internal static class GesCompiler
             using var sourceRange = _builder.SourceRange(expression.SourceRange);
             var destination = state.AllocateTemporary(_builder, context);
             if (EmitExpressionToRegister(expression, destination, context, state)) return destination;
-            throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support expression node '{expression.GetType().Name}'.");
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support expression node '{expression.GetType().Name}'.");
         }
 
         private GesRegisterRef EmitExpressionForRead(ExpressionNode expression, LoweringContext context, ExpressionState state)
@@ -685,7 +692,7 @@ internal static class GesCompiler
                     _builder.Implies(destination, left, right);
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support short-circuit operator '{operation.ToSourceText()}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support short-circuit operator '{operation.ToSourceText()}'.");
             }
         }
 
@@ -711,7 +718,7 @@ internal static class GesCompiler
                         _builder.Max(destination, destination, next);
                         break;
                     default:
-                        throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support variadic operator '{variadic.Operator}'.");
+                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support variadic operator '{variadic.Operator}'.");
                 }
             }
 
@@ -780,7 +787,7 @@ internal static class GesCompiler
                     else ThrowInvalidIntrinsicArity(intrinsic, "2, 4 or 6");
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support intrinsic '{intrinsic.Function.ToSourceText()}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support intrinsic '{intrinsic.Function.ToSourceText()}'.");
             }
         }
 
@@ -791,7 +798,7 @@ internal static class GesCompiler
         }
 
         private static void ThrowInvalidIntrinsicArity(IntrinsicCallExpressionNode intrinsic, string expected)
-            => throw new GameEventScriptCompileException($"Intrinsic '{intrinsic.Function.ToSourceText()}' expects {expected} arguments but got {intrinsic.Arguments.Count}.");
+            => throw CompileFailure(GameEventScriptDiagnosticCodes.CompileInvalidArity, $"Intrinsic '{intrinsic.Function.ToSourceText()}' expects {expected} arguments but got {intrinsic.Arguments.Count}.", intrinsic.Function.ToSourceText());
 
         private void EmitCollectionAccessInto(CollectionAccessExpressionNode access, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
@@ -913,7 +920,7 @@ internal static class GesCompiler
                     EmitInlineIteratorPipeline(destination, target, new CollectionSelectorNode[] { objectMatch }, 0, objectMatch, context, state);
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support selector node '{access.Selector.GetType().Name}'.");
             }
         }
 
@@ -1311,7 +1318,7 @@ internal static class GesCompiler
                 AverageSelectorNode average => IsIdentityProjection(average.Identifier, average.Projection)
                     ? current
                     : EmitSelectorExpressionForRead(average.Identifier, current, average.Projection, context, state),
-                _ => throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot aggregate terminal selector node '{terminal.GetType().Name}'.")
+                _ => throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot aggregate terminal selector node '{terminal.GetType().Name}'.")
             };
         }
 
@@ -1336,7 +1343,7 @@ internal static class GesCompiler
                         ? current
                         : EmitSelectorExpressionForRead(select.Identifier, current, select.Projection, context, state);
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot inline non-terminal selector node '{selector.GetType().Name}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline non-terminal selector node '{selector.GetType().Name}'.");
             }
         }
 
@@ -1493,7 +1500,7 @@ internal static class GesCompiler
                     return;
                 }
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot inline terminal selector node '{terminal.GetType().Name}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot inline terminal selector node '{terminal.GetType().Name}'.");
             }
         }
 
@@ -1590,7 +1597,7 @@ internal static class GesCompiler
                     else _builder.HasPattern(destination, target, GameEventScriptBytecodePatternKind.Straight);
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support dice pattern node '{pattern.GetType().Name}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support dice pattern node '{pattern.GetType().Name}'.");
             }
         }
 
@@ -1735,7 +1742,7 @@ internal static class GesCompiler
                         entryMatch = EmitObjectPatternPredicate(member, nested.Pattern, context, state);
                         break;
                     default:
-                        throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support object match value '{entry.Value.GetType().Name}'.");
+                        throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support object match value '{entry.Value.GetType().Name}'.");
                 }
 
                 var combined = state.AllocateTemporary(_builder, context);
@@ -1776,7 +1783,7 @@ internal static class GesCompiler
                     _builder.DropLowest(destination, target, count);
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support slice selector '{slice.Operation} {slice.Scope}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support slice selector '{slice.Operation} {slice.Scope}'.");
             }
         }
 
@@ -1801,7 +1808,7 @@ internal static class GesCompiler
         {
             if (generatedCollection.CollectionType != "list")
             {
-                throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support generated collection type '{generatedCollection.CollectionType}'.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support generated collection type '{generatedCollection.CollectionType}'.");
             }
 
             var builderRegister = state.AllocateTemporary(_builder, context);
@@ -1891,7 +1898,7 @@ internal static class GesCompiler
                 }
 
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support iteration source '{source.GetType().Name}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support iteration source '{source.GetType().Name}'.");
             }
         }
 
@@ -2007,7 +2014,7 @@ internal static class GesCompiler
                     _builder.StageNothing();
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler cannot stage non-constant expression '{expression.GetType().Name}' without preparing it first.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler cannot stage non-constant expression '{expression.GetType().Name}' without preparing it first.");
             }
         }
 
@@ -2026,7 +2033,7 @@ internal static class GesCompiler
         {
             if (!module.Callables.TryGetValue(call.Name, out var callable) || !_callableEntries.TryGetValue(call.Name, out var entry))
             {
-                throw new GameEventScriptCompileException($"GameEventScript binary compiler could not resolve callable '{call.Name}'.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve callable '{call.Name}'.", call.Name);
             }
 
             EmitStageArguments(call.Arguments, context, state);
@@ -2060,7 +2067,7 @@ internal static class GesCompiler
                 callable.Kind != GameEventScriptCallableKind.PredicateCall ||
                 !_callableEntries.TryGetValue(predicate.PredicateName, out var entry))
             {
-                throw new GameEventScriptCompileException($"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.", predicate.PredicateName);
             }
 
             EmitStageArgument(PrepareStageArgument(predicate.Value, context, state));
@@ -2146,7 +2153,7 @@ internal static class GesCompiler
                 return;
             }
 
-            throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support type constructor ':{constructor.TypeName}'.");
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support type constructor ':{constructor.TypeName}'.");
         }
 
         private bool EmitSpatialConstructor(TypeConstructorExpressionNode constructor, GesRegisterRef destination, LoweringContext context, ExpressionState state)
@@ -2162,7 +2169,7 @@ internal static class GesCompiler
         {
             if (string.IsNullOrWhiteSpace(typeName))
             {
-                throw new GameEventScriptCompileException("GameEventScript binary compiler requires a type name.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
             }
 
             if (GetQuantityUnit(typeName) is { } unit)
@@ -2171,7 +2178,7 @@ internal static class GesCompiler
             }
             else if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName))
             {
-                throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support quantity type '{typeName}'.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
             }
             else if (typeName is "number" or "numeric" or "numeric:integer" or "numeric:fractional")
             {
@@ -2191,7 +2198,7 @@ internal static class GesCompiler
         {
             if (string.IsNullOrWhiteSpace(typeName))
             {
-                throw new GameEventScriptCompileException("GameEventScript binary compiler requires a type name.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, "GameEventScript binary compiler requires a type name.");
             }
 
             if (GetQuantityUnit(typeName) is { } unit)
@@ -2200,7 +2207,7 @@ internal static class GesCompiler
             }
             else if (GameEventScriptBytecodeInstructionUnits.IsQuantityTypeName(typeName))
             {
-                throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support quantity type '{typeName}'.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support quantity type '{typeName}'.");
             }
             else if (typeName is "number" or "numeric")
             {
@@ -2307,7 +2314,7 @@ internal static class GesCompiler
                     _builder.Atan(destination, operand);
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support unary operator '{operation.ToSourceText()}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support unary operator '{operation.ToSourceText()}'.");
             }
         }
 
@@ -2394,7 +2401,7 @@ internal static class GesCompiler
                     _builder.Zip(destination, left, right);
                     return;
                 default:
-                    throw new GameEventScriptCompileException($"GameEventScript binary compiler does not support binary operator '{operation.ToSourceText()}'.");
+                    throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnsupportedConstruct, $"GameEventScript binary compiler does not support binary operator '{operation.ToSourceText()}'.");
             }
         }
 
@@ -2418,7 +2425,7 @@ internal static class GesCompiler
         private GesBindRef ResolveRecordConstructor(TypeDefinitionNode type)
         {
             if (_recordConstructors.TryGetValue(type.Name, out var bind)) return bind;
-            throw new GameEventScriptCompileException($"GameEventScript record constructor ':{type.Name}' was not emitted.");
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript record constructor ':{type.Name}' was not emitted.", type.Name);
         }
 
         private GesBindRef ResolveExternalTypeConstructor(string typeName, IReadOnlyList<string> argumentNames)
@@ -2426,12 +2433,12 @@ internal static class GesCompiler
             var reference = new GameEventScriptExternalTypeConstructorReference(typeName, argumentNames);
             if (module.ExternalTypeDefinitions.Resolve(reference.TypeName) is not { } typeDefinition)
             {
-                throw new GameEventScriptCompileException($"GameEventScript external type ':{reference.TypeName}' is not registered.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript external type ':{reference.TypeName}' is not registered.", reference.TypeName);
             }
 
             if (!typeDefinition.HasConstructor(reference.ArgumentLabels))
             {
-                throw new GameEventScriptCompileException($"GameEventScript external type constructor ':{reference.SignatureId}' is not registered.");
+                throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript external type constructor ':{reference.SignatureId}' is not registered.", reference.SignatureId);
             }
 
             if (_externalTypeConstructors.TryGetValue(reference.SignatureId, out var bind)) return bind;
@@ -2553,7 +2560,7 @@ internal static class GesCompiler
 
         private static short ToShort(int value, string name)
             => value is < short.MinValue or > short.MaxValue
-                ? throw new GameEventScriptCompileException($"GameEventScript binary compiler {name} must fit into Int16.")
+                ? throw CompileFailure(GameEventScriptDiagnosticCodes.CompileNumericLimitExceeded, $"GameEventScript binary compiler {name} must fit into Int16.", name)
                 : (short)value;
 
         private static GameEventScriptBytecodeInstructionUnit ResolveUnitOrNone(string unitName)
@@ -2649,7 +2656,7 @@ internal static class GesCompiler
         {
             if (_registers.TryGetValue(name, out var register)) return register;
             if (_parent is not null) return _parent.Require(name);
-            throw new GameEventScriptCompileException($"GameEventScript binary compiler could not resolve identifier '{name}'.");
+            throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve identifier '{name}'.", name);
         }
 
         public void DeclareHandlerSignature(string name, GameEventScriptMessageSignature signature)

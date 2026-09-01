@@ -24,7 +24,8 @@ internal static class GesVmRegisterCustomType
         if (externalTypeConstructorBindId >= vmState.ExternalTypeBinds.Length || vmState.ExternalTypeBinds[externalTypeConstructorBindId].Kind != GameEventScriptBinaryBindKind.ExternalType)
         {
             vmState.SetNothing(destinationRegister);
-            vmState.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
+            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
+                $"External type constructor bind id '{externalTypeConstructorBindId}' was not found.");
             return;
         }
 
@@ -48,7 +49,8 @@ internal static class GesVmRegisterCustomType
         if (externalTypeConstructorBindId >= vmState.BoundExternalTypeConstructors.Length || vmState.BoundExternalTypeConstructors[externalTypeConstructorBindId] is not { } constructor)
         {
             vmState.SetNothing(destinationRegister);
-            vmState.RaiseError($"External type constructor bind id '{externalTypeConstructorBindId}' was not dynamically bound.");
+            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
+                $"External type constructor bind id '{externalTypeConstructorBindId}' was not dynamically bound.");
             return;
         }
 

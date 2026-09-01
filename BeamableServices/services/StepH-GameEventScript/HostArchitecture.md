@@ -53,6 +53,12 @@ pointer, registers, frames, stages, random stack, and active message. The host
 reuses this state serially for every script handler and fully resets it after
 completion or failure. VM pooling across hosts is not part of this architecture.
 
+All portable failures follow `PortableDiagnostics.md`. Runtime handler failures
+are reported to the observer, abort/reset only the failing handler, and leave the
+remaining immutable dispatch snapshot runnable. A pump result that observed a
+handler failure uses `RuntimeError` and carries its first diagnostic. Successful
+VM stepping, resume, and dispatch do not allocate diagnostic objects.
+
 ## External Type Boundary
 
 External types use two deliberately separate inputs. Compilation receives an
@@ -138,9 +144,13 @@ ScriptRunning
   ExecuteFrame budget exhausted
     -> Paused (VM state is retained)
 
-  handler completes or fails
+  handler completes
     -> fully reset VM state
     -> Dispatching
+
+  handler fails
+    -> report diagnostic, fully reset VM state
+    -> continue Dispatching; pump result is RuntimeError
 
   handler safety limit reached
     -> reset VM state

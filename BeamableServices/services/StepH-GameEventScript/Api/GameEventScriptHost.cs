@@ -39,6 +39,7 @@ public sealed class GameEventScriptHost
     private int _stepProcessedMessages;
     private int _stepEmittedMessages;
     private int _stepPublishedMessages;
+    private GameEventScriptDiagnostic? _stepRuntimeDiagnostic;
     private int _pendingVmWarmupCapacity;
 
     internal GameEventScriptHost(
@@ -73,14 +74,18 @@ public sealed class GameEventScriptHost
         var maxCallStackDepth = Math.Min(ushort.MaxValue, Math.Max(0, _limits.MaxCallDepth));
         if (program.RequiredRegisterCount > maxRegisterCount)
         {
-            throw new GameEventScriptDynamicLinkException(
-                $"Program requires {program.RequiredRegisterCount} registers but the host limit is {maxRegisterCount}.");
+            throw LinkError(
+                GameEventScriptDiagnosticCodes.LinkRequiredRegisterCountExceeded,
+                $"Program requires {program.RequiredRegisterCount} registers but the host limit is {maxRegisterCount}.",
+                program);
         }
 
         if (program.RequiredCallStackDepth > maxCallStackDepth)
         {
-            throw new GameEventScriptDynamicLinkException(
-                $"Program requires call-stack depth {program.RequiredCallStackDepth} but the host limit is {maxCallStackDepth}.");
+            throw LinkError(
+                GameEventScriptDiagnosticCodes.LinkRequiredCallStackDepthExceeded,
+                $"Program requires call-stack depth {program.RequiredCallStackDepth} but the host limit is {maxCallStackDepth}.",
+                program);
         }
 
         var linked = new GesLinkedProgram(program, _extensionRegistry, _externalTypeRegistry);
@@ -111,6 +116,13 @@ public sealed class GameEventScriptHost
 
         return instance;
     }
+
+    private static GameEventScriptDynamicLinkException LinkError(string code, string message, GameEventScriptProgram program)
+        => new(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Link,
+            code,
+            message,
+            ProgramName: program.ModuleName));
 
     public GameEventScriptSubscription Subscribe(
         string message,
@@ -196,6 +208,17 @@ public sealed class GameEventScriptHost
                 }
 
                 if (_vmState!.State == Processing) break;
+                if (_vmState.State == Error)
+                {
+                    RecordRuntimeError(_vmState.ErrorDiagnostic ?? CreateRuntimeDiagnostic(
+                        GameEventScriptDiagnosticCodes.RuntimeUnhandledFailure,
+                        "The VM entered an error state without a diagnostic."));
+                    _vmState.Reset();
+                    CompleteActiveHandler();
+                    continue;
+                }
+
+                _vmState.Reset();
                 CompleteActiveHandler();
                 continue;
             }
@@ -222,14 +245,30 @@ public sealed class GameEventScriptHost
             if (next.NativeHandler is not null)
             {
                 try { next.NativeHandler.Handle(_activeMessage.Message, _context); }
-                catch (GameEventScriptFatalRuntimeException) { throw; }
-                catch { }
+                catch (GameEventScriptFatalRuntimeException exception) { RecordRuntimeError(exception.Diagnostic); }
+                catch (Exception exception)
+                {
+                    RecordRuntimeError(CreateRuntimeDiagnostic(
+                        GameEventScriptDiagnosticCodes.RuntimeNativeHandlerFailure,
+                        "Native message handler failed.",
+                        exception.GetType().Name + ": " + exception.Message));
+                }
                 CompleteActiveHandler();
                 continue;
             }
 
-            GameEventScriptVirtualMachine.Begin(_vmState!, next.Instance!.LinkedProgram, _activeMessage.Message,
-                next.MatchArguments, next.EntryAddress, _context);
+            try
+            {
+                GameEventScriptVirtualMachine.Begin(_vmState!, next.Instance!.LinkedProgram, _activeMessage.Message,
+                    next.MatchArguments, next.EntryAddress, next.DispatchSignatureId, _context);
+            }
+            catch (GameEventScriptFatalRuntimeException exception)
+            {
+                RecordRuntimeError(exception.Diagnostic);
+                _vmState!.Reset();
+                CompleteActiveHandler();
+                continue;
+            }
             _scriptHandlerActive = true;
         }
 
@@ -254,7 +293,7 @@ public sealed class GameEventScriptHost
         while (step.State == GameEventScriptExecutionState.Paused &&
                (step.ExecutedOpcodes > 0 || step.ProcessedMessages > 0 || step.EmittedMessages > 0 || step.PublishedMessages > 0));
 
-        return new GameEventScriptExecutionResult(step.State, totalOpcodes, totalProcessed, totalEmitted, totalPublished);
+        return new GameEventScriptExecutionResult(step.State, totalOpcodes, totalProcessed, totalEmitted, totalPublished, step.Diagnostic);
     }
 
     internal bool EmitFromContext(GameEventScriptMessage message)
@@ -273,7 +312,14 @@ public sealed class GameEventScriptHost
         if (_publishSink is not null)
         {
             try { outboundAccepted = _publishSink.Publish(message); }
-            catch { outboundAccepted = false; }
+            catch (Exception exception)
+            {
+                outboundAccepted = false;
+                _observer?.RuntimeError(CreateRuntimeDiagnostic(
+                    GameEventScriptDiagnosticCodes.RuntimePublishSinkFailure,
+                    "Publish sink failed.",
+                    exception.GetType().Name + ": " + exception.Message));
+            }
         }
 
         var result = new GameEventScriptPublishResult(localAccepted, attempted, outboundAccepted);
@@ -288,13 +334,32 @@ public sealed class GameEventScriptHost
         _stepProcessedMessages = 0;
         _stepEmittedMessages = 0;
         _stepPublishedMessages = 0;
+        _stepRuntimeDiagnostic = null;
     }
 
     private GameEventScriptExecutionResult CreateResult(bool runtimeLimitReached)
-        => new(runtimeLimitReached
+        => new(_stepRuntimeDiagnostic is not null
+                ? GameEventScriptExecutionState.RuntimeError
+                : runtimeLimitReached
                 ? GameEventScriptExecutionState.RuntimeLimitReached
                 : IsIdle ? GameEventScriptExecutionState.Completed : GameEventScriptExecutionState.Paused,
-            _stepExecutedOpcodes, _stepProcessedMessages, _stepEmittedMessages, _stepPublishedMessages);
+            _stepExecutedOpcodes, _stepProcessedMessages, _stepEmittedMessages, _stepPublishedMessages,
+            _stepRuntimeDiagnostic);
+
+    private void RecordRuntimeError(GameEventScriptDiagnostic diagnostic)
+    {
+        _stepRuntimeDiagnostic ??= diagnostic;
+        _observer?.RuntimeError(diagnostic);
+    }
+
+    private GameEventScriptDiagnostic CreateRuntimeDiagnostic(string code, string message, string? technicalDetails = null)
+        => new(
+            GameEventScriptDiagnosticPhase.Runtime,
+            code,
+            message,
+            ProgramName: _activeHandler?.Instance?.Program.ModuleName,
+            HandlerName: _activeHandler?.DispatchSignatureId,
+            TechnicalDetails: technicalDetails);
 
     private bool StartNextMessage()
     {

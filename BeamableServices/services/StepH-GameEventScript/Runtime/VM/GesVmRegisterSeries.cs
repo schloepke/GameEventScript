@@ -17,7 +17,7 @@ internal static class GesVmRegisterSeries
                 return;
             default:
                 vmState.SetNothing(destinationRegister);
-                vmState.RaiseError("Unknown series kind.");
+                vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidSeriesKind, "Unknown series kind.");
                 return;
         }
     }

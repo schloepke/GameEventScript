@@ -9,17 +9,20 @@ internal sealed class TestRuntimeObserver : IGameEventScriptRuntimeObserver
     private readonly Action<GameEventScriptMessage>? _messagePublished;
     private readonly Action<GameEventScriptPublishResult>? _publishResult;
     private readonly Action<string, string, int>? _runtimeLimitReached;
+    private readonly Action<GameEventScriptDiagnostic>? _runtimeError;
 
     private TestRuntimeObserver(
         Action<GameEventScriptMessage>? messageEmitted,
         Action<GameEventScriptMessage>? messagePublished,
         Action<string, string, int>? runtimeLimitReached = null,
-        Action<GameEventScriptPublishResult>? publishResult = null)
+        Action<GameEventScriptPublishResult>? publishResult = null,
+        Action<GameEventScriptDiagnostic>? runtimeError = null)
     {
         _messageEmitted = messageEmitted;
         _messagePublished = messagePublished;
         _runtimeLimitReached = runtimeLimitReached;
         _publishResult = publishResult;
+        _runtimeError = runtimeError;
     }
 
     public static TestRuntimeObserver ObserveOutputs(Action<GameEventScriptMessage> messageOutput)
@@ -28,8 +31,9 @@ internal sealed class TestRuntimeObserver : IGameEventScriptRuntimeObserver
     public static TestRuntimeObserver ObserveMessages(
         Action<GameEventScriptMessage>? messageEmitted = null,
         Action<GameEventScriptMessage>? messagePublished = null,
-        Action<string, string, int>? runtimeLimitReached = null)
-        => new(messageEmitted, messagePublished, runtimeLimitReached);
+        Action<string, string, int>? runtimeLimitReached = null,
+        Action<GameEventScriptDiagnostic>? runtimeError = null)
+        => new(messageEmitted, messagePublished, runtimeLimitReached, runtimeError: runtimeError);
 
     public static TestRuntimeObserver ObservePublishResults(Action<GameEventScriptPublishResult> publishResult)
         => new(null, null, null, publishResult);
@@ -53,6 +57,9 @@ internal sealed class TestRuntimeObserver : IGameEventScriptRuntimeObserver
 
     public void RuntimeLimitReached(string limitName, string detail, int limit)
         => _runtimeLimitReached?.Invoke(limitName, detail, limit);
+
+    public void RuntimeError(GameEventScriptDiagnostic diagnostic)
+        => _runtimeError?.Invoke(diagnostic);
 }
 
 internal sealed class TestRuntimeLimitEvent(string name, string detail, int limit)

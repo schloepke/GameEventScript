@@ -13,4 +13,6 @@ public interface IGameEventScriptRuntimeObserver
     void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId);
 
     void RuntimeLimitReached(string limitName, string detail, int limit);
+
+    void RuntimeError(GameEventScriptDiagnostic diagnostic);
 }

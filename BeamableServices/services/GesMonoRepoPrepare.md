@@ -125,7 +125,7 @@ festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 - NaN- und identische Bounds verbrauchen weder einen PRNG- noch einen
   `FromSequence`-Wert.
 
-## 3. C#-Kopplungen im portablen API/Core auflösen
+## 3. C#-Kopplungen im portablen API/Core auflösen - DONE
 
 Nicht jedes C#-Sprachkonstrukt muss entfernt werden. `readonly struct`, `ref`,
 `init`, `IEnumerable`, `AggressiveInlining` und auch das interne `object?`-Feld
@@ -192,34 +192,23 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - JSON-Conformance deckt unterschiedliche Reihenfolgen, leere Argumentlisten,
   doppelte normalisierte Namen und Signaturmatching ab.
 
-### 3.4 Stabiler Fehlervertrag
+### 3.4 Stabiler Fehlervertrag - DONE
 
-`.gesb`-Formatfehler besitzen bereits stabile Codes. Compile-Fehler sind nur
-teilweise strukturiert; einzelne Compilerpfade, Dynamic Linking und VM-Fehler
-verwenden weiterhin freie englische Texte. Runtime-Fehler sind außerdem nicht
-als strukturierte Ereignisse über Execution Result oder Observer sichtbar.
-
-Benötigte Schritte:
-
-1. Einen sprachneutralen Diagnosevertrag mit stabiler Fehlerphase und stabilem
-   Fehlercode definieren. Mindestens `parse`, `validate`, `compile`, `decode`,
-   `link` und `runtime` müssen eindeutig unterscheidbar sein.
-2. Gemeinsame optionale Diagnosefelder für Symbol, Symbolart, Source Range,
-   Program beziehungsweise Handler und technische Details festlegen. Freier
-   Meldungstext bleibt nur eine menschenlesbare Ergänzung.
-3. Alle Parser-, Validator- und Compilerfehler strukturiert erzeugen; generische
-   `GameEventScriptCompileException(string)`-Pfade aus dem portablen Ablauf
-   entfernen.
-4. `GameEventScriptDynamicLinkException` um stabile Link-Codes und relevante
-   Referenzinformationen erweitern.
-5. VM- und Runtime-Fehler mit stabilen Codes versehen und über einen definierten
-   Observer- beziehungsweise Execution-Vertrag sichtbar machen, ohne den
-   Runtime-Hot-Path unnötig zu allozieren.
-6. Exceptions als C#-Transportmechanismus behandeln; der portable Vertrag sind
-   die Diagnosedaten, nicht die CLR-Exception-Hierarchie.
-7. JSON-Conformance von `messageContains` auf Phase plus Fehlercode und, wo
-   sinnvoll, Source-/Symbolfelder migrieren. Englischer Text darf nicht mehr
-   über Bestehen oder Fehlschlagen eines portablen Tests entscheiden.
+- `GameEventScriptDiagnostic` definiert die gemeinsamen Phasen `parse`,
+  `validate`, `compile`, `decode`, `link` und `runtime`, stabile ASCII-Codes und
+  optionale Symbol-, Source-, Program-, Handler- und technische Felder.
+- Parser, Validator und Compiler erzeugen direkt Diagnosen; der freie öffentliche
+  String-Konstruktor und die alte separate Compile-Error-Oberfläche sind entfernt.
+- `.gesb`-Fehler werden verlustfrei als `decode.<formatCode>` gespiegelt. Link-
+  Exceptions tragen strukturierte Link-Codes und Referenzkontext.
+- VM-/Native-Fehler werden nur auf dem Fehlerpfad materialisiert, über den
+  Observer gemeldet und als `RuntimeError` plus erster Diagnose im Execution-
+  Result sichtbar. Der fehlerhafte Handler wird resetet; der Dispatch-Snapshot
+  läuft deterministisch weiter.
+- JSON-Conformance verwendet ausschließlich Phase plus Code und optionale
+  strukturierte Felder. `messageContains` wurde aus portablen Fehlererwartungen
+  entfernt; Runtime-Diagnosen sind als geordnete Observer-Ereignisse prüfbar.
+- Der normative Vertrag steht in `StepH-GameEventScript/PortableDiagnostics.md`.
 
 ## 4. `GameEventScriptProgram` als wirklich portables Datenmodell härten
 

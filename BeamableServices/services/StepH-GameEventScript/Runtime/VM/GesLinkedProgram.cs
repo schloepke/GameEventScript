@@ -125,10 +125,13 @@ internal sealed class GesLinkedProgram
             var fullName = FetchString(bind.Name);
             var separator = fullName.IndexOf('.');
             if (separator <= 0 || separator >= fullName.Length - 1)
-                throw new GameEventScriptDynamicLinkException($"External extension reference '{fullName}' has an invalid name.");
+                throw LinkError(GameEventScriptDiagnosticCodes.LinkInvalidExtensionReference,
+                    $"External extension reference '{fullName}' has an invalid name.", fullName);
             var reference = new GameEventScriptExtensionReference(fullName[..separator], fullName[(separator + 1)..], ReadStrings(bind.ArgumentNames));
-            result[bindId] = registry.Resolve(reference) ?? throw new GameEventScriptDynamicLinkException(
-                $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+            result[bindId] = registry.Resolve(reference) ?? throw LinkError(
+                GameEventScriptDiagnosticCodes.LinkMissingExtension,
+                $"GameEventScript extension '{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
+                reference.SignatureId);
         }
 
         return result;
@@ -142,11 +145,15 @@ internal sealed class GesLinkedProgram
             var bind = ExternalTypeBinds[bindId];
             if (bind.Kind != ExternalType || bind.Id != bindId) continue;
             var reference = new GameEventScriptExternalTypeConstructorReference(FetchString(bind.Name), ReadStrings(bind.ArgumentNames));
-            var constructor = registry.Resolve(reference) ?? throw new GameEventScriptDynamicLinkException(
-                $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.");
+            var constructor = registry.Resolve(reference) ?? throw LinkError(
+                GameEventScriptDiagnosticCodes.LinkMissingExternalTypeConstructor,
+                $"GameEventScript external type constructor ':{reference.SignatureId}' was not dynamically bound to external bind id '{bindId}'.",
+                reference.SignatureId);
             if (!string.Equals(constructor.Definition.SignatureId, reference.SignatureId, StringComparison.Ordinal))
-                throw new GameEventScriptDynamicLinkException(
-                    $"GameEventScript external type constructor registry returned '{constructor.Definition.SignatureId}' for requested reference '{reference.SignatureId}'.");
+                throw LinkError(
+                    GameEventScriptDiagnosticCodes.LinkMismatchedExternalTypeConstructor,
+                    $"GameEventScript external type constructor registry returned '{constructor.Definition.SignatureId}' for requested reference '{reference.SignatureId}'.",
+                    reference.SignatureId);
             result[bindId] = constructor;
         }
 
@@ -204,7 +211,7 @@ internal sealed class GesLinkedProgram
         return null;
     }
 
-    private static void ValidateResourceMetadata(GameEventScriptProgram program)
+    private void ValidateResourceMetadata(GameEventScriptProgram program)
     {
         ushort requiredRegisterCount = 0;
         ushort requiredCallStackDepth = 0;
@@ -218,10 +225,19 @@ internal sealed class GesLinkedProgram
         if (program.RequiredRegisterCount != requiredRegisterCount ||
             program.RequiredCallStackDepth != requiredCallStackDepth)
         {
-            throw new GameEventScriptDynamicLinkException(
+            throw LinkError(
+                GameEventScriptDiagnosticCodes.LinkInvalidProgram,
                 $"Program resource metadata is inconsistent. Program requires {program.RequiredRegisterCount} registers and " +
                 $"{program.RequiredCallStackDepth} call-stack entries, but its message handlers require maxima of " +
                 $"{requiredRegisterCount} and {requiredCallStackDepth}.");
         }
     }
+
+    private GameEventScriptDynamicLinkException LinkError(string code, string message, string? symbol = null)
+        => new(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Link,
+            code,
+            message,
+            symbol,
+            ProgramName: Program.ModuleName));
 }

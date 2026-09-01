@@ -41,7 +41,7 @@ internal sealed class GesParser
     private readonly GesTokenReader _reader;
     private readonly string? _requestedSourceName;
     private readonly uint? _sourceId;
-    private readonly List<GameEventScriptCompileError> _errors;
+    private readonly List<GameEventScriptDiagnostic> _errors;
     private string? _moduleName;
     private string? _sourceName;
 
@@ -3033,13 +3033,12 @@ internal sealed class GesParser
 
     private void AddParseError(GameEventScriptParseException exception)
     {
-        _errors.Add(new GameEventScriptCompileError(
+        _errors.Add(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Parse,
+            GameEventScriptDiagnosticCodes.ParseSyntax,
             exception.Message,
-            ModuleName,
-            string.Empty,
-            GameEventScriptSymbolKind.Unknown,
-            GameEventScriptCompileErrorKind.Syntax,
-            new GameEventScriptSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName, _sourceId)));
+            SourceLocation: new GameEventScriptSourceLocation(SourceName, exception.Line, exception.Column, exception.EndLine, exception.EndColumn, ModuleName, _sourceId),
+            ProgramName: ModuleName));
     }
 
     private void SynchronizeTopLevel()

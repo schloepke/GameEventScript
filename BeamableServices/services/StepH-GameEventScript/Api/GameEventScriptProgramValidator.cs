@@ -33,7 +33,7 @@ public static class GameEventScriptProgramValidator
         }
         catch (GameEventScriptDynamicLinkException exception)
         {
-            var code = exception.Message.Contains("Recursive calls", StringComparison.Ordinal)
+            var code = exception.Diagnostic.Code == GameEventScriptDiagnosticCodes.LinkCyclicCallGraph
                 ? GameEventScriptProgramFormatErrorCode.CyclicCallGraph
                 : GameEventScriptProgramFormatErrorCode.InvalidCallAddress;
             throw new GameEventScriptProgramFormatException(code, exception.Message, innerException: exception);

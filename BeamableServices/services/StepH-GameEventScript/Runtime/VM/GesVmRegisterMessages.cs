@@ -12,7 +12,8 @@ internal static class GesVmRegisterMessages
     {
         if (shape.Length == 0)
         {
-            vmState.RaiseError("Cannot create message signature from empty shape");
+            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidMessageShape,
+                "Cannot create message signature from empty shape.");
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);
@@ -27,7 +28,8 @@ internal static class GesVmRegisterMessages
     {
         if (shape.Length == 0 || argumentRegisters.Length != shape.Length - 1)
         {
-            vmState.RaiseError("Message signature shape and argument registers mismatch");
+            vmState.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidMessageShape,
+                "Message signature shape and argument registers mismatch.");
             return;
         }
         var messageName = vmState.FetchStringByPointer(shape[0]);

@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Runtime;
-using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
+using static StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes;
 using static StepH.GameEventScript.Api.GameEventScriptSymbolKind;
 using static StepH.GameEventScript.Compiler.GameEventScriptCallableKind;
 
@@ -145,7 +145,7 @@ public sealed class GameEventScriptBuilder
                                  FindModuleWithCallable(modules, conflictName, false);
             var conflictNode = FindCallableNode(conflictModule?.FunctionDefinitions, conflictName) ??
                                (ScriptNode?)FindCallableNode(conflictModule?.PredicateDefinitions, conflictName);
-            errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, PredicateFunctionConflict, conflictNode);
+            errors.Add(conflictModule, $"Name '{conflictName}' is declared as both a predicate and a function", conflictName, GlobalDefinition, ValidatePredicateFunctionConflict, conflictNode);
         }
 
         foreach (var module in modules)
@@ -262,7 +262,7 @@ public sealed class GameEventScriptBuilder
             if (map.ContainsKey(externalType.Name))
             {
                 var module = FindModuleWithType(modules, externalType.Name);
-                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GameEventScriptSymbolKind.Type, DuplicateType);
+                errors.Add(module, $"Type '{externalType.Name}' is defined both as a script record and an external type", externalType.Name, GameEventScriptSymbolKind.Type, ValidateDuplicateType);
                 continue;
             }
 
@@ -305,7 +305,7 @@ public sealed class GameEventScriptBuilder
             {
                 if (!map.TryAdd(typeDefinition.Name, typeDefinition))
                 {
-                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GameEventScriptSymbolKind.Type, DuplicateType, typeDefinition);
+                    errors.Add(module, $"Type '{typeDefinition.Name}' is defined more than once", typeDefinition.Name, GameEventScriptSymbolKind.Type, ValidateDuplicateType, typeDefinition);
                 }
             }
         }
@@ -320,7 +320,7 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var predicateDefinition in module.PredicateDefinitions)
             {
-                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition)) errors.Add(module, $"Predicate '{predicateDefinition.Name}' is defined more than once", predicateDefinition.Name, Predicate, DuplicatePredicate, predicateDefinition);
+                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition)) errors.Add(module, $"Predicate '{predicateDefinition.Name}' is defined more than once", predicateDefinition.Name, Predicate, ValidateDuplicatePredicate, predicateDefinition);
             }
         }
 
@@ -334,7 +334,7 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var functionDefinition in module.FunctionDefinitions)
             {
-                if (!map.TryAdd(functionDefinition.Name, functionDefinition)) errors.Add(module, $"Function '{functionDefinition.Name}' is defined more than once", functionDefinition.Name, Function, DuplicateFunction, functionDefinition);
+                if (!map.TryAdd(functionDefinition.Name, functionDefinition)) errors.Add(module, $"Function '{functionDefinition.Name}' is defined more than once", functionDefinition.Name, Function, ValidateDuplicateFunction, functionDefinition);
             }
         }
 

@@ -166,9 +166,9 @@ internal static class GameEventScriptConformanceRunner
     internal static void RunLoadErrorTest(GameEventScriptConformanceCase testCase)
     {
         var expected = testCase.Test.ExpectedError;
-        if (expected is null || string.IsNullOrWhiteSpace(expected.MessageContains))
+        if (expected is null || string.IsNullOrWhiteSpace(expected.Code))
         {
-            Assert.Fail($"{testCase}: loadError tests require expectedError.messageContains.");
+            Assert.Fail($"{testCase}: loadError tests require expectedError.code.");
         }
 
         var program = CompileScripts(testCase.Test);
@@ -184,7 +184,7 @@ internal static class GameEventScriptConformanceRunner
         }
         catch (GameEventScriptDynamicLinkException exception)
         {
-            if (MessageMatches(expected.MessageContains, exception.Message)) return;
+            if (DiagnosticMatches(expected, exception.Diagnostic)) return;
             Assert.Fail($"{testCase}: load error expectation did not match.{Environment.NewLine}{exception.Message}");
         }
 
@@ -462,24 +462,7 @@ internal static class GameEventScriptConformanceRunner
         GameEventScriptExpectedCompileErrorSpec expected,
         GameEventScriptCompileException exception)
     {
-        if (exception.Errors.Count == 0)
-        {
-            AssertGenericCompilationError(testCase, expected, exception);
-            return;
-        }
-
-        var expectedPhase = string.IsNullOrWhiteSpace(expected.Phase) ? null : expected.Phase;
-        var matchingErrors = exception.Errors.Where(error =>
-            expectedPhase is null ||
-            PhaseMatches(expected, error.Kind == GameEventScriptCompileErrorKind.Syntax ? "syntax" : "build"));
-
-        if (matchingErrors.Any(error =>
-                Matches(expected.Kind, error.Kind.ToString()) &&
-                Matches(expected.Symbol, error.Symbol) &&
-                Matches(expected.SymbolKind, error.SymbolKind.ToString()) &&
-                Matches(expected.ModuleName, error.ModuleName) &&
-                MessageMatches(expected.MessageContains, error.Message, exception.Message) &&
-                SourceLocationMatches(expected, error.SourceLocation)))
+        if (exception.Diagnostics.Any(error => DiagnosticMatches(expected, error)))
         {
             return;
         }
@@ -487,25 +470,25 @@ internal static class GameEventScriptConformanceRunner
         Assert.Fail($"{testCase}: compile error expectation did not match.{Environment.NewLine}{exception.Message}");
     }
 
-    private static void AssertGenericCompilationError(
-        GameEventScriptConformanceCase testCase,
-        GameEventScriptExpectedCompileErrorSpec expected,
-        GameEventScriptCompileException exception)
-    {
-        if (!PhaseMatches(expected, "compilation") || !MessageMatches(expected.MessageContains, exception.Message))
-        {
-            Assert.Fail($"{testCase}: generic compilation error expectation did not match.{Environment.NewLine}{exception.Message}");
-        }
-    }
+    private static bool DiagnosticMatches(GameEventScriptExpectedCompileErrorSpec expected, GameEventScriptDiagnostic diagnostic)
+        => PhaseMatches(expected, diagnostic.Phase.ToString()) &&
+           Matches(expected.Code, diagnostic.Code) &&
+           Matches(expected.Symbol, diagnostic.Symbol) &&
+           Matches(expected.SymbolKind, diagnostic.SymbolKind.ToString()) &&
+           Matches(expected.ProgramName, diagnostic.ProgramName) &&
+           SourceLocationMatches(expected, diagnostic.SourceLocation);
 
     private static bool SourceLocationMatches(
         GameEventScriptExpectedCompileErrorSpec expected,
-        GameEventScriptSourceLocation location)
-        => Matches(expected.SourceName, location.SourceName) &&
-           Matches(expected.Line, location.Line) &&
-           Matches(expected.Column, location.Column) &&
-           Matches(expected.EndLine, location.EndLine) &&
-           Matches(expected.EndColumn, location.EndColumn);
+        GameEventScriptSourceLocation? location)
+        => location is not null
+            ? Matches(expected.SourceName, location.SourceName) &&
+              Matches(expected.Line, location.Line) &&
+              Matches(expected.Column, location.Column) &&
+              Matches(expected.EndLine, location.EndLine) &&
+              Matches(expected.EndColumn, location.EndColumn)
+            : expected.SourceName is null && expected.Line is null && expected.Column is null &&
+              expected.EndLine is null && expected.EndColumn is null;
 
     private static GameEventScriptProgram CompileBytecode(GameEventScriptConformanceTest test)
     {
@@ -658,7 +641,7 @@ internal static class GameEventScriptConformanceRunner
         => string.IsNullOrWhiteSpace(expected.Phase) ||
            string.Equals(expected.Phase, actual, StringComparison.OrdinalIgnoreCase);
 
-    private static bool Matches(string? expected, string actual)
+    private static bool Matches(string? expected, string? actual)
         => string.IsNullOrWhiteSpace(expected) ||
            string.Equals(expected, actual, StringComparison.OrdinalIgnoreCase);
 
@@ -680,10 +663,6 @@ internal static class GameEventScriptConformanceRunner
         => string.Join(
             Environment.NewLine,
             opCodes.Select((opCode, index) => $"{index:D4}: {opCode}"));
-
-    private static bool MessageMatches(string? expected, params string?[] actualMessages)
-        => string.IsNullOrWhiteSpace(expected) ||
-           actualMessages.Any(message => message?.Contains(expected, StringComparison.Ordinal) ?? false);
 
     private static void AssertOptionalEquals(GameEventScriptConformanceCase testCase, string description, string? expected, string actual)
     {

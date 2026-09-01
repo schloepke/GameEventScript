@@ -125,7 +125,8 @@ public sealed class GesExternalTypeConstructorCall
         if (_expectedTypeName is not null && !string.Equals(value.Definition.Name, _expectedTypeName, StringComparison.Ordinal))
         {
             SetNothing();
-            _vmState?.RaiseError($"External constructor for ':{_expectedTypeName}' returned value of type ':{value.Definition.Name}'.");
+            _vmState?.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExternalTypeBinding,
+                $"External constructor for ':{_expectedTypeName}' returned value of type ':{value.Definition.Name}'.");
             return;
         }
         _hasResult = true;

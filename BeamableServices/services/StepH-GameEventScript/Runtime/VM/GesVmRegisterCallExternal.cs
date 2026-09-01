@@ -12,7 +12,8 @@ internal static class GesVmRegisterCallExternal
         if (externalBindId >= state.ExtensionCallBinds.Length || state.ExtensionCallBinds[externalBindId].Kind != GameEventScriptBinaryBindKind.ExtensionCall)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError($"External extension bind id '{externalBindId}' was not found.");
+            state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExtensionBinding,
+                $"External extension bind id '{externalBindId}' was not found.");
             return;
         }
 
@@ -21,14 +22,16 @@ internal static class GesVmRegisterCallExternal
         if (argumentRegisters.Length != bind.ArgumentNames.Count)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError("External extension call argument count does not match the reference shape.");
+            state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExtensionBinding,
+                "External extension call argument count does not match the reference shape.");
             return;
         }
 
         if (externalBindId >= state.BoundExtensionCalls.Length || state.BoundExtensionCalls[externalBindId] is not { } function)
         {
             state.SetNothing(destinationRegister);
-            state.RaiseError($"External extension bind id '{externalBindId}' was not dynamically bound.");
+            state.RaiseError(GameEventScriptDiagnosticCodes.RuntimeInvalidExtensionBinding,
+                $"External extension bind id '{externalBindId}' was not dynamically bound.");
             return;
         }
 

@@ -7,7 +7,8 @@
       "name": "missing expression in let statement fails syntax analysis",
       "script": "on Broken {\n  let x be\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -15,7 +16,8 @@
       "name": "malformed predicate parameter fails syntax analysis",
       "script": "module BrokenCombat\npredicate unitIsDead(un%it) be unit[hp] <= 0\non FireAtUnit(unit) {\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -23,8 +25,8 @@
       "name": "illegal token inside expression fails through compile interface",
       "script": "on Broken {\n  let value be hello%&some\n  let other be @\n}",
       "expectedError": {
-        "phase": "syntax",
-        "messageContains": "hello%&some"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -32,7 +34,8 @@
       "name": "legacy percent modulo operator is rejected",
       "script": "on Broken {\n  let value be 10 % 3\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -40,7 +43,8 @@
       "name": "type tags are case sensitive",
       "script": "on Start(value) {\n  let numberValue as :Float be value\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -48,7 +52,8 @@
       "name": "legacy external handler syntax is rejected",
       "script": "external on Notify(playerId, points)",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -56,7 +61,8 @@
       "name": "sort selector requires explicit direction",
       "script": "on Sorted(items) {\n  let values be items[:sort]\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -64,7 +70,8 @@
       "name": "legacy untagged type declaration is rejected",
       "script": "on Start(value) {\n  let score as double be value\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -72,7 +79,8 @@
       "name": "legacy untagged unary form is rejected",
       "script": "on Start(values) {\n  let size be len values\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -80,7 +88,8 @@
       "name": "legacy random tag operator is rejected",
       "script": "on Start {\n  let value be :random from 1 to 6\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -88,7 +97,8 @@
       "name": "legacy clamp tag operator is rejected",
       "script": "on Start {\n  let value be :clamp 5 between 1 and 10\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -96,7 +106,8 @@
       "name": "legacy min tag operator is rejected",
       "script": "on Start {\n  let value be :min of 1 and 2\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -104,7 +115,8 @@
       "name": "legacy max tag operator is rejected",
       "script": "on Start {\n  let value be :max of 1 and 2\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -112,7 +124,8 @@
       "name": "legacy zip tag operator is rejected",
       "script": "on Start {\n  let value be [1] :zip [2]\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -120,7 +133,8 @@
       "name": "legacy dice tag roll is rejected",
       "script": "on Start {\n  let value be :dice 4d6\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -128,7 +142,8 @@
       "name": "legacy default tag operator is rejected",
       "script": "on Start(value) {\n  let result be value :default 10\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -136,7 +151,8 @@
       "name": "legacy emit tag literal form is rejected",
       "script": "on Start {\n  emit Done with :radio\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -144,8 +160,8 @@
       "name": "legacy handler matching tag literal form is rejected",
       "script": "on Ping matching :radio {\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax",
-        "messageContains": "Expected tag literal"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -153,8 +169,8 @@
       "name": "legacy handler without tag literal form is rejected",
       "script": "on Ping without :blocked {\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax",
-        "messageContains": "Expected tag literal"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -162,7 +178,8 @@
       "name": "legacy floor prefix builtin is rejected",
       "script": "on Start {\n  let value be #floor 10.4\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -170,7 +187,8 @@
       "name": "legacy wrapDegree prefix builtin is rejected",
       "script": "on Start {\n  let value be #wrapDegree 370°\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -178,7 +196,8 @@
       "name": "direct range is rejected after in for loops",
       "script": "on Start {\n  for item in from 1 to 10 emit Seen(value: item)\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -186,7 +205,8 @@
       "name": "direct range is rejected after in generated collections",
       "script": "on Start {\n  let values be :list[:select item in from 1 to 5 => item]\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -194,7 +214,8 @@
       "name": "seeded random blocks cannot be value expressions",
       "script": "on Start(seed) {\n  let values be random with seed {\n    emit Done\n  }\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -202,7 +223,8 @@
       "name": "drop selector requires a supported scope",
       "script": "on Broken {\n  let x be roll dice 4d6[:drop middle 1]\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -210,7 +232,8 @@
       "name": "dice counts must be positive integers",
       "script": "on Broken {\n  let x be roll dice 0d6\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -218,7 +241,8 @@
       "name": "handler headers reject handler tag prefix",
       "script": "on :handler Shoot(unit, target) {\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -226,7 +250,8 @@
       "name": "emit rejects incomplete labeled message arguments",
       "script": "on Start(unit, target) {\n  emit Shoot(unit:)\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -234,7 +259,8 @@
       "name": "prefix message and handler literals are rejected",
       "script": "on Start(unit, target) {\n  let h as :handler be :handler Shoot(unit, target)\n  let m as :message be :message Shoot(unit: unit, target: target)\n  emit :message Shoot(unit: unit, target: target)\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -242,7 +268,8 @@
       "name": "uppercase positional invocation requires identifier parameters",
       "script": "on Start(unit) {\n  let invalid be Shoot(unit + 1)\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -250,7 +277,8 @@
       "name": "quantity rejects percentage unit syntax",
       "script": "on Start {\n  let x be 100 as :quantity(%)\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -258,7 +286,8 @@
       "name": "set literal syntax is rejected",
       "script": "on Start {\n  let x be #set[1, 2]\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -266,7 +295,8 @@
       "name": "generated set syntax is rejected",
       "script": "on Start {\n  let x be #set[:select item from 1 to 3 => item]\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -274,7 +304,8 @@
       "name": "predicate function and handler identifiers enforce casing",
       "script": "predicate Wounded(unit) be unit.hp < unit.maxHp\nfunction filter(Units) be Units\non Start(Target) {\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -282,8 +313,8 @@
       "name": "take selector count must be positive",
       "script": "on Start(values) {\n  let result be values[:take first 0]\n}",
       "expectedError": {
-        "phase": "syntax",
-        "messageContains": "Expected positive integer for take count"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -291,8 +322,8 @@
       "name": "drop selector count must be positive",
       "script": "on Start(values) {\n  let result be values[:drop first 0]\n}",
       "expectedError": {
-        "phase": "syntax",
-        "messageContains": "Expected positive integer for drop count"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -300,7 +331,8 @@
       "name": "unicode letters are rejected in identifiers",
       "script": "on Start {\n  let naïve be 1\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -308,7 +340,8 @@
       "name": "unicode whitespace is not portable trivia",
       "script": "on Start {\n  emit Done\n}",
       "expectedError": {
-        "phase": "syntax"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     },
     {
@@ -316,8 +349,8 @@
       "name": "choose selector count must be positive",
       "script": "on Start(values) {\n  let result be values[:choose 0 at random]\n}",
       "expectedError": {
-        "phase": "syntax",
-        "messageContains": "Expected positive integer for choose count"
+        "phase": "parse",
+        "code": "parse.syntax"
       }
     }
   ]

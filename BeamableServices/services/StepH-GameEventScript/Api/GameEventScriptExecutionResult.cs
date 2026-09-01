@@ -6,7 +6,8 @@ public enum GameEventScriptExecutionState
 {
     Paused,
     Completed,
-    RuntimeLimitReached
+    RuntimeLimitReached,
+    RuntimeError
 }
 
 public readonly struct GameEventScriptExecutionResult(
@@ -14,11 +15,13 @@ public readonly struct GameEventScriptExecutionResult(
     int executedOpcodes,
     int processedMessages,
     int emittedMessages,
-    int publishedMessages)
+    int publishedMessages,
+    GameEventScriptDiagnostic? diagnostic = null)
 {
     public GameEventScriptExecutionState State { get; } = state;
     public int ExecutedOpcodes { get; } = executedOpcodes;
     public int ProcessedMessages { get; } = processedMessages;
     public int EmittedMessages { get; } = emittedMessages;
     public int PublishedMessages { get; } = publishedMessages;
+    public GameEventScriptDiagnostic? Diagnostic { get; } = diagnostic;
 }

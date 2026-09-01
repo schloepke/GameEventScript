@@ -326,43 +326,10 @@ struct StepH.GameEventScript.Api.GameEventScriptCodeSegment
   property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Instructions { get }
   property System.Int32 Count { get }
   property System.Int32 Length { get }
-sealed class StepH.GameEventScript.Api.GameEventScriptCompileError
-  ctor GameEventScriptCompileError(System.String Message, System.String ModuleName, System.String Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind, StepH.GameEventScript.Api.GameEventScriptCompileErrorKind Kind, StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation)
-  method StepH.GameEventScript.Api.GameEventScriptCompileError <Clone>$()
-  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptCompileError other)
-  method System.Boolean Equals(System.Object obj)
-  method System.Int32 GetHashCode()
-  method System.String ToString()
-  method System.Void Deconstruct(System.String& Message, System.String& ModuleName, System.String& Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind& SymbolKind, StepH.GameEventScript.Api.GameEventScriptCompileErrorKind& Kind, StepH.GameEventScript.Api.GameEventScriptSourceLocation& SourceLocation)
-  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptCompileError left, StepH.GameEventScript.Api.GameEventScriptCompileError right)
-  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptCompileError left, StepH.GameEventScript.Api.GameEventScriptCompileError right)
-  property StepH.GameEventScript.Api.GameEventScriptCompileErrorKind Kind { get set }
-  property StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation { get set }
-  property StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind { get set }
-  property System.String Message { get set }
-  property System.String ModuleName { get set }
-  property System.String Symbol { get set }
-enum StepH.GameEventScript.Api.GameEventScriptCompileErrorKind
-  enum-field Syntax = 0
-  enum-field DuplicateType = 1
-  enum-field DuplicatePredicate = 2
-  enum-field DuplicateFunction = 3
-  enum-field PredicateFunctionConflict = 4
-  enum-field MissingCallable = 5
-  enum-field InvalidPredicate = 6
-  enum-field WrongPredicateArity = 7
-  enum-field WrongFunctionArity = 8
-  enum-field DuplicateHandlerParameter = 9
-  enum-field DuplicateDefinitionParameter = 10
-  enum-field DuplicatePublishArgument = 11
-  enum-field DuplicateVariable = 12
-  enum-field InvalidIdentifierCase = 13
-  enum-field InvalidMessageCase = 14
-  enum-field InvalidTypeConstructor = 15
 class StepH.GameEventScript.Api.GameEventScriptCompileException
-  ctor GameEventScriptCompileException(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptCompileError> errors)
-  ctor GameEventScriptCompileException(System.String message)
-  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptCompileError> Errors { get }
+  ctor GameEventScriptCompileException(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  ctor GameEventScriptCompileException(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptDiagnostic> diagnostics)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptDiagnostic> Diagnostics { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
   ctor GameEventScriptCompileOptions()
   property StepH.GameEventScript.Api.GameEventScriptDebugInfoOptions DebugInfo { get set }
@@ -405,10 +372,87 @@ enum StepH.GameEventScript.Api.GameEventScriptDebugSymbolKind
 sealed class StepH.GameEventScript.Api.GameEventScriptDebugSymbolsSegment
   ctor GameEventScriptDebugSymbolsSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptDebugSymbol> symbols)
   property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptDebugSymbol> Symbols { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptDiagnostic
+  ctor GameEventScriptDiagnostic(StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase Phase, System.String Code, System.String Message, System.String Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind, StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation, System.String ProgramName, System.String HandlerName, System.String TechnicalDetails)
+  method StepH.GameEventScript.Api.GameEventScriptDiagnostic <Clone>$()
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptDiagnostic other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase& Phase, System.String& Code, System.String& Message, System.String& Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind& SymbolKind, StepH.GameEventScript.Api.GameEventScriptSourceLocation& SourceLocation, System.String& ProgramName, System.String& HandlerName, System.String& TechnicalDetails)
+  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptDiagnostic left, StepH.GameEventScript.Api.GameEventScriptDiagnostic right)
+  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptDiagnostic left, StepH.GameEventScript.Api.GameEventScriptDiagnostic right)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase Phase { get set }
+  property StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation { get set }
+  property StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind { get set }
+  property System.String Code { get set }
+  property System.String HandlerName { get set }
+  property System.String Message { get set }
+  property System.String ProgramName { get set }
+  property System.String Symbol { get set }
+  property System.String TechnicalDetails { get set }
+static class StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes
+  field static System.String CompileCyclicCallGraph
+  field static System.String CompileInvalidArity
+  field static System.String CompileInvalidResourceMetadata
+  field static System.String CompileInvariantViolation
+  field static System.String CompileNumericLimitExceeded
+  field static System.String CompileUnresolvedSymbol
+  field static System.String CompileUnsupportedConstruct
+  field static System.String LinkCyclicCallGraph
+  field static System.String LinkInvalidExtensionReference
+  field static System.String LinkInvalidProgram
+  field static System.String LinkMismatchedExternalTypeConstructor
+  field static System.String LinkMissingExtension
+  field static System.String LinkMissingExternalTypeConstructor
+  field static System.String LinkRequiredCallStackDepthExceeded
+  field static System.String LinkRequiredRegisterCountExceeded
+  field static System.String ParseSyntax
+  field static System.String RuntimeCallStackOverflow
+  field static System.String RuntimeIllegalOpcode
+  field static System.String RuntimeInstructionPointerOutOfRange
+  field static System.String RuntimeInvalidExtensionBinding
+  field static System.String RuntimeInvalidExternalTypeBinding
+  field static System.String RuntimeInvalidMessageShape
+  field static System.String RuntimeInvalidRecordConstructor
+  field static System.String RuntimeInvalidSeriesKind
+  field static System.String RuntimeNativeHandlerFailure
+  field static System.String RuntimePreparationFailed
+  field static System.String RuntimePublishSinkFailure
+  field static System.String RuntimeRandomStackOverflow
+  field static System.String RuntimeRandomStackUnderflow
+  field static System.String RuntimeRegisterOverflow
+  field static System.String RuntimeUnhandledFailure
+  field static System.String RuntimeVmStateConflict
+  field static System.String ValidateDuplicateDefinitionParameter
+  field static System.String ValidateDuplicateFunction
+  field static System.String ValidateDuplicateHandlerParameter
+  field static System.String ValidateDuplicatePredicate
+  field static System.String ValidateDuplicatePublishArgument
+  field static System.String ValidateDuplicateType
+  field static System.String ValidateDuplicateVariable
+  field static System.String ValidateInvalidIdentifierCase
+  field static System.String ValidateInvalidMessageCase
+  field static System.String ValidateInvalidPredicate
+  field static System.String ValidateInvalidTypeConstructor
+  field static System.String ValidateMissingCallable
+  field static System.String ValidatePredicateFunctionConflict
+  field static System.String ValidateWrongFunctionArity
+  field static System.String ValidateWrongPredicateArity
+  method static System.String Decode(StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode code)
+enum StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase
+  enum-field Parse = 1
+  enum-field Validate = 2
+  enum-field Compile = 3
+  enum-field Decode = 4
+  enum-field Link = 5
+  enum-field Runtime = 6
 sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException
-  ctor GameEventScriptDynamicLinkException(System.String message)
+  ctor GameEventScriptDynamicLinkException(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
 struct StepH.GameEventScript.Api.GameEventScriptExecutionResult
-  ctor GameEventScriptExecutionResult(StepH.GameEventScript.Api.GameEventScriptExecutionState state, System.Int32 executedOpcodes, System.Int32 processedMessages, System.Int32 emittedMessages, System.Int32 publishedMessages)
+  ctor GameEventScriptExecutionResult(StepH.GameEventScript.Api.GameEventScriptExecutionState state, System.Int32 executedOpcodes, System.Int32 processedMessages, System.Int32 emittedMessages, System.Int32 publishedMessages, StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
   property StepH.GameEventScript.Api.GameEventScriptExecutionState State { get }
   property System.Int32 EmittedMessages { get }
   property System.Int32 ExecutedOpcodes { get }
@@ -418,6 +462,7 @@ enum StepH.GameEventScript.Api.GameEventScriptExecutionState
   enum-field Paused = 0
   enum-field Completed = 1
   enum-field RuntimeLimitReached = 2
+  enum-field RuntimeError = 3
 sealed class StepH.GameEventScript.Api.GameEventScriptExtensionReference
   ctor GameEventScriptExtensionReference(System.String extensionName, System.String functionName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
   property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
@@ -461,6 +506,7 @@ sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefin
   property System.String Name { get }
   property System.String TypeName { get }
 abstract class StepH.GameEventScript.Api.GameEventScriptFatalRuntimeException
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
 sealed class StepH.GameEventScript.Api.GameEventScriptFloatRange
   ctor GameEventScriptFloatRange(System.Double from, System.Double to, System.Double step)
   property System.Double From { get }
@@ -629,6 +675,7 @@ enum StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode
   enum-field InvalidProgram = 38
 sealed class StepH.GameEventScript.Api.GameEventScriptProgramFormatException
   ctor GameEventScriptProgramFormatException(StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode errorCode, System.String message, System.Int64? byteOffset, System.UInt16? sectionType, System.Int32? entryIndex, System.Exception innerException)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
   property StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode ErrorCode { get }
   property System.Int32? EntryIndex { get }
   property System.Int64? ByteOffset { get }
@@ -845,6 +892,7 @@ interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
   method System.Void DispatchStarted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
   method System.Void MessageEmitted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
   method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptPublishResult result)
+  method System.Void RuntimeError(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
   method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
 static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions
   method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)

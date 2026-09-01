@@ -31,7 +31,8 @@
         "maxCallDepth": 1
       },
       "expectedError": {
-        "messageContains": "requires call-stack depth 2 but the host limit is 1"
+        "phase": "link",
+        "code": "link.requiredCallStackDepthExceeded"
       }
     },
     {
@@ -42,7 +43,8 @@
         "maxRegisterValues": 6
       },
       "expectedError": {
-        "messageContains": "requires 7 registers but the host limit is 6"
+        "phase": "link",
+        "code": "link.requiredRegisterCountExceeded"
       }
     },
     {
@@ -137,7 +139,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -185,7 +189,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -251,7 +257,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -347,7 +355,9 @@
             },
             {
               "name": "Done",
-              "args": []
+              "args": [
+
+              ]
             }
           ]
         }
@@ -361,7 +371,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -460,7 +472,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -553,7 +567,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -634,7 +650,9 @@
             },
             {
               "name": "Done",
-              "args": []
+              "args": [
+
+              ]
             }
           ]
         }
@@ -648,7 +666,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -787,7 +807,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -856,7 +878,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -953,7 +977,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -1036,7 +1062,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -1112,7 +1140,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -1174,7 +1204,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -1229,7 +1261,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -1270,7 +1304,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {
@@ -1339,7 +1375,9 @@
         {
           "input": {
             "name": "Start",
-            "args": []
+            "args": [
+
+            ]
           },
           "expectedPublished": [
             {

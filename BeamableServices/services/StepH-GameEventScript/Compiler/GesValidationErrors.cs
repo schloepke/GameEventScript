@@ -6,7 +6,7 @@ namespace StepH.GameEventScript.Compiler;
 
 internal sealed class GesValidationErrors
 {
-    private readonly List<GameEventScriptCompileError> _errors = [];
+    private readonly List<GameEventScriptDiagnostic> _errors = [];
 
     public int Count => _errors.Count;
 
@@ -15,7 +15,7 @@ internal sealed class GesValidationErrors
         string message,
         string symbol,
         GameEventScriptSymbolKind symbolKind,
-        GameEventScriptCompileErrorKind kind,
+        string code,
         ScriptNode? sourceNode = null)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
@@ -37,7 +37,14 @@ internal sealed class GesValidationErrors
             sourceLocation = sourceLocation with { SourceName = sourceName };
         }
 
-        _errors.Add(new GameEventScriptCompileError(message, moduleName, symbol, symbolKind, kind, sourceLocation));
+        _errors.Add(new GameEventScriptDiagnostic(
+            GameEventScriptDiagnosticPhase.Validate,
+            code,
+            message,
+            string.IsNullOrEmpty(symbol) ? null : symbol,
+            symbolKind,
+            sourceLocation,
+            moduleName));
     }
 
     public void ThrowIfAny()

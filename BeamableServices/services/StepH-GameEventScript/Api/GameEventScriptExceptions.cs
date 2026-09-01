@@ -2,9 +2,92 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
+#pragma warning disable CS1591
+
 // ReSharper disable UnusedMember.Global
 
 namespace StepH.GameEventScript.Api;
+
+public enum GameEventScriptDiagnosticPhase
+{
+    Parse = 1,
+    Validate = 2,
+    Compile = 3,
+    Decode = 4,
+    Link = 5,
+    Runtime = 6
+}
+
+public static class GameEventScriptDiagnosticCodes
+{
+    public const string ParseSyntax = "parse.syntax";
+    public const string ValidateDuplicateType = "validate.duplicateType";
+    public const string ValidateDuplicatePredicate = "validate.duplicatePredicate";
+    public const string ValidateDuplicateFunction = "validate.duplicateFunction";
+    public const string ValidatePredicateFunctionConflict = "validate.predicateFunctionConflict";
+    public const string ValidateMissingCallable = "validate.missingCallable";
+    public const string ValidateInvalidPredicate = "validate.invalidPredicate";
+    public const string ValidateWrongPredicateArity = "validate.wrongPredicateArity";
+    public const string ValidateWrongFunctionArity = "validate.wrongFunctionArity";
+    public const string ValidateDuplicateHandlerParameter = "validate.duplicateHandlerParameter";
+    public const string ValidateDuplicateDefinitionParameter = "validate.duplicateDefinitionParameter";
+    public const string ValidateDuplicatePublishArgument = "validate.duplicatePublishArgument";
+    public const string ValidateDuplicateVariable = "validate.duplicateVariable";
+    public const string ValidateInvalidIdentifierCase = "validate.invalidIdentifierCase";
+    public const string ValidateInvalidMessageCase = "validate.invalidMessageCase";
+    public const string ValidateInvalidTypeConstructor = "validate.invalidTypeConstructor";
+    public const string CompileUnsupportedConstruct = "compile.unsupportedConstruct";
+    public const string CompileInvalidArity = "compile.invalidArity";
+    public const string CompileUnresolvedSymbol = "compile.unresolvedSymbol";
+    public const string CompileNumericLimitExceeded = "compile.numericLimitExceeded";
+    public const string CompileCyclicCallGraph = "compile.cyclicCallGraph";
+    public const string CompileInvalidResourceMetadata = "compile.invalidResourceMetadata";
+    public const string CompileInvariantViolation = "compile.invariantViolation";
+    public const string LinkRequiredRegisterCountExceeded = "link.requiredRegisterCountExceeded";
+    public const string LinkRequiredCallStackDepthExceeded = "link.requiredCallStackDepthExceeded";
+    public const string LinkInvalidExtensionReference = "link.invalidExtensionReference";
+    public const string LinkMissingExtension = "link.missingExtension";
+    public const string LinkMissingExternalTypeConstructor = "link.missingExternalTypeConstructor";
+    public const string LinkMismatchedExternalTypeConstructor = "link.mismatchedExternalTypeConstructor";
+    public const string LinkCyclicCallGraph = "link.cyclicCallGraph";
+    public const string LinkInvalidProgram = "link.invalidProgram";
+    public const string RuntimeVmStateConflict = "runtime.vmStateConflict";
+    public const string RuntimePreparationFailed = "runtime.preparationFailed";
+    public const string RuntimeInstructionPointerOutOfRange = "runtime.instructionPointerOutOfRange";
+    public const string RuntimeIllegalOpcode = "runtime.illegalOpcode";
+    public const string RuntimeRegisterOverflow = "runtime.registerOverflow";
+    public const string RuntimeCallStackOverflow = "runtime.callStackOverflow";
+    public const string RuntimeRandomStackOverflow = "runtime.randomStackOverflow";
+    public const string RuntimeRandomStackUnderflow = "runtime.randomStackUnderflow";
+    public const string RuntimeInvalidRecordConstructor = "runtime.invalidRecordConstructor";
+    public const string RuntimeInvalidExtensionBinding = "runtime.invalidExtensionBinding";
+    public const string RuntimeInvalidExternalTypeBinding = "runtime.invalidExternalTypeBinding";
+    public const string RuntimeInvalidMessageShape = "runtime.invalidMessageShape";
+    public const string RuntimeInvalidSeriesKind = "runtime.invalidSeriesKind";
+    public const string RuntimeUnhandledFailure = "runtime.unhandledFailure";
+    public const string RuntimeNativeHandlerFailure = "runtime.nativeHandlerFailure";
+    public const string RuntimePublishSinkFailure = "runtime.publishSinkFailure";
+
+    public static string Decode(GameEventScriptProgramFormatErrorCode code)
+    {
+        var name = code.ToString();
+        return "decode." + char.ToLowerInvariant(name[0]) + name[1..];
+    }
+}
+
+public sealed record GameEventScriptDiagnostic(
+    GameEventScriptDiagnosticPhase Phase,
+    string Code,
+    string Message,
+    string? Symbol = null,
+    GameEventScriptSymbolKind SymbolKind = GameEventScriptSymbolKind.Unknown,
+    GameEventScriptSourceLocation? SourceLocation = null,
+    string? ProgramName = null,
+    string? HandlerName = null,
+    string? TechnicalDetails = null)
+{
+    public override string ToString() => $"[{Code}] {Message}";
+}
 
 /// <summary>
 /// Represents an exception that occurs during the compilation process of a Game Event Script.
@@ -21,9 +104,11 @@ public class GameEventScriptCompileException : Exception
     /// <summary>
     /// Represents an exception thrown when the Game Event Script compilation process encounters an error.
     /// </summary>
-    public GameEventScriptCompileException(string message) : base(message)
+    public GameEventScriptCompileException(GameEventScriptDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
     {
-        Errors = [];
+        if (diagnostic.Phase is not (GameEventScriptDiagnosticPhase.Parse or GameEventScriptDiagnosticPhase.Validate or GameEventScriptDiagnosticPhase.Compile))
+            throw new ArgumentException("A compile exception requires a parse, validate, or compile diagnostic.", nameof(diagnostic));
+        Diagnostics = [diagnostic];
     }
 
     /// <summary>
@@ -35,23 +120,34 @@ public class GameEventScriptCompileException : Exception
     /// successful script processing. It supports detailed error reporting by encapsulating
     /// a collection of compilation errors.
     /// </remarks>
-    public GameEventScriptCompileException(IReadOnlyList<GameEventScriptCompileError> errors) : base(BuildMessage(errors))
+    public GameEventScriptCompileException(IReadOnlyList<GameEventScriptDiagnostic> diagnostics) : base(BuildMessage(diagnostics))
     {
-        Errors = errors ?? throw new ArgumentNullException(nameof(errors));
+        _ = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        var copy = new GameEventScriptDiagnostic[diagnostics.Count];
+        for (var index = 0; index < copy.Length; index++)
+        {
+            var diagnostic = diagnostics[index] ?? throw new ArgumentException("Diagnostic list contains null.", nameof(diagnostics));
+            if (diagnostic.Phase is not (GameEventScriptDiagnosticPhase.Parse or GameEventScriptDiagnosticPhase.Validate or GameEventScriptDiagnosticPhase.Compile))
+                throw new ArgumentException("A compile exception requires parse, validate, or compile diagnostics.", nameof(diagnostics));
+            copy[index] = diagnostic;
+        }
+
+        Diagnostics = copy;
     }
 
     /// <summary>
     /// Gets a collection of compiler errors encountered during the processing of a game event script.
     /// </summary>
     /// <remarks>
-    /// This property contains detailed information about each compiler error,
-    /// such as the error message, module name, symbol, symbol kind, error kind,
-    /// and the source location where the error occurred. The collection is empty
-    /// if no errors were encountered.
+    /// The immutable snapshot contains portable phase/code data and optional
+    /// symbol/source/program context for each compiler error.
     /// </remarks>
-    public IReadOnlyList<GameEventScriptCompileError> Errors { get; }
+    public IReadOnlyList<GameEventScriptDiagnostic> Diagnostics { get; }
 
-    private static string BuildMessage(IReadOnlyList<GameEventScriptCompileError>? errors)
+    private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
+        => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
+
+    private static string BuildMessage(IReadOnlyList<GameEventScriptDiagnostic>? errors)
     {
         if (errors is null || errors.Count == 0)
         {
@@ -73,219 +169,6 @@ public class GameEventScriptCompileException : Exception
 
         return builder.ToString();
     }
-}
-
-/// <summary>
-/// Represents a detailed error encountered during the compilation of a Game Event Script.
-/// This error provides comprehensive information about the issue, including its location,
-/// type, and associated symbol, to assist in diagnosing and resolving the problem.
-/// </summary>
-/// <remarks>
-/// Instances of this class are used to encapsulate specific issues found during the script
-/// compilation process. Each error is classified by its kind, symbol, and source location,
-/// aiding developers in pinpointing and addressing problems in their scripts.
-/// </remarks>
-/// <param name="Message">
-/// A descriptive message explaining the nature of the compilation error.
-/// </param>
-/// <param name="ModuleName">
-/// The name of the module in which the error was detected.
-/// </param>
-/// <param name="Symbol">
-/// The specific symbol associated with the error, if applicable.
-/// </param>
-/// <param name="SymbolKind">
-/// The kind of symbol (e.g., Type, Predicate, Function, etc.) involved in the error.
-/// </param>
-/// <param name="Kind">
-/// The classification of the error (e.g., Syntax, MissingCallable, DuplicateType, etc.).
-/// </param>
-/// <param name="SourceLocation">
-/// The precise source location where the error occurred, including file name and optional
-/// line/column details.
-/// </param>
-public sealed record GameEventScriptCompileError(string Message, string ModuleName, string Symbol, GameEventScriptSymbolKind SymbolKind, GameEventScriptCompileErrorKind Kind, GameEventScriptSourceLocation SourceLocation)
-{
-    /// <summary>
-    /// Returns a string representation of the current GameEventScriptCompileError instance,
-    /// including detailed information such as the module name, error message, and source location.
-    /// </summary>
-    /// <returns>A string describing the error, formatted with module name, message, and source location.</returns>
-    public override string ToString() => $"Module '{ModuleName}': {Message} [{SourceLocation}]";
-}
-
-/// <summary>
-/// Defines the different types of errors that can occur during the compilation process of a Game Event Script.
-/// These errors represent specific issues detected in the script's syntax, structure, or logical definition.
-/// </summary>
-/// <remarks>
-/// This enumeration categorizes the various kinds of compile-time issues encountered by the Game Event Script compiler.
-/// Each value corresponds to a unique type of error, facilitating precise error reporting and debugging.
-/// </remarks>
-public enum GameEventScriptCompileErrorKind
-{
-    /// <summary>
-    /// Represents a syntax error encountered during the compilation of a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error indicates that the script contains invalid syntax that does not conform to the expected language grammar.
-    /// Such issues may include missing punctuation, mismatched delimiters, or other structural problems in the script
-    /// that prevent successful parsing and compilation.
-    /// </remarks>
-    Syntax,
-
-    /// <summary>
-    /// Indicates an error caused by the presence of duplicate type definitions in the Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when the script defines multiple types with the same name within the same scope.
-    /// Duplicate type definitions can lead to ambiguity and are not permitted by the compiler.
-    /// Developers must ensure that type names are unique within a given context to avoid this error.
-    /// </remarks>
-    DuplicateType,
-
-    /// <summary>
-    /// Represents an error caused by the presence of duplicate predicates in a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error indicates that the script defines multiple predicates with the same name or signature,
-    /// which leads to conflicts and ambiguity during the compilation process.
-    /// To resolve this issue, ensure that all predicates in the script have unique names or signatures.
-    /// </remarks>
-    DuplicatePredicate,
-
-    /// <summary>
-    /// Represents an error caused by multiple functions being defined with identical signatures in a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error indicates that the script contains redundant or conflicting functions, resulting in ambiguity or
-    /// unintended behavior during compilation. Each function within a script must be uniquely defined to ensure
-    /// proper execution and avoid logical conflicts.
-    /// </remarks>
-    DuplicateFunction,
-
-    /// <summary>
-    /// Represents a conflict between a predicate and a function in the Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error indicates that the script contains a logical conflict where a predicate and a function
-    /// are defined in a way that makes them incompatible or mutually exclusive. Such issues typically arise
-    /// from structural or logical errors in the script's design, requiring adjustments to resolve the conflict
-    /// and achieve consistent behavior.
-    /// </remarks>
-    PredicateFunctionConflict,
-
-    /// <summary>
-    /// Represents an error indicating that a required predicate or function is missing during
-    /// the compilation of a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when the script does not define a predicate or function needed for proper
-    /// execution. A predicate or function is essential for defining the logic and flow in the script,
-    /// and its absence prevents successful compilation.
-    /// </remarks>
-    MissingCallable,
-
-    /// <summary>
-    /// Indicates that a predicate expression within the Game Event Script is invalid.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when a predicate use is not valid, according to the requirements
-    /// of the script's logic or semantic requirements. Common causes may include unsupported operations,
-    /// invalid references, or expressions that cannot be evaluated in the context of the predicate's execution.
-    /// </remarks>
-    InvalidPredicate,
-
-    /// <summary>
-    /// Indicates an arity mismatch for a predicate encountered during the compilation of a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when the number of arguments provided to a predicate does not match the expected arity
-    /// defined for that predicate. It suggests that the script includes a predicate invocation with either too few or too
-    /// many arguments, leading to a compilation failure.
-    /// </remarks>
-    WrongPredicateArity,
-
-    /// <summary>
-    /// Represents an error that occurs when a function in a Game Event Script
-    /// has an incorrect number of arguments.
-    /// </summary>
-    /// <remarks>
-    /// This error indicates that the function does not match the expected arity,
-    /// meaning the number of arguments provided to the function does not align with the
-    /// predefined requirements or function signature for that function in the script.
-    /// </remarks>
-    WrongFunctionArity,
-
-    /// <summary>
-    /// Indicates an error where multiple handler parameters with the same name are defined in a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when a script defines duplicate parameters for a handler, which leads to ambiguity
-    /// during compilation. Each parameter name within a handler must be unique to ensure proper script execution.
-    /// </remarks>
-    DuplicateHandlerParameter,
-
-    /// <summary>
-    /// Indicates a duplication error caused by multiple parameters with the same name or definition in a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when a parameter is defined more than once within a specific context where unique parameter definitions are required.
-    /// Such duplication can lead to ambiguity in the interpretation or execution of the script and must be resolved for successful compilation.
-    /// </remarks>
-    DuplicateDefinitionParameter,
-
-    /// <summary>
-    /// Represents an error indicating a duplicate argument in a publishing statement within a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when multiple arguments with the same name are specified in a publishing statement,
-    /// leading to ambiguity or conflicts that prevent successful compilation of the script.
-    /// Ensure that each argument name within the publishing statement is unique.
-    /// </remarks>
-    DuplicatePublishArgument,
-
-    /// <summary>
-    /// Represents an error caused by the declaration of a variable with a name that duplicates an existing variable
-    /// within the same scope during the compilation of a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error indicates that the script contains multiple variables with the same identifier within the same scope,
-    /// leading to ambiguity or potential conflicts in variable resolution. To resolve this issue, ensure that all variable
-    /// names within the same scope are unique.
-    /// </remarks>
-    DuplicateVariable,
-
-    /// <summary>
-    /// Indicates an error caused by an identifier in the script not conforming to the expected case formatting.
-    /// </summary>
-    /// <remarks>
-    /// This error typically occurs when identifiers, such as variable names, type names, or method names,
-    /// do not follow the required case sensitivity or naming conventions enforced by the script compiler.
-    /// Ensuring proper capitalization and adherence to naming standards can resolve this issue.
-    /// </remarks>
-    InvalidIdentifierCase,
-
-    /// <summary>
-    /// Represents an error where a message case is invalid in a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when a message identifier or case usage in the script
-    /// does not conform to the expected conventions or requirements. Common causes
-    /// may include incorrect capitalization or formatting of message cases, leading
-    /// to unresolved or improperly referenced messages during compilation.
-    /// </remarks>
-    InvalidMessageCase,
-
-    /// <summary>
-    /// Represents an error indicating the use of an invalid type constructor during the compilation of a Game Event Script.
-    /// </summary>
-    /// <remarks>
-    /// This error occurs when a type constructor used in the script is not recognized or does not adhere to the expected
-    /// conventions and requirements of the scripting language. It may involve unsupported type definitions or incorrect
-    /// usage of type constructors, resulting in a failure to compile the script.
-    /// </remarks>
-    InvalidTypeConstructor
 }
 
 /// <summary>
@@ -394,14 +277,21 @@ public enum GameEventScriptSymbolKind
 public abstract class GameEventScriptFatalRuntimeException : Exception
 {
     /// <inheritdoc />
-    protected GameEventScriptFatalRuntimeException(string message) : base(message)
+    protected GameEventScriptFatalRuntimeException(GameEventScriptDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
     {
+        Diagnostic = diagnostic;
     }
 
     /// <inheritdoc />
-    protected GameEventScriptFatalRuntimeException(string message, Exception? innerException) : base(message, innerException)
+    protected GameEventScriptFatalRuntimeException(GameEventScriptDiagnostic diagnostic, Exception? innerException) : base(RequireDiagnostic(diagnostic).Message, innerException)
     {
+        Diagnostic = diagnostic;
     }
+
+    public GameEventScriptDiagnostic Diagnostic { get; }
+
+    private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
+        => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
 }
 
 /// <summary>
@@ -416,4 +306,17 @@ public abstract class GameEventScriptFatalRuntimeException : Exception
 /// runtime environment. It provides relevant error details to help diagnose and resolve
 /// issues during the linking process.
 /// </remarks>
-public sealed class GameEventScriptDynamicLinkException(string message) : Exception(message);
+public sealed class GameEventScriptDynamicLinkException : Exception
+{
+    public GameEventScriptDynamicLinkException(GameEventScriptDiagnostic diagnostic) : base(RequireDiagnostic(diagnostic).Message)
+    {
+        if (diagnostic.Phase != GameEventScriptDiagnosticPhase.Link)
+            throw new ArgumentException("A dynamic-link exception requires a link diagnostic.", nameof(diagnostic));
+        Diagnostic = diagnostic;
+    }
+
+    public GameEventScriptDiagnostic Diagnostic { get; }
+
+    private static GameEventScriptDiagnostic RequireDiagnostic(GameEventScriptDiagnostic? diagnostic)
+        => diagnostic ?? throw new ArgumentNullException(nameof(diagnostic));
+}

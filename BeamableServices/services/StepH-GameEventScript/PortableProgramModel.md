@@ -109,8 +109,8 @@ buffer and host state unchanged.
 
 ## Representation independence
 
-The `.gesb` payload fields define the portable meaning. C# explicit struct
-layout, CPU endianness, padding, object layout, and overlapping field aliases are
+The `.gesb` payload fields define the portable meaning. C# struct layout, CPU
+endianness, padding, object layout, and overlapping field aliases are
 implementation details only. Other language ports need not reproduce them in
 memory.
 
@@ -140,3 +140,22 @@ For every resulting program, the writer must be able to encode all retained
 program data. Reading those canonical bytes must reconstruct the same portable
 meaning. Byte identity is required only where `GesbFormatV1.md` or a canonical
 fixture explicitly requires it.
+
+## Regression gates
+
+Every implementation must cover the semantic equivalents of these gates:
+
+- mutating any input sequence after segment or program construction cannot alter
+  retained program data;
+- the public API cannot freely construct an arbitrary program graph;
+- `compile -> write -> read -> canonical rewrite -> load -> execute` preserves
+  both encoded meaning and runtime behavior;
+- primary word aliases, signed views, four payload words, signed `i64`, and exact
+  Binary64 bits have the numeric relationships specified by `.gesb` regardless
+  of native memory byte order;
+- canonical fixtures protect encoded bytes and the shared numeric definition
+  protects every serialized enum-like ID.
+
+The C# port additionally snapshots its public API and verifies its compact
+instruction size. Those two checks are implementation-specific and are not
+requirements for the in-memory representation used by another language.

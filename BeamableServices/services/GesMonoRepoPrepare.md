@@ -210,7 +210,7 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
   entfernt; Runtime-Diagnosen sind als geordnete Observer-Ereignisse prüfbar.
 - Der normative Vertrag steht in `StepH-GameEventScript/PortableDiagnostics.md`.
 
-## 4. `GameEventScriptProgram` als wirklich portables Datenmodell härten
+## 4. `GameEventScriptProgram` als wirklich portables Datenmodell härten - DONE
 
 Der `.gesb`-V1-Umbau hat einen großen Teil dieses Punkts bereits vorweggenommen.
 Das Programmodell besitzt einen internen Konstruktor, seine Tabellen werden
@@ -265,16 +265,20 @@ Regressionstests statt eines weiteren großen Umbaus.
 - Der Vertrag ist in `PortableProgramModel.md`, `GesbFormatV1.md` und
   `BytecodeOpcodeShape.md` festgehalten.
 
-### 4.4 Regressionstests und Abschluss
+### 4.4 Regressionstests und Abschluss - DONE
 
-- Defensive Kopien und die Immutability verschachtelter Programdaten testen.
-- Testen, dass `GameEventScriptProgram` keinen öffentlichen Konstruktor besitzt.
-- Vollständigen `Compile -> Write -> Read -> Write -> Host.Load`-Roundtrip als
-  portable Grenze absichern.
-- Kanonische Bytes und numerische IDs gegen unbeabsichtigte Abhängigkeiten vom
-  CLR-Memory-Layout schützen.
-- Nach erfolgreichem Audit Punkt 4 als erledigt markieren und das Ergebnis in
-  der normativen Dokumentation beziehungsweise `AGENTS.md` festhalten.
+- Ein Programmodell-Test mutiert nach der Konstruktion sämtliche übergebenen
+  Top-Level- und verschachtelten Sequenzen. String-/Index-Pools, Bindargumente
+  und Tags, Code, Debugsymbole, SourceMap-Hashes und Line-Offsets, SourceArchive
+  sowie opaque Payloads bleiben unverändert.
+- Ein Reflection-Test schützt den fehlenden öffentlichen Program-Konstruktor.
+- Ein vollständiger `Compile -> Write -> Read -> Write -> Host.Load -> Execute`-
+  Test sichert kanonische Bytes und identisches Runtimeverhalten gemeinsam ab.
+- Numerische Word-Aliase, Signed-Sichten, Aux-Payload-Reihenfolge, `I64`, exakte
+  Binary64-Bits und die kompakte 16-Byte-C#-Instruction sind explizit getestet.
+- Golden Fixtures und der Public-API-Snapshot schützen zusätzlich sämtliche
+  kanonischen Bytes und expliziten Enum-/Opcode-IDs.
+- Der Abschluss ist in `PortableProgramModel.md` und `AGENTS.md` festgehalten.
 
 ## 5. JSON-Conformance ausbauen
 

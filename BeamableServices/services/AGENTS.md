@@ -72,6 +72,31 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Program Model Hardening
+
+- Audited the complete `GameEventScriptProgram` graph and documented its
+  permitted transport-only data, ownership, construction, validation, and
+  representation rules in `PortableProgramModel.md`.
+- Removed internal mutable backing-array exposure. All nested program sequences
+  are defensively copied and Core bulk reads receive only read-only spans or
+  immutable slices.
+- Compiler, reader, writer, and `Host.Load` are explicit shared-validator trust
+  boundaries.
+- Bytecode instructions no longer use overlapping CLR fields. Numeric word and
+  payload properties are endian-independent while the C# value type remains 16
+  bytes; `.gesb` bytes continue to be field-wise canonical Little Endian.
+- Regression tests cover deep defensive copies, public construction, complete
+  compile/write/read/rewrite/load/execute behavior, payload bits, golden bytes,
+  and numeric API IDs.
+
+Verification after this change:
+
+```text
+1073/1073 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
 ### Portable Diagnostic Contract
 
 - Added language-neutral `parse`, `validate`, `compile`, `decode`, `link`, and

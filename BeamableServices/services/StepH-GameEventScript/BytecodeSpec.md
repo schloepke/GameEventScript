@@ -126,6 +126,12 @@ integral results to integer values. Larger constants such as future vector/point
 literals should use a normalized data segment instead of reintroducing an object
 constant pool.
 
+String payloads are strict UTF-8 in `.gesb`. Runtime text length, indexing, and
+iteration use Unicode scalar values, while SourceMap locations use UTF-8 byte
+offsets. Names and tags referenced by bindings or typed operands must satisfy
+the ASCII grammars in [PortableTextSemantics.md](PortableTextSemantics.md); the
+shared program validator enforces this for compiler output and loaded binaries.
+
 ### Numeric Unit Encoding Target
 
 `UnitAndFlags` is a byte. Its target portable layout is:
@@ -597,8 +603,8 @@ Required operations:
 - `Clamp`
 
 Text and tag values are text-compatible for `Count`, `Contains`, `StartsWith`,
-and `EndsWith`: comparisons use raw text without the `:` tag prefix, using
-ordinal comparison, and `Count` counts raw text characters. Other operand
+and `EndsWith`: comparisons use exact scalar sequences over raw text without
+the `#` tag prefix, and `Count` counts Unicode scalar values. Other operand
 shapes follow their collection or invalid-operation semantics.
 
 `Contains left, right` writes membership of `left` in `right`. For text/tag
@@ -700,8 +706,8 @@ kind and uses kind-specific value equality:
 | Kind | Exact equality rule |
 | --- | --- |
 | `Nothing` | Not reached by the opcode because `Nothing` propagates. |
-| `Tag` | Ordinal raw tag text. Numeric tag constants use numeric comparison when the other operand is also numeric-capable. |
-| `Text` | Ordinal text. Text is not implicitly numeric. |
+| `Tag` | Exact Unicode-scalar tag text. Numeric tag constants use numeric comparison when the other operand is also numeric-capable. |
+| `Text` | Exact Unicode-scalar text. Text is not implicitly numeric. |
 | `Percentage` | Numeric ratio, including comparison with other numeric-capable operands. |
 | `Number` | Numeric value and matching quantity unit, including integer/float cross-representation. |
 | `Boolean` | Numeric value `0` or `1` in top-level equality. |

@@ -297,6 +297,22 @@
     },
     {
       "kind": "compileError",
+      "name": "unicode letters are rejected in identifiers",
+      "script": "on Start {\n  let na\u00efve be 1\n  emit Done\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
+      "name": "unicode whitespace is not portable trivia",
+      "script": "on Start {\n\u00a0 emit Done\n}",
+      "expectedError": {
+        "phase": "syntax"
+      }
+    },
+    {
+      "kind": "compileError",
       "name": "choose selector count must be positive",
       "script": "on Start(values) {\n  let result be values[:choose 0 at random]\n}",
       "expectedError": {

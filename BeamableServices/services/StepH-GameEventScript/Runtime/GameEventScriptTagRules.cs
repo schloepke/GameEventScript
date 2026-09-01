@@ -3,22 +3,7 @@ namespace StepH.GameEventScript.Runtime;
 internal static class GameEventScriptTagRules
 {
     internal static bool IsValidTagName(string? value)
-    {
-        if (string.IsNullOrEmpty(value) || !char.IsLower(value[0]))
-        {
-            return false;
-        }
-
-        for (var i = 1; i < value.Length; i++)
-        {
-            if (!char.IsLetter(value[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
+        => value is not null && GameEventScriptText.IsTagName(value);
 
     internal static string? NormalizeTextCast(string? value)
     {

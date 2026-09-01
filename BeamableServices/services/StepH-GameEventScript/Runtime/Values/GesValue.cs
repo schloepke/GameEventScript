@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Runtime.Values.GesValue.GesValueFlags;
@@ -76,15 +77,20 @@ public struct GesValue : IEquatable<GesValue>
 
     public static GesValue GesText(string text)
     {
+        text ??= string.Empty;
+        GameEventScriptText.RequireValidUnicode(text, nameof(text));
         var value = new GesValue();
-        value.SetText(text ?? string.Empty);
+        value.SetText(text);
         return value;
     }
 
     public static GesValue GesTag(string tag)
     {
+        tag ??= string.Empty;
+        if (!GameEventScriptText.IsTagValue(tag))
+            throw new ArgumentException("Tag values must use the portable ASCII name grammar.", nameof(tag));
         var value = new GesValue();
-        value.SetTag(tag ?? string.Empty);
+        value.SetTag(tag);
         return value;
     }
 
@@ -406,13 +412,16 @@ public struct GesValue : IEquatable<GesValue>
     }
 
     internal void SetText(string text)
+        => SetText(text, GameEventScriptText.CountScalars(text));
+
+    internal void SetText(string text, int scalarCount)
     {
         Kind = Text;
         Flags = StorageObjectFlag |
                 (text.Length == 0 ? None : HasValueFlag) |
-                (text.Equals("true", StringComparison.OrdinalIgnoreCase) || text == "1" ? IsTrueFlag : IsFalseFlag);
+                (GameEventScriptText.EqualsAsciiIgnoreCase(text, "true") || text == "1" ? IsTrueFlag : IsFalseFlag);
         Unit = UnitNone;
-        IntegerValue = text.Length;
+        IntegerValue = scalarCount;
         ObjectValue = text;
     }
 
@@ -423,7 +432,7 @@ public struct GesValue : IEquatable<GesValue>
                 HasValueFlag |
                 IsFalseFlag;
         Unit = UnitNone;
-        IntegerValue = 0;
+        IntegerValue = GameEventScriptText.CountScalars(tag);
         ObjectValue = tag;
     }
 

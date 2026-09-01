@@ -521,9 +521,11 @@ internal static class GesVmRegisterCollectionOperators
                 }
 
                 var item = new GesValue();
-                for (var i = 0; i < text.Length; i++)
+                for (var utf16Offset = 0; utf16Offset < text.Length;)
                 {
-                    item.SetText(text[i].ToString());
+                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    utf16Offset += scalar.Length;
+                    item.SetText(scalar, 1);
                     if (item.IsTrue)
                     {
                         if (!requireAll)
@@ -699,9 +701,11 @@ internal static class GesVmRegisterCollectionOperators
             case Text or Tag:
             {
                 var text = a.TextValue;
-                for (var i = 0; i < text.Length; i++)
+                for (var utf16Offset = 0; utf16Offset < text.Length;)
                 {
-                    candidate.SetText(text[i].ToString());
+                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    utf16Offset += scalar.Length;
+                    candidate.SetText(scalar, 1);
                     if (vmState.ContainsHelper(candidate, b) == true)
                     {
                         if (!requireAll)
@@ -799,9 +803,11 @@ internal static class GesVmRegisterCollectionOperators
             case Text or Tag:
             {
                 var text = a.TextValue;
-                for (var i = 0; i < text.Length; i++)
+                for (var utf16Offset = 0; utf16Offset < text.Length;)
                 {
-                    candidate.SetText(text[i].ToString());
+                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    utf16Offset += scalar.Length;
+                    candidate.SetText(scalar, 1);
                     candidates.Add(in candidate);
                 }
 
@@ -1069,7 +1075,7 @@ internal static class GesVmRegisterCollectionOperators
                         var bi = 0;
                         while (ai < aMap.StorageLength && bi < bMap.StorageLength)
                         {
-                            var comparison = string.CompareOrdinal(aMap.KeyAt(ai), bMap.KeyAt(bi));
+                            var comparison = GameEventScriptText.CompareScalarOrdinal(aMap.KeyAt(ai), bMap.KeyAt(bi));
                             if (comparison == 0)
                             {
                                 map.Set(aMap.KeyAt(ai), aMap.ValueAt(ai));
@@ -1103,12 +1109,12 @@ internal static class GesVmRegisterCollectionOperators
                             keys[i] = keyValue.TextValue;
                         }
 
-                        Array.Sort(keys, StringComparer.Ordinal);
+                        Array.Sort(keys, GameEventScriptText.ScalarComparer);
                         var ai = 0;
                         var bi = 0;
                         while (ai < aMap.StorageLength && bi < keys.Length)
                         {
-                            var comparison = string.CompareOrdinal(aMap.KeyAt(ai), keys[bi]);
+                            var comparison = GameEventScriptText.CompareScalarOrdinal(aMap.KeyAt(ai), keys[bi]);
                             if (comparison == 0)
                             {
                                 map.Set(aMap.KeyAt(ai), aMap.ValueAt(ai));

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
@@ -42,7 +43,16 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// </summary>
     /// <param name="name">The message name to normalize. Can be null or empty, in which case an empty string is returned.</param>
     /// <returns>A normalized string representation of the message name, or an empty string if the input was null or only contained whitespace.</returns>
-    public static string NormalizeMessageName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+    public static string NormalizeMessageName(string? name)
+    {
+        if (name is null) return string.Empty;
+        GameEventScriptText.RequireValidUnicode(name, nameof(name));
+        var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
+        if (normalized.Length == 0) return string.Empty;
+        if (!GameEventScriptText.IsMessageName(normalized))
+            throw new ArgumentException("Message names must contain ASCII letters only.", nameof(name));
+        return normalized;
+    }
 
     /// <summary>
     /// Normalizes a parameter name by trimming whitespace and replacing null or empty values with the default unlabeled parameter name.
@@ -54,9 +64,13 @@ public sealed class GameEventScriptMessageSignature : IEquatable<GameEventScript
     /// </returns>
     public static string NormalizeParameterName(string? name)
     {
-        if (string.IsNullOrWhiteSpace(name)) return UnlabeledParameterName;
-        var trimmed = name.Trim();
-        return trimmed.Length == 0 ? UnlabeledParameterName : trimmed;
+        if (name is null) return UnlabeledParameterName;
+        GameEventScriptText.RequireValidUnicode(name, nameof(name));
+        var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
+        if (normalized.Length == 0) return UnlabeledParameterName;
+        if (normalized != UnlabeledParameterName && !GameEventScriptText.IsIdentifier(normalized))
+            throw new ArgumentException("Parameter names must use the portable lowercase ASCII identifier grammar.", nameof(name));
+        return normalized;
     }
 
     /// <summary>

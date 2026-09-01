@@ -2630,7 +2630,7 @@ internal sealed class GesParser
 
         for (var i = 1; i < text.Length; i++)
         {
-            if (!char.IsDigit(text[i]))
+            if (!GameEventScriptText.IsAsciiDigit(text[i]))
             {
                 return false;
             }

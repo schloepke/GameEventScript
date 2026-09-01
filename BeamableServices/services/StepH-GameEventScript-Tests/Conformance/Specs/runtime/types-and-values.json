@@ -3228,6 +3228,35 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "unicode text uses scalar length indexing and iteration",
+      "script": "\uFEFFon Start {\n  let text be 'A\ud83d\ude00e\u0301'\n  let scalars as :list be text\n  emit Done(count: text[:count], first: text[:first], second: text[2], third: text[3], fourth: text[4], last: text[:last], single: '\ud83d\ude00'[:single], listCount: scalars[:count], listSecond: scalars[2], hugeIndex: text[9223372036854775807])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start"
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "count": { "type": ":integer", "value": "4" },
+                "first": { "type": ":text", "value": "A" },
+                "second": { "type": ":text", "value": "\ud83d\ude00" },
+                "third": { "type": ":text", "value": "e" },
+                "fourth": { "type": ":text", "value": "\u0301" },
+                "last": { "type": ":text", "value": "\u0301" },
+                "single": { "type": ":text", "value": "\ud83d\ude00" },
+                "listCount": { "type": ":integer", "value": "4" },
+                "listSecond": { "type": ":text", "value": "\ud83d\ude00" },
+                "hugeIndex": { "type": ":nothing" }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

@@ -315,8 +315,8 @@ public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonCon
 
     private static bool PerformanceReportMatchesReference(string reference, string current, out string diff)
     {
-        var referenceLines = reference.ReplaceLineEndings("\n").Split('\n');
-        var currentLines = current.ReplaceLineEndings("\n").Split('\n');
+        var referenceLines = reference.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n');
+        var currentLines = current.ReplaceLineEndings("\n").TrimEnd('\n').Split('\n');
         var builder = new StringBuilder();
         var count = Math.Max(referenceLines.Length, currentLines.Length);
         for (var index = 0; index < count; index++)

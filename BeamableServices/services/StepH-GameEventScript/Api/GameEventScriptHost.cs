@@ -162,7 +162,7 @@ public sealed class GameEventScriptHost
 
     public bool Receive(GameEventScriptMessage message)
     {
-        if (string.IsNullOrWhiteSpace(message.Name) || GameEventScriptSystemEndpoints.IsInitializationName(message.Name)) return false;
+        if (message.Name.Length == 0 || GameEventScriptSystemEndpoints.IsInitializationName(message.Name)) return false;
         return EnqueueMessage(message);
     }
 

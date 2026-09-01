@@ -124,19 +124,21 @@ internal class GesIntIterator(int[] values) : IGesIterator, IDisposable
 
 internal class GesStringIterator(string stringValue) : IGesIterator, IDisposable
 {
-    private int _current;
+    private int _utf16Offset;
     private string? _stringValue = stringValue;
 
     public GesIteratorResult Next()
     {
-        if (_stringValue == null || _current >= _stringValue.Length)
+        if (_stringValue == null || _utf16Offset >= _stringValue.Length)
         {
             _stringValue = null;
             return default;
         }
 
         var value = default(GesValue);
-        value.SetText(_stringValue[_current++].ToString());
+        var scalar = GameEventScriptText.ScalarAtUtf16Offset(_stringValue, _utf16Offset);
+        _utf16Offset += scalar.Length;
+        value.SetText(scalar, 1);
         return new GesIteratorResult(in value);
     }
 

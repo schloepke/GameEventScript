@@ -83,6 +83,12 @@ Names are intentionally narrow:
   extension references use `:`. Built-in type names are reserved by the
   language.
 
+All of these name grammars use ASCII letters and digits; they do not depend on
+platform Unicode classification. Source is strict UTF-8, an optional initial BOM
+is removed, and only ASCII space/tab plus `LF`, `CRLF`, or `CR` are portable
+whitespace/newlines. The complete normative contract is in
+[PortableTextSemantics.md](PortableTextSemantics.md).
+
 Text literals can use single or double quotes. The quote character is escaped by
 doubling it:
 
@@ -358,14 +364,14 @@ min of a and b and c
 max of a and b and c
 ```
 
-`x[:count]` counts text and tag characters by raw text, so `#active[:count]`
-is `6`.
+`x[:count]` counts Unicode scalar values in text and raw tag text, so
+`#active[:count]` is `6`.
 
 `x[:keys]`, `x[:values]`, and `x[:entries]` are defined only for maps and
 map-backed custom type values. `x[:keys]` returns a list of tag keys,
 `x[:values]` returns the corresponding values, and `x[:entries]` returns maps
-with `key` and `value` fields. All three projections use stable ordinal key
-order. If the operand is `nothing`, the result is `nothing`; if the operand is
+with `key` and `value` fields. All three projections use stable Unicode-scalar
+key order. If the operand is `nothing`, the result is `nothing`; if the operand is
 any other non-map value, the result is also `nothing`.
 
 Square and cube roots lower to powers with exponents `0.5` and `1/3`. `exp`
@@ -540,7 +546,7 @@ Text is not numeric for equality, so `'10.3' = 10.3` is false while
 `('10.3' as :number) = 10.3` is true.
 
 If the numeric view does not apply, exact equality requires the same value kind:
-tags and text compare ordinal text, vectors and points compare `x`, `y`, `z`,
+tags and text compare exact Unicode-scalar sequences, vectors and points compare `x`, `y`, `z`,
 and unit, ranges compare `from`, `to`, and `step`, series compare signature and
 offset, messages compare signature id, arguments, and tag sequence, handlers
 compare signature id, lists compare ordered items, dice compare ordered rolls,
@@ -605,6 +611,13 @@ Tags are not empty. Tags are text-like symbolic values: they use the same raw
 text as quoted text values, but are written without quotes and must follow the
 tag naming rules. Text and tags can be used interchangeably for map keys, member
 lookup selectors, text containment, and text boundary operations.
+
+Text preserves its exact Unicode scalar sequence without normalization. Text
+length, positional indexing, iteration, text-to-list conversion, and terminal
+operations count or return Unicode scalar values rather than UTF-8 bytes,
+UTF-16 code units, or grapheme clusters. Indexes remain 1-based. Equality is
+exact and ordering is lexicographic by Unicode scalar value; see
+[PortableTextSemantics.md](PortableTextSemantics.md).
 
 ### Vector and Point
 

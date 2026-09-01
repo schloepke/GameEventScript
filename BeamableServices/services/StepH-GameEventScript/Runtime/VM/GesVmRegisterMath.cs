@@ -379,7 +379,7 @@ internal static class GesVmRegisterMath
                         keys[i] = keyValue.TextValue;
                     }
 
-                    Array.Sort(keys, StringComparer.Ordinal);
+                    Array.Sort(keys, GameEventScriptText.ScalarComparer);
                 }
                 else
                 {
@@ -394,7 +394,7 @@ internal static class GesVmRegisterMath
                     for (var ai = 0; ai < aMap.StorageLength; ai++)
                     {
                         var key = aMap.KeyAt(ai);
-                        while (bi < bMap.StorageLength && string.CompareOrdinal(bMap.KeyAt(bi), key) < 0) bi++;
+                        while (bi < bMap.StorageLength && GameEventScriptText.CompareScalarOrdinal(bMap.KeyAt(bi), key) < 0) bi++;
                         if (bi < bMap.StorageLength && string.Equals(bMap.KeyAt(bi), key, StringComparison.Ordinal)) continue;
                         map.Set(key, aMap.ValueAt(ai));
                     }
@@ -405,7 +405,7 @@ internal static class GesVmRegisterMath
                     for (var ai = 0; ai < aMap.StorageLength; ai++)
                     {
                         var key = aMap.KeyAt(ai);
-                        while (ki < keys.Length && string.CompareOrdinal(keys[ki], key) < 0) ki++;
+                        while (ki < keys.Length && GameEventScriptText.CompareScalarOrdinal(keys[ki], key) < 0) ki++;
                         if (ki < keys.Length && string.Equals(keys[ki], key, StringComparison.Ordinal)) continue;
                         map.Set(key, aMap.ValueAt(ai));
                     }
@@ -1347,12 +1347,12 @@ internal static class GesVmRegisterMath
             case Text when b.Kind is Text:
                 leftText ??= a.TextValue;
                 rightText ??= b.TextValue;
-                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                comparison = GameEventScriptText.CompareScalarOrdinal(rightText, leftText);
                 break;
             case Tag when b.Kind is Tag:
                 leftText ??= a.TextValue;
                 rightText ??= b.TextValue;
-                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                comparison = GameEventScriptText.CompareScalarOrdinal(rightText, leftText);
                 break;
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
@@ -1567,12 +1567,12 @@ internal static class GesVmRegisterMath
             case Text when b.Kind is Text:
                 leftText ??= a.TextValue;
                 rightText ??= b.TextValue;
-                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                comparison = GameEventScriptText.CompareScalarOrdinal(rightText, leftText);
                 break;
             case Tag when b.Kind is Tag:
                 leftText ??= a.TextValue;
                 rightText ??= b.TextValue;
-                comparison = StringComparer.Ordinal.Compare(rightText, leftText);
+                comparison = GameEventScriptText.CompareScalarOrdinal(rightText, leftText);
                 break;
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:

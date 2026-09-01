@@ -19,7 +19,9 @@ public sealed class GesValueMap
 
         Array.Copy(keys, _keys, count);
         Array.Copy(values, _values, count);
-        Array.Sort(_keys, _values, StringComparer.Ordinal);
+        for (var index = 0; index < _keys.Length; index++)
+            GameEventScriptText.RequireValidUnicode(_keys[index], nameof(keys));
+        Array.Sort(_keys, _values, GameEventScriptText.ScalarComparer);
     }
     
     public int Length => _keys.Length;
@@ -51,7 +53,7 @@ public sealed class GesValueMap
         while (min <= max)
         {
             var mid = min + ((max - min) >> 1);
-            var comparison = string.CompareOrdinal(_keys[mid], key);
+            var comparison = GameEventScriptText.CompareScalarOrdinal(_keys[mid], key);
             if (comparison == 0) return mid;
             if (comparison < 0) min = mid + 1;
             else max = mid - 1;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Api;
@@ -255,9 +256,14 @@ public sealed class GameEventScriptMessage : IEquatable<GameEventScriptMessage>
 
     internal static string NormalizeTagName(string? tag)
     {
-        if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
-        var normalized = tag.Trim();
-        return normalized.Length > 0 && normalized[0] == '#' ? normalized[1..] : normalized;
+        if (tag is null) return string.Empty;
+        GameEventScriptText.RequireValidUnicode(tag, nameof(tag));
+        var normalized = GameEventScriptText.TrimAsciiWhitespace(tag);
+        if (normalized.Length > 0 && normalized[0] == '#') normalized = normalized[1..];
+        if (normalized.Length == 0) return string.Empty;
+        if (!GameEventScriptText.IsTagName(normalized))
+            throw new ArgumentException("Tag names must use the portable lowercase ASCII name grammar.", nameof(tag));
+        return normalized;
     }
 
     internal static IReadOnlyList<string> NormalizeTags(IEnumerable<string>? tags)

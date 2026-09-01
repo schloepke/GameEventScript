@@ -341,7 +341,7 @@ internal static class GesVmRegisterSortGroupDistinct
         {
             case Text when b.Kind is Text:
             case Tag when b.Kind is Tag:
-                return StringComparer.Ordinal.Compare(a.TextValue, b.TextValue);
+                return GameEventScriptText.CompareScalarOrdinal(a.TextValue, b.TextValue);
             case Vector when b.Kind is Vector:
             case Point when b.Kind is Point:
                 if (a.Unit != b.Unit ||

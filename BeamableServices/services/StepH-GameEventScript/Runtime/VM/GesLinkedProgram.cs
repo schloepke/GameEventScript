@@ -50,6 +50,7 @@ internal sealed class GesLinkedProgram
         GesProgramCallGraphValidator.Validate(program);
         ValidateResourceMetadata(program);
         StringPool = BuildStringPool(program.StringConstants);
+        StringScalarCounts = BuildStringScalarCountsIfNeeded(StringPool);
         CodeSegmentSize = checked((ushort)program.Code.Length);
         RecordConstructors = BuildIdIndexedBindTable(program, Record);
         ExtensionCallBinds = BuildIdIndexedBindTable(program, ExtensionCall);
@@ -63,6 +64,7 @@ internal sealed class GesLinkedProgram
 
     internal GameEventScriptProgram Program { get; }
     internal string[] StringPool { get; }
+    internal int[]? StringScalarCounts { get; }
     internal ushort CodeSegmentSize { get; }
     internal OutboundMessageSignature[] OutboundMessageSignatures { get; }
     internal GameEventScriptBinaryBindEntry[] RecordConstructors { get; }
@@ -74,6 +76,7 @@ internal sealed class GesLinkedProgram
     internal int RequiredRegisterCapacity { get; }
 
     internal string FetchString(ushort index) => StringPool[index];
+    internal int FetchStringScalarCount(ushort index) => StringScalarCounts is { } counts ? counts[index] : StringPool[index].Length;
 
     private Handler[] BuildHandlers(GameEventScriptProgram program)
     {
@@ -181,6 +184,20 @@ internal sealed class GesLinkedProgram
         var strings = new string[table.Slices.Length];
         for (var index = 0; index < strings.Length; index++) strings[index] = table.Resolve((ushort)index);
         return strings;
+    }
+
+    private static int[]? BuildStringScalarCountsIfNeeded(string[] strings)
+    {
+        for (var index = 0; index < strings.Length; index++)
+        {
+            if (GameEventScriptText.CountScalars(strings[index]) == strings[index].Length) continue;
+            var counts = new int[strings.Length];
+            for (var countIndex = 0; countIndex < strings.Length; countIndex++)
+                counts[countIndex] = GameEventScriptText.CountScalars(strings[countIndex]);
+            return counts;
+        }
+
+        return null;
     }
 
     private static void ValidateResourceMetadata(GameEventScriptProgram program)

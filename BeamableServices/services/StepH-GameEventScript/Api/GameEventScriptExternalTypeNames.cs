@@ -1,4 +1,5 @@
 using System;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Api;
 
@@ -68,7 +69,7 @@ internal static class GameEventScriptExternalTypeNames
             normalized = normalized[1..];
         }
 
-        if (!IsLetterOnlyLowerStart(normalized))
+        if (!GameEventScriptText.IsTypeName(normalized))
         {
             throw new ArgumentException($"External GameEventScript type name ':{normalized}' must start with a lower-case letter and contain letters only.");
         }
@@ -79,7 +80,7 @@ internal static class GameEventScriptExternalTypeNames
     public static string NormalizeIdentifier(string? name, string parameterName)
     {
         var normalized = NormalizeName(name, parameterName);
-        if (!IsIdentifier(normalized))
+        if (!GameEventScriptText.IsIdentifier(normalized))
         {
             throw new ArgumentException($"External GameEventScript identifier '{normalized}' must start with a lower-case letter, contain letters only, and may end with _<index>.");
         }
@@ -89,81 +90,14 @@ internal static class GameEventScriptExternalTypeNames
 
     private static string NormalizeName(string? name, string parameterName)
     {
-        if (string.IsNullOrWhiteSpace(name))
+        if (name is null)
         {
             throw new ArgumentException("Name must not be null or whitespace.", parameterName);
         }
 
-        return name.Trim();
-    }
-
-    private static bool IsLetterOnlyLowerStart(string value)
-    {
-        if (value.Length == 0 || !char.IsLower(value[0]))
-        {
-            return false;
-        }
-
-        for (var index = 0; index < value.Length; index++)
-        {
-            if (!char.IsLetter(value[index]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool IsIdentifier(string value)
-    {
-        if (value.Length == 0 || !char.IsLower(value[0]))
-        {
-            return false;
-        }
-
-        var underscore = value.LastIndexOf('_');
-        if (underscore < 0)
-        {
-            for (var index = 0; index < value.Length; index++)
-            {
-                if (!char.IsLetter(value[index]))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        if (underscore == 0 || underscore == value.Length - 1)
-        {
-            return false;
-        }
-
-        var prefix = value[..underscore];
-        var suffix = value[(underscore + 1)..];
-        for (var index = 0; index < prefix.Length; index++)
-        {
-            if (!char.IsLetter(prefix[index]))
-            {
-                return false;
-            }
-        }
-
-        for (var index = 0; index < suffix.Length; index++)
-        {
-            if (!char.IsDigit(suffix[index]))
-            {
-                return false;
-            }
-        }
-
-        if (suffix.Length == 0)
-        {
-            return false;
-        }
-
-        return suffix.Length == 1 || suffix[0] != '0';
+        GameEventScriptText.RequireValidUnicode(name, parameterName);
+        var normalized = GameEventScriptText.TrimAsciiWhitespace(name);
+        if (normalized.Length == 0) throw new ArgumentException("Name must not be null or whitespace.", parameterName);
+        return normalized;
     }
 }

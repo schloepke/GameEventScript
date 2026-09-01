@@ -68,4 +68,23 @@ public sealed class GameEventScriptMessageSignatureTests
         Assert.IsNotNull(message);
         Assert.AreEqual("Ping(amount)", message.SignatureId);
     }
+
+    [TestMethod]
+    public void PublicNamesUsePortableAsciiGrammarAndAsciiTrimming()
+    {
+        Assert.AreEqual("Ping", GameEventScriptMessageSignature.NormalizeMessageName("\tPing "));
+        Assert.AreEqual("amount_2", GameEventScriptMessageSignature.NormalizeParameterName(" amount_2\t"));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessageSignature.Create("Pïng", []));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessageSignature.Create("Ping", ["ämount"]));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessageSignature.Create("\u00A0Ping\u00A0", []));
+        Assert.ThrowsExactly<ArgumentException>(() => GameEventScriptMessage.Create("Ping", arguments: null, tags: ["#réady"]));
+    }
+
+    [TestMethod]
+    public void HostTagValuesRemainCaseSensitiveAsciiSymbols()
+    {
+        Assert.AreEqual("Ready", GesValue.GesTag("Ready").TextValue);
+        Assert.AreNotEqual(GesValue.GesTag("Ready"), GesValue.GesTag("ready"));
+        Assert.ThrowsExactly<ArgumentException>(() => GesValue.GesTag("réady"));
+    }
 }

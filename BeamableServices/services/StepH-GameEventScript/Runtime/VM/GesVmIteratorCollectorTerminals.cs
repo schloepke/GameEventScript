@@ -190,20 +190,17 @@ internal static class GesVmIteratorCollectorTerminals
     }
     private static void FirstFromText(GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var text = source.TextValue;
-        if (text.Length > 0) vmState.SetText(destinationRegister, text[0].ToString());
+        if (GameEventScriptText.ScalarAt(source.TextValue, 0) is { } scalar) vmState.SetText(destinationRegister, scalar);
         else vmState.SetNothing(destinationRegister);
     }
     private static void LastFromText(GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var text = source.TextValue;
-        if (text.Length > 0) vmState.SetText(destinationRegister, text[^1].ToString());
+        if (source.IntegerValue > 0 && GameEventScriptText.ScalarAt(source.TextValue, source.IntegerValue - 1) is { } scalar) vmState.SetText(destinationRegister, scalar);
         else vmState.SetNothing(destinationRegister);
     }
     private static void SingleFromText(GesVmState vmState, ushort destinationRegister, in GesValue source)
     {
-        var text = source.TextValue;
-        if (text.Length == 1) vmState.SetText(destinationRegister, text);
+        if (source.IntegerValue == 1) vmState.SetText(destinationRegister, source.TextValue);
         else vmState.SetNothing(destinationRegister);
     }
 }

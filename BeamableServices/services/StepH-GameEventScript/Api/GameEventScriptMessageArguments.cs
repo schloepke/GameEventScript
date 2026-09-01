@@ -220,10 +220,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<KeyVal
         {
             var normalizedName = GameEventScriptMessageSignature.NormalizeParameterName(names[index]);
             signatureLabels[index] = normalizedName;
-            if (string.IsNullOrEmpty(names[index]))
-            {
-                names[index] = normalizedName;
-            }
+            names[index] = normalizedName;
         }
 
         return new GameEventScriptMessageArguments(names, values, signatureLabels);

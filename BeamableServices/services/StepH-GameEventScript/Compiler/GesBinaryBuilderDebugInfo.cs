@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime;
 
 namespace StepH.GameEventScript.Compiler;
 
@@ -144,9 +145,7 @@ internal sealed partial class GesBinaryBuilder
         var lineIndex = Math.Clamp(line - 1, 0, Math.Max(0, lineStarts.Count - 1));
         var start = lineStarts.Count == 0 ? 0 : lineStarts[lineIndex];
         var end = lineIndex + 1 < lineStarts.Count ? lineStarts[lineIndex + 1] : text.Length;
-        var result = Math.Clamp(start + Math.Max(0, column - 1), start, end);
-        if (result > 0 && result < text.Length && char.IsLowSurrogate(text[result]) && char.IsHighSurrogate(text[result - 1])) result--;
-        return result;
+        return GameEventScriptText.Utf16OffsetForScalarOffset(text, start, end, Math.Max(0, column - 1));
     }
 
     private static int[] BuildLineStartCharacters(string text)

@@ -1868,74 +1868,13 @@ internal static class GesAstValidator
     }
 
     private static bool IsIdentifierCase(string name)
-    {
-        if (string.IsNullOrEmpty(name) || !char.IsLower(name[0]))
-        {
-            return false;
-        }
-
-        var suffixStart = name.LastIndexOf('_');
-        var letterEndExclusive = suffixStart < 0 ? name.Length : suffixStart;
-        for (var i = 1; i < letterEndExclusive; i++)
-        {
-            if (!char.IsLetter(name[i]))
-            {
-                return false;
-            }
-        }
-
-        if (suffixStart < 0)
-        {
-            return true;
-        }
-
-        return suffixStart > 0 &&
-               IsValidNumericSuffix(name, suffixStart + 1);
-    }
+        => GameEventScriptText.IsIdentifier(name);
 
     private static bool IsMessageCase(string name)
     {
-        if (string.IsNullOrEmpty(name) || !char.IsUpper(name[0]))
-        {
-            return false;
-        }
-
-        for (var i = 1; i < name.Length; i++)
-        {
-            if (!char.IsLetter(name[i]))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    private static bool IsValidNumericSuffix(string value, int start)
-    {
-        if (start >= value.Length)
-        {
-            return false;
-        }
-
-        if (value[start] == '0')
-        {
-            return start + 1 == value.Length;
-        }
-
-        if (value[start] is < '1' or > '9')
-        {
-            return false;
-        }
-
-        for (var index = start + 1; index < value.Length; index++)
-        {
-            if (!char.IsDigit(value[index]))
-            {
-                return false;
-            }
-        }
-
+        if (string.IsNullOrEmpty(name) || !GameEventScriptText.IsAsciiUpper(name[0])) return false;
+        for (var index = 1; index < name.Length; index++)
+            if (!GameEventScriptText.IsAsciiLetter(name[index])) return false;
         return true;
     }
 }

@@ -796,6 +796,38 @@
           ]
         }
       ]
+    },
+    {
+      "kind": "scriptApi",
+      "name": "text and map ordering follows unicode scalar order",
+      "script": "module AtomicUnicodeScalarSort\non Start(values) {\n  let sorted be ['\ue000', '\ud800\udc00'][:sort ascending]\n  emit Done(firstText: sorted[1], secondText: sorted[2], firstMapValue: values[:first], lastMapValue: values[:last])\n}",
+      "steps": [
+        {
+          "input": {
+            "name": "Start",
+            "args": {
+              "values": {
+                "type": ":map",
+                "entries": {
+                  "\ud800\udc00": { "type": ":integer", "value": "2" },
+                  "\ue000": { "type": ":integer", "value": "1" }
+                }
+              }
+            }
+          },
+          "expectedPublished": [
+            {
+              "name": "Done",
+              "args": {
+                "firstText": { "type": ":text", "value": "\ue000" },
+                "secondText": { "type": ":text", "value": "\ud800\udc00" },
+                "firstMapValue": { "type": ":integer", "value": "1" },
+                "lastMapValue": { "type": ":integer", "value": "2" }
+              }
+            }
+          ]
+        }
+      ]
     }
   ]
 }

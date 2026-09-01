@@ -45,26 +45,24 @@ weil ihre Ausführung erst gemeinsam mit den Runtime-Ports geprüft werden kann.
 
 Mehrere aktuelle Verhaltensweisen hängen implizit an .NET.
 
-### Text und Unicode
+### 2.1 Text und Unicode - DONE
 
-Lexer und Validator verwenden unter anderem `char.IsLetter`, `char.IsLower` und `char.IsWhiteSpace`. Swift verwendet bei Strings standardmäßig Grapheme, Kotlin UTF-16 und C++ häufig UTF-8-Bytes.
+Der sprachneutrale Vertrag ist in
+[PortableTextSemantics.md](StepH-GameEventScript/PortableTextSemantics.md)
+festgeschrieben und in Compiler, Runtime, Host-API und `.gesb`-Validator
+umgesetzt:
 
-Festzulegen sind:
-
-- Source-Encoding, wahrscheinlich UTF-8
-- erlaubte Zeichen in Namen und Tags
-- entweder ASCII-Namen oder eine genau definierte Unicode-Version
-- erlaubte Whitespace- und Newline-Zeichen
-- Einheit für Textlänge und Textindex:
-    - UTF-8-Byte
-    - Unicode Scalar
-    - UTF-16 Code Unit
-    - Grapheme Cluster
-- Stringvergleich und Sortierreihenfolge
-- Normalisierung, etwa keine Normalisierung oder NFC
-- Einheit für Compiler-Zeile und Spalte
-
-Ohne diese Regeln entstehen garantiert Unterschiede zwischen Swift und C#.
+- Source ist striktes UTF-8; ein initiales BOM wird entfernt.
+- Namen und Tags verwenden explizite ASCII-Grammatiken.
+- Portable Whitespace-/Newline-Zeichen sind fest definiert.
+- Textlänge, Indexierung und Iteration verwenden Unicode Scalars bei
+  weiterhin 1-basierten Indizes.
+- Textgleichheit ist exakt, Sortierung lexikografisch nach Unicode Scalar und
+  es findet keine Normalisierung statt.
+- Compilerzeilen/-spalten sind 1-basiert und Scalar-basiert; SourceMaps bleiben
+  UTF-8-Byte-basiert.
+- JSON-Conformance deckt Supplementary-Plane-Zeichen, kombinierende Zeichen,
+  Scalar-Sortierung und unzulässige Unicode-Namen/Whitespace ab.
 
 ### Zahlen
 

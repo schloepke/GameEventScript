@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using StepH.GameEventScript.Compiler;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptCompileErrorKind;
 using static StepH.GameEventScript.Api.GameEventScriptSymbolKind;
 using static StepH.GameEventScript.Compiler.GameEventScriptCallableKind;
@@ -13,6 +15,7 @@ namespace StepH.GameEventScript.Api;
 /// </summary>
 public sealed class GameEventScriptBuilder
 {
+    private static readonly UTF8Encoding StrictUtf8 = new(false, true);
     private readonly List<SourceInput> _sources = [];
     private GameEventScriptCompileOptions _options = new();
     private IGameEventScriptExternalTypeRegistry _externalTypeRegistry = GameEventScriptEmptyExternalTypeRegistry.Instance;
@@ -74,7 +77,8 @@ public sealed class GameEventScriptBuilder
     /// </returns>
     public GameEventScriptBuilder AddScript(string text, string? sourceName = null)
     {
-        _sources.Add(new SourceInput(text ?? throw new ArgumentNullException(nameof(text)), sourceName));
+        var source = GameEventScriptText.PrepareSource(text ?? throw new ArgumentNullException(nameof(text)), nameof(text));
+        _sources.Add(new SourceInput(source, sourceName));
         return this;
     }
 
@@ -91,7 +95,7 @@ public sealed class GameEventScriptBuilder
     public GameEventScriptBuilder AddFile(string path)
     {
         _ = path ?? throw new ArgumentNullException(nameof(path));
-        return AddScript(File.ReadAllText(path), path);
+        return AddScript(StrictUtf8.GetString(File.ReadAllBytes(path)), path);
     }
 
     /// <summary>
@@ -156,7 +160,7 @@ public sealed class GameEventScriptBuilder
         for (var index = 0; index < _sources.Count; index++)
         {
             var source = _sources[index];
-            sourceDocuments[index] = new GesSourceDocument(checked((uint)index), string.IsNullOrWhiteSpace(source.SourceName) ? "UnknownSource" : source.SourceName!, source.Text);
+            sourceDocuments[index] = new GesSourceDocument(checked((uint)index), string.IsNullOrEmpty(source.SourceName) ? "UnknownSource" : source.SourceName!, source.Text);
         }
         var moduleResult = new GesSyntaxTreeModule(ResolveModuleName(modules), typeDefinitions, callables, handlers, externalTypeDefinitions, sourceDocuments);
         return GesAstOptimizer.Optimize(moduleResult);

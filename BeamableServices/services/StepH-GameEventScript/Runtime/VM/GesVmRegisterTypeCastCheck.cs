@@ -280,8 +280,14 @@ internal static class GesVmRegisterTypeCastCheck
                     return dst;
                 }
 
-                var list = new GesValue[text.Length];
-                for (var i = 0; i < text.Length; i++) list[i].SetText(text[i].ToString());
+                var list = new GesValue[xValue.Length];
+                var utf16Offset = 0;
+                for (var i = 0; i < list.Length; i++)
+                {
+                    var scalar = GameEventScriptText.ScalarAtUtf16Offset(text, utf16Offset);
+                    list[i].SetText(scalar, 1);
+                    utf16Offset += scalar.Length;
+                }
                 dst.SetList(list);
                 return dst;
             }

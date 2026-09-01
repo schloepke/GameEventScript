@@ -46,7 +46,8 @@ public sealed class GameEventScriptExtensionReference
 
     public string SignatureId { get; }
 
-    private static string NormalizeName(string? name) => string.IsNullOrWhiteSpace(name) ? string.Empty : name.Trim();
+    private static string NormalizeName(string? name)
+        => name is null ? string.Empty : GameEventScriptExternalTypeNames.NormalizeIdentifier(name, nameof(name));
 
     private static string[] NormalizeArgumentLabels(IEnumerable<string?>? argumentLabels)
     {

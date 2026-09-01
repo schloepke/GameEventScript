@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptOpcodePrinter.OperandPart;
 
 namespace StepH.GameEventScript.Api;
@@ -1231,14 +1232,14 @@ public static class GameEventScriptProgramDumper
                 var ch = name[i];
                 if (i == 0)
                 {
-                    if (char.IsLetter(ch) || ch == '_')
+                    if (GameEventScriptText.IsAsciiLetter(ch) || ch == '_')
                     {
                         builder.Append(ch);
                     }
                     else
                     {
                         builder.Append('_');
-                        if (char.IsDigit(ch))
+                        if (GameEventScriptText.IsAsciiDigit(ch))
                         {
                             builder.Append(ch);
                         }
@@ -1247,7 +1248,7 @@ public static class GameEventScriptProgramDumper
                     continue;
                 }
 
-                builder.Append(char.IsLetterOrDigit(ch) || ch == '_' ? ch : '_');
+                builder.Append(GameEventScriptText.IsAsciiLetter(ch) || GameEventScriptText.IsAsciiDigit(ch) || ch == '_' ? ch : '_');
             }
 
             return builder.ToString();

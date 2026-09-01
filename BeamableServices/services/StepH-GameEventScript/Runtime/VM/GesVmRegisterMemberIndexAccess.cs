@@ -80,15 +80,15 @@ internal static class GesVmRegisterMemberIndexAccess
             return;
         }
 
-        var index = (int)indexIn - 1;
+        var index = indexIn - 1L;
         switch (obj.Kind)
         {
             case List when obj.ObjectValue is GesValue[] list:
-                if (index < list.Length) vmState.SetValue(destinationRegister, in list[index]);
+                if (index < list.Length) vmState.SetValue(destinationRegister, in list[(int)index]);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Dice when obj.ObjectValue is int[] dices:
-                if (index < dices.Length) vmState.SetInteger(destinationRegister, dices[index]);
+                if (index < dices.Length) vmState.SetInteger(destinationRegister, dices[(int)index]);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Vector or Point when obj.ObjectValue is GesValueVectorPoint vp:
@@ -109,17 +109,15 @@ internal static class GesVmRegisterMemberIndexAccess
                 }
                 return;
             case Range when obj.ObjectValue is GesValueRangeInteger integerRange:
-                var intRangeValue = integerRange.From + index * integerRange.Step;
-                if (integerRange.Step > 0 && intRangeValue <= integerRange.To || integerRange.Step < 0 && intRangeValue >= integerRange.To) vmState.SetInteger(destinationRegister, intRangeValue);
+                if (GameEventScriptRangeMath.GetTerm(integerRange.From, integerRange.To, integerRange.Step, indexIn) is { } intRangeValue) vmState.SetInteger(destinationRegister, intRangeValue);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Range when obj.ObjectValue is GesValueRangeFloat floatRange:
-                var floatRangeValue = floatRange.From + index * floatRange.Step;
-                if (floatRange.Step > 0 && floatRangeValue <= floatRange.To || floatRange.Step < 0 && floatRangeValue >= floatRange.To) vmState.SetFloat(destinationRegister, floatRangeValue);
+                if (GameEventScriptRangeMath.GetTerm(floatRange.From, floatRange.To, floatRange.Step, indexIn) is { } floatRangeValue) vmState.SetFloat(destinationRegister, floatRangeValue);
                 else vmState.SetNothing(destinationRegister);
                 return;
             case Text or Tag when obj is { IsStorageObject: true, ObjectValue: string text }:
-                if (index < text.Length) vmState.SetText(destinationRegister, text[index].ToString());
+                if (GameEventScriptText.ScalarAt(text, index) is { } scalar) vmState.SetText(destinationRegister, scalar);
                 else vmState.SetNothing(destinationRegister);
                 return;
             default:

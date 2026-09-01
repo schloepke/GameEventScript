@@ -54,6 +54,28 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Text and Unicode Semantics
+
+- Source input is a valid Unicode-scalar sequence; file input is strict UTF-8,
+  an optional initial BOM is removed, and `LF`, `CRLF`, and `CR` are the only
+  logical newlines. Portable horizontal whitespace is ASCII space/tab.
+- Language names and tags use explicit ASCII grammars. Runtime text is not
+  normalized; length, 1-based indexing, iteration, and text-to-list conversion
+  operate on Unicode scalar values. Ordering is scalar ordinal.
+- Compiler columns are 1-based Unicode-scalar columns while `.gesb` SourceMap
+  ranges remain UTF-8 byte offsets. The normative contract is
+  `StepH-GameEventScript/PortableTextSemantics.md`.
+- Linked programs precompute scalar counts for string constants so the portable
+  contract does not add per-load or per-count hot-path work.
+
+Verification after this change:
+
+```text
+1034/1034 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
+
 ### Portable `.gesb` V1
 
 - Added the canonical little-endian sectioned `.gesb` V1 reader and writer,

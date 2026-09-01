@@ -44,7 +44,11 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Compilation includes `DebugSymbols`, `SourceMap`, and `SourceArchive` by default; production or size-sensitive builds opt out explicitly with `GameEventScriptDebugInfoOptions.None`.
 - `GameEventScriptHost` is the autonomous serial execution unit and can run with native handlers only.
 - `Load(program, priority)` is additive and returns an idempotently detachable `GameEventScriptInstance`.
+- Portable native handlers implement `IGameEventScriptNativeMessageHandler`.
+  C# `Action` adapters live exclusively in `CSharpBridge`.
 - Native `Subscribe` returns an idempotently detachable `GameEventScriptSubscription`.
+- Program instances and native subscriptions use stable host-local registration
+  IDs for lifecycle operations; their handles store no detach/unsubscribe closures.
 - Each host creates one `GameEventScriptContext`, owns one logical-message ring queue, and lazily creates at most one reusable `GesVmState`.
 - `GameEventScriptVirtualMachine` is a stateless executor; program-specific dynamic links live in `GesLinkedProgram`.
 - External types use a declarative compiler catalog, a separate host runtime
@@ -59,6 +63,30 @@ The project has a portable Game Event Script host/VM architecture with a compact
   and equal-priority host dispatch.
 
 ## Recent Completed Work
+
+### Portable Native Handlers and ID-Based Lifecycle
+
+- Core native subscriptions use `IGameEventScriptNativeMessageHandler`; all
+  `Action<GameEventScriptMessage, GameEventScriptContext>` convenience overloads
+  and adapters live in `CSharpBridge`.
+- Program instances and native subscriptions receive stable, non-reused,
+  host-local registration IDs. `Detach()` and `Unsubscribe()` call the host with
+  that ID and retain no `Func<bool>` closures.
+- Host lifecycle lookup uses intrusive registration links on already allocated
+  instance/subscription objects. This avoids eager registry dictionaries and the
+  load-allocation regression they would introduce.
+- Existing enqueue-time subscription snapshots remain immutable. Detaching or
+  unsubscribing removes only future dispatch visibility.
+- JSON conformance uses a manual portable native handler, while C# delegate
+  convenience and automatic serialized pumping remain covered by bridge tests.
+
+Verification after this change:
+
+```text
+1061/1061 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed
+```
 
 ### Portable External-Type Boundary
 

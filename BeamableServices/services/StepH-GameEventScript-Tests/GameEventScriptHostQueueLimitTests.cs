@@ -1,4 +1,5 @@
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime;
 using static StepH.GameEventScript.Api.GameEventScriptMessage;
 

@@ -472,10 +472,10 @@ sealed class StepH.GameEventScript.Api.GameEventScriptHost
   method StepH.GameEventScript.Api.GameEventScriptExecutionResult ExecuteFrame(System.Int32 opcodeBudget)
   method StepH.GameEventScript.Api.GameEventScriptExecutionResult RunToCompletion()
   method StepH.GameEventScript.Api.GameEventScriptInstance Load(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
-  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
-  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
-  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
-  method StepH.GameEventScript.Api.GameEventScriptSubscription SubscribeMessageName(System.String messageName, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription SubscribeMessageName(System.String messageName, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method System.Boolean Receive(StepH.GameEventScript.Api.GameEventScriptMessage message)
   method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateBuilder()
   property System.Boolean IsIdle { get }
@@ -834,6 +834,8 @@ interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry
 interface StepH.GameEventScript.Api.IGameEventScriptExternalValue
   method StepH.GameEventScript.Runtime.Values.GesValue? GetField(System.String fieldName)
   property StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition Definition { get }
+interface StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler
+  method System.Void Handle(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptContext context)
 interface StepH.GameEventScript.Api.IGameEventScriptPublishSink
   method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
 interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
@@ -860,6 +862,10 @@ static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTyp
   method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry CreateRegistry(System.Collections.Generic.IEnumerable<System.Type> types)
   method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry CreateRegistry(System.Type[] types)
 static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptHost host, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptHost host, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptHost host, System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription SubscribeMessageName(StepH.GameEventScript.Api.GameEventScriptHost host, System.String messageName, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
   method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner RunAutomatically(StepH.GameEventScript.Api.GameEventScriptHost host)
 sealed class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner
   method StepH.GameEventScript.Api.GameEventScriptInstance Load(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)

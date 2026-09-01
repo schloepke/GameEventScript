@@ -151,29 +151,22 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - JSON-Conformance verwendet einen manuellen Katalog, eine manuelle Registry und
   einen manuellen `aim`-Wert; C#-Reflection bleibt in separaten Bridge-Tests.
 
-### 3.2 Native Handler und Lebenszyklus
+### 3.2 Native Handler und Lebenszyklus - DONE
 
-Der Core-Host verwendet direkt `Action<GameEventScriptMessage,
-GameEventScriptContext>`. `GameEventScriptInstance` und
-`GameEventScriptSubscription` halten außerdem `Func<bool>`-Closures für Detach
-und Unsubscribe.
-
-Benötigte Schritte:
-
-1. Eine portable Native-Handler-Schnittstelle beziehungsweise Handler-Referenz
-   definieren und im Core-Host verwenden.
-2. Bequeme `Action`-Overloads und deren Adapter in den `CSharpBridge`
-   verschieben.
-3. Hostseitige stabile Registrierungs-IDs für Programminstanzen und native
-   Subscriptions einführen.
-4. `GameEventScriptInstance.Detach()` und
-   `GameEventScriptSubscription.Unsubscribe()` über Host plus
-   Registrierungs-ID ausführen, ohne gespeicherte Closures.
-5. Idempotenz und die bestehende Snapshot-Semantik beibehalten: bereits
-   eingereihte Dispatch-Snapshots laufen weiter, spätere Nachrichten sehen die
-   entfernte Registrierung nicht mehr.
-6. API-Snapshot, Native-only-Host-Tests, dynamische Registrierung sowie den
-   CSharpBridge-Auto-Runner entsprechend migrieren.
+- Der portable Core verwendet `IGameEventScriptNativeMessageHandler`; der Host
+  speichert keine C#-Delegates mehr.
+- Sprachspezifische `Action<GameEventScriptMessage, GameEventScriptContext>`-
+  Overloads und Adapter liegen ausschließlich im `CSharpBridge`.
+- Der Host vergibt stabile, nicht wiederverwendete hostlokale Registrierungs-IDs
+  für Programminstanzen und native Subscriptions.
+- `GameEventScriptInstance` und `GameEventScriptSubscription` führen Detach bzw.
+  Unsubscribe über Host plus Registrierungs-ID aus und halten keine
+  `Func<bool>`-Closures.
+- Idempotenz und Enqueue-Snapshot-Semantik bleiben erhalten: bereits
+  eingereihte Handler laufen weiter, spätere Nachrichten sehen entfernte
+  Registrierungen nicht mehr.
+- JSON-Conformance verwendet einen manuellen portablen Handler; Native-only-
+  Host, dynamische Registrierung und C#-Auto-Runner bleiben separat getestet.
 
 ### 3.3 Geordnete Message-Argumente
 

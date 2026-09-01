@@ -2,6 +2,7 @@ using System.Text;
 using System.Security.Cryptography;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.CSharpBridge;
 using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH_GameEventScript_Tests.Api;

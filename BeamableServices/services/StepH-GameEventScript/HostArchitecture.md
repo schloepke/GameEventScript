@@ -23,14 +23,25 @@ does not create a VM until the first program is loaded.
 
 `GameEventScriptInstance` is one host-specific link of one program. `Load` is
 additive and returns an instance. Linking resolves extension and external-type
-references against that host. `Detach` is idempotent and removes the instance
-from future dispatch snapshots. Before registering anything, loading rejects a
-cyclic synchronous call graph or requirements above `MaxRegisterValues` and
+references against that host. The host assigns a stable, non-reused registration
+ID. The instance retains only its host and ID for lifecycle operations; it does
+not retain a detach closure. `Detach` is idempotent and removes the instance from
+future dispatch snapshots. Before registering anything, loading rejects a cyclic
+synchronous call graph or requirements above `MaxRegisterValues` and
 `MaxCallDepth`. It then pre-warms the reusable register storage from the program
 maximum.
 
 `GameEventScriptSubscription` represents one native registration. `Unsubscribe`
-is idempotent and affects future snapshots only.
+uses the same host-owned registration-ID model, is idempotent, and affects future
+snapshots only. Registration IDs are host-local lifecycle identities and are not
+wire or program identities.
+
+Portable native handlers implement `IGameEventScriptNativeMessageHandler` and
+receive the message plus the host's context through `Handle`. The Core stores the
+handler object directly and contains no `Action` delegate adapter. C# callers may
+use the `Action<GameEventScriptMessage, GameEventScriptContext>` convenience
+overloads in `CSharpBridge`; other ports provide their own language-idiomatic
+adapters without changing the Core contract.
 
 `GameEventScriptContext` is created once per host and passed to native handlers
 and extensions. It exposes the host random stream, limits, `Emit`, and `Publish`.

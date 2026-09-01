@@ -6,6 +6,16 @@ using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
+internal sealed class GameEventScriptCSharpNativeMessageHandler(
+    Action<GameEventScriptMessage, GameEventScriptContext> handler) : IGameEventScriptNativeMessageHandler
+{
+    private readonly Action<GameEventScriptMessage, GameEventScriptContext> _handler =
+        handler ?? throw new ArgumentNullException(nameof(handler));
+
+    public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
+        => _handler(message, context);
+}
+
 /// <summary>
 /// Optional C# adapter that serializes host access and pumps accepted messages on a shared worker.
 /// </summary>
@@ -57,7 +67,11 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         lock (_gate)
         {
             ThrowIfDisposed();
-            return _host.Subscribe(message, parameterNames, handler, priority);
+            return _host.Subscribe(
+                message,
+                parameterNames,
+                new GameEventScriptCSharpNativeMessageHandler(handler),
+                priority);
         }
     }
 
@@ -113,6 +127,59 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
 
 public static class GameEventScriptCSharpHostExtensions
 {
+    public static GameEventScriptSubscription Subscribe(
+        this GameEventScriptHost host,
+        string message,
+        IReadOnlyCollection<string> parameterNames,
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        int priority = 0)
+        => RequireHost(host).Subscribe(
+            message,
+            parameterNames,
+            new GameEventScriptCSharpNativeMessageHandler(handler),
+            priority);
+
+    public static GameEventScriptSubscription Subscribe(
+        this GameEventScriptHost host,
+        GameEventScriptMessageSignature signature,
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        int priority = 0)
+        => RequireHost(host).Subscribe(
+            signature,
+            new GameEventScriptCSharpNativeMessageHandler(handler),
+            priority);
+
+    public static GameEventScriptSubscription Subscribe(
+        this GameEventScriptHost host,
+        GameEventScriptMessageSignature signature,
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IReadOnlyCollection<string>? matchingTags,
+        IReadOnlyCollection<string>? withoutTags = null,
+        int priority = 0)
+        => RequireHost(host).Subscribe(
+            signature,
+            new GameEventScriptCSharpNativeMessageHandler(handler),
+            matchingTags,
+            withoutTags,
+            priority);
+
+    public static GameEventScriptSubscription SubscribeMessageName(
+        this GameEventScriptHost host,
+        string messageName,
+        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IReadOnlyCollection<string>? matchingTags = null,
+        IReadOnlyCollection<string>? withoutTags = null,
+        int priority = 0)
+        => RequireHost(host).SubscribeMessageName(
+            messageName,
+            new GameEventScriptCSharpNativeMessageHandler(handler),
+            matchingTags,
+            withoutTags,
+            priority);
+
     public static GameEventScriptCSharpHostRunner RunAutomatically(this GameEventScriptHost host)
-        => GameEventScriptCSharpHostRunner.Create(host);
+        => GameEventScriptCSharpHostRunner.Create(RequireHost(host));
+
+    private static GameEventScriptHost RequireHost(GameEventScriptHost? host)
+        => host ?? throw new ArgumentNullException(nameof(host));
 }

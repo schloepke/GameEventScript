@@ -31,6 +31,9 @@ public sealed class GameEventScriptHost
     private SubscriptionEntry? _activeHandler;
     private bool _hasActiveMessage;
     private bool _scriptHandlerActive;
+    private GameEventScriptInstance? _instances;
+    private SubscriptionEntry? _nativeSubscriptions;
+    private long _nextRegistrationId;
     private long _nextRegistrationOrder;
     private int _stepExecutedOpcodes;
     private int _stepProcessedMessages;
@@ -85,25 +88,21 @@ public sealed class GameEventScriptHost
         if (!_vmState.PrepareCapacity(linked))
             _pendingVmWarmupCapacity = Math.Max(_pendingVmWarmupCapacity, linked.RequiredRegisterCapacity);
 
-        var instance = new GameEventScriptInstance(program, linked);
-        var registrations = new SubscriptionEntry[linked.Handlers.Length];
+        var registrationId = NextRegistrationId();
+        var instance = new GameEventScriptInstance(this, registrationId, program, linked);
         var initialization = new List<SubscriptionEntry>();
         for (var index = 0; index < linked.Handlers.Length; index++)
         {
             var handler = linked.Handlers[index];
             var entry = SubscriptionEntry.ForScript(instance, handler, priority, _nextRegistrationOrder++);
-            registrations[index] = entry;
             if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Signature.Name))
                 initialization.Add(entry);
             else
                 Register(entry);
         }
 
-        instance.Attach(() =>
-        {
-            RemoveMany(registrations);
-            return true;
-        });
+        instance.NextRegistration = _instances;
+        _instances = instance;
         if (initialization.Count > 0)
         {
             var message = GameEventScriptSystemEndpoints.CreateInitializationMessage();
@@ -116,48 +115,54 @@ public sealed class GameEventScriptHost
     public GameEventScriptSubscription Subscribe(
         string message,
         IReadOnlyCollection<string> parameterNames,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IGameEventScriptNativeMessageHandler handler,
         int priority = NormalPriority)
         => Subscribe(GameEventScriptMessageSignature.Create(message, parameterNames), handler, null, null, priority);
 
     public GameEventScriptSubscription Subscribe(
         GameEventScriptMessageSignature signature,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IGameEventScriptNativeMessageHandler handler,
         int priority = NormalPriority)
         => Subscribe(signature, handler, null, null, priority);
 
     public GameEventScriptSubscription Subscribe(
         GameEventScriptMessageSignature signature,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IGameEventScriptNativeMessageHandler handler,
         IReadOnlyCollection<string>? matchingTags,
         IReadOnlyCollection<string>? withoutTags = null,
         int priority = NormalPriority)
     {
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
-        var entry = SubscriptionEntry.ForNative(signature, handler,
+        var registrationId = NextRegistrationId();
+        var entry = SubscriptionEntry.ForNative(registrationId, signature, handler,
             GameEventScriptMessage.NormalizeTags(matchingTags),
             GameEventScriptMessage.NormalizeTags(withoutTags),
             matchArguments: true, priority, _nextRegistrationOrder++);
         Register(entry);
-        return new GameEventScriptSubscription(() => Remove(entry));
+        entry.NextNativeRegistration = _nativeSubscriptions;
+        _nativeSubscriptions = entry;
+        return new GameEventScriptSubscription(this, registrationId);
     }
 
     public GameEventScriptSubscription SubscribeMessageName(
         string messageName,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
+        IGameEventScriptNativeMessageHandler handler,
         IReadOnlyCollection<string>? matchingTags = null,
         IReadOnlyCollection<string>? withoutTags = null,
         int priority = NormalPriority)
     {
         if (string.IsNullOrWhiteSpace(messageName)) throw new ArgumentException("Message name must not be empty.", nameof(messageName));
         _ = handler ?? throw new ArgumentNullException(nameof(handler));
-        var entry = SubscriptionEntry.ForNative(GameEventScriptMessageSignature.Create(messageName, []), handler,
+        var registrationId = NextRegistrationId();
+        var entry = SubscriptionEntry.ForNative(registrationId, GameEventScriptMessageSignature.Create(messageName, []), handler,
             GameEventScriptMessage.NormalizeTags(matchingTags),
             GameEventScriptMessage.NormalizeTags(withoutTags),
             matchArguments: false, priority, _nextRegistrationOrder++);
         Register(entry);
-        return new GameEventScriptSubscription(() => Remove(entry));
+        entry.NextNativeRegistration = _nativeSubscriptions;
+        _nativeSubscriptions = entry;
+        return new GameEventScriptSubscription(this, registrationId);
     }
 
     public bool Receive(GameEventScriptMessage message)
@@ -216,7 +221,7 @@ public sealed class GameEventScriptHost
             StartHandler(next);
             if (next.NativeHandler is not null)
             {
-                try { next.NativeHandler(_activeMessage.Message, _context); }
+                try { next.NativeHandler.Handle(_activeMessage.Message, _context); }
                 catch (GameEventScriptFatalRuntimeException) { throw; }
                 catch { }
                 CompleteActiveHandler();
@@ -362,11 +367,76 @@ public sealed class GameEventScriptHost
         return true;
     }
 
-    private bool RemoveMany(SubscriptionEntry[] entries)
+    internal bool IsInstanceAttached(long registrationId)
     {
-        var removed = false;
-        for (var index = 0; index < entries.Length; index++) removed |= Remove(entries[index]);
-        return removed;
+        for (var current = _instances; current is not null; current = current.NextRegistration)
+            if (current.RegistrationId == registrationId) return true;
+        return false;
+    }
+
+    internal bool DetachInstance(long registrationId)
+    {
+        GameEventScriptInstance? previous = null;
+        var current = _instances;
+        while (current is not null && current.RegistrationId != registrationId)
+        {
+            previous = current;
+            current = current.NextRegistration;
+        }
+
+        if (current is null) return false;
+        if (previous is null) _instances = current.NextRegistration;
+        else previous.NextRegistration = current.NextRegistration;
+        current.NextRegistration = null;
+        RemoveInstanceRegistrations(current);
+        return true;
+    }
+
+    internal bool IsSubscriptionRegistered(long registrationId)
+    {
+        for (var current = _nativeSubscriptions; current is not null; current = current.NextNativeRegistration)
+            if (current.RegistrationId == registrationId) return true;
+        return false;
+    }
+
+    internal bool Unsubscribe(long registrationId)
+    {
+        SubscriptionEntry? previous = null;
+        var current = _nativeSubscriptions;
+        while (current is not null && current.RegistrationId != registrationId)
+        {
+            previous = current;
+            current = current.NextNativeRegistration;
+        }
+
+        if (current is null) return false;
+        if (previous is null) _nativeSubscriptions = current.NextNativeRegistration;
+        else previous.NextNativeRegistration = current.NextNativeRegistration;
+        current.NextNativeRegistration = null;
+        return Remove(current);
+    }
+
+    private void RemoveInstanceRegistrations(GameEventScriptInstance instance)
+    {
+        var handlers = instance.LinkedProgram.Handlers;
+        for (var handlerIndex = 0; handlerIndex < handlers.Length; handlerIndex++)
+        {
+            var handler = handlers[handlerIndex];
+            if (GameEventScriptSystemEndpoints.IsInitializationName(handler.Signature.Name)) continue;
+            var index = handler.MatchArguments ? _exact : _byName;
+            var key = handler.MatchArguments ? handler.Signature.SignatureId : handler.Signature.Name;
+            if (!index.TryGetValue(key, out var entries)) continue;
+            var updated = Remove(entries, instance);
+            if (ReferenceEquals(updated, entries)) continue;
+            if (updated.Length == 0) index.Remove(key); else index[key] = updated;
+        }
+    }
+
+    private long NextRegistrationId()
+    {
+        if (_nextRegistrationId == long.MaxValue)
+            throw new InvalidOperationException("The host registration ID space is exhausted.");
+        return ++_nextRegistrationId;
     }
 
     private static SubscriptionEntry[] Get(Dictionary<string, SubscriptionEntry[]> index, string key)
@@ -402,6 +472,20 @@ public sealed class GameEventScriptHost
         return result;
     }
 
+    private static SubscriptionEntry[] Remove(SubscriptionEntry[] entries, GameEventScriptInstance instance)
+    {
+        var removedCount = 0;
+        for (var index = 0; index < entries.Length; index++)
+            if (ReferenceEquals(entries[index].Instance, instance)) removedCount++;
+        if (removedCount == 0) return entries;
+        if (removedCount == entries.Length) return [];
+        var result = new SubscriptionEntry[entries.Length - removedCount];
+        var target = 0;
+        for (var index = 0; index < entries.Length; index++)
+            if (!ReferenceEquals(entries[index].Instance, instance)) result[target++] = entries[index];
+        return result;
+    }
+
     private static SubscriptionEntry[] Sort(SubscriptionEntry[] entries)
     {
         Array.Sort(entries, Compare);
@@ -423,7 +507,8 @@ public sealed class GameEventScriptHost
             bool matchArguments,
             int priority,
             long registrationOrder,
-            Action<GameEventScriptMessage, GameEventScriptContext>? nativeHandler,
+            long registrationId,
+            IGameEventScriptNativeMessageHandler? nativeHandler,
             GameEventScriptInstance? instance,
             ushort entryAddress)
         {
@@ -433,6 +518,7 @@ public sealed class GameEventScriptHost
             MatchArguments = matchArguments;
             Priority = priority;
             RegistrationOrder = registrationOrder;
+            RegistrationId = registrationId;
             NativeHandler = nativeHandler;
             Instance = instance;
             EntryAddress = entryAddress;
@@ -444,23 +530,26 @@ public sealed class GameEventScriptHost
         internal bool MatchArguments { get; }
         internal int Priority { get; }
         internal long RegistrationOrder { get; }
-        internal Action<GameEventScriptMessage, GameEventScriptContext>? NativeHandler { get; }
+        internal long RegistrationId { get; }
+        internal IGameEventScriptNativeMessageHandler? NativeHandler { get; }
         internal GameEventScriptInstance? Instance { get; }
         internal ushort EntryAddress { get; }
+        internal SubscriptionEntry? NextNativeRegistration { get; set; }
         internal string DispatchSignatureId => MatchArguments ? Signature.SignatureId : $"{Signature.Name}(*)";
 
         internal static SubscriptionEntry ForNative(
+            long registrationId,
             GameEventScriptMessageSignature signature,
-            Action<GameEventScriptMessage, GameEventScriptContext> handler,
+            IGameEventScriptNativeMessageHandler handler,
             IReadOnlyList<string> requiredTags,
             IReadOnlyList<string> excludedTags,
             bool matchArguments,
             int priority,
             long order)
-            => new(signature, Copy(requiredTags), Copy(excludedTags), matchArguments, priority, order, handler, null, 0);
+            => new(signature, Copy(requiredTags), Copy(excludedTags), matchArguments, priority, order, registrationId, handler, null, 0);
 
         internal static SubscriptionEntry ForScript(GameEventScriptInstance instance, GesLinkedProgram.Handler handler, int priority, long order)
-            => new(handler.Signature, handler.RequiredTags, handler.ExcludedTags, handler.MatchArguments, priority, order, null, instance, handler.EntryAddress);
+            => new(handler.Signature, handler.RequiredTags, handler.ExcludedTags, handler.MatchArguments, priority, order, 0, null, instance, handler.EntryAddress);
 
         internal bool Matches(GameEventScriptMessage message)
         {

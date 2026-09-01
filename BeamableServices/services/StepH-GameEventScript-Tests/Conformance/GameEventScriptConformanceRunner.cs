@@ -388,36 +388,48 @@ internal static class GameEventScriptConformanceRunner
             host.Subscribe(
                 subscriber.Message!,
                 subscriber.Parameters ?? [],
-                (message, context) =>
-                {
-                    if (subscriber.Throw)
-                    {
-                        throw new InvalidOperationException("Configured conformance subscriber failure.");
-                    }
-
-                    foreach (var emit in subscriber.Emit ?? [])
-                    {
-                        ValidateRequired(emit.Name, "external subscriber emit name", testCase.SuiteFile, testCase.SuiteName, testCase.Test.Name);
-                        Dictionary<string, GesValue> args;
-                        if (emit.ForwardArguments)
-                        {
-                            args = new Dictionary<string, GesValue>(message.Arguments.Count, StringComparer.Ordinal);
-                            foreach (var pair in message.Arguments)
-                            {
-                                args[pair.Key] = pair.Value;
-                            }
-                        }
-                        else
-                        {
-                            args = emit.Args.ValueKind == JsonValueKind.Undefined
-                                ? new Dictionary<string, GesValue>(StringComparer.Ordinal)
-                                : GameEventScriptConformanceValueCodec.DecodeArguments(emit.Args);
-                        }
-
-                        context.Emit(GameEventScriptMessage.Create(emit.Name!, args));
-                    }
-                },
+                new ConformanceNativeMessageHandler(testCase, subscriber),
                 subscriber.Priority ?? 0);
+        }
+    }
+
+    private sealed class ConformanceNativeMessageHandler(
+        GameEventScriptConformanceCase testCase,
+        GameEventScriptExternalSubscriberSpec subscriber) : IGameEventScriptNativeMessageHandler
+    {
+        public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
+        {
+            if (subscriber.Throw)
+            {
+                throw new InvalidOperationException("Configured conformance subscriber failure.");
+            }
+
+            foreach (var emit in subscriber.Emit ?? [])
+            {
+                ValidateRequired(
+                    emit.Name,
+                    "external subscriber emit name",
+                    testCase.SuiteFile,
+                    testCase.SuiteName,
+                    testCase.Test.Name);
+                Dictionary<string, GesValue> args;
+                if (emit.ForwardArguments)
+                {
+                    args = new Dictionary<string, GesValue>(message.Arguments.Count, StringComparer.Ordinal);
+                    foreach (var pair in message.Arguments)
+                    {
+                        args[pair.Key] = pair.Value;
+                    }
+                }
+                else
+                {
+                    args = emit.Args.ValueKind == JsonValueKind.Undefined
+                        ? new Dictionary<string, GesValue>(StringComparer.Ordinal)
+                        : GameEventScriptConformanceValueCodec.DecodeArguments(emit.Args);
+                }
+
+                context.Emit(GameEventScriptMessage.Create(emit.Name!, args));
+            }
         }
     }
 

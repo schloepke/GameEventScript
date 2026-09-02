@@ -45,3 +45,8 @@ under `Conformance/SpecsMarkdown/Received`; bytecode-snapshot cases produce a
 separate received candidate there as well. These generated files never replace
 the normative source suite automatically. The former combined text performance
 report and combined GESA dump no longer exist.
+
+The C# Markdown adapter collects the independently executed case results and
+writes `ConformanceResults.json` plus `ConformanceReport.md` after a complete
+corpus run. Report generation does not execute the corpus a second time; the
+separate identity test only validates suite and case counts and stable IDs.

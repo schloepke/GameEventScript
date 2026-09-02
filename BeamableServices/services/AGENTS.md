@@ -81,7 +81,9 @@ The project has a portable Game Event Script host/VM architecture with a compact
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
 - The active Markdown adapter exposes 961 independent cases plus a whole-corpus
-  identity/execution test. Legacy JSON models, codecs, discovery, tests, the
+  identity test. Their results are collected into canonical
+  `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
+  second corpus execution. Legacy JSON models, codecs, discovery, tests, the
   temporary migrator, and the superseded pilot have been removed.
 - Five explicit C# performance tests measure the five Markdown performance
   cases independently. They emit canonical JSON, a Markdown report, and a

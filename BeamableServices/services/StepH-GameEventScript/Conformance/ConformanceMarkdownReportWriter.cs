@@ -26,11 +26,11 @@ public static class ConformanceMarkdownReportWriter
         var missing = MissingCapabilities(report);
         text.Append("\n\nMissing: ");
         AppendCodes(text, missing);
-        text.Append("\n\n## Cases\n\n| ID | Title | Kind | Level | Status | Code |\n| --- | --- | --- | --- | --- | --- |\n");
+        text.Append("\n\n## Cases\n\n| Result | ID | Title | Kind | Level | Status | Code |\n| :---: | --- | --- | --- | --- | --- | --- |\n");
         for (var index = 0; index < report.Cases.Count; index++)
         {
             var result = report.Cases[index];
-            text.Append("| `").Append(Code(result.Id)).Append("` | ").Append(Cell(result.Title)).Append(" | ")
+            text.Append("| ").Append(ResultIcon(result.Status)).Append(" | `").Append(Code(result.Id)).Append("` | ").Append(Cell(result.Title)).Append(" | ")
                 .Append(ConformanceResultJsonWriter.Name(result.Kind)).Append(" | ").Append(ConformanceResultJsonWriter.Name(result.Level)).Append(" | ")
                 .Append(ConformanceResultJsonWriter.Name(result.Status)).Append(" | `").Append(Code(result.Code)).Append("` |\n");
         }
@@ -39,6 +39,15 @@ public static class ConformanceMarkdownReportWriter
         WriteProblems(text, report);
         return text.ToString();
     }
+
+    private static string ResultIcon(ConformanceCaseStatus status)
+        => status switch
+        {
+            ConformanceCaseStatus.Passed => "✅",
+            ConformanceCaseStatus.Skipped => "⏭️",
+            ConformanceCaseStatus.Failed or ConformanceCaseStatus.Error => "❌",
+            _ => "❔"
+        };
 
     private static void WritePerformance(StringBuilder text, ConformanceRunReport report)
     {

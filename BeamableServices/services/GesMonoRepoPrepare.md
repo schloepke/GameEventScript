@@ -666,6 +666,15 @@ Approval-Werten. Die fünf separaten Bytecode-Snapshot-Cases erzeugen analog ein
 aggregierte Approval-Datei unter `Received/snapshots`. Kein Adapter überschreibt
 die normative Suite automatisch.
 
+Die 961 einzeln ausgeführten Case-Ergebnisse werden threadsicher gesammelt und
+am Ende der MSTest-Klasse ohne erneute fachliche Ausführung als
+`Received/ConformanceResults.json` und `Received/ConformanceReport.md`
+geschrieben. Der frühere zusätzliche `RunCorpus` im Identitäts-Test ist
+entfallen; dieser prüft nur noch Fallzahlen sowie eindeutige Suite- und Case-IDs.
+Der Gesamtbericht führt Performance-Cases mit ihrem fachlichen Ergebnis, aber
+ohne die deterministischen Platzhaltermetriken; reale Messwerte stehen nur im
+separaten expliziten Performancebericht.
+
 Der C#-Adapter nimmt pro Compile-, Load- und Run-Metrik drei voneinander
 unabhängige Samples und vergleicht den schnellsten vollständigen Lauf. So bleiben
 die kleinen Zeitmessungen gegenüber Scheduler-Ausreißern stabil; Allokationen

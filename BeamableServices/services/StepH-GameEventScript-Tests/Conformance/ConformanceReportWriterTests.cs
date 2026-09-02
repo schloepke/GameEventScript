@@ -90,8 +90,13 @@ public sealed class ConformanceReportWriterTests
         StringAssert.Contains(markdown, "| 1 | 0 | 0 | 1 | 0 |");
         StringAssert.Contains(markdown, "Advertised: `compiler`");
         StringAssert.Contains(markdown, "Missing: `bytecode-snapshot`");
+        StringAssert.Contains(markdown, "| ⏭️ | `suite/case` | A \\| title | bytecode | atomic | skipped |");
         StringAssert.Contains(markdown, "A \\| title");
         StringAssert.Contains(markdown, "`suite/case`");
+
+        var passed = ConformanceMarkdownReportWriter.ToText(
+            ConformanceRunner.RunDocument(document, Environment(["bytecode-snapshot", "compiler"])));
+        StringAssert.Contains(passed, "| ✅ | `suite/case` | A \\| title | bytecode | atomic | passed |");
     }
 
     [TestMethod]
@@ -104,6 +109,7 @@ public sealed class ConformanceReportWriterTests
         var json = ConformanceResultJsonWriter.ToText(report);
 
         Assert.AreEqual(ConformanceCaseStatus.Failed, report.Status);
+        StringAssert.Contains(markdown, "| ❌ | `performance/case` | Case | performance | atomic | failed |");
         StringAssert.Contains(markdown, "## Performance");
         StringAssert.Contains(markdown, "| `performance/case` | `test-profile` | `run.elapsed` | 3 | 1 | 2 | ms | failed |");
         StringAssert.Contains(markdown, "## Failures and errors");

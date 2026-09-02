@@ -78,15 +78,34 @@ The project has a portable Game Event Script host/VM architecture with a compact
   authoring structure, limited YAML subset, stable suite/case IDs, inheritance,
   source/program grouping, ordered step tables, expectations, test kinds,
   Binary64 comparison, performance profiles, and bytecode snapshots.
+- Semantic case and expectation data uses plain `yaml` fences for standard
+  syntax highlighting. The required root discriminator is `gesBlock: case` or
+  `gesBlock: expect`; trailing custom YAML fence info is not supported.
 - `ConformanceRunnerV1.md` normatively separates parsing from synchronous,
   threadless execution and defines capabilities, skip/error rules, case and
   corpus execution, canonical result JSON, aggregate Markdown reports, and
   source-range-based received updates.
 - `## Fixtures` is documentation-only in V1. The received writer may propose
   performance-reference and `gesa` updates but never overwrites authored input.
-- Implementation of the package/parser/validator is the next conformance step;
-  the existing JSON corpus remains active until deterministic migration proves
-  parity.
+- `StepH.GameEventScript.Conformance` now provides the public synchronous,
+  fileless parser, portable limits and diagnostics, immutable normalized models,
+  strict structural Markdown scanner, and restricted YAML/schema validator.
+- Semantic block/payload/table/test ranges and performance-reference ranges are
+  retained as UTF-8 byte positions for received output. Internal Markdown/YAML
+  nodes are not public, and no Host/VM/Runtime/Compiler code depends on the
+  package.
+- Native bootstrap fixtures cover valid and invalid authoring input. The runner
+  remains the next conformance step; the existing JSON corpus stays active until
+  deterministic migration proves parity.
+
+Verification after the parser/validator implementation:
+
+```text
+1100/1100 non-performance tests passed
+27/27 native Markdown parser bootstrap tests passed
+1/1 zero-allocation hot-path test passed
+1/1 JSON performance reference test passed on confirmation run
+```
 
 ### Portable Program Model Hardening
 

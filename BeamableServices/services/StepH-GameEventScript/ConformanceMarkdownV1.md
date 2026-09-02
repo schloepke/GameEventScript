@@ -79,15 +79,15 @@ data.
 
 ### Fenced blocks
 
-A semantic fence starts with exactly three backticks at column zero, followed by
-one of these exact info strings, and ends with exactly three backticks at column
-zero:
+A semantic fence inside a test starts with exactly three backticks at column
+zero, followed by one of these exact info strings, and ends with exactly three
+backticks at column zero:
 
 | Info string | Meaning | Cardinality |
 | --- | --- | --- |
-| `yaml ges-case` | Case metadata and execution configuration | exactly one per test |
+| `yaml` with `gesBlock: case` | Case metadata and execution configuration | exactly one per test |
 | `ges` | One GES source input | kind-dependent |
-| `yaml ges-expect` | Structured expectations | zero or one, kind-dependent |
+| `yaml` with `gesBlock: expect` | Structured expectations | zero or one, kind-dependent |
 | `gesa` | Expected Game Event Script Assembler dump | exactly one for `bytecodeSnapshot` |
 
 Opening or closing fences may not have trailing whitespace. Semantic fences may
@@ -96,13 +96,17 @@ joined by `LF`; the structural line ending immediately before the closing fence
 is not part of the payload. An author can represent a terminal payload newline
 by leaving an additional empty content line before the closing fence.
 
-GES source and GESA payloads are passed on with logical `LF` line endings. The
-YAML payloads use the YAML subset defined below.
+GES source and GESA payloads are passed on with logical `LF` line endings. Every
+exact `yaml` fence inside a test is semantic, uses the YAML subset below, and
+must contain exactly one root discriminator named `gesBlock`. Its value is
+exactly `case` or `expect`. Additional fence text such as `yaml ges-case` is not
+part of V1 and is rejected as an unknown semantic fence. YAML fences outside a
+test, including those under `## Fixtures`, remain ordinary documentation.
 
 ## Portable YAML subset
 
-The frontmatter, `yaml ges-case`, `yaml ges-expect`, and YAML flow values all use
-the same restricted YAML 1.2-inspired profile.
+The frontmatter, semantic `yaml` blocks, and YAML flow values all use the same
+restricted YAML 1.2-inspired profile.
 
 ### Supported forms
 
@@ -177,8 +181,8 @@ The frontmatter root supports these fields:
 | `runtimeLimits` | runtime-limit mapping | no | default runtime limits |
 | `comparison` | comparison options | no | default value comparison |
 
-The same defaultable fields may occur in `ges-case`. Resolution follows these
-rules:
+The same defaultable fields may occur in the `gesBlock: case` mapping. Resolution
+follows these rules:
 
 - a test scalar replaces the suite scalar;
 - `compile`, `runtimeLimits`, and `comparison` are overlaid by field, with test
@@ -206,10 +210,12 @@ downgraded to optional. Capability behavior is defined by
 
 ## Case metadata
 
-Every test contains exactly one `yaml ges-case` root mapping. It supports:
+Every test contains exactly one `yaml` root mapping whose first-class
+discriminator is `gesBlock: case`. It supports:
 
 | Field | Type | Required | Meaning |
 | --- | --- | --- | --- |
+| `gesBlock` | `case` | yes | identifies this YAML block as case metadata |
 | `id` | ID | yes | stable local identity |
 | `kind` | test-kind string | inherited | kind override |
 | `level` | level string | inherited | level override |
@@ -347,10 +353,11 @@ once. For `frames`, it repeatedly executes frames of the specified budget until
 the host is idle or reports a runtime limit. The expectation records whether at
 least one frame returned `paused`.
 
-The corresponding `yaml ges-expect` block keys its detailed input and outputs
-by step ID:
+The corresponding `yaml` block with `gesBlock: expect` keys its detailed input
+and outputs by step ID:
 
 ```yaml
+gesBlock: expect
 steps:
   add:
     input:
@@ -453,9 +460,10 @@ expectation. It uses the common step expectation shape above.
 ### `compileError` and `loadError`
 
 `compileError` requires `compiler`; `loadError` requires `compiler`, `host`, and
-`vm`. Each requires source and a `yaml ges-expect` block containing:
+`vm`. Each requires source and a `yaml` block with `gesBlock: expect` containing:
 
 ```yaml
+gesBlock: expect
 error:
   phase: validate
   code: validate.missingCallable
@@ -476,9 +484,10 @@ diagnostic contract is `PortableDiagnostics.md`.
 
 ### `messageApi`
 
-Requires `message-api` and no GES source. `ges-case` contains:
+Requires `message-api` and no GES source. The `gesBlock: case` mapping contains:
 
 ```yaml
+gesBlock: case
 messageApi:
   signature:
     name: Start
@@ -544,7 +553,7 @@ At least one constraint is required. Opcode names are exact canonical names.
 ### `bytecodeSnapshot`
 
 Requires `compiler`, the optional capability `bytecode-snapshot`, and source. It
-has exactly one `gesa` block and no `yaml ges-expect` block. The compiler's
+has exactly one `gesa` block and no `gesBlock: expect` block. The compiler's
 canonical dumper output and the block payload are normalized to logical `LF`
 and compared byte-for-byte as UTF-8. No whitespace, address, symbol,
 source-comment, or metadata field is ignored.
@@ -655,7 +664,8 @@ requires:
 
 ## Test: Integer addition
 
-```yaml ges-case
+```yaml
+gesBlock: case
 id: integer-add
 ```
 
@@ -672,7 +682,8 @@ on Start(value) {
 | --- | --- | --- | --- |
 | add | Start | completion | |
 
-```yaml ges-expect
+```yaml
+gesBlock: expect
 steps:
   add:
     input:

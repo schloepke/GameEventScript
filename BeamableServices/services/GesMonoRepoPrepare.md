@@ -302,6 +302,11 @@ ein eingeschränktes YAML-Profil, und geordnete Testschritte werden als klar
 definierte Markdown-Tabellen geschrieben. Freie Prosa, Notes und sonstige
 Markdown-Inhalte bleiben nichtnormativ.
 
+Semantische YAML-Blöcke verwenden ausschließlich den normalen Fence-Info-String
+`yaml`, damit verbreitete Markdown-Highlighter sie zuverlässig erkennen. Das
+Pflichtfeld `gesBlock` im Root-Mapping unterscheidet `case` von `expect`;
+zusätzliche Fence-Tokens wie `yaml ges-case` gehören nicht zum Format.
+
 Ein optionaler reservierter Abschnitt `## Fixtures` darf Werte und Matrizen zur
 besseren Lesbarkeit dokumentieren, wird in V1 aber vollständig vom Runner
 ignoriert. Falls später parameterisierte beziehungsweise Matrix-Tests daraus
@@ -377,7 +382,36 @@ Quelldatei.
 - Conformance-Daten und -Ergebnisse klar von zukünftigem Produkt-/Wire-JSON
   trennen.
 
-### 5.2 Portables Conformance-Package, Parser und Validator implementieren
+### 5.2 Portables Conformance-Package, Parser und Validator implementieren - DONE
+
+Der isolierte Ordner und Namespace `StepH.GameEventScript.Conformance` enthält
+nun eine öffentliche synchrone Byte-/Text-Parser-API, konfigurierbare Limits,
+stabile strukturierte Diagnostics und ein vollständig normalisiertes immutable
+Dokumentmodell. Host, VM, Runtime, Compiler und übrige Core-Bereiche verweisen
+nicht zurück auf das Conformance-Package, sodass es im Monorepo mechanisch in
+ein optionales Modul verschoben werden kann.
+
+Der Parser implementiert einen eigenen strukturellen Markdown-Scanner sowie nur
+das normative YAML-Subset, ohne CommonMark-/YAML-Abhängigkeit. Er validiert
+geschlossene V1-Schemas, Vererbung, IDs, Capabilities, Kardinalitäten,
+Source-/Programmgruppierung, Steps und alle Testarten. Semantische Block-,
+Payload-, Tabellen-, Test-, Performance-Reference- und `gesa`-Ranges bleiben als
+UTF-8-Bytebereiche für den späteren Received-Writer erhalten.
+
+Case- und Expectation-Metadaten stehen in gewöhnlichen `yaml`-Fences und werden
+über das verpflichtende Root-Feld `gesBlock: case` beziehungsweise
+`gesBlock: expect` klassifiziert. YAML außerhalb eines Tests und unter
+`## Fixtures` bleibt Dokumentation; die frühere Zusatzsyntax im Fence wird nicht
+akzeptiert.
+
+Native Bootstrap-Tests und physische Golden-/Invalid-Fixtures decken UTF-8/BOM,
+alle Newlineformen, YAML-Flow-/Blockformen, Fixtures, Vererbung, typisierte
+Expectations, Tabellen, Limits, Immutability und stabile Fehlercodes ab. Die
+öffentliche API-Snapshot-Erwartung enthält die neue Modulgrenze.
+
+Abnahme: 1100/1100 Nicht-Performance-Tests, 27/27 native Parser-Bootstrap-Tests
+und der Zero-Allocation-Hot-Path-Test sind erfolgreich. Der zuvor bestätigte
+JSON-Performance-Referenzlauf bleibt von dieser Parseränderung unberührt.
 
 - Vorerst den Ordner und Namespace `StepH.GameEventScript.Conformance` innerhalb
   des bestehenden Core-Projekts verwenden. Host, VM, Compiler und andere

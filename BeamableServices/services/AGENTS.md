@@ -72,6 +72,22 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Conformance V1 Contracts
+
+- `ConformanceMarkdownV1.md` normatively defines the strict UTF-8 Markdown
+  authoring structure, limited YAML subset, stable suite/case IDs, inheritance,
+  source/program grouping, ordered step tables, expectations, test kinds,
+  Binary64 comparison, performance profiles, and bytecode snapshots.
+- `ConformanceRunnerV1.md` normatively separates parsing from synchronous,
+  threadless execution and defines capabilities, skip/error rules, case and
+  corpus execution, canonical result JSON, aggregate Markdown reports, and
+  source-range-based received updates.
+- `## Fixtures` is documentation-only in V1. The received writer may propose
+  performance-reference and `gesa` updates but never overwrites authored input.
+- Implementation of the package/parser/validator is the next conformance step;
+  the existing JSON corpus remains active until deterministic migration proves
+  parity.
+
 ### Portable Program Model Hardening
 
 - Audited the complete `GameEventScriptProgram` graph and documented its
@@ -393,8 +409,10 @@ and retain a required pointer here.
 
 ### Next portable architecture steps
 
-- Prioritize the language-neutral contracts, metadata, and JSON conformance needed
-  for the existing Swift/Kotlin/C++/C# monorepo before deeper optimizer work.
+- Prioritize the language-neutral contracts, metadata, and portable Markdown
+  conformance needed for the existing Swift/Kotlin/C++/C# monorepo before deeper
+  optimizer work. Keep the existing JSON corpus only until deterministic
+  Markdown migration proves parity.
 
 ### Deferred language and state features
 

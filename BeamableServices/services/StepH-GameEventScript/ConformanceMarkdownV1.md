@@ -1,0 +1,688 @@
+# Game Event Script Conformance Markdown V1
+
+This document is the normative authoring-format specification for portable Game
+Event Script conformance suites. The key words **must**, **must not**,
+**required**, **should**, and **may** are to be interpreted as normative
+requirements.
+
+The format is intended to be implemented independently in C#, Swift, Kotlin,
+C++, and other ports. It is deliberately a small structural Markdown scanner
+plus a strict YAML subset. It is not CommonMark plus full YAML.
+
+Conformance Markdown is test data. It is not the product message/wire format.
+
+## Encoding and logical lines
+
+- A document is strict UTF-8. An optional UTF-8 BOM is accepted only at byte
+  offset zero and is not part of the document content.
+- `LF`, `CRLF`, and `CR` are recognized as logical line endings. A parser
+  interprets all three as `LF`; other Unicode line separators are ordinary text.
+- Source ranges are offsets and lengths into the original UTF-8 byte sequence,
+  excluding an optional BOM. This permits a received writer to preserve all
+  unrelated bytes exactly.
+- Line and column diagnostics are one-based Unicode-scalar positions. A tab is
+  one scalar for column counting.
+- Structural markers are recognized only at column zero and only outside a
+  fenced block. Their ASCII spelling and case are exact.
+- A document containing invalid UTF-8, an unclosed recognized fence, or a NUL
+  byte is invalid.
+
+## Structural Markdown profile
+
+Only the following Markdown structures carry V1 semantics:
+
+- the YAML frontmatter at the beginning of the file;
+- headings whose line starts exactly with `## Test: `;
+- the reserved heading `## Fixtures` before the first test;
+- the exact heading `### Steps` inside a test;
+- fenced blocks with one of the recognized info strings below;
+- the pipe table immediately following `### Steps`.
+
+All other headings, paragraphs, lists, block quotes, callouts, and code blocks
+are prose. They are retained by the source document but ignored by the parser.
+An unrecognized fenced block whose info string starts with `ges` inside a test
+is an error, because it is likely a misspelled semantic block.
+
+### Frontmatter
+
+After the optional BOM, the first logical line must be exactly `---`. The next
+line that is exactly `---` closes the frontmatter. `...` is not a closing
+marker. The content between the markers is one YAML-subset mapping. No content
+may precede the opening marker.
+
+### Test boundaries
+
+A line of the form
+
+```text
+## Test: Display title
+```
+
+starts a test. The title is trimmed of surrounding ASCII space and tab and must
+not be empty. It is a display value only. It may change without changing test
+identity.
+
+The test continues up to, but does not include, the next `## Test: ` heading or
+the end of the document. Other H2 headings do not end the test. A suite must
+contain at least one test.
+
+### Fixtures
+
+`## Fixtures` may occur at most once and only before the first test. Everything
+from that heading to the first test is nonnormative documentation, including
+tables and recognized-looking code examples. A V1 parser must not materialize,
+resolve, substitute, or execute these values.
+
+A future matrix feature must use a new explicitly versioned construct. No later
+format version may silently reinterpret a V1 `## Fixtures` section as executable
+data.
+
+### Fenced blocks
+
+A semantic fence starts with exactly three backticks at column zero, followed by
+one of these exact info strings, and ends with exactly three backticks at column
+zero:
+
+| Info string | Meaning | Cardinality |
+| --- | --- | --- |
+| `yaml ges-case` | Case metadata and execution configuration | exactly one per test |
+| `ges` | One GES source input | kind-dependent |
+| `yaml ges-expect` | Structured expectations | zero or one, kind-dependent |
+| `gesa` | Expected Game Event Script Assembler dump | exactly one for `bytecodeSnapshot` |
+
+Opening or closing fences may not have trailing whitespace. Semantic fences may
+not be indented or nested. The payload is the sequence of logical content lines
+joined by `LF`; the structural line ending immediately before the closing fence
+is not part of the payload. An author can represent a terminal payload newline
+by leaving an additional empty content line before the closing fence.
+
+GES source and GESA payloads are passed on with logical `LF` line endings. The
+YAML payloads use the YAML subset defined below.
+
+## Portable YAML subset
+
+The frontmatter, `yaml ges-case`, `yaml ges-expect`, and YAML flow values all use
+the same restricted YAML 1.2-inspired profile.
+
+### Supported forms
+
+- one root mapping;
+- block mappings and block sequences using exactly two spaces per indentation
+  level;
+- flow mappings `{ key: value }` and flow sequences `[value, value]` on one
+  logical line;
+- plain, single-quoted, and double-quoted scalar values;
+- comments beginning with `#` outside quotes when `#` is the first non-space
+  character or is preceded by whitespace;
+- lowercase `null`, `true`, and `false`;
+- signed base-10 integers with grammar `-?(0|[1-9][0-9]*)`;
+- finite decimal values with JSON number grammar. A decimal token is retained
+  losslessly until its schema field converts it to Int64, UInt64, or Binary64.
+
+Block mapping keys must be a plain token matching
+`[A-Za-z][A-Za-z0-9_.-]*` or a quoted string. Keys are case-sensitive. Duplicate
+keys are invalid after quoted-string decoding. Tabs are invalid in indentation.
+Trailing whitespace has no meaning.
+
+Double-quoted strings support the JSON escapes `\"`, `\\`, `\/`, `\b`, `\f`,
+`\n`, `\r`, `\t`, and `\uXXXX`; a valid surrogate pair represents one Unicode
+scalar and an unpaired surrogate is invalid. A single quote inside a
+single-quoted string is written as `''`. Plain strings must be quoted when they
+would otherwise be resolved as null, boolean, or number. Values beginning with
+`#`, `&`, `*`, `!`, `%`, `@`, or a backtick must be quoted.
+
+### Explicitly unsupported forms
+
+Anchors, aliases, merge keys, tags, directives, block scalars (`|` and `>`),
+complex keys, explicit `?` keys, multiple YAML documents, implicit dates,
+sexagesimal numbers, non-decimal integers, `.nan`, `.inf`, and implementation-
+specific scalar resolution are invalid. A parser must report them; it must not
+silently accept a larger host-library YAML dialect.
+
+Schema mappings are closed. An unknown property is an error unless this
+specification explicitly declares it open. Property names are always matched
+case-sensitively.
+
+The mappings keyed by declared IDs or canonical names are intentionally open:
+step expectations by Step ID, performance profiles by Profile ID, metrics by
+Metric ID, and opcode `counts`/`minimumCounts` by canonical opcode name. Their
+keys and values are still fully validated by the enclosing schema.
+
+## IDs, suite frontmatter, and inheritance
+
+An ID component matches:
+
+```text
+[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*
+```
+
+`suiteId` and each case-local `id` use this grammar. The full case ID is
+`suiteId + "/" + case.id`. Suite IDs must be unique in a corpus and case IDs
+must be unique in a suite. IDs are never derived from a path, heading, title, or
+testframework method.
+
+The frontmatter root supports these fields:
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `formatVersion` | integer | yes | must be `1` |
+| `suiteId` | string | yes | stable suite identity |
+| `title` | string | no | display title; otherwise `suiteId` |
+| `kind` | test-kind string | no | default test kind |
+| `level` | `atomic` or `scenario` | no | default level |
+| `categories` | ID sequence | no | default runner/framework categories |
+| `tags` | string sequence | no | default tags |
+| `requires` | capability requirement | no | default capabilities |
+| `compile` | compile options | no | default compile options |
+| `runtimeLimits` | runtime-limit mapping | no | default runtime limits |
+| `comparison` | comparison options | no | default value comparison |
+
+The same defaultable fields may occur in `ges-case`. Resolution follows these
+rules:
+
+- a test scalar replaces the suite scalar;
+- `compile`, `runtimeLimits`, and `comparison` are overlaid by field, with test
+  fields replacing fields of the same name;
+- suite categories/tags followed by test categories/tags are concatenated and
+  then de-duplicated by exact ordinal spelling while retaining first occurrence;
+- core and optional capability lists are combined and de-duplicated in the same
+  way;
+- all other case fields are never inherited.
+
+`level` must resolve to a value; it is never inferred from a directory. `kind`
+must also resolve to a supported value.
+
+A capability requirement has this shape:
+
+```yaml
+requires:
+  core: [compiler, host, vm, external-types]
+  optional: []
+```
+
+Core capabilities required by a test kind are added implicitly and cannot be
+downgraded to optional. Capability behavior is defined by
+`ConformanceRunnerV1.md`.
+
+## Case metadata
+
+Every test contains exactly one `yaml ges-case` root mapping. It supports:
+
+| Field | Type | Required | Meaning |
+| --- | --- | --- | --- |
+| `id` | ID | yes | stable local identity |
+| `kind` | test-kind string | inherited | kind override |
+| `level` | level string | inherited | level override |
+| `categories` | ID sequence | no | additional categories |
+| `tags` | string sequence | no | additional tags |
+| `requires` | capability requirement | no | additional requirements |
+| `compile` | mapping | no | compile options |
+| `runtimeLimits` | mapping | no | host runtime-limit overrides |
+| `comparison` | mapping | no | value comparison override |
+| `sources` | source descriptor sequence | conditional | names and program grouping |
+| `random` | mapping | no | deterministic random configuration |
+| `nativeHandlers` | sequence | no | declarative portable native handlers |
+| `messageApi` | mapping | `messageApi` only | signature and message input |
+| `performance` | mapping | `performance` only | workload configuration |
+
+Compile options are:
+
+```yaml
+compile:
+  debugInfo: [debugSymbols, sourceMap, sourceArchive]
+  binaryRoundTrip: false
+```
+
+`debugInfo` is a sequence containing each listed value at most once. An empty
+sequence means no debug segments. Its default is all three values.
+`binaryRoundTrip` defaults to `false`; when true, the compiled program is
+written as canonical `.gesb`, read again, and only then used by the test.
+Enabling it implicitly requires the core capability `program-binary`.
+
+`runtimeLimits` uses the exact portable names `maxProcessedEventsPerRun`,
+`maxQueuedMessagesPerRun`, `maxExecutionSteps`, `maxRegisterValues`,
+`maxLoopIterations`, `maxCallDepth`, `maxRangeItems`,
+`maxGeneratedCollectionItems`, `maxDiceCount`, and `maxDiceSides`. Values are
+positive integers. Omitted fields use Core defaults.
+
+`comparison` is:
+
+```yaml
+comparison:
+  binary64:
+    mode: exact
+```
+
+or:
+
+```yaml
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+```
+
+Exact comparison is the default. ULP mode is allowed only where platform math
+or another documented operation requires it. Kind, unit, integer, text,
+boolean, tag, ordering, and structure remain exact in both modes.
+
+`random` contains exactly one of `seed` (signed Int64) or `sequence` (a
+non-empty sequence of canonical Binary64 strings). Tests that execute a random
+operation must supply deterministic random configuration unless the tested
+behavior explicitly expects nondeterminism, which V1 test kinds currently do
+not support.
+
+### Sources and programs
+
+The order of `ges` fences is compiler input order. If `sources` is absent,
+exactly one `ges` fence is required and receives source name
+`<suiteId>.<caseId>.ges` and program ID `main`.
+
+If `sources` is present, it must contain exactly one descriptor per `ges` fence:
+
+```yaml
+sources:
+  - name: rules.ges
+    program: rules
+  - name: helpers.ges
+    program: rules
+  - name: opponent.ges
+    program: opponent
+```
+
+`name` is a non-empty portable source name, not a path to open. `program` is an
+ID and defaults to `main`. Sources with the same program ID are added to one
+compiler builder in descriptor order. Programs are loaded into the host in the
+order their ID first occurs. Interleaving descriptors for different programs is
+valid but should be avoided for readability.
+
+No parser or runner opens a source path. External binary fixtures use the
+resource-resolver contract defined separately by their test kind.
+
+### Declarative native handlers
+
+The initial V1 shape preserves current portable host-dispatch cases:
+
+```yaml
+nativeHandlers:
+  - message: Notify
+    parameters: [playerId, count]
+    priority: 0
+    throw: false
+    emit:
+      - name: ExternalSeen
+        forwardArguments: true
+```
+
+`message` is required. `parameters` defaults to an empty ordered sequence,
+`priority` to zero, `throw` to false, and `emit` to empty. An emit entry requires
+`name` and exactly one of `forwardArguments: true` or an ordered `args` sequence.
+The set is intentionally declarative; arbitrary native code is not test data.
+
+## Ordered steps
+
+Runtime and performance tests express chronological input in exactly one table
+under an exact `### Steps` heading. After optional blank lines, its header and
+delimiter are exactly:
+
+```text
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+```
+
+Each following nonblank pipe-table row has four cells:
+
+- `step` is an ID unique within the case;
+- `receive` is the exact incoming message name;
+- `pump` is `completion` or `frames`;
+- `budget` is empty for `completion` and a positive UInt32 for `frames`.
+
+Cells are trimmed of surrounding ASCII space and tab. Backslash escapes, inline
+Markdown, multiline cells, and additional columns are not supported. A table
+ends at the first blank or non-table line. At least one row is required whenever
+the test kind requires steps.
+
+For `completion`, the runner calls the synchronous run-to-completion operation
+once. For `frames`, it repeatedly executes frames of the specified budget until
+the host is idle or reports a runtime limit. The expectation records whether at
+least one frame returned `paused`.
+
+The corresponding `yaml ges-expect` block keys its detailed input and outputs
+by step ID:
+
+```yaml
+steps:
+  add:
+    input:
+      tags: []
+      args:
+        - name: value
+          value: { type: ":integer", value: "7" }
+    accepted: true
+    local:
+      - name: Done
+        args:
+          - name: result
+            value: { type: ":integer", value: "12" }
+    outbound: []
+    paused: false
+    runtimeLimits:
+      include: []
+      exclude: []
+    diagnostics: []
+```
+
+`input.tags` and `input.args` default to empty. `accepted` defaults to true;
+`local`, `outbound`, runtime-limit lists, and diagnostics default to empty.
+`paused` is optional and is not compared when absent. A step expectation key
+must name a table row, and every table row may have at most one expectation
+entry. Message lists and argument lists are order-sensitive. `local` observes
+both Emit and the local half of Publish; `outbound` observes messages handed to
+the configured publish sink in call order. Sink outcome expectations are a
+separate host-observation concern.
+
+Each `runtimeLimits.include` or `.exclude` entry may constrain `name`,
+`detailContains`, and `limit`; at least one field is required. Each diagnostics
+entry uses the portable diagnostic expectation shape from the error kinds
+below, except that `phase` and `code` remain required. Entries and observations
+are compared in order; exclusions must not occur anywhere in the observation
+sequence.
+
+An optional top-level `initialization` expectation has `local`, `outbound`,
+`runtimeLimits`, and `diagnostics` with the same meanings. It describes the
+single run-to-completion pump performed after all programs and native handlers
+are installed and before the first step. An absent `initialization` mapping is
+equivalent to all four empty expectations.
+
+## Portable message and value shape
+
+A message is:
+
+```yaml
+name: Done
+tags: [combat]
+args:
+  - name: result
+    value: { type: ":integer", value: "12" }
+```
+
+`name` is required; `tags` and `args` default to empty. Arguments are always an
+ordered sequence. A mapping keyed by argument name is invalid.
+
+Values use the existing portable conformance shape:
+
+| `type` | Additional fields |
+| --- | --- |
+| `:nothing` | none |
+| `:text`, `:tag` | `value` string |
+| `:boolean` | `value` boolean |
+| `:integer` | canonical signed-Int64 `value` string; optional `unit` |
+| `:float` | canonical Binary64 `value` string; optional `unit` |
+| `:percentage` | canonical Binary64 ratio `value` string |
+| `:vector`, `:point` | Binary64 strings `x`, `y`, `z`; optional `unit` |
+| `:list` | ordered `items` value sequence |
+| `:map` | `entries`, an ordered sequence of `{ key, value }` |
+| `:dice` | ordered Int32 `rolls` |
+| `:range` | Binary64 strings `from`, `to`, `step` |
+| `:message` | nested `message` |
+| any declared custom type | ordered `entries` sequence |
+
+Numeric strings and special values follow `PortableNumberSemantics.md`.
+Message names, argument names, tags, units, and custom types follow the portable
+Core contracts. Map/record semantic comparison follows
+`PortableDeterminismSemantics.md`; their encoded entry sequence is retained for
+diagnostics and duplicate-key validation.
+
+## Expectation fields by test kind
+
+Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
+`compileMetadata`, `bytecode`, `performance`, and `bytecodeSnapshot`. A kind's
+required core capabilities are additive to explicit `requires.core`.
+
+The presence of `nativeHandlers` implicitly requires `native-handlers`.
+`compile.binaryRoundTrip: true` implicitly requires `program-binary`. Source
+that uses an external type must explicitly require `external-types`; the runner
+does not infer capabilities by parsing GES source.
+
+### `scriptApi`
+
+Requires `compiler`, `host`, `vm`, `observer`, and `publish-sink`; requires at
+least one source and either a Steps table or an explicit `initialization`
+expectation. It uses the common step expectation shape above.
+
+### `compileError` and `loadError`
+
+`compileError` requires `compiler`; `loadError` requires `compiler`, `host`, and
+`vm`. Each requires source and a `yaml ges-expect` block containing:
+
+```yaml
+error:
+  phase: validate
+  code: validate.missingCallable
+  symbol: missing
+  symbolKind: function
+  sourceName: sample.ges
+  line: 3
+  column: 7
+  endLine: 3
+  endColumn: 14
+  programName: Sample
+  handlerName: Start
+```
+
+`phase` and `code` are required. Other fields are optional exact constraints.
+Human-readable messages and technical details cannot be expectations. The
+diagnostic contract is `PortableDiagnostics.md`.
+
+### `messageApi`
+
+Requires `message-api` and no GES source. `ges-case` contains:
+
+```yaml
+messageApi:
+  signature:
+    name: Start
+    parameters: [a, b]
+  message:
+    name: Start
+    args: []
+```
+
+Its expectation contains at least one of:
+
+```yaml
+message:
+  name: Start
+  signatureId: "Start(a,b)"
+  messageSignatureId: "Start()"
+  matches: false
+  argumentCount: 0
+  error: duplicateArgumentName
+```
+
+If `error` is present, successful construction fails the case and the other
+fields must be absent. Message error codes are stable ASCII identifiers.
+
+### `compileMetadata`
+
+Requires `compiler` and source. Its expectation contains one or more of:
+
+```yaml
+metadata:
+  messageDefinitions:
+    - name: Start
+      count: 1
+      signatureIds: ["Start(value)"]
+  programResources:
+    requiredRegisterCount: 7
+    requiredCallStackDepth: 2
+  handlerResources:
+    - name: Start
+      signatureId: "Start(value)"
+      requiredRegisterCount: 7
+      requiredCallStackDepth: 2
+```
+
+Every present property is an exact constraint. Sequence order is significant
+where the underlying program contract defines order.
+
+### `bytecode`
+
+Requires `compiler` and source. Its expectation is:
+
+```yaml
+opcodes:
+  contains: [Multiply, EmitMessage]
+  excludes: [Move]
+  counts: { RandomTake: 1 }
+  minimumCounts: { PropertyAccess: 7 }
+```
+
+At least one constraint is required. Opcode names are exact canonical names.
+`contains` means count greater than zero; `excludes` means zero.
+
+### `bytecodeSnapshot`
+
+Requires `compiler`, the optional capability `bytecode-snapshot`, and source. It
+has exactly one `gesa` block and no `yaml ges-expect` block. The compiler's
+canonical dumper output and the block payload are normalized to logical `LF`
+and compared byte-for-byte as UTF-8. No whitespace, address, symbol,
+source-comment, or metadata field is ignored.
+
+### `performance`
+
+Requires the same core capabilities as `scriptApi` plus the optional capability
+`performance`. It uses ordinary sources, steps, and correctness expectations.
+Its case metadata additionally contains:
+
+```yaml
+performance:
+  iterations: 1000
+  warmupIterations: 10
+  compileWarmupIterations: 3
+```
+
+All counts are non-negative UInt32 and `iterations` is positive. The expectation
+adds profile-specific baselines:
+
+```yaml
+performance:
+  profiles:
+    csharp-dotnet-release-macos-arm64:
+      metrics:
+        run.per-invoke-elapsed:
+          reference: 0.002669
+          unit: ms
+          toleranceRelative: 0.20
+          toleranceAbsolute: 0.001
+        run.per-invoke-allocated:
+          reference: 0.172
+          maximum: 0.172
+          unit: KiB
+```
+
+Profile IDs use the normal ID grammar. Metric IDs use the same grammar with
+additional dot-separated components. V1 performance metrics are lower-is-better.
+Units are `ns`, `us`, `ms`, `s`, `B`, `KiB`, `count`, or those units followed
+by `/iteration`. One `KiB` is exactly 1024 bytes.
+
+`reference` is required and is the value updated in received output. At least
+one of `maximum`, `toleranceRelative`, or `toleranceAbsolute` is required.
+Relative tolerance is a non-negative ratio, not a percentage. The permitted
+upper bound is the smallest supplied bound among `maximum`,
+`reference * (1 + toleranceRelative)`, and
+`reference + toleranceAbsolute`. A measured value at or below the bound passes;
+an improvement never fails. All values are finite non-negative Binary64 values.
+
+Workload and correctness are shared across ports. Profiles and their baselines
+may be language-, runtime-, configuration-, OS-, and architecture-specific.
+
+## Normalized immutable document model
+
+Parsing and schema validation produce one immutable normalized document with:
+
+- format version and one suite with resolved defaults;
+- cases in document order, each with stable local and full ID, display title,
+  resolved kind, level, categories, tags, capabilities, options, source inputs,
+  steps, and typed expectations;
+- messages and values in their explicit portable ordered forms;
+- original UTF-8 source ranges for the frontmatter, every test, every semantic
+  block, each performance `reference` scalar, and the `gesa` payload.
+
+The normalized model contains no Markdown AST, YAML AST, filesystem path,
+testframework object, executable delegate, or platform exception. All exposed
+collections are immutable snapshots. Parsers may retain the original document
+bytes only as an explicit immutable source-document value used for received
+output.
+
+## Invalid documents and versioning
+
+Structural, YAML, schema, duplicate-ID, cross-reference, and kind/cardinality
+violations are errors. The parser returns no executable partial document.
+Diagnostics have stable codes, original UTF-8 byte ranges, and line/column
+locations. At minimum, implementations distinguish:
+
+- `conformance.markdown.invalidUtf8`, `.missingFrontmatter`,
+  `.unterminatedFrontmatter`, `.invalidTestHeading`, `.unterminatedFence`,
+  `.unknownSemanticFence`, and `.invalidStepsTable`;
+- `conformance.yaml.syntax`, `.unsupportedFeature`, `.duplicateKey`,
+  `.invalidScalar`, and `.limitExceeded`;
+- `conformance.schema.unknownField`, `.missingField`, `.invalidValue`,
+  `.duplicateId`, `.unknownReference`, `.invalidCardinality`,
+  `.unknownKind`, and `.unsupportedVersion`.
+
+Format version 1 is closed. A parser that does not support the declared version
+must reject the document. New fields or semantics require an explicitly
+documented compatible revision strategy or a new format version; they must not
+be inferred from prose.
+
+## Minimal example
+
+````markdown
+---
+formatVersion: 1
+suiteId: runtime.math
+title: Runtime math
+kind: scriptApi
+level: atomic
+categories: [conformance]
+tags: [runtime, math]
+requires:
+  core: [compiler, host, vm]
+---
+
+# Runtime math
+
+## Test: Integer addition
+
+```yaml ges-case
+id: integer-add
+```
+
+```ges
+on Start(value) {
+  let result be value + 5
+  emit Done(result: result)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| add | Start | completion | |
+
+```yaml ges-expect
+steps:
+  add:
+    input:
+      args:
+        - name: value
+          value: { type: ":integer", value: "7" }
+    local:
+      - name: Done
+        args:
+          - name: result
+            value: { type: ":integer", value: "12" }
+```
+````

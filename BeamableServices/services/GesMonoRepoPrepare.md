@@ -319,7 +319,25 @@ Neue Semantik soll nicht mehr in das auslaufende JSON-Autorenformat eingebaut
 werden. Die bestehende Suite wird zunächst ohne fachliche Änderungen in das
 neue Format überführt; Erweiterungen folgen erst nach nachgewiesener Parität.
 
-### 5.1 Markdown- und Runner-Vertrag normativ spezifizieren
+### 5.1 Markdown- und Runner-Vertrag normativ spezifizieren - DONE
+
+Der Autorenvertrag steht normativ in
+[ConformanceMarkdownV1.md](StepH-GameEventScript/ConformanceMarkdownV1.md), der
+Ausführungs-, Capability-, Ergebnis-, Report- und Received-Vertrag in
+[ConformanceRunnerV1.md](StepH-GameEventScript/ConformanceRunnerV1.md).
+
+Festgelegt sind insbesondere der bewusst kleine Markdown-Strukturscanner, das
+strikte YAML-Subset, stabile Suite-/Case-IDs, Vererbung, Source-/Programmgruppierung,
+geordnete Step-Tabellen, portable Message-/Value-Formen und die Schemas aller
+V1-Testarten. Fixtures bleiben ausdrücklich reine Dokumentation. Binary64 ist
+standardmäßig bitexakt; ULP-Toleranz muss explizit gewählt werden.
+
+Der Runner-Vertrag trennt Parser und Ausführung, definiert Core- gegenüber
+optionalen Capabilities, Status/Fehlerklassifikation, Einzel-/Dokument-/Corpus-
+Ausführung, Performanceprofile und das kanonische JSON-Ergebnis. Markdown-Report
+und Received-Ausgabe werden aus strukturierten Ergebnissen erzeugt; Received darf
+nur Performance-Referenzen und `gesa`-Payloads ersetzen und überschreibt nie die
+Quelldatei.
 
 - `ConformanceMarkdownV1.md` als normative Beschreibung des Autorenformats
   anlegen.

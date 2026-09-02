@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.casts.type-check"
 title: "Cast Matrix — Type Checks"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Cast Matrix — Type Checks

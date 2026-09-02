@@ -37,7 +37,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Runtime VM code lives under `StepH-GameEventScript/Runtime/VM`.
 - C# Reflection and annotation support lives under `StepH-GameEventScript/CSharpBridge`.
 - The old VM/compiler path has been removed or superseded by the new binary compiler and VM.
-- Standard extensions were migrated into opcodes where possible.
+- Standard extensions use dedicated opcodes where practical.
 - Series now use direct VM concepts and `CreateSeries`.
 - `GameEventScriptProgram` is the immutable reusable compiler result.
 - `GameEventScriptProgram` is the portable parsed representation of the `.gesb` V1 binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
@@ -98,24 +98,19 @@ Verification after this change:
 
 ### Markdown-only Conformance Corpus and C# Adapters
 
-- The former 34-suite, 956-case JSON corpus was deterministically migrated to
-  `StepH-GameEventScript-Tests/Conformance/Suites` and the JSON
-  source fixtures were removed after old/new execution parity passed. The corpus
-  now contains 73 suites and 1,009 semantic cases after portable Host and API coverage was
-  added.
-- Every migrated case has an explicit stable ID, kind, and atomic/scenario
+- The normative corpus lives in
+  `StepH-GameEventScript-Tests/Conformance/Suites` and contains 73 suites and
+  1,009 semantic cases.
+- Every case has an explicit stable ID, kind, and atomic/scenario
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
 - The active Markdown adapter exposes 1,016 independent cases, including seven
   bytecode snapshots, plus a whole-corpus
   identity test. Their results are collected into canonical
   `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
-  second corpus execution. Legacy JSON models, codecs, discovery, tests, the
-  temporary migrator, and the superseded pilot have been removed.
-- The completed 5.8 native-test audit removed 66 portable or duplicated C#
-  methods. `StepH-GameEventScript/NativeTestRetention.md` classifies all 91
-  remaining native methods; applicable `.gesb` tests are intentionally
-  re-audited under 5.9.
+  second corpus execution.
+- `StepH-GameEventScript/NativeTestRetention.md` classifies all 91 C# methods;
+  applicable `.gesb` tests are intentionally re-audited under 5.9.
 - The test tree now has exactly two semantic roots: `Conformance` contains
   Markdown suites, fixtures, reports, and its C# runner/parser adapters directly
   in the root; `Native` contains the remaining C#-specific tests grouped by
@@ -131,22 +126,10 @@ Verification after this change:
   cases independently. They emit canonical JSON, a Markdown report, and a
   received Markdown approval candidate. Bytecode snapshots likewise emit a
   received candidate without overwriting the normative suite.
-- The former combined performance text report and GESA dump files have been
-  removed; all baselines and snapshots now live in their owning H2 cases.
-- Markdown V1 now explicitly represents the legacy negative message argument
+- All baselines and snapshots live in their owning H2 cases.
+- Markdown V1 explicitly represents the negative message argument
   mapping, the `any: true` runtime-limit wildcard, and embedded U+FEFF source
-  content. Runtime parity also fixed map, mixed-range, and non-finite-float
-  comparison differences found by the migration.
-
-Verification at the migration boundary:
-
-```text
-956/956 legacy-to-Markdown parity cases passed
-962/962 active Markdown corpus tests passed
-1127/1127 non-performance tests passed
-5/5 Markdown performance reference tests passed
-1/1 zero-allocation hot-path test passed
-```
+  content, plus map, mixed-range, and non-finite-float comparison behavior.
 
 Verification after the completed 5.8 API/compiler audit and hierarchy cleanup:
 
@@ -201,8 +184,7 @@ Verification after the writer implementation:
   nodes are not public, and no Host/VM/Runtime/Compiler code depends on the
   package.
 - Native bootstrap fixtures cover valid and invalid authoring input. The runner
-  uses only the normalized model; the existing JSON corpus stays active until
-  deterministic migration proves parity.
+  uses only the normalized public model.
 
 ### Portable Conformance Runner
 
@@ -469,7 +451,7 @@ Verification after this change:
 - Added immutable program table views and host-specific linked-program data.
 - Added direct resumable script dispatch, immutable subscription snapshots, and a growing logical-message ring queue.
 - Added value-type execution/publish results, local-plus-outbound Publish semantics, initialization-per-instance, Detach, and Unsubscribe.
-- Migrated JSON conformance to `Program -> Host.Load -> Receive -> ExecuteFrame/RunToCompletion`, including multi-program and frame-resume cases.
+- Markdown conformance exercises `Program -> Host.Load -> Receive -> ExecuteFrame/RunToCompletion`, including multi-program and frame-resume cases.
 - Added allocation validation showing zero queue/selection/frame/resume heap allocation after warmup when message creation and output payload creation are excluded.
 
 Verification after this architecture change:

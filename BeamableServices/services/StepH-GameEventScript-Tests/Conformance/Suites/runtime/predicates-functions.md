@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.predicates-functions"
 title: "RuntimePredicatesFunctions"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimePredicatesFunctions

@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.collections"
 title: "RuntimeCollections"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeCollections

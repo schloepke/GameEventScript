@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.clamp-spatial"
 title: "Math Matrix — Clamp Spatial Values"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Clamp Spatial Values

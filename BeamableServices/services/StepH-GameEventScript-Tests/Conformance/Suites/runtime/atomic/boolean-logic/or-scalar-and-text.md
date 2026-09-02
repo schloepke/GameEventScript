@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.or-scalar-and-text"
 title: "Boolean Logic — Or Scalars and Text"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Or Scalars and Text

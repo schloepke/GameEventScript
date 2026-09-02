@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.iterator-terminals"
 title: "RuntimeAtomicIteratorTerminals"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicIteratorTerminals

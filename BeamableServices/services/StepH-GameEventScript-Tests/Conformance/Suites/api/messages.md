@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "api.messages"
 title: "ApiMessages"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # ApiMessages

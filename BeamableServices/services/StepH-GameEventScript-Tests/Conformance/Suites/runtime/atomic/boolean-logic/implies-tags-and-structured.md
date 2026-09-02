@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.implies-tags-and-structured"
 title: "Boolean Logic — Implies Tags and Structured Values"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Implies Tags and Structured Values

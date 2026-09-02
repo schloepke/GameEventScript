@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.collection-operators"
 title: "RuntimeAtomicCollectionOperators"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicCollectionOperators

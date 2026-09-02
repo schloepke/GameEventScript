@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.multiplication"
 title: "Math Matrix — Multiplication"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Multiplication

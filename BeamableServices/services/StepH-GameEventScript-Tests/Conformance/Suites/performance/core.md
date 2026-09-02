@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "performance.core"
 title: "PerformanceCore"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # PerformanceCore

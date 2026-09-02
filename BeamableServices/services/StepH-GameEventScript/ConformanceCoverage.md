@@ -1,6 +1,6 @@
 # Portable Conformance Coverage
 
-This is the normative migration index from behavior to stable Conformance
+This is the normative coverage index from behavior to stable Conformance
 Markdown case IDs. Keep IDs stable. A language-specific test may be removed or
 reduced only after the behavior it protects has a passing portable case listed
 here. Add or update this matrix in the same change as new portable behavior.

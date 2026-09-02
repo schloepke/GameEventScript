@@ -5,13 +5,10 @@ C# verification. Portable public behavior belongs under
 `StepH-GameEventScript-Tests/Conformance`; C# test code belongs under
 `StepH-GameEventScript-Tests/Native`.
 
-After the completed 5.8 audit, 91 C# test methods remain. Compared with the
-original 156-method inventory, 66 portable or duplicate methods have been
-removed; one parser-bootstrap regression was added for literal astral YAML
-scalars. The Markdown corpus now contains 1,016 cases in 73 suites: 1,009
-semantic cases and 7 bytecode snapshots. Of those 91 methods, 36 bootstrap the
-Conformance infrastructure from the `Conformance` root and 55 test deliberately
-native implementation concerns below `Native`.
+There are 91 C# test methods. The Markdown corpus contains 1,016 cases in 73
+suites: 1,009 semantic cases and 7 bytecode snapshots. Of the C# methods, 36
+bootstrap the Conformance infrastructure from the `Conformance` root and 55
+test deliberately native implementation concerns below `Native`.
 
 | Retention class | Methods | Native subtree | Why they remain native |
 | --- | ---: | --- | --- |

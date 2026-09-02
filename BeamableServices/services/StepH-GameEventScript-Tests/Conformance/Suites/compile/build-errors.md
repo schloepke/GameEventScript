@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "compile.build-errors"
 title: "CompileBuildErrors"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # CompileBuildErrors

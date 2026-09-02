@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.patterns"
 title: "RuntimeAtomicPatterns"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicPatterns

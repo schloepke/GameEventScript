@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.or-tags-and-structured"
 title: "Boolean Logic — Or Tags and Structured Values"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Or Tags and Structured Values

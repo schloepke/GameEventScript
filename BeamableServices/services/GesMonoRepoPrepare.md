@@ -551,151 +551,47 @@ Abnahme: sechs fokussierte Writer-Tests decken kanonisches JSON,
 Markdown-Escaping und -Inhalte, Performance-/Failure-Ausgabe, bytegenaue
 Performanceupdates mit BOM/CRLF, GESA-Updates sowie stale Reports ab.
 
-### 5.5 Repräsentative vertikale Markdown-Migration durchführen - DONE
+### 5.5 Vertikalen Markdown-Vertrag absichern - DONE
 
-Der inzwischen entfernte vertikale Pilot lag als echte Markdown-Suite unter
-einem temporären Pilotdokument, das nach der vollständigen Migration entfernt wurde.
-Er übernimmt aus dem bisherigen JSON-Bestand je einen `scriptApi`-,
-`compileError`-, `loadError`-, `messageApi`-, `compileMetadata`-, `bytecode`-
-und `performance`-Fall sowie den bisherigen ersten Performance-Dump als
-eigenständigen `bytecodeSnapshot`-Fall. Frontmatter-Vererbung, lokale
-Overrides, Binary-Roundtrip, benannte Sourceinputs, Steps, Diagnosen,
-Ressourcenmetadaten, Opcodebedingungen, Performanceprofil und exaktes GESA
-werden dadurch gemeinsam abgedeckt.
+Der portable Parser und Runner decken jede Testart vertikal ab: `scriptApi`,
+`compileError`, `loadError`, `messageApi`, `compileMetadata`, `bytecode`,
+`performance` und `bytecodeSnapshot`. Frontmatter-Vererbung, lokale Overrides,
+Binary-Roundtrip, benannte Sourceinputs, Steps, Diagnosen, Ressourcenmetadaten,
+Opcodebedingungen, Performanceprofile und exaktes GESA werden gemeinsam
+geprüft. Neue Conformance-Fälle werden ausschließlich als Markdown angelegt.
 
-Jeder H2-Fall wird einzeln vom portablen Parser und Runner ausgeführt. Ein
-C#-Paritätstest lädt zusätzlich den zugehörigen bisherigen JSON-Fall, vergleicht
-das normalisierte Modell und führt auch den alten Testpfad aus. Der
-Performancepilot führt die fachliche Workload real aus und speist die neue
-Messschnittstelle deterministisch mit den bestehenden C#-Referenzwerten; echte
-Messung und Approval bleiben Aufgabe des expliziten Performance-Adapters. Ein
-zusätzlicher Dokumentlauf prüft Gesamtstatus, JSON-/Markdown-Report und einen
-byteidentischen Received-Write bei unveränderten Expectations.
+### 5.6 Normativen Markdown-Corpus materialisieren - DONE
 
-Der Pilot bestätigte drei bereits normative, für den Migrator wichtige Details:
-H2-Titel sind case-sensitiv, ein terminales Source-Newline wird durch eine
-zusätzliche Leerzeile im Fence repräsentiert und portable `symbolKind`-Werte
-verwenden lower camel case statt der bisherigen C#-Enum-Schreibweise. Es war
-keine Erweiterung des Formats, Parsers oder Laufzeitmodells erforderlich. Neue
-Conformance-Fälle werden ab diesem Schnitt als Markdown angelegt; JSON ist nur
-noch temporäre Quelle für Schritt 5.6.
+Alle Cases besitzen explizite, vom Anzeigetitel unabhängige IDs und ein
+aufgelöstes `atomic`/`scenario`-Level. Sourceinputs, getrennte Programs, Steps,
+native Handler, Runtime-Limits, Diagnosen, Random-Sequenzen,
+Binary64-Vergleich und fachliche Expectations liegen vollständig im
+Markdownmodell vor. Maps verwenden die normative geordnete Entry-Form und
+numerische Werte die definierte shortest-roundtrip Binary64-Darstellung.
 
-- Vor der Massenmigration mindestens einen vorhandenen Fall jeder heutigen
-  Testart sowie einen `bytecodeSnapshot` nach Markdown übertragen.
-- Dabei Frontmatter, per-Test-Overrides, GES-Source, Expectations, Steps,
-  Compilerfehler, Loadfehler, Metadaten, Opcode-Erwartungen und Performanceinput
-  real gegen Parser und Runner prüfen.
-- Für jeden Pilotfall das normalisierte Modell und das Ausführungsergebnis mit
-  dem bisherigen JSON-Fall vergleichen.
-- Gefundene Lücken zuerst in Spezifikation, Parser oder Modell korrigieren und
-  das Format erst danach für die vollständige Migration festschreiben.
-- Ab diesem funktionsfähigen vertikalen Schnitt neue Conformance-Fälle nur noch
-  als Markdown anlegen. Ein akuter Regressionstest darf vorher ausnahmsweise
-  temporär noch als JSON entstehen.
+Die Performancefälle enthalten portable KiB-/Millisekunden-Baselines und
+jeweils einen eigenen `bytecodeSnapshot`. Suite-/Case-Eindeutigkeit sowie die
+vollständige Ausführung werden durch die generische Corpus-Testklasse geprüft.
 
-### 5.6 Bestehende JSON-Suite deterministisch migrieren - DONE
+### 5.7 Einheitliche Conformance-Infrastruktur herstellen - DONE
 
-Der deterministische Einmal-Migrator hat 34 Suites und alle 956 bisherigen
-Fälle nach `Conformance/Suites` übertragen. Die lokalen IDs
-`case-0001` usw. sind explizit materialisiert und unabhängig von den
-Anzeigeüberschriften; der doppelte Titel im Message-Member-Test wurde als
-`message handler member and index access` eindeutig gemacht. Jeder Fall trägt
-sein aufgelöstes `atomic`/`scenario`-Level. Sourceinputs, getrennte Programs,
-Steps, native Handler, Runtime-Limits, Diagnosen, Random-Sequenzen,
-Binary64-Vergleich und sämtliche fachlichen Expectations liegen nun im
-Markdownmodell vor.
+Das Testprojekt verwendet ausschließlich das normative Markdownmodell und die
+generische Discovery. Die weiterhin benötigten C#-Extension- und
+External-Type-Bindings liegen in der C#-Testumgebung und haben keine
+Abhängigkeit von einem weiteren Autorenformat.
 
-Der Migrationslauf hat alle 956 Fälle nacheinander über den bisherigen und den
-neuen Runner ausgeführt und gleiche erfolgreiche Ergebnisse bestätigt. Dabei
-wurden alte Map-Objekte in die normative geordnete Entry-Form und numerische
-Strings bedeutungsgleich in shortest-roundtrip Binary64 überführt. Zwei zuvor
-implizite Negativformen sind nun explizit spezifiziert: eine ungeordnete
-Message-Argument-Map ausschließlich für `invalidArgumentsShape` sowie
-`{ any: true }` als Runtime-Limit-Wildcard. U+FEFF innerhalb eines GES-Fence ist
-Sourceinhalt und kein Dokument-BOM. Außerdem wurden zwei bereits im neuen
-Vergleicher sichtbare Paritätsfehler für leere Maps, Integer-/Float-Ranges und
-nicht-finite Float-Einheiten korrigiert.
+Die fünf Performancefälle werden durch einen expliziten, nicht-parallelen
+C#-Performanceadapter gemessen. Er verwendet die im jeweiligen Markdownfall
+enthaltenen Profilgrenzen und erzeugt unter `Conformance/Received/performance`
+einen kanonischen JSON-Report, einen Markdown-Gesamtbericht und eine
+suite-benannte `.received.md`. Bytecode-Snapshot-Cases erzeugen analog
+Approval-Dateien unter `Received/snapshots`. Kein Adapter überschreibt eine
+normative Suite automatisch.
 
-Die fünf Performancefälle enthalten je zwölf portable KiB-/Millisekunden-
-Baselines aus dem bisherigen Referenzreport. Jeder Fall besitzt zusätzlich
-einen eigenen, aus dem bisherigen kombinierten Referenzdump extrahierten
-`bytecodeSnapshot`. Der aktive C#-Adapter entdeckt 961 H2-Fälle einzeln; ein
-zusätzlicher Corpus-Test prüft Suite-/Case-Eindeutigkeit und führt den gesamten
-Corpus aus. Nach bestätigter Parität wurden alle 34 JSON-Quelldateien entfernt.
-Der danach tote Einmal-Migrator, die ignorierten Legacy-Testklassen und die alten
-kombinierten Referenzdateien wurden geschlossen in Schritt 5.7 entfernt.
-
-- Einen internen einmaligen JSON-zu-Markdown-Migrator auf Basis der bestehenden
-  C#-Modelle bauen; er ist kein öffentliches API und keine dauerhafte
-  Kompatibilitätsschicht.
-- Allen 956 bestehenden Fällen stabile IDs zuweisen und den bereits vorhandenen
-  doppelten Anzeigenamen ohne Ableitung der ID vom Titel bereinigen.
-- `atomic`/`scenario` explizit materialisieren und nicht länger aus Dateipfaden
-  ableiten.
-- Deterministische, lesbare Markdown-, YAML- und Tabellenformatierung erzeugen.
-- Suite für Suite migrieren und jeweils Fallzahl, Sources, Inputs,
-  Expectations, Compileroptionen, Random-Sequenzen und Ausführungsergebnisse
-  gegen den bisherigen Stand vergleichen.
-- Die bisher zusammengefassten Performancefälle als einzelne H2-Tests mit
-  eigener YAML-Baseline materialisieren; die Werte aus
-  `PerformanceReport.reference.txt` in die jeweiligen Expectations überführen.
-- Den kombinierten `PerformanceBinaryDump.reference.gesa` in eigenständige
-  `bytecodeSnapshot`-Cases mit jeweils einem erwarteten `gesa`-Block aufteilen.
-- Während der mechanischen Migration keine fachlichen Erwartungen ändern.
-  Korrekturen erfolgen danach separat, damit Parser- und Semantikänderungen
-  unterscheidbar bleiben.
-- Nach bestätigter Parität die jeweilige JSON-Quelldatei entfernen; JSON und
-  Markdown werden nicht dauerhaft parallel gepflegt.
-
-### 5.7 Alte JSON-Conformance-Infrastruktur entfernen - DONE
-
-Die ehemaligen JSON-Modelle, Discovery, Value-Codecs, Runner, dateispezifischen
-MSTest-Klassen, der Einmal-Migrator und der superseded Pilot sind entfernt. Im
-Testprojekt bleibt nur noch das normalisierte portable Markdownmodell mit einer
-generischen Discovery über alle 34 Suites und 961 einzeln adressierbaren H2-Cases.
-Die weiterhin benötigten C#-Extension- und External-Type-Bindings liegen nun in
-einer reinen C#-Testumgebung und haben keine Abhängigkeit mehr von einem alten
-Autorenformat.
-
-Die fünf Performancefälle werden zusätzlich durch einen expliziten,
-nicht-parallelen C#-Performanceadapter einzeln gemessen. Er verwendet die im
-jeweiligen Markdownfall enthaltenen Profilgrenzen und erzeugt unter
-`Conformance/Received/performance` einen kanonischen JSON-Report,
-einen Markdown-Gesamtbericht und eine suite-benannte `.received.md` mit den gemessenen
-Approval-Werten. Die fünf separaten Bytecode-Snapshot-Cases erzeugen analog eine
-aggregierte Approval-Datei unter `Received/snapshots`. Kein Adapter überschreibt
-die normative Suite automatisch.
-
-Die 961 einzeln ausgeführten Case-Ergebnisse werden threadsicher gesammelt und
-am Ende der MSTest-Klasse ohne erneute fachliche Ausführung als
-`Received/ConformanceResults.json` und `Received/ConformanceReport.md`
-geschrieben. Der frühere zusätzliche `RunCorpus` im Identitäts-Test ist
-entfallen; dieser prüft nur noch Fallzahlen sowie eindeutige Suite- und Case-IDs.
-Der Gesamtbericht führt Performance-Cases mit ihrem fachlichen Ergebnis, aber
-ohne die deterministischen Platzhaltermetriken; reale Messwerte stehen nur im
-separaten expliziten Performancebericht.
-
-Der C#-Adapter nimmt pro Compile-, Load- und Run-Metrik drei voneinander
-unabhängige Samples und vergleicht den schnellsten vollständigen Lauf. So bleiben
-die kleinen Zeitmessungen gegenüber Scheduler-Ausreißern stabil; Allokationen
-werden weiterhin aus genau diesem vollständigen Sample berichtet.
-
-Die vier kombinierten `PerformanceReport.*.txt`- und
-`PerformanceBinaryDump.*.gesa`-Dateien sind entfernt. Testdefinitionen stammen
-damit ausschließlich aus Markdown; maschinenlesbare Resultate ausschließlich
-aus dem kanonischen Conformance-JSON-Writer.
-
-- Nach vollständiger Migration JSON-Modelle, JSON-Discovery und den temporären
-  Importer/Migrator entfernen.
-- Dateispezifische MSTest-Methoden durch generische Markdown-Discovery ersetzen.
-- Die alten kombinierten Performance-Report- und Binary-Dump-Referenzdateien
-  entfernen, sobald ihre Werte und Snapshots vollständig in den einzelnen
-  Markdown-Cases enthalten sind.
-- Sicherstellen, dass ausschließlich das normative Markdownformat zur
-  Testdefinition und ausschließlich das definierte Ergebnisformat zur
-  maschinellen Ausgabe verwendet werden.
-- Den vollständigen migrierten Corpus, API-Snapshot, Nicht-Performance-Suite und
-  Performance-Referenz verifizieren, bevor neue fachliche Fälle hinzukommen.
+Die unabhängig ausgeführten Case-Ergebnisse werden threadsicher gesammelt und
+ohne erneute fachliche Ausführung als `Received/ConformanceResults.json` und
+`Received/ConformanceReport.md` geschrieben. Der Identitätstest prüft
+Fallzahlen sowie eindeutige Suite- und Case-IDs.
 
 ### 5.8 Conformance-Environment und fehlende Semantik ausbauen - DONE
 

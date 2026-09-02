@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.host-dispatch"
 title: "RuntimeHostDispatch"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeHostDispatch

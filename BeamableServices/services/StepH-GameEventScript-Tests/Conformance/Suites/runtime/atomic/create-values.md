@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.create-values"
 title: "RuntimeAtomicCreateValues"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicCreateValues

@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "compile.binary-compiler"
 title: "CompileBinaryCompiler"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # CompileBinaryCompiler

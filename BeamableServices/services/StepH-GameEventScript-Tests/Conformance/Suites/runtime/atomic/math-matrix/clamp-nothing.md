@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.clamp-nothing"
 title: "Math Matrix — Clamp from Nothing"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Clamp from Nothing

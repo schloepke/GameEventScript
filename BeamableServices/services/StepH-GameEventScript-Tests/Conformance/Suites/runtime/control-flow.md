@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.control-flow"
 title: "RuntimeControlFlow"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeControlFlow

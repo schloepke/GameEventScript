@@ -34,9 +34,8 @@ The complete portable corpus lives under
 `StepH-GameEventScript-Tests/Conformance/Suites`. Its 73 suites
 contain 1,009 semantic cases and seven independent bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
-the C# test adapter. The former JSON source fixtures were removed after the
-one-time parity run passed through both execution paths. New conformance cases
-are authored only as Markdown.
+the C# test adapter. Markdown is the sole normative authoring format for
+conformance cases.
 
 The C# adapter also discovers the five performance cases independently for an
 explicit, non-parallel measurement run. It writes the canonical result JSON, a
@@ -59,5 +58,6 @@ modes, exact observer traces, native-only Hosts, repeated independent Hosts and
 a closed set of ID-based lifecycle actions.
 
 The test-project hierarchy is intentionally split in two. `Conformance`
-contains only Markdown suites, parser fixtures and generated reports. All C#
-tests and adapters live under `Native`, grouped by their implementation purpose.
+contains Markdown suites, parser fixtures, generated reports, and its C#
+runner/parser adapters directly in the root. `Native` contains the remaining
+C#-specific tests, grouped by implementation purpose.

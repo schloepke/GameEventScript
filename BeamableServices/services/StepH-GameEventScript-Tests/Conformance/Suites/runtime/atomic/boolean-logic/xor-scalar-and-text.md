@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.xor-scalar-and-text"
 title: "Boolean Logic — Xor Scalars and Text"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Xor Scalars and Text

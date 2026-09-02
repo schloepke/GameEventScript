@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.compare.less-than"
 title: "Comparison Matrix — Less Than"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Comparison Matrix — Less Than

@@ -24,7 +24,7 @@ public sealed class ConformanceMarkdownCorpusTests
 
     [TestMethod]
     [DynamicData(nameof(Cases), DynamicDataDisplayName = nameof(DisplayName))]
-    public void MigratedMarkdownCasePasses(ConformanceDocument document, string caseId)
+    public void ConformanceCasePasses(ConformanceDocument document, string caseId)
     {
         var result = ConformanceRunner.RunCase(
             document,
@@ -36,7 +36,7 @@ public sealed class ConformanceMarkdownCorpusTests
     }
 
     [TestMethod]
-    public void MigratedMarkdownCorpusHasStableUniqueIdentityAndExpectedCounts()
+    public void ConformanceCorpusHasStableUniqueIdentityAndExpectedCounts()
     {
         var documents = ConformanceCSharpTestEnvironment.Documents;
         Assert.HasCount(73, documents);

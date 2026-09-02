@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.types-and-values.numeric-and-units"
 title: "Types and Values — Numeric Values and Units"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Types and Values — Numeric Values and Units

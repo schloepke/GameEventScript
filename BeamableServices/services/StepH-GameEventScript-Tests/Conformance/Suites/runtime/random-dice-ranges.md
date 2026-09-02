@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.random-dice-ranges"
 title: "RuntimeRandomDiceRanges"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeRandomDiceRanges

@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.equality.equal"
 title: "Equality Matrix — Equal"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Equality Matrix — Equal

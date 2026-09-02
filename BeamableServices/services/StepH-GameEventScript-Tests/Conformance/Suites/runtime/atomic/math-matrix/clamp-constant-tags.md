@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.clamp-constant-tags"
 title: "Math Matrix — Clamp Constant Tags"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Clamp Constant Tags

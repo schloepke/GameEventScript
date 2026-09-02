@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.minimum"
 title: "Math Matrix — Minimum"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Minimum

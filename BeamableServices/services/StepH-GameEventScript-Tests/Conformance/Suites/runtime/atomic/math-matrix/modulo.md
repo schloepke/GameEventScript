@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.modulo"
 title: "Math Matrix — Modulo"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Modulo

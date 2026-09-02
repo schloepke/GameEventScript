@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.series"
 title: "RuntimeAtomicSeries"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicSeries

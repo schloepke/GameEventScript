@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.unary-logarithm-and-power"
 title: "Math Matrix — Unary, Logarithm, and Power"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Unary, Logarithm, and Power

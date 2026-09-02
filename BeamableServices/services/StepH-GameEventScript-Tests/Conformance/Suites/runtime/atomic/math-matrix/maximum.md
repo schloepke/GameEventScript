@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.maximum"
 title: "Math Matrix — Maximum"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Maximum

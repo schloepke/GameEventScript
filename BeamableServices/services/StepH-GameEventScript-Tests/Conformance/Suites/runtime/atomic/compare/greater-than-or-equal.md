@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.compare.greater-than-or-equal"
 title: "Comparison Matrix — Greater Than or Equal"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Comparison Matrix — Greater Than or Equal

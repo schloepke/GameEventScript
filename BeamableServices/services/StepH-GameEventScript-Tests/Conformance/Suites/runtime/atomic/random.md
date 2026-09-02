@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.random"
 title: "RuntimeAtomicRandom"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicRandom

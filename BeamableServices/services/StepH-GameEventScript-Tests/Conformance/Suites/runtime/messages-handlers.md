@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.messages-handlers"
 title: "RuntimeMessagesHandlers"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeMessagesHandlers

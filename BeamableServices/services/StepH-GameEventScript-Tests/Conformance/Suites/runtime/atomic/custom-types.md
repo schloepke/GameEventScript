@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.custom-types"
 title: "RuntimeAtomicCustomTypes"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicCustomTypes

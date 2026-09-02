@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.trig-navigation"
 title: "RuntimeAtomicTrigNavigation"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicTrigNavigation

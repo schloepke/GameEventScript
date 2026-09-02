@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.sort-group-distinct"
 title: "RuntimeAtomicSortGroupDistinct"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicSortGroupDistinct

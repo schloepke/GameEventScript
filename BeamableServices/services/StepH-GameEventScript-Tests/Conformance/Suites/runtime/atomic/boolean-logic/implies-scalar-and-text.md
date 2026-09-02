@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.implies-scalar-and-text"
 title: "Boolean Logic — Implies Scalars and Text"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Implies Scalars and Text

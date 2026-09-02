@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.not"
 title: "Boolean Logic — Not"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Not

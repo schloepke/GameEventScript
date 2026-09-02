@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "compile.bytecode-lowering"
 title: "Compile Bytecode Lowering"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Compile Bytecode Lowering

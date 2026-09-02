@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.clamp-nan-tag"
 title: "Math Matrix — Clamp NaN Tags"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Clamp NaN Tags

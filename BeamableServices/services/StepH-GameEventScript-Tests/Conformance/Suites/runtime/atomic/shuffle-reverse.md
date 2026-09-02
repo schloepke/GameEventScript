@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.shuffle-reverse"
 title: "RuntimeAtomicShuffleReverse"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicShuffleReverse

@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.member-index-access"
 title: "RuntimeAtomicMemberIndexAccess"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicMemberIndexAccess

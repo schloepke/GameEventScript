@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.types-and-values.text-collections-and-checks"
 title: "Types and Values — Text, Collections, and Checks"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Types and Values — Text, Collections, and Checks

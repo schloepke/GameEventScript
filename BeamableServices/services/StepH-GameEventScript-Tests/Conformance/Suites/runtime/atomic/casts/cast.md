@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.casts.cast"
 title: "Cast Matrix — Value Conversion"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Cast Matrix — Value Conversion

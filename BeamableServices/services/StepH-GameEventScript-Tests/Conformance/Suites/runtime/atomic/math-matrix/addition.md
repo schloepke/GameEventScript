@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.addition"
 title: "Math Matrix — Addition"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Addition

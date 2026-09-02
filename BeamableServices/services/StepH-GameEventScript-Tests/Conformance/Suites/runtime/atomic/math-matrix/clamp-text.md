@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.clamp-text"
 title: "Math Matrix — Clamp Text Values"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Clamp Text Values

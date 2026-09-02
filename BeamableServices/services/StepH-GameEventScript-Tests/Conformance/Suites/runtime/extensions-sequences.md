@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.extensions-sequences"
 title: "RuntimeExtensionsSequences"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeExtensionsSequences

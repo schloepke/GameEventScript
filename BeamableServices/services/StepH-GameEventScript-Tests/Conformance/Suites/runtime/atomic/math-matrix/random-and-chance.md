@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.random-and-chance"
 title: "Math Matrix — Random and Chance"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Random and Chance

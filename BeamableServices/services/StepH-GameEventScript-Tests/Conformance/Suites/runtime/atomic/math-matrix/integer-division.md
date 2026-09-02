@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.math-matrix.integer-division"
 title: "Math Matrix — Integer Division"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Math Matrix — Integer Division

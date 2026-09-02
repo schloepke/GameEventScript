@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.types-and-values.custom-and-spatial"
 title: "Types and Values — Custom and Spatial Values"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Types and Values — Custom and Spatial Values

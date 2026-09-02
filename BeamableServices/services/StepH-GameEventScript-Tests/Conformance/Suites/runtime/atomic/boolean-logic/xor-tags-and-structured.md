@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.boolean-logic.xor-tags-and-structured"
 title: "Boolean Logic — Xor Tags and Structured Values"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # Boolean Logic — Xor Tags and Structured Values

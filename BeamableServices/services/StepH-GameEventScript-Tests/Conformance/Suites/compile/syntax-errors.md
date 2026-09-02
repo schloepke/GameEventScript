@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "compile.syntax-errors"
 title: "CompileSyntaxErrors"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # CompileSyntaxErrors

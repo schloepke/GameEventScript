@@ -3,7 +3,6 @@ formatVersion: 1
 suiteId: "runtime.atomic.iterator-core"
 title: "RuntimeAtomicIteratorCore"
 categories: [conformance]
-tags: [migrated-json-v1]
 ---
 
 # RuntimeAtomicIteratorCore

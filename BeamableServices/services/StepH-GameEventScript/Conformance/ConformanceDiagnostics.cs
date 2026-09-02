@@ -86,6 +86,7 @@ public sealed class ConformanceParserLimits
     public int MaxSourcesPerTest { get; init; } = 256;
     public int MaxSourceBytesPerTest { get; init; } = 4 * 1024 * 1024;
     public int MaxStepsPerTest { get; init; } = 65535;
+    public int MaxHostsPerTest { get; init; } = 256;
     public int MaxScalarBytes { get; init; } = 1024 * 1024;
     public int MaxYamlNodes { get; init; } = 262144;
 }

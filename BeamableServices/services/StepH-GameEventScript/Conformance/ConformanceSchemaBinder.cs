@@ -36,7 +36,7 @@ internal static class ConformanceSchemaBinder
             var yaml = ResolveYamlBlocks(testSyntax, limits);
             if (yaml.Case is null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Every test requires exactly one yaml block with 'gesBlock: case'.", text.Lines[testSyntax.StartLineIndex].Range());
             var caseNode = yaml.Case;
-            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "nativeHandlers", "messageApi", "performance");
+            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "hostCount", "deferredPrograms", "nativeHandlers", "messageApi", "performance");
             var id = RequiredId(caseNode, "id");
             if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate case ID '{id}'.", Property(caseNode, "id")!.Value.Range);
             var defaults = ParseDefaults(caseNode, suiteDefaults);
@@ -46,10 +46,19 @@ internal static class ConformanceSchemaBinder
             var sources = BindSources(suiteId, id, caseNode, testSyntax, limits);
             var nativeHandlers = BindNativeHandlers(Optional(caseNode, "nativeHandlers"));
             var random = BindRandom(Optional(caseNode, "random"));
+            var publishSink = BindPublishSink(OptionalString(caseNode, "publishSink"), Optional(caseNode, "publishSink")?.Range ?? caseNode.Range);
+            var hostCount = OptionalUInt32(caseNode, "hostCount") ?? 1;
+            if (hostCount == 0 || limits.MaxHostsPerTest <= 0 || hostCount > (uint)limits.MaxHostsPerTest) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount must be positive and within MaxHostsPerTest.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
+            var deferredPrograms = OptionalStringList(caseNode, "deferredPrograms", ids: true) ?? new List<string>();
+            if (hostCount > 1 && defaults.Kind != ConformanceTestKind.ScriptApi) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount greater than one is supported only by scriptApi.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
+            if (deferredPrograms.Count > 0 && defaults.Kind != ConformanceTestKind.ScriptApi) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "deferredPrograms is supported only by scriptApi.", Optional(caseNode, "deferredPrograms")?.Range ?? caseNode.Range);
             var messageApi = BindMessageApi(Optional(caseNode, "messageApi"));
             var workload = BindPerformanceWorkload(Optional(caseNode, "performance"));
             var expectations = BindExpectation(defaults.Kind.Value, expectationNode);
-            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, messageApi, workload);
+            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, nativeHandlers.Count, messageApi, workload);
+            if (defaults.Kind == ConformanceTestKind.ScriptApi && sources.Count == 0 && defaults.Compile.BinaryRoundTrip)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A native-only scriptApi case cannot request a program binary roundtrip.", caseNode.Range);
+            ValidateHostReferences(sources, deferredPrograms, nativeHandlers, caseNode.Range);
             if (messageApi?.ArgumentsWereMapping == true &&
                 !string.Equals(expectations.MessageApi?.Error, "invalidArgumentsShape", StringComparison.Ordinal))
                 throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A messageApi argument mapping is valid only with expected error 'invalidArgumentsShape'.", caseNode.Range);
@@ -57,6 +66,12 @@ internal static class ConformanceSchemaBinder
             var core = new List<string>(defaults.Requires.Core);
             var optional = new List<string>(defaults.Requires.Optional);
             AddKindCapabilities(defaults.Kind.Value, core, optional);
+            if (defaults.Kind == ConformanceTestKind.ScriptApi && sources.Count == 0)
+            {
+                core.Remove("compiler");
+                core.Remove("vm");
+                core.Remove("publish-sink");
+            }
             if (nativeHandlers.Count > 0) AddUnique(core, "native-handlers");
             if (defaults.Compile.BinaryRoundTrip) AddUnique(core, "program-binary");
             ValidateCapabilities(core, optional, caseNode.Range);
@@ -64,7 +79,7 @@ internal static class ConformanceSchemaBinder
             cases.Add(new ConformanceCase(
                 id, suiteId + "/" + id, testSyntax.Title, defaults.Kind.Value, defaults.Level.Value,
                 defaults.Categories, defaults.Tags, new ConformanceCapabilityRequirements(core, optional), defaults.Compile,
-                defaults.RuntimeLimits, defaults.Comparison, random, sources, nativeHandlers, steps, expectations, messageApi, workload,
+                defaults.RuntimeLimits, defaults.Comparison, publishSink, hostCount, deferredPrograms, random, sources, nativeHandlers, steps, expectations, messageApi, workload,
                 testSyntax.AssemblerBlock?.Payload, testSyntax.CaseBlock!.BlockRange, testSyntax.ExpectBlock?.BlockRange, testSyntax.StepsTableRange,
                 testSyntax.AssemblerBlock?.BlockRange, testSyntax.AssemblerBlock?.PayloadRange, range));
         }
@@ -150,13 +165,20 @@ internal static class ConformanceSchemaBinder
         var result = new List<ConformanceNativeHandler>();
         if (node is null) return result;
         RequireKind(node, YamlNodeKind.Sequence, "nativeHandlers must be a sequence.");
-        foreach (var item in node.Items)
+        var ids = new HashSet<string>(StringComparer.Ordinal);
+        for (var handlerIndex = 0; handlerIndex < node.Items.Count; handlerIndex++)
         {
-            Closed(item, "message", "parameters", "priority", "throw", "emit");
+            var item = node.Items[handlerIndex];
+            Closed(item, "id", "message", "parameters", "priority", "initiallySubscribed", "throw", "actions", "emit");
+            var id = OptionalString(item, "id") ?? "native-" + (handlerIndex + 1).ToString("D4", CultureInfo.InvariantCulture);
+            RequireId(id, Optional(item, "id")?.Range ?? item.Range);
+            if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, "Duplicate native handler ID '" + id + "'.", Optional(item, "id")?.Range ?? item.Range);
             var message = RequiredString(item, "message");
             var parameters = OptionalStringList(item, "parameters") ?? new List<string>();
             var priority = OptionalInt32(item, "priority") ?? 0;
+            var initiallySubscribed = OptionalBoolean(item, "initiallySubscribed") ?? true;
             var throws = OptionalBoolean(item, "throw") ?? false;
+            var actions = BindNativeActions(Optional(item, "actions"));
             var emits = new List<ConformanceNativeEmit>();
             var emitNode = Optional(item, "emit");
             if (emitNode is not null)
@@ -171,9 +193,59 @@ internal static class ConformanceSchemaBinder
                     emits.Add(new ConformanceNativeEmit(RequiredString(emit, "name"), forward == true, argsNode is null ? Array.Empty<ConformanceArgument>() : BindArguments(argsNode)));
                 }
             }
-            result.Add(new ConformanceNativeHandler(message, parameters, priority, throws, emits));
+            result.Add(new ConformanceNativeHandler(id, message, parameters, priority, initiallySubscribed, throws, actions, emits));
         }
         return result;
+    }
+
+    private static IReadOnlyList<ConformanceNativeAction> BindNativeActions(YamlNode? node)
+    {
+        var result = new List<ConformanceNativeAction>();
+        if (node is null) return result;
+        RequireKind(node, YamlNodeKind.Sequence, "nativeHandlers.actions must be a sequence.");
+        foreach (var item in node.Items)
+        {
+            Closed(item, "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler");
+            if (item.Properties.Count != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A native handler action requires exactly one operation.", item.Range);
+            var operation = item.Properties[0];
+            var kind = operation.Name switch
+            {
+                "loadProgram" => ConformanceNativeActionKind.LoadProgram,
+                "detachProgram" => ConformanceNativeActionKind.DetachProgram,
+                "subscribeHandler" => ConformanceNativeActionKind.SubscribeHandler,
+                _ => ConformanceNativeActionKind.UnsubscribeHandler
+            };
+            var target = String(operation.Value);
+            RequireId(target, operation.Value.Range);
+            result.Add(new ConformanceNativeAction(kind, target));
+        }
+        return result;
+    }
+
+    private static void ValidateHostReferences(IReadOnlyList<ConformanceSourceInput> sources, IReadOnlyList<string> deferredPrograms, IReadOnlyList<ConformanceNativeHandler> nativeHandlers, ConformanceSourceRange range)
+    {
+        var programs = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < sources.Count; index++) programs.Add(sources[index].ProgramId);
+        var deferred = new HashSet<string>(StringComparer.Ordinal);
+        for (var index = 0; index < deferredPrograms.Count; index++)
+        {
+            var id = deferredPrograms[index];
+            if (!deferred.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, "Duplicate deferred program ID '" + id + "'.", range);
+            if (!programs.Contains(id)) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownReference, "Unknown deferred program ID '" + id + "'.", range);
+        }
+        var handlers = new HashSet<string>(nativeHandlers.Select(value => value.Id), StringComparer.Ordinal);
+        for (var handlerIndex = 0; handlerIndex < nativeHandlers.Count; handlerIndex++)
+        for (var actionIndex = 0; actionIndex < nativeHandlers[handlerIndex].Actions.Count; actionIndex++)
+        {
+            var action = nativeHandlers[handlerIndex].Actions[actionIndex];
+            var valid = action.Kind switch
+            {
+                ConformanceNativeActionKind.LoadProgram => deferred.Contains(action.Target),
+                ConformanceNativeActionKind.DetachProgram => programs.Contains(action.Target),
+                _ => handlers.Contains(action.Target)
+            };
+            if (!valid) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownReference, "Unknown or invalid host-action target '" + action.Target + "'.", range);
+        }
     }
 
     private static ConformanceRandomConfiguration? BindRandom(YamlNode? node)
@@ -264,7 +336,7 @@ internal static class ConformanceSchemaBinder
     private static ConformanceStepExpectation BindStepExpectation(string receive, YamlNode? node)
     {
         if (node is null) return new ConformanceStepExpectation(new ConformanceMessage(receive, Array.Empty<string>(), Array.Empty<ConformanceArgument>()), true, Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), null, EmptyObservations());
-        Closed(node, "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics");
+        Closed(node, "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace");
         var inputNode = Optional(node, "input");
         var tags = new List<string>();
         IReadOnlyList<ConformanceArgument> args = Array.Empty<ConformanceArgument>();
@@ -312,7 +384,7 @@ internal static class ConformanceSchemaBinder
 
     private static ConformanceChannelExpectation BindChannel(YamlNode node)
     {
-        Closed(node, "local", "outbound", "runtimeLimits", "diagnostics");
+        Closed(node, "local", "outbound", "runtimeLimits", "diagnostics", "trace");
         return new ConformanceChannelExpectation(BindMessages(Optional(node, "local")), BindMessages(Optional(node, "outbound")), BindObservations(node));
     }
 
@@ -334,7 +406,60 @@ internal static class ConformanceSchemaBinder
             RequireKind(diagnosticNode, YamlNodeKind.Sequence, "diagnostics must be a sequence.");
             foreach (var item in diagnosticNode.Items) diagnostics.Add(BindDiagnostic(item));
         }
-        return new ConformanceObservationExpectation(included, excluded, diagnostics);
+        var traceNode = Optional(node, "trace");
+        return new ConformanceObservationExpectation(included, excluded, diagnostics, traceNode is not null, BindTrace(traceNode));
+    }
+
+    private static IReadOnlyList<ConformanceObserverEventExpectation> BindTrace(YamlNode? node)
+    {
+        var result = new List<ConformanceObserverEventExpectation>();
+        if (node is null) return result;
+        RequireKind(node, YamlNodeKind.Sequence, "trace must be a sequence.");
+        foreach (var item in node.Items)
+        {
+            var eventName = RequiredString(item, "event");
+            switch (eventName)
+            {
+                case "emit":
+                    Closed(item, "event", "message", "accepted");
+                    result.Add(new ConformanceObserverEventExpectation(ConformanceObserverEventKind.Emit, BindMessage(Required(item, "message")), null, RequiredBoolean(item, "accepted"), null, null, null));
+                    break;
+                case "publish":
+                    Closed(item, "event", "message", "result");
+                    result.Add(new ConformanceObserverEventExpectation(ConformanceObserverEventKind.Publish, BindMessage(Required(item, "message")), null, null, BindPublishResult(Required(item, "result")), null, null));
+                    break;
+                case "dispatchStarted":
+                case "dispatchCompleted":
+                    Closed(item, "event", "message", "signatureId");
+                    result.Add(new ConformanceObserverEventExpectation(
+                        eventName == "dispatchStarted" ? ConformanceObserverEventKind.DispatchStarted : ConformanceObserverEventKind.DispatchCompleted,
+                        BindMessage(Required(item, "message")), RequiredString(item, "signatureId"), null, null, null, null));
+                    break;
+                case "runtimeLimit":
+                    Closed(item, "event", "runtimeLimit");
+                    result.Add(new ConformanceObserverEventExpectation(ConformanceObserverEventKind.RuntimeLimit, null, null, null, null, BindRuntimeLimitExpectation(Required(item, "runtimeLimit")), null));
+                    break;
+                case "diagnostic":
+                    Closed(item, "event", "diagnostic");
+                    result.Add(new ConformanceObserverEventExpectation(ConformanceObserverEventKind.Diagnostic, null, null, null, null, null, BindDiagnostic(Required(item, "diagnostic"))));
+                    break;
+                default:
+                    throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "Unknown observer trace event '" + eventName + "'.", Property(item, "event")!.Value.Range);
+            }
+        }
+        return result;
+    }
+
+    private static ConformancePublishResultExpectation BindPublishResult(YamlNode node)
+    {
+        Closed(node, "localAccepted", "outboundAttempted", "outboundAccepted", "anyAccepted");
+        var local = RequiredBoolean(node, "localAccepted");
+        var attempted = RequiredBoolean(node, "outboundAttempted");
+        var outbound = RequiredBoolean(node, "outboundAccepted");
+        var any = RequiredBoolean(node, "anyAccepted");
+        if (outbound && !attempted) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A publish result cannot accept outbound without attempting outbound.", node.Range);
+        if (any != (local || outbound)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "anyAccepted must equal localAccepted or outboundAccepted.", node.Range);
+        return new ConformancePublishResultExpectation(local, attempted, outbound, any);
     }
 
     private static List<ConformanceRuntimeLimitExpectation> BindRuntimeLimitExpectations(YamlNode? node)
@@ -342,18 +467,20 @@ internal static class ConformanceSchemaBinder
         var result = new List<ConformanceRuntimeLimitExpectation>();
         if (node is null) return result;
         RequireKind(node, YamlNodeKind.Sequence, "Runtime-limit expectations must be a sequence.");
-        foreach (var item in node.Items)
-        {
-            Closed(item, "any", "name", "detailContains", "limit");
-            var any = OptionalBoolean(item, "any") ?? false;
-            var name = OptionalString(item, "name");
-            var detail = OptionalString(item, "detailContains");
-            var limit = OptionalUInt64(item, "limit");
-            if (!any && name is null && detail is null && limit is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "A runtime-limit expectation requires a constraint or 'any: true'.", item.Range);
-            if (any && (name is not null || detail is not null || limit is not null)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A wildcard runtime-limit expectation cannot contain additional constraints.", item.Range);
-            result.Add(new ConformanceRuntimeLimitExpectation(any, name, detail, limit));
-        }
+        foreach (var item in node.Items) result.Add(BindRuntimeLimitExpectation(item));
         return result;
+    }
+
+    private static ConformanceRuntimeLimitExpectation BindRuntimeLimitExpectation(YamlNode item)
+    {
+        Closed(item, "any", "name", "detailContains", "limit");
+        var any = OptionalBoolean(item, "any") ?? false;
+        var name = OptionalString(item, "name");
+        var detail = OptionalString(item, "detailContains");
+        var limit = OptionalUInt64(item, "limit");
+        if (!any && name is null && detail is null && limit is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "A runtime-limit expectation requires a constraint or 'any: true'.", item.Range);
+        if (any && (name is not null || detail is not null || limit is not null)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A wildcard runtime-limit expectation cannot contain additional constraints.", item.Range);
+        return new ConformanceRuntimeLimitExpectation(any, name, detail, limit);
     }
 
     private static ConformanceExpectedDiagnostic BindDiagnostic(YamlNode node)
@@ -586,11 +713,11 @@ internal static class ConformanceSchemaBinder
         if (type == ":dice") RequireKind(Required(node, "rolls"), YamlNodeKind.Sequence, "dice.rolls must be a sequence.");
     }
 
-    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, ConformanceMessageApiCase? messageApi, ConformancePerformanceWorkload? workload)
+    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, int nativeHandlerCount, ConformanceMessageApiCase? messageApi, ConformancePerformanceWorkload? workload)
     {
-        var requiresSource = kind is not ConformanceTestKind.MessageApi;
-        if (requiresSource && sourceCount == 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires GES source.", syntax.CaseBlock!.BlockRange);
-        if (!requiresSource && sourceCount != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "messageApi tests do not accept GES source.", syntax.Sources[0].BlockRange);
+        if (kind == ConformanceTestKind.MessageApi && sourceCount != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "messageApi tests do not accept GES source.", syntax.Sources[0].BlockRange);
+        if (kind != ConformanceTestKind.MessageApi && sourceCount == 0 && !(kind == ConformanceTestKind.ScriptApi && nativeHandlerCount > 0))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires GES source.", syntax.CaseBlock!.BlockRange);
         if (kind == ConformanceTestKind.BytecodeSnapshot)
         {
             if (syntax.AssemblerBlock is null || expectation is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "bytecodeSnapshot requires one gesa block and no expectation block.", syntax.CaseBlock!.BlockRange);
@@ -738,6 +865,7 @@ internal static class ConformanceSchemaBinder
     private static string RequiredString(YamlNode node, string name) => String(Required(node, name));
     private static string? OptionalString(YamlNode node, string name) => Optional(node, name) is { } value ? String(value) : null;
     private static bool? OptionalBoolean(YamlNode node, string name) => Optional(node, name) is { } value ? Boolean(value) : null;
+    private static bool RequiredBoolean(YamlNode node, string name) => Boolean(Required(node, name));
     private static int? OptionalInt32(YamlNode node, string name) => Optional(node, name) is { } value ? ParseInt32(value) : null;
     private static uint? OptionalUInt32(YamlNode node, string name) => Optional(node, name) is { } value ? ParseUInt32(value) : null;
     private static ulong? OptionalUInt64(YamlNode node, string name) => Optional(node, name) is { } value ? ParseUInt64(value) : null;
@@ -865,7 +993,16 @@ internal static class ConformanceSchemaBinder
         return baseUnit is "ns" or "us" or "ms" or "s" or "B" or "KiB" or "count";
     }
     private static void RequireKind(YamlNode node, YamlNodeKind kind, string message) { if (node.Kind != kind) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, message, node.Range); }
-    private static ConformanceObservationExpectation EmptyObservations() => new(Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceExpectedDiagnostic>());
+    private static ConformancePublishSinkMode BindPublishSink(string? value, ConformanceSourceRange range) => value switch
+    {
+        null or "accept" => ConformancePublishSinkMode.Accept,
+        "absent" => ConformancePublishSinkMode.Absent,
+        "reject" => ConformancePublishSinkMode.Reject,
+        "throw" => ConformancePublishSinkMode.Throw,
+        _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "publishSink must be accept, absent, reject, or throw.", range)
+    };
+
+    private static ConformanceObservationExpectation EmptyObservations() => new(Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceExpectedDiagnostic>(), false, Array.Empty<ConformanceObserverEventExpectation>());
     private static ConformanceFailure Schema(string code, string message, ConformanceSourceRange range) => new(code, message, range);
 
     private sealed class Defaults

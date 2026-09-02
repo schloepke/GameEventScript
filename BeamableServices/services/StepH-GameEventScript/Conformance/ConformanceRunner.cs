@@ -116,45 +116,62 @@ public static class ConformanceRunner
 
     private static ConformanceCaseResult RunRuntime(ConformanceCase testCase, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions options, bool measurePerformance)
     {
-        IReadOnlyList<GameEventScriptProgram> programs;
-        try { programs = CompilePrograms(testCase, environment); }
+        IReadOnlyList<CompiledProgram> programs;
+        try { programs = CompileProgramEntries(testCase, environment); }
         catch (GameEventScriptCompileException exception) { return UnexpectedDiagnostics(testCase, "compile", exception.Diagnostics); }
+        var mismatches = new List<ConformanceMismatch>();
+        var allDiagnostics = new List<ConformanceResultDiagnostic>();
+        var allLimits = new List<ConformanceRuntimeLimitResult>();
+        for (var hostIndex = 0; hostIndex < testCase.HostCount; hostIndex++)
+        {
+            RuntimeCollector collector;
+            string? technical;
+            try
+            {
+                collector = RunRuntimeHost(testCase, environment, options, programs, testCase.HostCount == 1 ? string.Empty : "/hosts/" + hostIndex.ToString(CultureInfo.InvariantCulture), mismatches, out technical);
+            }
+            catch (GameEventScriptDynamicLinkException exception)
+            {
+                return UnexpectedDiagnostics(testCase, "link", new[] { exception.Diagnostic });
+            }
+            allDiagnostics.AddRange(collector.AllDiagnostics);
+            allLimits.AddRange(collector.AllLimitResults);
+            if (technical is not null) return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, diagnostics: allDiagnostics, runtimeLimits: allLimits, technical: technical);
+        }
 
-        var collector = new RuntimeCollector();
+        if (mismatches.Count > 0) return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches, diagnostics: allDiagnostics, runtimeLimits: allLimits);
+        if (!measurePerformance) return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, diagnostics: allDiagnostics, runtimeLimits: allLimits);
+        return MeasurePerformance(testCase, environment);
+    }
+
+    private static RuntimeCollector RunRuntimeHost(ConformanceCase testCase, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions options, IReadOnlyList<CompiledProgram> programs, string pathPrefix, List<ConformanceMismatch> mismatches, out string? technical)
+    {
+        technical = null;
+        var collector = new RuntimeCollector(testCase.PublishSink);
         var builder = GameEventScriptHost.CreateBuilder()
             .WithRandom(CreateRandom(testCase.Random))
             .WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits))
-            .WithRuntimeObserver(collector)
-            .WithPublishSink(collector);
+            .WithRuntimeObserver(collector);
+        if (testCase.PublishSink != ConformancePublishSinkMode.Absent) builder.WithPublishSink(collector);
         if (environment.ExtensionRegistry is not null) builder.WithRegistry(environment.ExtensionRegistry);
         if (environment.ExternalTypeRegistry is not null) builder.WithExternalTypeRegistry(environment.ExternalTypeRegistry);
-        var host = builder.Build();
-        try
-        {
-            for (var index = 0; index < programs.Count; index++) host.Load(programs[index]);
-        }
-        catch (GameEventScriptDynamicLinkException exception)
-        {
-            return UnexpectedDiagnostics(testCase, "link", new[] { exception.Diagnostic });
-        }
+        var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms);
+        state.Configure();
 
-        for (var index = 0; index < testCase.NativeHandlers.Count; index++) RegisterNative(host, testCase.NativeHandlers[index]);
-
-        var mismatches = new List<ConformanceMismatch>();
-        host.RunToCompletion();
-        CompareChannel("/initialization", testCase.Expectation.Initialization.Local, collector.Local, testCase.Comparison, mismatches);
-        CompareChannel("/initialization/outbound", testCase.Expectation.Initialization.Outbound, collector.Outbound, testCase.Comparison, mismatches);
-        CompareObservations("/initialization", testCase.Expectation.Initialization.Observations, collector, mismatches);
+        state.Host.RunToCompletion();
+        CompareChannel(pathPrefix + "/initialization", testCase.Expectation.Initialization.Local, collector.Local, testCase.Comparison, mismatches);
+        CompareChannel(pathPrefix + "/initialization/outbound", testCase.Expectation.Initialization.Outbound, collector.Outbound, testCase.Comparison, mismatches);
+        CompareObservations(pathPrefix + "/initialization", testCase.Expectation.Initialization.Observations, collector, testCase.Comparison, mismatches);
 
         for (var stepIndex = 0; stepIndex < testCase.Steps.Count; stepIndex++)
         {
             var step = testCase.Steps[stepIndex];
             collector.Clear();
-            var accepted = host.Receive(ConformanceRuntimeValueCodec.DecodeMessage(step.Expectation.Input));
+            var accepted = state.Host.Receive(ConformanceRuntimeValueCodec.DecodeMessage(step.Expectation.Input));
             var paused = false;
             if (step.Pump == ConformancePumpMode.Completion)
             {
-                var execution = host.RunToCompletion();
+                var execution = state.Host.RunToCompletion();
                 paused = execution.State == GameEventScriptExecutionState.Paused;
             }
             else
@@ -163,25 +180,21 @@ public static class ConformanceRunner
                 GameEventScriptExecutionResult execution;
                 do
                 {
-                    if (++frames > options.Limits.MaxFramesPerStep)
-                        return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults, technical: "MaxFramesPerStep was exceeded.");
-                    execution = host.ExecuteFrame(checked((int)step.Budget!.Value));
+                    if (++frames > options.Limits.MaxFramesPerStep) { technical = "MaxFramesPerStep was exceeded."; return collector; }
+                    execution = state.Host.ExecuteFrame(checked((int)step.Budget!.Value));
                     if (execution.State == GameEventScriptExecutionState.Paused) paused = true;
                 }
                 while (execution.State == GameEventScriptExecutionState.Paused);
             }
 
-            var path = "/steps/" + step.Id;
+            var path = pathPrefix + "/steps/" + step.Id;
             if (accepted != step.Expectation.Accepted) AddMismatch(mismatches, path + "/accepted", step.Expectation.Accepted ? "true" : "false", accepted ? "true" : "false");
             if (step.Expectation.Paused is { } expectedPaused && expectedPaused != paused) AddMismatch(mismatches, path + "/paused", expectedPaused ? "true" : "false", paused ? "true" : "false");
             CompareChannel(path + "/local", step.Expectation.Local, collector.Local, testCase.Comparison, mismatches);
             CompareChannel(path + "/outbound", step.Expectation.Outbound, collector.Outbound, testCase.Comparison, mismatches);
-            CompareObservations(path, step.Expectation.Observations, collector, mismatches);
+            CompareObservations(path, step.Expectation.Observations, collector, testCase.Comparison, mismatches);
         }
-
-        if (mismatches.Count > 0) return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults);
-        if (!measurePerformance) return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults);
-        return MeasurePerformance(testCase, environment);
+        return collector;
     }
 
     private static ConformanceCaseResult MeasurePerformance(ConformanceCase testCase, ConformanceRunnerEnvironment environment)
@@ -362,6 +375,14 @@ public static class ConformanceRunner
 
     private static IReadOnlyList<GameEventScriptProgram> CompilePrograms(ConformanceCase testCase, ConformanceRunnerEnvironment environment)
     {
+        var entries = CompileProgramEntries(testCase, environment);
+        var programs = new GameEventScriptProgram[entries.Count];
+        for (var index = 0; index < programs.Length; index++) programs[index] = entries[index].Program;
+        return programs;
+    }
+
+    private static IReadOnlyList<CompiledProgram> CompileProgramEntries(ConformanceCase testCase, ConformanceRunnerEnvironment environment)
+    {
         var groups = new List<SourceGroup>();
         for (var sourceIndex = 0; sourceIndex < testCase.Sources.Count; sourceIndex++)
         {
@@ -371,7 +392,7 @@ public static class ConformanceRunner
             if (group is null) { group = new SourceGroup(source.ProgramId); groups.Add(group); }
             group.Sources.Add(source);
         }
-        var programs = new GameEventScriptProgram[groups.Count];
+        var programs = new CompiledProgram[groups.Count];
         for (var groupIndex = 0; groupIndex < groups.Count; groupIndex++)
         {
             var builder = GameEventScriptBuilder.Create();
@@ -382,7 +403,7 @@ public static class ConformanceRunner
                 builder.AddScript(source.Text, source.Name);
             }
             var program = builder.Compile(new GameEventScriptCompileOptions { DebugInfo = DebugInfo(testCase.Compile.DebugInfo) });
-            programs[groupIndex] = testCase.Compile.BinaryRoundTrip ? GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program)) : program;
+            programs[groupIndex] = new CompiledProgram(groups[groupIndex].Id, testCase.Compile.BinaryRoundTrip ? GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program)) : program);
         }
         return programs;
     }
@@ -394,21 +415,21 @@ public static class ConformanceRunner
         return programs[0];
     }
 
-    private static void RegisterNative(GameEventScriptHost host, ConformanceNativeHandler definition)
-        => host.Subscribe(definition.Message, definition.Parameters, new DeclarativeNativeHandler(definition), definition.Priority);
-
     private sealed class DeclarativeNativeHandler : IGameEventScriptNativeMessageHandler
     {
         private readonly ConformanceNativeHandler _definition;
+        private readonly HostScenarioState _state;
 
-        internal DeclarativeNativeHandler(ConformanceNativeHandler definition)
+        internal DeclarativeNativeHandler(ConformanceNativeHandler definition, HostScenarioState state)
         {
             _definition = definition;
+            _state = state;
         }
 
         public void Handle(GameEventScriptMessage message, GameEventScriptContext context)
         {
             if (_definition.Throws) throw new InvalidOperationException("Configured conformance native handler failure.");
+            for (var actionIndex = 0; actionIndex < _definition.Actions.Count; actionIndex++) _state.Apply(_definition.Actions[actionIndex]);
             for (var emitIndex = 0; emitIndex < _definition.Emits.Count; emitIndex++)
             {
                 var emit = _definition.Emits[emitIndex];
@@ -428,31 +449,136 @@ public static class ConformanceRunner
         }
     }
 
+    private sealed class HostScenarioState
+    {
+        private readonly IReadOnlyList<CompiledProgram> _programs;
+        private readonly IReadOnlyList<ConformanceNativeHandler> _definitions;
+        private readonly HashSet<string> _deferred;
+        private readonly Dictionary<string, GameEventScriptInstance> _instances = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, GameEventScriptSubscription> _subscriptions = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, DeclarativeNativeHandler> _handlers = new(StringComparer.Ordinal);
+
+        internal HostScenarioState(GameEventScriptHost host, IReadOnlyList<CompiledProgram> programs, IReadOnlyList<ConformanceNativeHandler> definitions, IReadOnlyList<string> deferred)
+        {
+            Host = host;
+            _programs = programs;
+            _definitions = definitions;
+            _deferred = new HashSet<string>(deferred, StringComparer.Ordinal);
+            for (var index = 0; index < definitions.Count; index++) _handlers.Add(definitions[index].Id, new DeclarativeNativeHandler(definitions[index], this));
+        }
+
+        internal GameEventScriptHost Host { get; }
+
+        internal void Configure()
+        {
+            for (var index = 0; index < _programs.Count; index++) if (!_deferred.Contains(_programs[index].Id)) Load(_programs[index].Id);
+            for (var index = 0; index < _definitions.Count; index++) if (_definitions[index].InitiallySubscribed) Subscribe(_definitions[index].Id);
+        }
+
+        internal void Apply(ConformanceNativeAction action)
+        {
+            switch (action.Kind)
+            {
+                case ConformanceNativeActionKind.LoadProgram: Load(action.Target); break;
+                case ConformanceNativeActionKind.DetachProgram:
+                    if (_instances.TryGetValue(action.Target, out var instance)) { instance.Detach(); _instances.Remove(action.Target); }
+                    break;
+                case ConformanceNativeActionKind.SubscribeHandler: Subscribe(action.Target); break;
+                case ConformanceNativeActionKind.UnsubscribeHandler:
+                    if (_subscriptions.TryGetValue(action.Target, out var subscription)) { subscription.Unsubscribe(); _subscriptions.Remove(action.Target); }
+                    break;
+            }
+        }
+
+        private void Load(string id)
+        {
+            if (_instances.ContainsKey(id)) return;
+            for (var index = 0; index < _programs.Count; index++)
+                if (string.Equals(_programs[index].Id, id, StringComparison.Ordinal)) { _instances.Add(id, Host.Load(_programs[index].Program)); return; }
+        }
+
+        private void Subscribe(string id)
+        {
+            if (_subscriptions.ContainsKey(id)) return;
+            for (var index = 0; index < _definitions.Count; index++)
+            {
+                var definition = _definitions[index];
+                if (!string.Equals(definition.Id, id, StringComparison.Ordinal)) continue;
+                _subscriptions.Add(id, Host.Subscribe(definition.Message, definition.Parameters, _handlers[id], definition.Priority));
+                return;
+            }
+        }
+    }
+
     private sealed class RuntimeCollector : IGameEventScriptRuntimeObserver, IGameEventScriptPublishSink
     {
+        private readonly ConformancePublishSinkMode _publishSink;
+        internal RuntimeCollector(ConformancePublishSinkMode publishSink) => _publishSink = publishSink;
         internal List<GameEventScriptMessage> Local { get; } = new();
         internal List<GameEventScriptMessage> Outbound { get; } = new();
         internal List<RuntimeLimitEvent> Limits { get; } = new();
         internal List<ConformanceResultDiagnostic> Diagnostics { get; } = new();
+        internal List<ObserverEvent> Trace { get; } = new();
         internal List<ConformanceRuntimeLimitResult> AllLimitResults { get; } = new();
         internal List<ConformanceResultDiagnostic> AllDiagnostics { get; } = new();
-        public bool Publish(GameEventScriptMessage message) { Outbound.Add(message); return true; }
-        public void MessageEmitted(GameEventScriptMessage message, bool accepted) => Local.Add(message);
-        public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result) => Local.Add(message);
-        public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId) { }
-        public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId) { }
+        public bool Publish(GameEventScriptMessage message)
+        {
+            Outbound.Add(message);
+            return _publishSink switch
+            {
+                ConformancePublishSinkMode.Accept => true,
+                ConformancePublishSinkMode.Reject => false,
+                ConformancePublishSinkMode.Throw => throw new InvalidOperationException("Configured conformance publish sink failure."),
+                _ => false
+            };
+        }
+        public void MessageEmitted(GameEventScriptMessage message, bool accepted)
+        {
+            Local.Add(message);
+            Trace.Add(ObserverEvent.Emit(message, accepted));
+        }
+        public void MessagePublished(GameEventScriptMessage message, GameEventScriptPublishResult result)
+        {
+            Local.Add(message);
+            Trace.Add(ObserverEvent.Publish(message, result));
+        }
+        public void DispatchStarted(GameEventScriptMessage message, string dispatchSignatureId)
+            => Trace.Add(ObserverEvent.Dispatch(ConformanceObserverEventKind.DispatchStarted, message, dispatchSignatureId));
+        public void DispatchCompleted(GameEventScriptMessage message, string dispatchSignatureId)
+            => Trace.Add(ObserverEvent.Dispatch(ConformanceObserverEventKind.DispatchCompleted, message, dispatchSignatureId));
         public void RuntimeLimitReached(string limitName, string detail, int limit)
         {
-            Limits.Add(new RuntimeLimitEvent(limitName, detail, limit));
+            var value = new RuntimeLimitEvent(limitName, detail, limit);
+            Limits.Add(value);
             AllLimitResults.Add(new ConformanceRuntimeLimitResult(limitName, detail, limit));
+            Trace.Add(ObserverEvent.ForRuntimeLimit(value));
         }
         public void RuntimeError(GameEventScriptDiagnostic diagnostic)
         {
             var result = ConvertDiagnostic(diagnostic);
             Diagnostics.Add(result);
             AllDiagnostics.Add(result);
+            Trace.Add(ObserverEvent.ForDiagnostic(result));
         }
-        internal void Clear() { Local.Clear(); Outbound.Clear(); Limits.Clear(); Diagnostics.Clear(); }
+        internal void Clear() { Local.Clear(); Outbound.Clear(); Limits.Clear(); Diagnostics.Clear(); Trace.Clear(); }
+    }
+
+    private sealed class ObserverEvent
+    {
+        private ObserverEvent(ConformanceObserverEventKind kind, GameEventScriptMessage? message, string? signatureId, bool accepted, GameEventScriptPublishResult publishResult, RuntimeLimitEvent? runtimeLimit, ConformanceResultDiagnostic? diagnostic)
+        { Kind = kind; Message = message; SignatureId = signatureId; Accepted = accepted; PublishResult = publishResult; RuntimeLimit = runtimeLimit; Diagnostic = diagnostic; }
+        internal ConformanceObserverEventKind Kind { get; }
+        internal GameEventScriptMessage? Message { get; }
+        internal string? SignatureId { get; }
+        internal bool Accepted { get; }
+        internal GameEventScriptPublishResult PublishResult { get; }
+        internal RuntimeLimitEvent? RuntimeLimit { get; }
+        internal ConformanceResultDiagnostic? Diagnostic { get; }
+        internal static ObserverEvent Emit(GameEventScriptMessage message, bool accepted) => new(ConformanceObserverEventKind.Emit, message, null, accepted, default, null, null);
+        internal static ObserverEvent Publish(GameEventScriptMessage message, GameEventScriptPublishResult result) => new(ConformanceObserverEventKind.Publish, message, null, false, result, null, null);
+        internal static ObserverEvent Dispatch(ConformanceObserverEventKind kind, GameEventScriptMessage message, string signatureId) => new(kind, message, signatureId, false, default, null, null);
+        internal static ObserverEvent ForRuntimeLimit(RuntimeLimitEvent value) => new(ConformanceObserverEventKind.RuntimeLimit, null, null, false, default, value, null);
+        internal static ObserverEvent ForDiagnostic(ConformanceResultDiagnostic value) => new(ConformanceObserverEventKind.Diagnostic, null, null, false, default, null, value);
     }
 
     private sealed class RuntimeLimitEvent
@@ -470,6 +596,13 @@ public static class ConformanceRunner
         internal List<ConformanceSourceInput> Sources { get; } = new();
     }
 
+    private sealed class CompiledProgram
+    {
+        internal CompiledProgram(string id, GameEventScriptProgram program) { Id = id; Program = program; }
+        internal string Id { get; }
+        internal GameEventScriptProgram Program { get; }
+    }
+
     private static void CompareChannel(string path, IReadOnlyList<ConformanceMessage> expected, IReadOnlyList<GameEventScriptMessage> actual, ConformanceComparisonOptions comparison, List<ConformanceMismatch> mismatches)
     {
         if (expected.Count != actual.Count) { AddMismatch(mismatches, path + "/length", expected.Count.ToString(CultureInfo.InvariantCulture), actual.Count.ToString(CultureInfo.InvariantCulture)); return; }
@@ -477,7 +610,7 @@ public static class ConformanceRunner
             if (!ConformanceRuntimeValueCodec.MessagesEqual(expected[index], actual[index], comparison)) AddMismatch(mismatches, path + "/" + index.ToString(CultureInfo.InvariantCulture), expected[index].Name, ConformanceRuntimeValueCodec.Describe(actual[index]));
     }
 
-    private static void CompareObservations(string path, ConformanceObservationExpectation expected, RuntimeCollector actual, List<ConformanceMismatch> mismatches)
+    private static void CompareObservations(string path, ConformanceObservationExpectation expected, RuntimeCollector actual, ConformanceComparisonOptions comparison, List<ConformanceMismatch> mismatches)
     {
         var nextLimit = 0;
         for (var index = 0; index < expected.IncludedRuntimeLimits.Count; index++)
@@ -502,7 +635,67 @@ public static class ConformanceRunner
         {
             if (!DiagnosticMatches(expected.Diagnostics[index], actual.Diagnostics[index])) AddMismatch(mismatches, path + "/diagnostics/" + index.ToString(CultureInfo.InvariantCulture), expected.Diagnostics[index].Code, actual.Diagnostics[index].Code);
         }
+        if (expected.TraceSpecified) CompareTrace(path + "/trace", expected.Trace, actual.Trace, comparison, mismatches);
     }
+
+    private static void CompareTrace(string path, IReadOnlyList<ConformanceObserverEventExpectation> expected, IReadOnlyList<ObserverEvent> actual, ConformanceComparisonOptions comparison, List<ConformanceMismatch> mismatches)
+    {
+        if (expected.Count != actual.Count)
+        {
+            AddMismatch(mismatches, path + "/length", expected.Count.ToString(CultureInfo.InvariantCulture), actual.Count.ToString(CultureInfo.InvariantCulture));
+            return;
+        }
+        for (var index = 0; index < expected.Count; index++)
+        {
+            var itemPath = path + "/" + index.ToString(CultureInfo.InvariantCulture);
+            var left = expected[index];
+            var right = actual[index];
+            if (left.Kind != right.Kind) { AddMismatch(mismatches, itemPath + "/event", ObserverEventName(left.Kind), ObserverEventName(right.Kind)); continue; }
+            switch (left.Kind)
+            {
+                case ConformanceObserverEventKind.Emit:
+                    if (!ConformanceRuntimeValueCodec.MessagesEqual(left.Message!, right.Message!, comparison)) AddMismatch(mismatches, itemPath + "/message", left.Message!.Name, ConformanceRuntimeValueCodec.Describe(right.Message!));
+                    if (left.Accepted != right.Accepted) AddMismatch(mismatches, itemPath + "/accepted", left.Accepted == true ? "true" : "false", right.Accepted ? "true" : "false");
+                    break;
+                case ConformanceObserverEventKind.Publish:
+                    if (!ConformanceRuntimeValueCodec.MessagesEqual(left.Message!, right.Message!, comparison)) AddMismatch(mismatches, itemPath + "/message", left.Message!.Name, ConformanceRuntimeValueCodec.Describe(right.Message!));
+                    ComparePublishResult(itemPath + "/result", left.PublishResult!, right.PublishResult, mismatches);
+                    break;
+                case ConformanceObserverEventKind.DispatchStarted:
+                case ConformanceObserverEventKind.DispatchCompleted:
+                    if (!ConformanceRuntimeValueCodec.MessagesEqual(left.Message!, right.Message!, comparison)) AddMismatch(mismatches, itemPath + "/message", left.Message!.Name, ConformanceRuntimeValueCodec.Describe(right.Message!));
+                    if (!string.Equals(left.SignatureId, right.SignatureId, StringComparison.Ordinal)) AddMismatch(mismatches, itemPath + "/signatureId", left.SignatureId, right.SignatureId);
+                    break;
+                case ConformanceObserverEventKind.RuntimeLimit:
+                    if (!LimitMatches(left.RuntimeLimit!, right.RuntimeLimit!)) AddMismatch(mismatches, itemPath + "/runtimeLimit", "matching observation", right.RuntimeLimit!.Name);
+                    break;
+                case ConformanceObserverEventKind.Diagnostic:
+                    if (!DiagnosticMatches(left.Diagnostic!, right.Diagnostic!)) AddMismatch(mismatches, itemPath + "/diagnostic", left.Diagnostic!.Code, right.Diagnostic!.Code);
+                    break;
+            }
+        }
+    }
+
+    private static void ComparePublishResult(string path, ConformancePublishResultExpectation expected, GameEventScriptPublishResult actual, List<ConformanceMismatch> mismatches)
+    {
+        CheckBoolean(path + "/localAccepted", expected.LocalAccepted, actual.LocalAccepted, mismatches);
+        CheckBoolean(path + "/outboundAttempted", expected.OutboundAttempted, actual.OutboundAttempted, mismatches);
+        CheckBoolean(path + "/outboundAccepted", expected.OutboundAccepted, actual.OutboundAccepted, mismatches);
+        CheckBoolean(path + "/anyAccepted", expected.AnyAccepted, actual.AnyAccepted, mismatches);
+    }
+
+    private static void CheckBoolean(string path, bool expected, bool actual, List<ConformanceMismatch> mismatches)
+    { if (expected != actual) AddMismatch(mismatches, path, expected ? "true" : "false", actual ? "true" : "false"); }
+
+    private static string ObserverEventName(ConformanceObserverEventKind kind) => kind switch
+    {
+        ConformanceObserverEventKind.Emit => "emit",
+        ConformanceObserverEventKind.Publish => "publish",
+        ConformanceObserverEventKind.DispatchStarted => "dispatchStarted",
+        ConformanceObserverEventKind.DispatchCompleted => "dispatchCompleted",
+        ConformanceObserverEventKind.RuntimeLimit => "runtimeLimit",
+        _ => "diagnostic"
+    };
 
     private static bool LimitMatches(ConformanceRuntimeLimitExpectation expected, RuntimeLimitEvent actual)
         => (expected.Name is null || string.Equals(expected.Name, actual.Name, StringComparison.Ordinal))

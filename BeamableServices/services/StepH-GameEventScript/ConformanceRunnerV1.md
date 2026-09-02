@@ -119,6 +119,9 @@ not an implementation exception escaping the runner.
   in that order where applicable.
 - Programs are compiled and loaded in the order defined by their source
   descriptors. Native handlers are registered in metadata order.
+- Programs listed in `deferredPrograms` are compiled during setup but are not
+  loaded until their fixed native `loadProgram` action executes. Native
+  lifecycle actions operate only on validated IDs and are idempotent.
 - The runner performs one initialization run-to-completion pump after setup and
   before the first step, even when no initialization output is expected.
 - A runtime step first calls `Receive`, records its acceptance, and then uses
@@ -127,7 +130,10 @@ not an implementation exception escaping the runner.
   records whether any result was paused.
 - Native handlers are atomic according to the portable Host contract.
 - Local messages, outbound sink messages, runtime-limit observations, and
-  runtime diagnostics are recorded in observer order and compared separately.
+  runtime diagnostics are recorded and compared separately. When an expectation
+  contains `trace`, every Emit, Publish, DispatchStarted, DispatchCompleted,
+  RuntimeLimitReached, and RuntimeError callback is additionally compared as one
+  exact ordered sequence.
 - Any unhandled implementation exception is caught at the runner boundary and
   becomes an `error`. Its platform text may be included as nonnormative technical
   detail but never determines a pass.
@@ -142,10 +148,13 @@ that measurement mode.
 
 ### Script API
 
-The runner compiles each program, optionally performs its requested `.gesb`
-roundtrip, creates one host with the declared runtime limits, links/loads all
-programs, registers native handlers, pumps initialization, and executes the
-ordered steps.
+For a source-backed case, the runner compiles each program once and optionally
+performs its requested `.gesb` roundtrip. A native-only case skips compilation
+and VM setup entirely. The runner creates the declared number of hosts with the declared runtime
+limits, links/loads non-deferred programs, registers initially enabled native
+handlers, pumps initialization, and executes the ordered steps. With
+`hostCount > 1`, the identical immutable Program objects and the same expected
+scenario are used independently for every Host; outputs are never merged.
 
 An absent expected channel means the format-defined empty default, not “do not
 compare”. Message name, tags, argument order, argument names, value kinds,

@@ -175,6 +175,64 @@ steps:
     }
 
     [TestMethod]
+    public void ParsesPublishSinkAndOrderedObserverTrace()
+    {
+        const string markdown = """
+---
+formatVersion: 1
+suiteId: observer.trace
+kind: scriptApi
+level: scenario
+---
+## Test: Rejected publish
+```yaml
+gesBlock: case
+id: rejected
+publishSink: reject
+```
+```ges
+on Start() { publish Remote() }
+on Remote() {}
+```
+### Steps
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Start | completion | |
+```yaml
+gesBlock: expect
+steps:
+  run:
+    trace:
+      - event: dispatchStarted
+        message: { name: Start }
+        signatureId: "Start()"
+      - event: publish
+        message: { name: Remote }
+        result:
+          localAccepted: true
+          outboundAttempted: true
+          outboundAccepted: false
+          anyAccepted: true
+```
+""";
+
+        var test = ConformanceMarkdownParser.Parse(markdown).Cases[0];
+        var trace = test.Steps[0].Expectation.Observations.Trace;
+
+        Assert.AreEqual(ConformancePublishSinkMode.Reject, test.PublishSink);
+        Assert.IsTrue(test.Steps[0].Expectation.Observations.TraceSpecified);
+        Assert.HasCount(2, trace);
+        Assert.AreEqual(ConformanceObserverEventKind.DispatchStarted, trace[0].Kind);
+        Assert.AreEqual("Start()", trace[0].SignatureId);
+        Assert.AreEqual(ConformanceObserverEventKind.Publish, trace[1].Kind);
+        var publishResult = trace[1].PublishResult ?? throw new AssertFailedException("Publish trace result is missing.");
+        Assert.IsTrue(publishResult.LocalAccepted);
+        Assert.IsTrue(publishResult.OutboundAttempted);
+        Assert.IsFalse(publishResult.OutboundAccepted);
+        Assert.IsTrue(publishResult.AnyAccepted);
+    }
+
+    [TestMethod]
     public void ParsesPerformanceReferenceRangesAndIndependentSources()
     {
         const string markdown = """

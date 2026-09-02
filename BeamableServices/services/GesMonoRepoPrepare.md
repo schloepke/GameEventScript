@@ -697,7 +697,38 @@ aus dem kanonischen Conformance-JSON-Writer.
 - Den vollständigen migrierten Corpus, API-Snapshot, Nicht-Performance-Suite und
   Performance-Referenz verifizieren, bevor neue fachliche Fälle hinzukommen.
 
-### 5.8 Conformance-Environment und fehlende Semantik ausbauen
+### 5.8 Conformance-Environment und fehlende Semantik ausbauen - DONE
+
+Das portable Environment und die noch fehlenden Host-Szenarien sind jetzt
+ausdrückbar und getestet:
+
+- `ConformanceEnvironmentV1.md` definiert den festen, kleinen Extension-Katalog
+  (`floor`, `max`, Navigation, `echo`, `truth`, `fail`, `vectorSum`) sowie den
+  manuellen External Type `aim`. Andere Ports benötigen dafür weder Reflection
+  noch beliebigen Testcode aus YAML.
+- Native Handler besitzen optionale stabile IDs, initialen Subscription-Status
+  und eine geschlossene, geordnete Aktionsmenge für Load, Detach, Subscribe und
+  Unsubscribe. Ein Script-API-Fall darf dadurch auch einen Native-only Host
+  beschreiben.
+- `publishSink` bildet `absent`, `accept`, `reject` und `throw` ab. Optionales
+  `trace` vergleicht die vollständige geordnete Observer-Sequenz; Publish verlangt
+  dabei alle vier Result-Felder.
+- `hostCount` lädt dieselben kompilierten immutable Programs in mehrere
+  unabhängige Hosts und vergleicht die komplette Erwartung pro Host. Deferred
+  Programs ermöglichen Load und Initialization während eines Dispatchs.
+- Neue portable Suites decken die vier Sinkpfade, Observerreihenfolge,
+  Native-only, Program-Reuse, VM-Reset, Lifecycle-Snapshots und per-Handler
+  zurückgesetzte Runtime-Limits ab. Die bereits migrierten Semantikfälle bleiben
+  die Grundlage für Values, Collections, Random, Metadaten, Queueing,
+  Pause/Resume und External Types.
+- `ConformanceCoverage.md` ordnet die portablen Verhaltensbereiche stabilen
+  Case-IDs zu und dokumentiert die bewusst C#-spezifisch bleibenden Tests.
+
+Ein indirekter zyklischer Callgraph kann nicht aus gültigem GES-Source erzeugt
+werden, weil Vorwärtsreferenzen vorher abgelehnt werden. Sein portabler
+Trust-Boundary-Fall wird deshalb korrekt unter 5.9 als gezielt ungültige
+`.gesb`-Fixture ergänzt; bis dahin bleibt der interne Builder-/Validator-Test
+bestehen.
 
 - Deklarative Extension- und External-Type-Kataloge sowie eine kleine Menge
   fest benannter portabler Testoperationen wie `echo`, `fail` und `floor`
@@ -753,6 +784,9 @@ noch die Implementierungsbesonderheit.
 ### 5.9 `.gesb`-Fixtures und Manifest ergänzen
 
 - Gültige und gezielt beschädigte `.gesb`-Dateien einchecken.
+- Eine ungültige Fixture mit indirektem zyklischem Callgraph und stabiler
+  portabler Case-ID aufnehmen; danach den temporären Hinweis in
+  `ConformanceCoverage.md` ersetzen.
 - Ein Manifest mit Fixture-ID, relativem Pfad, Source, Compileroptionen,
   ProgramVersion, SHA-256 und erwarteten Read-, Validation- und
   Runtime-Ergebnissen führen.

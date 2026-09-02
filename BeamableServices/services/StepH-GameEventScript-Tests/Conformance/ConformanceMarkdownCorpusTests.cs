@@ -39,12 +39,12 @@ public sealed class ConformanceMarkdownCorpusTests
     public void MigratedMarkdownCorpusHasStableUniqueIdentityAndExpectedCounts()
     {
         var documents = ConformanceCSharpTestEnvironment.Documents;
-        Assert.HasCount(34, documents);
-        Assert.AreEqual(961, documents.Sum(document => document.Cases.Count));
-        Assert.AreEqual(956, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
+        Assert.HasCount(36, documents);
+        Assert.AreEqual(972, documents.Sum(document => document.Cases.Count));
+        Assert.AreEqual(967, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind != ConformanceTestKind.BytecodeSnapshot)));
         Assert.AreEqual(5, documents.Sum(document => document.Cases.Count(testCase => testCase.Kind == ConformanceTestKind.BytecodeSnapshot)));
-        Assert.AreEqual(34, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
-        Assert.AreEqual(961, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(36, documents.Select(document => document.SuiteId).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(972, documents.SelectMany(document => document.Cases).Select(testCase => testCase.FullId).Distinct(StringComparer.Ordinal).Count());
     }
 
     [ClassCleanup]

@@ -138,6 +138,39 @@ opcodes: { contains: [ReturnVoid], excludes: [EmitMessage] }
     }
 
     [TestMethod]
+    public void NativeOnlyCaseDoesNotRequireCompilerVmOrPublishSink()
+    {
+        var document = Parse("scriptApi", """
+```yaml
+gesBlock: case
+id: case
+nativeHandlers:
+  - id: ping
+    message: Ping
+    emit:
+      - name: Pong
+        args: []
+```
+### Steps
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| run | Ping | completion | |
+```yaml
+gesBlock: expect
+steps:
+  run:
+    local:
+      - name: Pong
+```
+""", includeDefaultCase: false);
+
+        var testCase = document.Cases[0];
+        CollectionAssert.AreEquivalent(new[] { "host", "native-handlers", "observer" }, testCase.Requires.Core.ToArray());
+        var result = ConformanceRunner.RunCase(document, "case", Environment(["host", "native-handlers", "observer"]));
+        Assert.AreEqual(ConformanceCaseStatus.Passed, result.Status);
+    }
+
+    [TestMethod]
     public void AppliesCapabilityStatusAggregateOrderingAndResultSink()
     {
         var document = Parse("bytecode", """

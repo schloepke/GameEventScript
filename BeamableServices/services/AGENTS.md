@@ -72,15 +72,41 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Conformance Environment and Host Semantics
+
+- `ConformanceEnvironmentV1.md` defines the fixed portable extension operations
+  and manual `aim` external type used by language runners. Test documents cannot
+  embed arbitrary native code or reflection targets.
+- Script cases support `publishSink: absent|accept|reject|throw` and optional
+  exact observer traces covering Emit, Publish with the full four-field result,
+  Dispatch start/end, runtime limits, and diagnostics.
+- Declarative native handlers have stable IDs, initial subscription state and a
+  closed set of Load/Detach/Subscribe/Unsubscribe actions. Deferred programs,
+  native-only Hosts and `hostCount` scenarios cover lifecycle snapshots and
+  reuse of one immutable Program across independent Hosts.
+- `ConformanceCoverage.md` maps portable semantics to stable Markdown case IDs.
+  Indirect cyclic bytecode remains an internal validator test until point 5.9
+  adds the deliberately invalid `.gesb` fixture that can represent it.
+
+Verification after this change:
+
+```text
+1140/1140 non-performance tests passed
+5/5 explicit Markdown performance tests passed
+```
+
 ### Markdown-only Conformance Corpus and C# Adapters
 
 - The former 34-suite, 956-case JSON corpus was deterministically migrated to
   `StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Migrated` and the JSON
-  source fixtures were removed after old/new execution parity passed.
+  source fixtures were removed after old/new execution parity passed. The corpus
+  now contains 36 suites and 967 semantic cases after portable Host coverage was
+  added.
 - Every migrated case has an explicit stable ID, kind, and atomic/scenario
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
-- The active Markdown adapter exposes 961 independent cases plus a whole-corpus
+- The active Markdown adapter exposes 972 independent cases, including five
+  bytecode snapshots, plus a whole-corpus
   identity test. Their results are collected into canonical
   `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
   second corpus execution. Legacy JSON models, codecs, discovery, tests, the

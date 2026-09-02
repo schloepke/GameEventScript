@@ -229,6 +229,9 @@ discriminator is `gesBlock: case`. It supports:
 | `comparison` | mapping | no | value comparison override |
 | `sources` | source descriptor sequence | conditional | names and program grouping |
 | `random` | mapping | no | deterministic random configuration |
+| `publishSink` | `accept`, `absent`, `reject`, or `throw` | no | configured publish-sink behavior; default `accept` |
+| `hostCount` | positive integer | no | run the same compiled Programs and expectations independently in this many Hosts; default `1` |
+| `deferredPrograms` | ID sequence | no | source-program groups loaded only by a native host action |
 | `nativeHandlers` | sequence | no | declarative portable native handlers |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `performance` | mapping | `performance` only | workload configuration |
@@ -309,23 +312,51 @@ resource-resolver contract defined separately by their test kind.
 
 ### Declarative native handlers
 
-The initial V1 shape preserves current portable host-dispatch cases:
+The V1 shape preserves portable host-dispatch cases and supports a closed set of
+host-lifecycle actions:
 
 ```yaml
 nativeHandlers:
-  - message: Notify
+  - id: notify-handler
+    message: Notify
     parameters: [playerId, count]
     priority: 0
+    initiallySubscribed: true
     throw: false
+    actions:
+      - loadProgram: deferred-rules
+      - subscribeHandler: late-handler
     emit:
       - name: ExternalSeen
         forwardArguments: true
 ```
 
-`message` is required. `parameters` defaults to an empty ordered sequence,
-`priority` to zero, `throw` to false, and `emit` to empty. An emit entry requires
-`name` and exactly one of `forwardArguments: true` or an ordered `args` sequence.
-The set is intentionally declarative; arbitrary native code is not test data.
+`message` is required. `id` defaults to the stable metadata-order name
+`native-0001`, `native-0002`, and so on. `parameters` defaults to an empty
+ordered sequence, `priority` to zero, `initiallySubscribed` to true, `throw` to
+false, and `actions`/`emit` to empty. An emit entry requires `name` and exactly
+one of `forwardArguments: true` or an ordered `args` sequence.
+
+Each action mapping contains exactly one of `loadProgram`, `detachProgram`,
+`subscribeHandler`, or `unsubscribeHandler`. Its value is an existing program
+or native-handler ID of the appropriate kind. Only a program listed in
+`deferredPrograms` may be a `loadProgram` target. Actions execute in metadata
+order before emits. Repeated load/subscribe and detach/unsubscribe operations
+are idempotent no-ops after the first state change. The set is intentionally
+closed and declarative; arbitrary native code is not test data.
+
+A `scriptApi` case with at least one native handler may have no GES source and
+thereby defines a native-only Host. `hostCount` is bounded by the parser's
+`MaxHostsPerTest`; every Host loads the same immutable compiled Program objects,
+but owns independent Context, queue, random generator and VM state. Expectations
+are compared independently for every Host. This option is intended for Program
+reuse and isolation tests, not performance measurement.
+
+`publishSink` configures the fixed test sink. `absent` installs no sink;
+`accept` records the call and returns true; `reject` records the call and returns
+false; `throw` records the call and throws a platform exception which the Host
+must convert to the portable `runtime.publishSinkFailure` diagnostic. Outbound
+messages record calls handed to the sink, regardless of acceptance.
 
 ## Ordered steps
 
@@ -379,6 +410,10 @@ steps:
       include: []
       exclude: []
     diagnostics: []
+    trace:
+      - event: publish
+        message: { name: Remote }
+        result: { localAccepted: true, outboundAttempted: true, outboundAccepted: false, anyAccepted: true }
 ```
 
 `input.tags` and `input.args` default to empty. `accepted` defaults to true;
@@ -387,8 +422,7 @@ steps:
 must name a table row, and every table row may have at most one expectation
 entry. Message lists and argument lists are order-sensitive. `local` observes
 both Emit and the local half of Publish; `outbound` observes messages handed to
-the configured publish sink in call order. Sink outcome expectations are a
-separate host-observation concern.
+the configured publish sink in call order.
 
 Each `runtimeLimits.include` or `.exclude` entry may constrain `name`,
 `detailContains`, and `limit`; at least one field is required. The explicit
@@ -399,8 +433,45 @@ below, except that `phase` and `code` remain required. Entries and observations
 are compared in order; exclusions must not occur anywhere in the observation
 sequence.
 
+`trace` is optional. When absent, observer callback order is not compared. When
+present, including as `[]`, it is an exact ordered expectation over all observer
+callbacks in that channel interval. Supported event shapes are:
+
+```yaml
+trace:
+  - event: emit
+    message: { name: Local }
+    accepted: true
+  - event: publish
+    message: { name: Remote }
+    result:
+      localAccepted: true
+      outboundAttempted: true
+      outboundAccepted: false
+      anyAccepted: true
+  - event: dispatchStarted
+    message: { name: Start }
+    signatureId: "Start()"
+  - event: dispatchCompleted
+    message: { name: Start }
+    signatureId: "Start()"
+  - event: runtimeLimit
+    runtimeLimit: { name: MaxLoopIterations, limit: 10 }
+  - event: diagnostic
+    diagnostic: { phase: runtime, code: runtime.publishSinkFailure }
+```
+
+Emit requires the complete `accepted` flag. Publish requires all four fields of
+`GameEventScriptPublishResult`; `outboundAccepted` implies
+`outboundAttempted`, and `anyAccepted` must equal `localAccepted OR
+outboundAccepted`. Dispatch events require the exact dispatched message and
+signature ID. Runtime-limit and diagnostic constraints use the same shapes as
+their standalone expectation lists. Message/value comparison uses the case's
+ordinary Binary64 comparison mode.
+
 An optional top-level `initialization` expectation has `local`, `outbound`,
-`runtimeLimits`, and `diagnostics` with the same meanings. It describes the
+`runtimeLimits`, `diagnostics`, and optional exact `trace` with the same
+meanings. It describes the
 single run-to-completion pump performed after all programs and native handlers
 are installed and before the first step. An absent `initialization` mapping is
 equivalent to all four empty expectations.
@@ -457,9 +528,15 @@ does not infer capabilities by parsing GES source.
 
 ### `scriptApi`
 
-Requires `compiler`, `host`, `vm`, `observer`, and `publish-sink`; requires at
-least one source and either a Steps table or an explicit `initialization`
-expectation. It uses the common step expectation shape above.
+The source-backed form requires `compiler`, `host`, `vm`, `observer`, and
+`publish-sink`; it requires at least one source and either a Steps table or an
+explicit `initialization` expectation. It uses the common step expectation
+shape above.
+
+The native-only form with no source instead requires only `host`, `observer`
+and the implicitly added `native-handlers` capability. It does not require a
+compiler, VM or publish sink because the closed V1 native actions can only emit
+locally. It still requires Steps or an explicit initialization expectation.
 
 ### `compileError` and `loadError`
 

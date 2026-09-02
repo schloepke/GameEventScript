@@ -35,6 +35,32 @@ public enum ConformanceBinary64ComparisonMode
     Ulp = 1
 }
 
+public enum ConformancePublishSinkMode
+{
+    Accept = 0,
+    Absent = 1,
+    Reject = 2,
+    Throw = 3
+}
+
+public enum ConformanceObserverEventKind
+{
+    Emit = 0,
+    Publish = 1,
+    DispatchStarted = 2,
+    DispatchCompleted = 3,
+    RuntimeLimit = 4,
+    Diagnostic = 5
+}
+
+public enum ConformanceNativeActionKind
+{
+    LoadProgram = 0,
+    DetachProgram = 1,
+    SubscribeHandler = 2,
+    UnsubscribeHandler = 3
+}
+
 public sealed class ConformanceSourceDocument
 {
     internal ConformanceSourceDocument(byte[] utf8Bytes, bool hasByteOrderMark, string lineEnding)
@@ -96,6 +122,9 @@ public sealed class ConformanceCase
         ConformanceCompileOptions compile,
         ConformanceRuntimeLimits runtimeLimits,
         ConformanceComparisonOptions comparison,
+        ConformancePublishSinkMode publishSink,
+        uint hostCount,
+        IReadOnlyList<string> deferredPrograms,
         ConformanceRandomConfiguration? random,
         IReadOnlyList<ConformanceSourceInput> sources,
         IReadOnlyList<ConformanceNativeHandler> nativeHandlers,
@@ -123,6 +152,9 @@ public sealed class ConformanceCase
         Compile = compile;
         RuntimeLimits = runtimeLimits;
         Comparison = comparison;
+        PublishSink = publishSink;
+        HostCount = hostCount;
+        DeferredPrograms = ConformanceDocument.Copy(deferredPrograms);
         Random = random;
         Sources = ConformanceDocument.Copy(sources);
         NativeHandlers = ConformanceDocument.Copy(nativeHandlers);
@@ -151,6 +183,9 @@ public sealed class ConformanceCase
     public ConformanceCompileOptions Compile { get; }
     public ConformanceRuntimeLimits RuntimeLimits { get; }
     public ConformanceComparisonOptions Comparison { get; }
+    public ConformancePublishSinkMode PublishSink { get; }
+    public uint HostCount { get; }
+    public IReadOnlyList<string> DeferredPrograms { get; }
     public ConformanceRandomConfiguration? Random { get; }
     public IReadOnlyList<ConformanceSourceInput> Sources { get; }
     public IReadOnlyList<ConformanceNativeHandler> NativeHandlers { get; }
@@ -243,20 +278,38 @@ public sealed class ConformanceSourceInput
 
 public sealed class ConformanceNativeHandler
 {
-    internal ConformanceNativeHandler(string message, IReadOnlyList<string> parameters, int priority, bool throws, IReadOnlyList<ConformanceNativeEmit> emits)
+    internal ConformanceNativeHandler(string id, string message, IReadOnlyList<string> parameters, int priority, bool initiallySubscribed, bool throws, IReadOnlyList<ConformanceNativeAction> actions, IReadOnlyList<ConformanceNativeEmit> emits)
     {
+        Id = id;
         Message = message;
         Parameters = ConformanceDocument.Copy(parameters);
         Priority = priority;
+        InitiallySubscribed = initiallySubscribed;
         Throws = throws;
+        Actions = ConformanceDocument.Copy(actions);
         Emits = ConformanceDocument.Copy(emits);
     }
 
+    public string Id { get; }
     public string Message { get; }
     public IReadOnlyList<string> Parameters { get; }
     public int Priority { get; }
+    public bool InitiallySubscribed { get; }
     public bool Throws { get; }
+    public IReadOnlyList<ConformanceNativeAction> Actions { get; }
     public IReadOnlyList<ConformanceNativeEmit> Emits { get; }
+}
+
+public sealed class ConformanceNativeAction
+{
+    internal ConformanceNativeAction(ConformanceNativeActionKind kind, string target)
+    {
+        Kind = kind;
+        Target = target;
+    }
+
+    public ConformanceNativeActionKind Kind { get; }
+    public string Target { get; }
 }
 
 public sealed class ConformanceNativeEmit
@@ -315,16 +368,65 @@ public sealed class ConformanceStepExpectation
 
 public sealed class ConformanceObservationExpectation
 {
-    internal ConformanceObservationExpectation(IReadOnlyList<ConformanceRuntimeLimitExpectation> included, IReadOnlyList<ConformanceRuntimeLimitExpectation> excluded, IReadOnlyList<ConformanceExpectedDiagnostic> diagnostics)
+    internal ConformanceObservationExpectation(IReadOnlyList<ConformanceRuntimeLimitExpectation> included, IReadOnlyList<ConformanceRuntimeLimitExpectation> excluded, IReadOnlyList<ConformanceExpectedDiagnostic> diagnostics, bool traceSpecified, IReadOnlyList<ConformanceObserverEventExpectation> trace)
     {
         IncludedRuntimeLimits = ConformanceDocument.Copy(included);
         ExcludedRuntimeLimits = ConformanceDocument.Copy(excluded);
         Diagnostics = ConformanceDocument.Copy(diagnostics);
+        TraceSpecified = traceSpecified;
+        Trace = ConformanceDocument.Copy(trace);
     }
 
     public IReadOnlyList<ConformanceRuntimeLimitExpectation> IncludedRuntimeLimits { get; }
     public IReadOnlyList<ConformanceRuntimeLimitExpectation> ExcludedRuntimeLimits { get; }
     public IReadOnlyList<ConformanceExpectedDiagnostic> Diagnostics { get; }
+    public bool TraceSpecified { get; }
+    public IReadOnlyList<ConformanceObserverEventExpectation> Trace { get; }
+}
+
+public sealed class ConformanceObserverEventExpectation
+{
+    internal ConformanceObserverEventExpectation(
+        ConformanceObserverEventKind kind,
+        ConformanceMessage? message,
+        string? signatureId,
+        bool? accepted,
+        ConformancePublishResultExpectation? publishResult,
+        ConformanceRuntimeLimitExpectation? runtimeLimit,
+        ConformanceExpectedDiagnostic? diagnostic)
+    {
+        Kind = kind;
+        Message = message;
+        SignatureId = signatureId;
+        Accepted = accepted;
+        PublishResult = publishResult;
+        RuntimeLimit = runtimeLimit;
+        Diagnostic = diagnostic;
+    }
+
+    public ConformanceObserverEventKind Kind { get; }
+    public ConformanceMessage? Message { get; }
+    public string? SignatureId { get; }
+    public bool? Accepted { get; }
+    public ConformancePublishResultExpectation? PublishResult { get; }
+    public ConformanceRuntimeLimitExpectation? RuntimeLimit { get; }
+    public ConformanceExpectedDiagnostic? Diagnostic { get; }
+}
+
+public sealed class ConformancePublishResultExpectation
+{
+    internal ConformancePublishResultExpectation(bool localAccepted, bool outboundAttempted, bool outboundAccepted, bool anyAccepted)
+    {
+        LocalAccepted = localAccepted;
+        OutboundAttempted = outboundAttempted;
+        OutboundAccepted = outboundAccepted;
+        AnyAccepted = anyAccepted;
+    }
+
+    public bool LocalAccepted { get; }
+    public bool OutboundAttempted { get; }
+    public bool OutboundAccepted { get; }
+    public bool AnyAccepted { get; }
 }
 
 public sealed class ConformanceRuntimeLimitExpectation

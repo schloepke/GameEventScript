@@ -31,8 +31,8 @@ as `case` or `expect`; custom trailing fence info strings are intentionally not
 accepted.
 
 The complete portable corpus lives under
-`Conformance/SpecsMarkdown/Migrated`. Its 34 suites contain 956 migrated
-semantic cases and five independent performance-bytecode snapshots. Every case
+`Conformance/SpecsMarkdown/Migrated`. Its 36 suites contain 967 semantic cases
+and five independent performance-bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. The former JSON source fixtures were removed after the
 one-time parity run passed through both execution paths. New conformance cases
@@ -50,3 +50,10 @@ The C# Markdown adapter collects the independently executed case results and
 writes `ConformanceResults.json` plus `ConformanceReport.md` after a complete
 corpus run. Report generation does not execute the corpus a second time; the
 separate identity test only validates suite and case counts and stable IDs.
+
+`ConformanceEnvironmentV1.md` defines the fixed extension and external-type
+catalog that each language runner implements. `ConformanceCoverage.md` maps
+portable behavior to stable case IDs and gates the reduction of
+language-specific tests. Script cases can configure all four publish-sink
+modes, exact observer traces, native-only Hosts, repeated independent Hosts and
+a closed set of ID-based lifecycle actions.

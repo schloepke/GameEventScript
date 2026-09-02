@@ -982,6 +982,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceCase
   property StepH.GameEventScript.Conformance.ConformanceExpectation Expectation { get }
   property StepH.GameEventScript.Conformance.ConformanceMessageApiCase MessageApi { get }
   property StepH.GameEventScript.Conformance.ConformancePerformanceWorkload Performance { get }
+  property StepH.GameEventScript.Conformance.ConformancePublishSinkMode PublishSink { get }
   property StepH.GameEventScript.Conformance.ConformanceRandomConfiguration Random { get }
   property StepH.GameEventScript.Conformance.ConformanceRuntimeLimits RuntimeLimits { get }
   property StepH.GameEventScript.Conformance.ConformanceSourceRange MetadataBlockRange { get }
@@ -996,12 +997,14 @@ sealed class StepH.GameEventScript.Conformance.ConformanceCase
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceSourceInput> Sources { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceStep> Steps { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Categories { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> DeferredPrograms { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
   property System.String ExpectedAssembler { get }
   property System.String FullId { get }
   property System.String Id { get }
   property System.String SuiteId { get }
   property System.String Title { get }
+  property System.UInt32 HostCount { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceCaseResult
   property StepH.GameEventScript.Conformance.ConformanceCaseStatus Status { get }
   property StepH.GameEventScript.Conformance.ConformancePerformanceResult Performance { get }
@@ -1134,20 +1137,48 @@ sealed class StepH.GameEventScript.Conformance.ConformanceMismatch
   property System.String Code { get }
   property System.String Expected { get }
   property System.String Path { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceNativeAction
+  property StepH.GameEventScript.Conformance.ConformanceNativeActionKind Kind { get }
+  property System.String Target { get }
+enum StepH.GameEventScript.Conformance.ConformanceNativeActionKind
+  enum-field LoadProgram = 0
+  enum-field DetachProgram = 1
+  enum-field SubscribeHandler = 2
+  enum-field UnsubscribeHandler = 3
 sealed class StepH.GameEventScript.Conformance.ConformanceNativeEmit
   property System.Boolean ForwardArguments { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceArgument> Arguments { get }
   property System.String Name { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceNativeHandler
+  property System.Boolean InitiallySubscribed { get }
   property System.Boolean Throws { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceNativeAction> Actions { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceNativeEmit> Emits { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.Int32 Priority { get }
+  property System.String Id { get }
   property System.String Message { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceObservationExpectation
+  property System.Boolean TraceSpecified { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic> Diagnostics { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceObserverEventExpectation> Trace { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation> ExcludedRuntimeLimits { get }
   property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation> IncludedRuntimeLimits { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceObserverEventExpectation
+  property StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic Diagnostic { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessage Message { get }
+  property StepH.GameEventScript.Conformance.ConformanceObserverEventKind Kind { get }
+  property StepH.GameEventScript.Conformance.ConformancePublishResultExpectation PublishResult { get }
+  property StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation RuntimeLimit { get }
+  property System.Boolean? Accepted { get }
+  property System.String SignatureId { get }
+enum StepH.GameEventScript.Conformance.ConformanceObserverEventKind
+  enum-field Emit = 0
+  enum-field Publish = 1
+  enum-field DispatchStarted = 2
+  enum-field DispatchCompleted = 3
+  enum-field RuntimeLimit = 4
+  enum-field Diagnostic = 5
 sealed class StepH.GameEventScript.Conformance.ConformanceOpcodeExpectation
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.UInt64> Counts { get }
   property System.Collections.Generic.IReadOnlyDictionary<System.String, System.UInt64> MinimumCounts { get }
@@ -1159,6 +1190,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceParserLimits
   ctor ConformanceParserLimits()
   property StepH.GameEventScript.Conformance.ConformanceParserLimits Default { get }
   property System.Int32 MaxDocumentBytes { get set }
+  property System.Int32 MaxHostsPerTest { get set }
   property System.Int32 MaxScalarBytes { get set }
   property System.Int32 MaxSourceBytesPerTest { get set }
   property System.Int32 MaxSourcesPerTest { get set }
@@ -1199,6 +1231,16 @@ sealed class StepH.GameEventScript.Conformance.ConformancePerformanceWorkload
 sealed class StepH.GameEventScript.Conformance.ConformanceProgramResourceExpectation
   property System.UInt32? RequiredCallStackDepth { get }
   property System.UInt32? RequiredRegisterCount { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePublishResultExpectation
+  property System.Boolean AnyAccepted { get }
+  property System.Boolean LocalAccepted { get }
+  property System.Boolean OutboundAccepted { get }
+  property System.Boolean OutboundAttempted { get }
+enum StepH.GameEventScript.Conformance.ConformancePublishSinkMode
+  enum-field Accept = 0
+  enum-field Absent = 1
+  enum-field Reject = 2
+  enum-field Throw = 3
 enum StepH.GameEventScript.Conformance.ConformancePumpMode
   enum-field Completion = 0
   enum-field Frames = 1

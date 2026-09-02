@@ -37,3 +37,11 @@ has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. The former JSON source fixtures were removed after the
 one-time parity run passed through both execution paths. New conformance cases
 are authored only as Markdown.
+
+The C# adapter also discovers the five performance cases independently for an
+explicit, non-parallel measurement run. It writes the canonical result JSON, a
+human-readable report, and a suite-local received Markdown approval candidate
+under `Conformance/SpecsMarkdown/Received`; bytecode-snapshot cases produce a
+separate received candidate there as well. These generated files never replace
+the normative source suite automatically. The former combined text performance
+report and combined GESA dump no longer exist.

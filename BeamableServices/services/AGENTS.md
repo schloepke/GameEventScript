@@ -72,7 +72,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
-### Complete JSON-to-Markdown Conformance Migration
+### Markdown-only Conformance Corpus and C# Adapters
 
 - The former 34-suite, 956-case JSON corpus was deterministically migrated to
   `StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Migrated` and the JSON
@@ -81,8 +81,14 @@ The project has a portable Game Event Script host/VM architecture with a compact
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
 - The active Markdown adapter exposes 961 independent cases plus a whole-corpus
-  identity/execution test. Legacy JSON test classes and the temporary migrator
-  are ignored pending their removal in work item 5.7.
+  identity/execution test. Legacy JSON models, codecs, discovery, tests, the
+  temporary migrator, and the superseded pilot have been removed.
+- Five explicit C# performance tests measure the five Markdown performance
+  cases independently. They emit canonical JSON, a Markdown report, and a
+  received Markdown approval candidate. Bytecode snapshots likewise emit a
+  received candidate without overwriting the normative suite.
+- The former combined performance text report and GESA dump files have been
+  removed; all baselines and snapshots now live in their owning H2 cases.
 - Markdown V1 now explicitly represents the legacy negative message argument
   mapping, the `any: true` runtime-limit wildcard, and embedded U+FEFF source
   content. Runtime parity also fixed map, mixed-range, and non-finite-float
@@ -93,28 +99,8 @@ Verification at the migration boundary:
 ```text
 956/956 legacy-to-Markdown parity cases passed
 962/962 active Markdown corpus tests passed
-1127/1127 active non-performance tests passed (37 legacy tests intentionally ignored until 5.7)
-1/1 zero-allocation hot-path test passed
-```
-
-### Representative Conformance Markdown Migration (Superseded Pilot)
-
-- Added one executable Markdown pilot for every portable conformance kind:
-  `scriptApi`, `compileError`, `loadError`, `messageApi`, `compileMetadata`,
-  `bytecode`, `performance`, and `bytecodeSnapshot`.
-- Each H2 case is independently discovered and run. Seven cases are paired
-  with their existing JSON source for normalized-model and legacy-execution
-  parity; the snapshot is paired with the existing performance dump.
-- The complete document also produces JSON/Markdown reports and an unchanged,
-  byte-identical received file when references already match.
-- The pilot is retained only until its JSON-dependent harness is removed in
-  step 5.7; the complete Markdown corpus above is now authoritative.
-
-Verification after this change:
-
-```text
-9/9 representative Markdown pilot tests passed
-1122/1122 non-performance tests passed
+1127/1127 non-performance tests passed
+5/5 Markdown performance reference tests passed
 1/1 zero-allocation hot-path test passed
 ```
 
@@ -513,8 +499,7 @@ and retain a required pointer here.
 
 - Prioritize the language-neutral contracts, metadata, and portable Markdown
   conformance needed for the existing Swift/Kotlin/C++/C# monorepo before deeper
-  optimizer work. Remove the now-inactive one-time JSON migration infrastructure
-  in work item 5.7.
+  optimizer work.
 
 ### Deferred language and state features
 

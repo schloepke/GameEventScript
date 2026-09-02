@@ -553,7 +553,7 @@ Performanceupdates mit BOM/CRLF, GESA-Updates sowie stale Reports ab.
 
 ### 5.5 Repräsentative vertikale Markdown-Migration durchführen - DONE
 
-Der vertikale Pilot liegt als echte Markdown-Suite unter
+Der inzwischen entfernte vertikale Pilot lag als echte Markdown-Suite unter
 `StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Pilot/representative.md`.
 Er übernimmt aus dem bisherigen JSON-Bestand je einen `scriptApi`-,
 `compileError`-, `loadError`-, `messageApi`-, `compileMetadata`-, `bytecode`-
@@ -622,8 +622,8 @@ einen eigenen, aus dem bisherigen kombinierten Referenzdump extrahierten
 `bytecodeSnapshot`. Der aktive C#-Adapter entdeckt 961 H2-Fälle einzeln; ein
 zusätzlicher Corpus-Test prüft Suite-/Case-Eindeutigkeit und führt den gesamten
 Corpus aus. Nach bestätigter Parität wurden alle 34 JSON-Quelldateien entfernt.
-Der nun tote Einmal-Migrator, die ignorierten Legacy-Testklassen und die alten
-kombinierten Referenzdateien werden geschlossen in Schritt 5.7 entfernt.
+Der danach tote Einmal-Migrator, die ignorierten Legacy-Testklassen und die alten
+kombinierten Referenzdateien wurden geschlossen in Schritt 5.7 entfernt.
 
 - Einen internen einmaligen JSON-zu-Markdown-Migrator auf Basis der bestehenden
   C#-Modelle bauen; er ist kein öffentliches API und keine dauerhafte
@@ -647,7 +647,34 @@ kombinierten Referenzdateien werden geschlossen in Schritt 5.7 entfernt.
 - Nach bestätigter Parität die jeweilige JSON-Quelldatei entfernen; JSON und
   Markdown werden nicht dauerhaft parallel gepflegt.
 
-### 5.7 Alte JSON-Conformance-Infrastruktur entfernen
+### 5.7 Alte JSON-Conformance-Infrastruktur entfernen - DONE
+
+Die ehemaligen JSON-Modelle, Discovery, Value-Codecs, Runner, dateispezifischen
+MSTest-Klassen, der Einmal-Migrator und der superseded Pilot sind entfernt. Im
+Testprojekt bleibt nur noch das normalisierte portable Markdownmodell mit einer
+generischen Discovery über alle 34 Suites und 961 einzeln adressierbaren H2-Cases.
+Die weiterhin benötigten C#-Extension- und External-Type-Bindings liegen nun in
+einer reinen C#-Testumgebung und haben keine Abhängigkeit mehr von einem alten
+Autorenformat.
+
+Die fünf Performancefälle werden zusätzlich durch einen expliziten,
+nicht-parallelen C#-Performanceadapter einzeln gemessen. Er verwendet die im
+jeweiligen Markdownfall enthaltenen Profilgrenzen und erzeugt unter
+`Conformance/SpecsMarkdown/Received/performance` einen kanonischen JSON-Report,
+einen Markdown-Gesamtbericht und eine suite-benannte `.received.md` mit den gemessenen
+Approval-Werten. Die fünf separaten Bytecode-Snapshot-Cases erzeugen analog eine
+aggregierte Approval-Datei unter `Received/snapshots`. Kein Adapter überschreibt
+die normative Suite automatisch.
+
+Der C#-Adapter nimmt pro Compile-, Load- und Run-Metrik drei voneinander
+unabhängige Samples und vergleicht den schnellsten vollständigen Lauf. So bleiben
+die kleinen Zeitmessungen gegenüber Scheduler-Ausreißern stabil; Allokationen
+werden weiterhin aus genau diesem vollständigen Sample berichtet.
+
+Die vier kombinierten `PerformanceReport.*.txt`- und
+`PerformanceBinaryDump.*.gesa`-Dateien sind entfernt. Testdefinitionen stammen
+damit ausschließlich aus Markdown; maschinenlesbare Resultate ausschließlich
+aus dem kanonischen Conformance-JSON-Writer.
 
 - Nach vollständiger Migration JSON-Modelle, JSON-Discovery und den temporären
   Importer/Migrator entfernen.

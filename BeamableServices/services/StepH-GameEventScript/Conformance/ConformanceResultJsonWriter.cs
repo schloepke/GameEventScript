@@ -191,6 +191,7 @@ public static class ConformanceResultJsonWriter
         ConformanceTestKind.BytecodeSnapshot => "bytecodeSnapshot",
         ConformanceTestKind.ValueApi => "valueApi",
         ConformanceTestKind.ExternalTypeApi => "externalTypeApi",
+        ConformanceTestKind.ProgramBinary => "programBinary",
         _ => "unknown"
     };
 

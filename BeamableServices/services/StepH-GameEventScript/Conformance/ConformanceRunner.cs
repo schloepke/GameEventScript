@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Security.Cryptography;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
 
@@ -82,7 +83,7 @@ public static class ConformanceRunner
 
     private static ConformanceCaseResult RunSelectedCase(ConformanceCase testCase, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions options)
     {
-        if (options.Limits is null || options.Limits.MaxCases <= 0 || options.Limits.MaxFramesPerStep <= 0)
+        if (options.Limits is null || options.Limits.MaxCases <= 0 || options.Limits.MaxFramesPerStep <= 0 || options.Limits.MaxResourceBytes <= 0)
             return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, technical: "Runner limits must be positive.");
         var environmentError = ValidateEnvironment(environment);
         if (environmentError is not null) return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, technical: environmentError);
@@ -106,6 +107,7 @@ public static class ConformanceRunner
                 ConformanceTestKind.CompileMetadata => RunCompileMetadata(testCase, environment),
                 ConformanceTestKind.Bytecode => RunBytecode(testCase, environment),
                 ConformanceTestKind.BytecodeSnapshot => RunBytecodeSnapshot(testCase, environment, options),
+                ConformanceTestKind.ProgramBinary => RunProgramBinary(testCase, environment, options),
                 _ => Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidModel, technical: "Unsupported test kind.")
             };
         }
@@ -297,6 +299,102 @@ public static class ConformanceRunner
                 : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { DiagnosticMismatch("/error", testCase.Expectation.Error!, new[] { diagnostic }) }, diagnostics: ConvertDiagnostics(new[] { diagnostic }));
         }
         return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.ExpectedLoadError, mismatches: new[] { new ConformanceMismatch("/error", ConformanceRunnerCodes.ExpectedLoadError, testCase.Expectation.Error!.Code, null) });
+    }
+
+    private static ConformanceCaseResult RunProgramBinary(ConformanceCase testCase, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions options)
+    {
+        var fixture = testCase.BinaryFixture!;
+        var expected = testCase.Expectation.Binary!;
+        if (environment.ResourceResolver is null)
+            return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, technical: "programBinary requires a resource resolver.");
+        var resource = environment.ResourceResolver.Resolve(fixture.ResourceId, options.Limits.MaxResourceBytes);
+        if (resource.Status != ConformanceResourceStatus.Found)
+        {
+            var code = resource.Status == ConformanceResourceStatus.LimitExceeded
+                ? ConformanceRunnerCodes.ResourceLimitExceeded
+                : ConformanceRunnerCodes.ResourceUnavailable;
+            return Result(testCase, ConformanceCaseStatus.Error, code, technical: resource.ErrorCode);
+        }
+        if (resource.Bytes.Count > options.Limits.MaxResourceBytes)
+            return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.ResourceLimitExceeded);
+        var bytes = CopyBytes(resource.Bytes);
+        var hash = Sha256(bytes);
+        if (!string.Equals(hash, fixture.Sha256, StringComparison.Ordinal))
+            return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.ResourceIntegrityMismatch,
+                mismatches: new[] { new ConformanceMismatch("/binaryFixture/sha256", ConformanceRunnerCodes.ResourceIntegrityMismatch, fixture.Sha256, hash) });
+
+        GameEventScriptProgram program;
+        try
+        {
+            program = GameEventScriptProgramReader.Read(bytes, new GameEventScriptProgramReadOptions
+            {
+                Retention = GameEventScriptProgramRetention.PreserveAll,
+                Limits = new GameEventScriptProgramReadLimits { MaxFileBytes = options.Limits.MaxResourceBytes }
+            });
+        }
+        catch (GameEventScriptProgramFormatException exception)
+        {
+            var actualOutcome = IsStructuralReadError(exception.ErrorCode) ? ConformanceBinaryOutcome.ReadError : ConformanceBinaryOutcome.ValidationError;
+            var mismatches = new List<ConformanceMismatch>();
+            if (expected.Outcome != actualOutcome) AddMismatch(mismatches, "/binary/outcome", BinaryOutcome(expected.Outcome), BinaryOutcome(actualOutcome));
+            CheckOptional(mismatches, "/binary/errorCode", expected.ErrorCode, exception.ErrorCode.ToString());
+            CheckOptional(mismatches, "/binary/byteOffset", expected.ByteOffset, exception.ByteOffset);
+            CheckOptional(mismatches, "/binary/sectionType", expected.SectionType, exception.SectionType);
+            CheckOptional(mismatches, "/binary/entryIndex", expected.EntryIndex, exception.EntryIndex);
+            return mismatches.Count == 0
+                ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed)
+                : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches);
+        }
+
+        var validMismatches = new List<ConformanceMismatch>();
+        if (expected.Outcome != ConformanceBinaryOutcome.Valid)
+            AddMismatch(validMismatches, "/binary/outcome", BinaryOutcome(expected.Outcome), "valid");
+        CheckOptional(validMismatches, "/binary/moduleName", expected.ModuleName, program.ModuleName);
+        CheckOptional(validMismatches, "/binary/requiredRegisterCount", expected.RequiredRegisterCount, program.RequiredRegisterCount);
+        CheckOptional(validMismatches, "/binary/requiredCallStackDepth", expected.RequiredCallStackDepth, program.RequiredCallStackDepth);
+        if (expected.OpaqueSectionCount is { } opaqueCount && opaqueCount != program.OpaqueSections.Count)
+            AddMismatch(validMismatches, "/binary/opaqueSectionCount", opaqueCount.ToString(CultureInfo.InvariantCulture), program.OpaqueSections.Count.ToString(CultureInfo.InvariantCulture));
+        if (program.ProgramVersion != fixture.ProgramVersion)
+            AddMismatch(validMismatches, "/binaryFixture/programVersion", fixture.ProgramVersion.ToString(CultureInfo.InvariantCulture), program.ProgramVersion.ToString(CultureInfo.InvariantCulture));
+        if (program.BuildMetadata is not null)
+        {
+            CheckOptional(validMismatches, "/binaryFixture/compilerId", fixture.CompilerId, program.BuildMetadata.CompilerId);
+            CheckOptional(validMismatches, "/binaryFixture/compilerVersion", fixture.CompilerVersion, program.BuildMetadata.CompilerVersion);
+        }
+        var rewritten = GameEventScriptProgramWriter.ToArray(program);
+        if (expected.RewriteByteExact is { } byteExact && byteExact != bytes.AsSpan().SequenceEqual(rewritten))
+            AddMismatch(validMismatches, "/binary/rewriteByteExact", byteExact ? "true" : "false", byteExact ? "false" : "true");
+        if (expected.RewriteSha256 is not null)
+            CheckOptional(validMismatches, "/binary/rewriteSha256", expected.RewriteSha256, Sha256(rewritten));
+        if (fixture.CompareCompiledRuntime)
+        {
+            GameEventScriptProgram compiled;
+            try { compiled = CompileFixtureProgram(testCase, environment); }
+            catch (GameEventScriptCompileException exception) { return UnexpectedDiagnostics(testCase, "compile", exception.Diagnostics); }
+            var fixtureRuntime = RequiredRuntimeBytes(program);
+            var compiledRuntime = RequiredRuntimeBytes(compiled);
+            if (!fixtureRuntime.AsSpan().SequenceEqual(compiledRuntime))
+                AddMismatch(validMismatches, "/binary/compiledRuntimeSegments", Sha256(fixtureRuntime), Sha256(compiledRuntime));
+        }
+        if (validMismatches.Count > 0)
+            return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: validMismatches);
+        if (testCase.Steps.Count == 0) return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed);
+
+        var collectorMismatches = new List<ConformanceMismatch>();
+        RuntimeCollector collector;
+        string? technical;
+        try
+        {
+            collector = RunRuntimeHost(testCase, environment, options, new[] { new CompiledProgram("main", program) }, string.Empty, collectorMismatches, out technical);
+        }
+        catch (GameEventScriptDynamicLinkException exception)
+        {
+            return UnexpectedDiagnostics(testCase, "link", new[] { exception.Diagnostic });
+        }
+        if (technical is not null) return Result(testCase, ConformanceCaseStatus.Error, ConformanceRunnerCodes.InvalidEnvironment, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults, technical: technical);
+        return collectorMismatches.Count == 0
+            ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults)
+            : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: collectorMismatches, diagnostics: collector.AllDiagnostics, runtimeLimits: collector.AllLimitResults);
     }
 
     private static ConformanceCaseResult RunMessageApi(ConformanceCase testCase)
@@ -531,6 +629,27 @@ public static class ConformanceRunner
         var programs = CompilePrograms(testCase, environment);
         if (programs.Count != 1) throw new InvalidOperationException("This conformance kind requires exactly one compiled program.");
         return programs[0];
+    }
+
+    private static GameEventScriptProgram CompileFixtureProgram(ConformanceCase testCase, ConformanceRunnerEnvironment environment)
+    {
+        if (testCase.Sources.Count == 0) throw new InvalidOperationException("Fixture comparison requires provenance source.");
+        var programId = testCase.Sources[0].ProgramId;
+        var builder = GameEventScriptBuilder.Create();
+        if (Has(testCase.Requires.Core, "external-types") && environment.ExternalTypeCatalog is not null)
+            builder.WithExternalTypeCatalog(environment.ExternalTypeCatalog);
+        for (var index = 0; index < testCase.Sources.Count; index++)
+        {
+            var source = testCase.Sources[index];
+            if (!string.Equals(source.ProgramId, programId, StringComparison.Ordinal))
+                throw new InvalidOperationException("Fixture comparison requires exactly one source Program group.");
+            builder.AddScript(source.Text, source.Name);
+        }
+        return builder.Compile(new GameEventScriptCompileOptions
+        {
+            DebugInfo = DebugInfo(testCase.Compile.DebugInfo),
+            ProgramVersion = testCase.BinaryFixture!.ProgramVersion
+        });
     }
 
     private sealed class DeclarativeNativeHandler : IGameEventScriptNativeMessageHandler
@@ -940,7 +1059,7 @@ public static class ConformanceRunner
 
     private static string? ValidateCorpus(IReadOnlyList<ConformanceDocument> documents, ConformanceRunnerLimits limits)
     {
-        if (limits.MaxCases <= 0 || limits.MaxFramesPerStep <= 0) return "Runner limits must be positive.";
+        if (limits.MaxCases <= 0 || limits.MaxFramesPerStep <= 0 || limits.MaxResourceBytes <= 0) return "Runner limits must be positive.";
         var suites = new HashSet<string>(StringComparer.Ordinal);
         var cases = new HashSet<string>(StringComparer.Ordinal);
         var count = 0;
@@ -1003,10 +1122,42 @@ public static class ConformanceRunner
     private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, string? expected, string actual) { if (expected is not null && !string.Equals(expected, actual, StringComparison.Ordinal)) AddMismatch(mismatches, path, expected, actual); }
     private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, bool? expected, bool actual) { if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value ? "true" : "false", actual ? "true" : "false"); }
     private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, uint? expected, ushort actual) { if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture)); }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, long? expected, long? actual) { if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture)); }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, ushort? expected, ushort? actual) { if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture)); }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, int? expected, int? actual) { if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture)); }
     private static void AddMismatch(List<ConformanceMismatch> mismatches, string path, string? expected, string? actual) => mismatches.Add(new ConformanceMismatch(path, ConformanceRunnerCodes.AssertionMismatch, expected, actual));
     private static bool StringListsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right) { if (left.Count != right.Count) return false; for (var index = 0; index < left.Count; index++) if (!string.Equals(left[index], right[index], StringComparison.Ordinal)) return false; return true; }
     private static string Join(IReadOnlyList<string> values) => "[" + string.Join(",", values) + "]";
     private static string MessageErrorCode(string message) => message.Contains("more than once", StringComparison.Ordinal) ? "duplicateArgumentName" : message.Contains("argument", StringComparison.OrdinalIgnoreCase) ? "invalidArgument" : "invalidMessage";
     private static string NormalizeLf(string value) => value.Replace("\r\n", "\n").Replace('\r', '\n');
     private static int FirstUtf8Difference(string left, string right) { var leftBytes = System.Text.Encoding.UTF8.GetBytes(left); var rightBytes = System.Text.Encoding.UTF8.GetBytes(right); var count = Math.Min(leftBytes.Length, rightBytes.Length); var index = 0; while (index < count && leftBytes[index] == rightBytes[index]) index++; return index; }
+    private static byte[] CopyBytes(IReadOnlyList<byte> source) { var result = new byte[source.Count]; for (var index = 0; index < result.Length; index++) result[index] = source[index]; return result; }
+    private static string Sha256(byte[] bytes)
+    {
+        using var algorithm = SHA256.Create();
+        var hash = algorithm.ComputeHash(bytes);
+        var result = new char[hash.Length * 2];
+        const string hex = "0123456789ABCDEF";
+        for (var index = 0; index < hash.Length; index++) { result[index * 2] = hex[hash[index] >> 4]; result[index * 2 + 1] = hex[hash[index] & 0x0F]; }
+        return new string(result);
+    }
+    private static byte[] RequiredRuntimeBytes(GameEventScriptProgram program)
+    {
+        var encoded = GameEventScriptProgramWriter.ToArray(program);
+        var result = new List<byte>();
+        var offset = 16;
+        while (offset < encoded.Length)
+        {
+            var payloadLength = checked((int)ReadUInt32(encoded, offset + 8));
+            var sectionLength = checked(12 + payloadLength);
+            if ((ReadUInt16(encoded, offset + 2) & 0x0001) != 0)
+                for (var index = 0; index < sectionLength; index++) result.Add(encoded[offset + index]);
+            offset += sectionLength;
+        }
+        return result.ToArray();
+    }
+    private static ushort ReadUInt16(IReadOnlyList<byte> bytes, int offset) => (ushort)(bytes[offset] | bytes[offset + 1] << 8);
+    private static uint ReadUInt32(IReadOnlyList<byte> bytes, int offset) => (uint)(ReadUInt16(bytes, offset) | ReadUInt16(bytes, offset + 2) << 16);
+    private static bool IsStructuralReadError(GameEventScriptProgramFormatErrorCode code) => code <= GameEventScriptProgramFormatErrorCode.TooManyEntries;
+    private static string BinaryOutcome(ConformanceBinaryOutcome outcome) => outcome switch { ConformanceBinaryOutcome.Valid => "valid", ConformanceBinaryOutcome.ReadError => "readError", _ => "validationError" };
 }

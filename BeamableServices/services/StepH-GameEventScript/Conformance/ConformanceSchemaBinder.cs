@@ -37,7 +37,7 @@ internal static class ConformanceSchemaBinder
             var yaml = ResolveYamlBlocks(testSyntax, limits);
             if (yaml.Case is null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Every test requires exactly one yaml block with 'gesBlock: case'.", text.Lines[testSyntax.StartLineIndex].Range());
             var caseNode = yaml.Case;
-            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "externalTypeRegistry", "hostCount", "deferredPrograms", "nativeHandlers", "stepActions", "messageApi", "valueApi", "externalTypeApi", "performance");
+            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "externalTypeRegistry", "hostCount", "deferredPrograms", "nativeHandlers", "stepActions", "messageApi", "valueApi", "externalTypeApi", "binaryFixture", "performance");
             var id = RequiredId(caseNode, "id");
             if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate case ID '{id}'.", Property(caseNode, "id")!.Value.Range);
             var defaults = ParseDefaults(caseNode, suiteDefaults);
@@ -57,11 +57,14 @@ internal static class ConformanceSchemaBinder
             var messageApi = BindMessageApi(Optional(caseNode, "messageApi"));
             var valueApi = BindValueApi(Optional(caseNode, "valueApi"));
             var externalTypeApi = BindExternalTypeApi(Optional(caseNode, "externalTypeApi"));
+            var binaryFixture = BindBinaryFixture(Optional(caseNode, "binaryFixture"));
             var workload = BindPerformanceWorkload(Optional(caseNode, "performance"));
             var expectations = BindExpectation(defaults.Kind.Value, expectationNode);
-            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, nativeHandlers.Count, messageApi, valueApi, externalTypeApi, workload);
+            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, nativeHandlers.Count, messageApi, valueApi, externalTypeApi, binaryFixture, workload);
             if (defaults.Kind == ConformanceTestKind.ScriptApi && sources.Count == 0 && defaults.Compile.BinaryRoundTrip)
                 throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A native-only scriptApi case cannot request a program binary roundtrip.", caseNode.Range);
+            if (defaults.Kind == ConformanceTestKind.ProgramBinary && defaults.Compile.BinaryRoundTrip)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A programBinary case cannot request a second binary roundtrip.", caseNode.Range);
             var stepActions = BindStepActions(Optional(caseNode, "stepActions"), testSyntax.Steps);
             ValidateHostReferences(sources, deferredPrograms, nativeHandlers, stepActions, caseNode.Range);
             if (messageApi?.ArgumentsWereMapping == true &&
@@ -71,6 +74,14 @@ internal static class ConformanceSchemaBinder
             var core = new List<string>(defaults.Requires.Core);
             var optional = new List<string>(defaults.Requires.Optional);
             AddKindCapabilities(defaults.Kind.Value, core, optional);
+            if (defaults.Kind == ConformanceTestKind.ProgramBinary && steps.Count > 0)
+            {
+                AddUnique(core, "host");
+                AddUnique(core, "vm");
+                AddUnique(core, "observer");
+                AddUnique(core, "publish-sink");
+            }
+            if (binaryFixture?.CompareCompiledRuntime == true) AddUnique(core, "compiler");
             if (defaults.Kind == ConformanceTestKind.ScriptApi && sources.Count == 0)
             {
                 core.Remove("compiler");
@@ -84,7 +95,7 @@ internal static class ConformanceSchemaBinder
             cases.Add(new ConformanceCase(
                 id, suiteId + "/" + id, testSyntax.Title, defaults.Kind.Value, defaults.Level.Value,
                 defaults.Categories, defaults.Tags, new ConformanceCapabilityRequirements(core, optional), defaults.Compile,
-                defaults.RuntimeLimits, defaults.Comparison, publishSink, externalTypeRegistry, hostCount, deferredPrograms, random, sources, nativeHandlers, steps, expectations, messageApi, valueApi, externalTypeApi, workload,
+                defaults.RuntimeLimits, defaults.Comparison, publishSink, externalTypeRegistry, hostCount, deferredPrograms, random, sources, nativeHandlers, steps, expectations, messageApi, valueApi, externalTypeApi, binaryFixture, workload,
                 testSyntax.AssemblerBlock?.Payload, testSyntax.CaseBlock!.BlockRange, testSyntax.ExpectBlock?.BlockRange, testSyntax.StepsTableRange,
                 testSyntax.AssemblerBlock?.BlockRange, testSyntax.AssemblerBlock?.PayloadRange, range));
         }
@@ -355,6 +366,45 @@ internal static class ConformanceSchemaBinder
         return new ConformanceExternalTypeApiCase(StringList(Required(node, "typeNames"), ids: false));
     }
 
+    private static ConformanceBinaryFixture? BindBinaryFixture(YamlNode? node)
+    {
+        if (node is null) return null;
+        Closed(node, "id", "resourceId", "relativePath", "sha256", "compilerId", "compilerVersion", "programVersion", "compareCompiledRuntime", "derivation");
+        var id = RequiredString(node, "id");
+        var resourceId = RequiredString(node, "resourceId");
+        RequireId(id, Property(node, "id")!.Value.Range);
+        RequireId(resourceId, Property(node, "resourceId")!.Value.Range);
+        var relativePath = RequiredString(node, "relativePath");
+        if (!ValidRelativeResourcePath(relativePath))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binaryFixture.relativePath must be a portable relative path without parent traversal.", Property(node, "relativePath")!.Value.Range);
+        var sha256 = RequiredString(node, "sha256");
+        RequireSha256(sha256, Property(node, "sha256")!.Value.Range);
+        var compilerId = RequiredString(node, "compilerId");
+        RequireId(compilerId, Property(node, "compilerId")!.Value.Range);
+        var compilerVersion = RequiredString(node, "compilerVersion");
+        if (compilerVersion.Length == 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binaryFixture.compilerVersion cannot be empty.", Property(node, "compilerVersion")!.Value.Range);
+        return new ConformanceBinaryFixture(
+            id, resourceId, relativePath, sha256, compilerId, compilerVersion,
+            ParseUInt64(Required(node, "programVersion")), OptionalBoolean(node, "compareCompiledRuntime") ?? false, OptionalString(node, "derivation"));
+    }
+
+    private static bool ValidRelativeResourcePath(string value)
+    {
+        if (value.Length == 0 || value[0] == '/' || value.Contains('\\') || value.Contains('\0')) return false;
+        var parts = value.Split('/');
+        for (var index = 0; index < parts.Length; index++)
+            if (parts[index].Length == 0 || parts[index] is "." or "..") return false;
+        return true;
+    }
+
+    private static void RequireSha256(string value, ConformanceSourceRange range)
+    {
+        if (value.Length != 64) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "SHA-256 must contain 64 uppercase hexadecimal digits.", range);
+        for (var index = 0; index < value.Length; index++)
+            if (value[index] is not (>= '0' and <= '9' or >= 'A' and <= 'F'))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "SHA-256 must contain 64 uppercase hexadecimal digits.", range);
+    }
+
     private static ConformancePerformanceWorkload? BindPerformanceWorkload(YamlNode? node)
     {
         if (node is null) return null;
@@ -424,7 +474,7 @@ internal static class ConformanceSchemaBinder
     private static ConformanceExpectation BindExpectation(ConformanceTestKind kind, YamlNode? node)
     {
         var emptyChannel = new ConformanceChannelExpectation(Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), EmptyObservations());
-        if (node is null) return new ConformanceExpectation(emptyChannel, null, null, null, null, null, null, null);
+        if (node is null) return new ConformanceExpectation(emptyChannel, null, null, null, null, null, null, null, null);
         var allowed = kind switch
         {
             ConformanceTestKind.ScriptApi => new[] { "gesBlock", "steps", "initialization" },
@@ -435,6 +485,7 @@ internal static class ConformanceSchemaBinder
             ConformanceTestKind.ExternalTypeApi => new[] { "gesBlock", "externalType" },
             ConformanceTestKind.CompileMetadata => new[] { "gesBlock", "metadata" },
             ConformanceTestKind.Bytecode => new[] { "gesBlock", "opcodes" },
+            ConformanceTestKind.ProgramBinary => new[] { "gesBlock", "binary", "steps", "initialization" },
             _ => new[] { "gesBlock" }
         };
         Closed(node, allowed);
@@ -454,7 +505,44 @@ internal static class ConformanceSchemaBinder
         var opcodes = opcodeNode is null ? null : BindOpcodes(opcodeNode);
         var performanceNode = Optional(node, "performance");
         var performance = performanceNode is null ? null : BindPerformanceExpectation(performanceNode);
-        return new ConformanceExpectation(initialization, error, messageApi, valueApi, externalTypeApi, metadata, opcodes, performance);
+        var binaryNode = Optional(node, "binary");
+        var binary = binaryNode is null ? null : BindBinaryExpectation(binaryNode);
+        return new ConformanceExpectation(initialization, error, messageApi, valueApi, externalTypeApi, metadata, opcodes, performance, binary);
+    }
+
+    private static ConformanceBinaryExpectation BindBinaryExpectation(YamlNode node)
+    {
+        Closed(node, "outcome", "errorCode", "byteOffset", "sectionType", "entryIndex", "rewriteByteExact", "rewriteSha256", "moduleName", "requiredRegisterCount", "requiredCallStackDepth", "opaqueSectionCount");
+        var outcomeText = RequiredString(node, "outcome");
+        var outcome = outcomeText switch
+        {
+            "valid" => ConformanceBinaryOutcome.Valid,
+            "readError" => ConformanceBinaryOutcome.ReadError,
+            "validationError" => ConformanceBinaryOutcome.ValidationError,
+            _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binary.outcome must be valid, readError, or validationError.", Property(node, "outcome")!.Value.Range)
+        };
+        var errorCode = OptionalString(node, "errorCode");
+        if ((outcome == ConformanceBinaryOutcome.Valid && errorCode is not null) ||
+            (outcome != ConformanceBinaryOutcome.Valid && errorCode is null))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binary.errorCode is required exactly for error outcomes.", node.Range);
+        if (errorCode is not null && (!Enum.TryParse<GameEventScriptProgramFormatErrorCode>(errorCode, ignoreCase: false, out var parsedErrorCode) || parsedErrorCode.ToString() != errorCode))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binary.errorCode must be a canonical .gesb format error name.", Property(node, "errorCode")!.Value.Range);
+        var byteOffsetNode = Optional(node, "byteOffset");
+        long? byteOffset = byteOffsetNode is null ? null : ParseInt64(byteOffsetNode);
+        if (byteOffset < 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binary.byteOffset cannot be negative.", byteOffsetNode!.Range);
+        var sectionTypeValue = OptionalUInt32(node, "sectionType");
+        if (sectionTypeValue > ushort.MaxValue) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binary.sectionType must fit UInt16.", Property(node, "sectionType")!.Value.Range);
+        var entryIndexValue = OptionalUInt32(node, "entryIndex");
+        if (entryIndexValue > int.MaxValue) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "binary.entryIndex must fit Int32.", Property(node, "entryIndex")!.Value.Range);
+        var rewriteSha256 = OptionalString(node, "rewriteSha256");
+        if (rewriteSha256 is not null) RequireSha256(rewriteSha256, Property(node, "rewriteSha256")!.Value.Range);
+        if (outcome != ConformanceBinaryOutcome.Valid && node.Properties.Any(property => property.Name is "rewriteByteExact" or "rewriteSha256" or "moduleName" or "requiredRegisterCount" or "requiredCallStackDepth" or "opaqueSectionCount"))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "Binary success fields are valid only for outcome: valid.", node.Range);
+        return new ConformanceBinaryExpectation(
+            outcome, errorCode, byteOffset, sectionTypeValue is null ? null : (ushort)sectionTypeValue.Value,
+            entryIndexValue is null ? null : (int)entryIndexValue.Value,
+            OptionalBoolean(node, "rewriteByteExact"), rewriteSha256, OptionalString(node, "moduleName"),
+            OptionalUInt32(node, "requiredRegisterCount"), OptionalUInt32(node, "requiredCallStackDepth"), OptionalUInt32(node, "opaqueSectionCount"));
     }
 
     private static ConformanceChannelExpectation BindChannel(YamlNode node)
@@ -819,18 +907,18 @@ internal static class ConformanceSchemaBinder
         }
     }
 
-    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, int nativeHandlerCount, ConformanceMessageApiCase? messageApi, ConformanceValueApiCase? valueApi, ConformanceExternalTypeApiCase? externalTypeApi, ConformancePerformanceWorkload? workload)
+    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, int nativeHandlerCount, ConformanceMessageApiCase? messageApi, ConformanceValueApiCase? valueApi, ConformanceExternalTypeApiCase? externalTypeApi, ConformanceBinaryFixture? binaryFixture, ConformancePerformanceWorkload? workload)
     {
         var apiOnly = kind is ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi;
         if (apiOnly && sourceCount != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "API object tests do not accept GES source.", syntax.Sources[0].BlockRange);
-        if (!apiOnly && sourceCount == 0 && !(kind == ConformanceTestKind.ScriptApi && nativeHandlerCount > 0))
+        if (!apiOnly && kind != ConformanceTestKind.ProgramBinary && sourceCount == 0 && !(kind == ConformanceTestKind.ScriptApi && nativeHandlerCount > 0))
             throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires GES source.", syntax.CaseBlock!.BlockRange);
         if (kind == ConformanceTestKind.BytecodeSnapshot)
         {
             if (syntax.AssemblerBlock is null || expectation is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "bytecodeSnapshot requires one gesa block and no expectation block.", syntax.CaseBlock!.BlockRange);
         }
         else if (syntax.AssemblerBlock is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only bytecodeSnapshot accepts a gesa block.", syntax.AssemblerBlock.BlockRange);
-        if (kind is ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi or ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance && expectation is null)
+        if (kind is ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi or ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance or ConformanceTestKind.ProgramBinary && expectation is null)
             throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires a yaml block with 'gesBlock: expect'.", syntax.CaseBlock!.BlockRange);
         if (expectation is not null)
         {
@@ -843,6 +931,7 @@ internal static class ConformanceSchemaBinder
                 ConformanceTestKind.CompileMetadata => "metadata",
                 ConformanceTestKind.Bytecode => "opcodes",
                 ConformanceTestKind.Performance => "performance",
+                ConformanceTestKind.ProgramBinary => "binary",
                 _ => null
             };
             if (requiredExpectation is not null && Optional(expectation, requiredExpectation) is null)
@@ -854,12 +943,23 @@ internal static class ConformanceSchemaBinder
         if (kind != ConformanceTestKind.ValueApi && valueApi is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "valueApi metadata is only valid for valueApi tests.", syntax.CaseBlock!.BlockRange);
         if (kind == ConformanceTestKind.ExternalTypeApi && externalTypeApi is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "externalTypeApi case metadata is required.", syntax.CaseBlock!.BlockRange);
         if (kind != ConformanceTestKind.ExternalTypeApi && externalTypeApi is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "externalTypeApi metadata is only valid for externalTypeApi tests.", syntax.CaseBlock!.BlockRange);
+        if (kind == ConformanceTestKind.ProgramBinary && binaryFixture is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "binaryFixture case metadata is required.", syntax.CaseBlock!.BlockRange);
+        if (kind != ConformanceTestKind.ProgramBinary && binaryFixture is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "binaryFixture metadata is only valid for programBinary tests.", syntax.CaseBlock!.BlockRange);
+        if (binaryFixture?.CompareCompiledRuntime == true && sourceCount == 0) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "compareCompiledRuntime requires provenance source.", syntax.CaseBlock!.BlockRange);
         if (kind == ConformanceTestKind.Performance && workload is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "performance workload metadata is required.", syntax.CaseBlock!.BlockRange);
         if (kind != ConformanceTestKind.Performance && workload is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "performance workload metadata is only valid for performance tests.", syntax.CaseBlock!.BlockRange);
         if (kind is ConformanceTestKind.ScriptApi or ConformanceTestKind.Performance)
         {
             var hasInitialization = expectation is not null && Optional(expectation, "initialization") is not null;
             if (!syntax.HasStepsTable && !hasInitialization) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A runtime test requires Steps or an initialization expectation.", syntax.CaseBlock!.BlockRange);
+        }
+        else if (kind == ConformanceTestKind.ProgramBinary)
+        {
+            var outcome = expectation is null ? null : Optional(Optional(expectation, "binary")!, "outcome");
+            if (syntax.HasStepsTable && (outcome is null || String(outcome) != "valid"))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only a valid programBinary case accepts Steps.", syntax.CaseBlock!.BlockRange);
+            if (!syntax.HasStepsTable && expectation is not null && Optional(expectation, "initialization") is not null)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A programBinary initialization expectation requires Steps.", syntax.CaseBlock!.BlockRange);
         }
         else if (syntax.HasStepsTable) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind does not accept Steps.", syntax.CaseBlock!.BlockRange);
     }
@@ -879,6 +979,7 @@ internal static class ConformanceSchemaBinder
             case ConformanceTestKind.Bytecode: Core("compiler"); break;
             case ConformanceTestKind.Performance: Core("compiler", "host", "vm", "observer", "publish-sink"); AddUnique(optional, "performance"); break;
             case ConformanceTestKind.BytecodeSnapshot: Core("compiler"); AddUnique(optional, "bytecode-snapshot"); break;
+            case ConformanceTestKind.ProgramBinary: Core("program-binary"); break;
         }
     }
 
@@ -1038,7 +1139,7 @@ internal static class ConformanceSchemaBinder
             "scriptApi" => ConformanceTestKind.ScriptApi, "compileError" => ConformanceTestKind.CompileError, "loadError" => ConformanceTestKind.LoadError,
             "messageApi" => ConformanceTestKind.MessageApi, "compileMetadata" => ConformanceTestKind.CompileMetadata, "bytecode" => ConformanceTestKind.Bytecode,
             "performance" => ConformanceTestKind.Performance, "bytecodeSnapshot" => ConformanceTestKind.BytecodeSnapshot,
-            "valueApi" => ConformanceTestKind.ValueApi, "externalTypeApi" => ConformanceTestKind.ExternalTypeApi,
+            "valueApi" => ConformanceTestKind.ValueApi, "externalTypeApi" => ConformanceTestKind.ExternalTypeApi, "programBinary" => ConformanceTestKind.ProgramBinary,
             _ => throw Schema(ConformanceDiagnosticCodes.SchemaUnknownKind, $"Unknown test kind '{value}'.", Property(node, name)!.Value.Range)
         };
     }

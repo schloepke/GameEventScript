@@ -2,8 +2,6 @@ using System.Text;
 using System.Security.Cryptography;
 using StepH.GameEventScript;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.CSharpBridge;
-using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH_GameEventScript_Tests.Native.BinaryFormat;
 
@@ -21,23 +19,6 @@ public sealed class GameEventScriptProgramFormatTests
         Assert.IsNotNull(program.SourceMap);
         Assert.IsNotNull(program.SourceArchive);
         Assert.AreEqual("default-debug.ges", program.SourceArchive.Sources[0].SourceName);
-    }
-
-    [TestMethod]
-    public void CanonicalBinaryRoundTripsWithoutKnownRawSections()
-    {
-        var program = Compile(GameEventScriptDebugInfoOptions.All);
-        var bytes = GameEventScriptProgramWriter.ToArray(program);
-        var decoded = GameEventScriptProgramReader.Read(bytes);
-        var rewritten = GameEventScriptProgramWriter.ToArray(decoded);
-
-        CollectionAssert.AreEqual(bytes, rewritten);
-        Assert.AreEqual((ulong)42, decoded.ProgramVersion);
-        Assert.AreEqual("steph.ges.compiler.csharp", decoded.BuildMetadata?.CompilerId);
-        Assert.IsNotNull(decoded.DebugSymbols);
-        Assert.IsNotNull(decoded.SourceMap);
-        Assert.IsNotNull(decoded.SourceArchive);
-        Assert.HasCount(0, decoded.OpaqueSections);
     }
 
     [TestMethod]
@@ -81,35 +62,6 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     [TestMethod]
-    public void NonCanonicalRequiredSectionOrderReadsAndRewritesCanonically()
-    {
-        var canonical = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
-        var sections = SplitSections(canonical);
-        sections.Reverse();
-        var reordered = JoinSections(canonical[..16], sections);
-
-        var decoded = GameEventScriptProgramReader.Read(reordered);
-        CollectionAssert.AreEqual(canonical, GameEventScriptProgramWriter.ToArray(decoded));
-    }
-
-    [TestMethod]
-    public void PreserveAllRetainsUnknownOptionalPayloadAndRelativeOrder()
-    {
-        var baseProgram = Compile(GameEventScriptDebugInfoOptions.None);
-        var program = CopyWithOpaque(baseProgram,
-        [
-            new GameEventScriptOpaqueSection(0x8002, GameEventScriptSectionFlags.None, 7, new byte[] { 1, 2 }, 9),
-            new GameEventScriptOpaqueSection(0x8001, GameEventScriptSectionFlags.None, 3, new byte[] { 4, 5, 6 }, 2)
-        ]);
-        var decoded = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(program));
-
-        Assert.HasCount(2, decoded.OpaqueSections);
-        Assert.AreEqual((ushort)0x8001, decoded.OpaqueSections[0].SectionType);
-        Assert.AreEqual((ushort)0x8002, decoded.OpaqueSections[1].SectionType);
-        CollectionAssert.AreEqual(new byte[] { 4, 5, 6 }, decoded.OpaqueSections[0].RawPayload.ToArray());
-    }
-
-    [TestMethod]
     public void PreserveKnownAndRuntimeOnlyDropUnknownPayloads()
     {
         var baseProgram = Compile(GameEventScriptDebugInfoOptions.All);
@@ -129,19 +81,6 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     [TestMethod]
-    public void UnknownRequiredSectionIsRejectedWithStableError()
-    {
-        var bytes = GameEventScriptProgramWriter.ToArray(CopyWithOpaque(Compile(GameEventScriptDebugInfoOptions.None),
-            [new GameEventScriptOpaqueSection(0x8000, GameEventScriptSectionFlags.None, 1, new byte[] { 9 }, 0)]));
-        var sectionOffset = FindSection(bytes, 0x8000);
-        WriteU16(bytes, sectionOffset + 2, (ushort)GameEventScriptSectionFlags.Required);
-
-        var exception = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes));
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.UnknownRequiredSection, exception.ErrorCode);
-        Assert.AreEqual((ushort)0x8000, exception.SectionType);
-    }
-
-    [TestMethod]
     public void ReservedSignatureSectionIsOpaqueAndHasNoTrustSemantics()
     {
         var program = CopyWithOpaque(Compile(GameEventScriptDebugInfoOptions.None),
@@ -155,27 +94,6 @@ public sealed class GameEventScriptProgramFormatTests
         WriteU16(bytes, section + 2, (ushort)GameEventScriptSectionFlags.Required);
         Assert.AreEqual(GameEventScriptProgramFormatErrorCode.UnknownRequiredSection,
             Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes)).ErrorCode);
-    }
-
-    [TestMethod]
-    public void MissingDuplicateAndInvalidReferencesProduceStableErrors()
-    {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
-        var sections = SplitSections(bytes);
-        var missing = JoinSections(bytes[..16], sections.Where(section => ReadU16(section, 0) != (ushort)GameEventScriptSectionType.Code).ToArray());
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.MissingRequiredSection,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(missing)).ErrorCode);
-
-        var stringSection = sections.Single(section => ReadU16(section, 0) == (ushort)GameEventScriptSectionType.StringConstants);
-        var duplicate = JoinSections(bytes[..16], sections.Concat([stringSection]).ToArray());
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.DuplicateSection,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(duplicate)).ErrorCode);
-
-        var invalidReference = (byte[])bytes.Clone();
-        var bindings = FindSection(invalidReference, (ushort)GameEventScriptSectionType.Bindings);
-        WriteU16(invalidReference, bindings + 20, 0xFFFE);
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidStringIndex,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(invalidReference)).ErrorCode);
     }
 
     [TestMethod]
@@ -195,15 +113,9 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     [TestMethod]
-    public void InvalidUtf8AndReaderLimitsProduceStableErrors()
+    public void ReaderFileLimitProducesStableError()
     {
         var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
-        var invalidUtf8 = (byte[])bytes.Clone();
-        var strings = FindSection(invalidUtf8, (ushort)GameEventScriptSectionType.StringConstants);
-        invalidUtf8[strings + 20] = 0xFF;
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidUtf8,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(invalidUtf8)).ErrorCode);
-
         var options = new GameEventScriptProgramReadOptions
         {
             Limits = new GameEventScriptProgramReadLimits { MaxFileBytes = bytes.Length - 1 }
@@ -247,30 +159,6 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     [TestMethod]
-    public void CompressionOnRequiredSectionIsRejected()
-    {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
-        WriteU16(bytes, 18, (ushort)(GameEventScriptSectionFlags.Required | (GameEventScriptSectionFlags)0x0010));
-        var exception = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(bytes));
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.UnsupportedCompression, exception.ErrorCode);
-    }
-
-    [TestMethod]
-    public void CorruptHeaderAndTruncatedPayloadProduceFormatErrors()
-    {
-        var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
-        var badMagic = (byte[])bytes.Clone();
-        badMagic[0] = (byte)'X';
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidMagic,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(badMagic)).ErrorCode);
-
-        var truncated = bytes[..^1];
-        WriteU32(truncated, 12, (uint)truncated.Length);
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.TruncatedSectionPayload,
-            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramReader.Read(truncated)).ErrorCode);
-    }
-
-    [TestMethod]
     public void UnicodeSourcesUseUtf8ByteOffsetsAndRoundTrip()
     {
         const string source = "module Unicode\n\non Start(name) {\n  let text be \"🙂 é \" + name\n  emit Done(text: text)\n}\n";
@@ -302,19 +190,6 @@ public sealed class GameEventScriptProgramFormatTests
         Assert.AreEqual(symbols, decoded.DebugSymbols is not null);
         Assert.AreEqual(map, decoded.SourceMap is not null);
         Assert.AreEqual(archive, decoded.SourceArchive is not null);
-    }
-
-    [TestMethod]
-    public void ReadProgramLoadsAndExecutesLikeCompiledProgram()
-    {
-        var decoded = GameEventScriptProgramReader.Read(GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.All)));
-        var received = new List<long>();
-        var host = GameEventScriptHost.CreateBuilder().Build();
-        host.Load(decoded);
-        host.Subscribe("Done", new[] { "value" }, (message, _) => received.Add(message.Arguments.GetAsInteger(0)));
-        Assert.IsTrue(host.Receive(GameEventScriptCSharpMessage.Create("Start", ("value", GesValue.GesInteger(2)))));
-        host.RunToCompletion();
-        CollectionAssert.AreEqual(new long[] { 3 }, received);
     }
 
     [TestMethod]
@@ -402,17 +277,6 @@ public sealed class GameEventScriptProgramFormatTests
         return result;
     }
 
-    private static byte[] JoinSections(ReadOnlySpan<byte> header, IReadOnlyList<byte[]> sections)
-    {
-        var length = 16 + sections.Sum(section => section.Length);
-        var result = new byte[length];
-        header.CopyTo(result);
-        WriteU32(result, 12, (uint)length);
-        var offset = 16;
-        foreach (var section in sections) { section.CopyTo(result, offset); offset += section.Length; }
-        return result;
-    }
-
     private static int FindSection(byte[] bytes, ushort type)
     {
         var offset = 16;
@@ -428,6 +292,5 @@ public sealed class GameEventScriptProgramFormatTests
     private static ushort ReadU16(IReadOnlyList<byte> bytes, int offset) => (ushort)(bytes[offset] | bytes[offset + 1] << 8);
     private static uint ReadU32(IReadOnlyList<byte> bytes, int offset) => (uint)(ReadU16(bytes, offset) | ReadU16(bytes, offset + 2) << 16);
     private static void WriteU16(IList<byte> bytes, int offset, ushort value) { bytes[offset] = (byte)value; bytes[offset + 1] = (byte)(value >> 8); }
-    private static void WriteU32(IList<byte> bytes, int offset, uint value) { WriteU16(bytes, offset, (ushort)value); WriteU16(bytes, offset + 2, (ushort)(value >> 16)); }
     private static string Sha256(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes));
 }

@@ -413,6 +413,49 @@ error:
     }
 
     [TestMethod]
+    public void BindsPortableProgramBinaryFixtureManifest()
+    {
+        const string markdown = """
+---
+formatVersion: 1
+suiteId: binary.fixture
+kind: programBinary
+level: atomic
+---
+## Test: Fixture
+```yaml
+gesBlock: case
+id: valid
+binaryFixture:
+  id: gesb-v1-valid
+  resourceId: gesb-v1.valid
+  relativePath: GesbV1/valid.gesb
+  sha256: 0000000000000000000000000000000000000000000000000000000000000000
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+```
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  moduleName: Fixture
+```
+""";
+
+        var testCase = ConformanceMarkdownParser.Parse(markdown).Cases[0];
+
+        Assert.AreEqual(ConformanceTestKind.ProgramBinary, testCase.Kind);
+        Assert.AreEqual("gesb-v1.valid", testCase.BinaryFixture!.ResourceId);
+        Assert.AreEqual("GesbV1/valid.gesb", testCase.BinaryFixture.RelativePath);
+        Assert.AreEqual((ulong)42, testCase.BinaryFixture.ProgramVersion);
+        Assert.AreEqual(ConformanceBinaryOutcome.Valid, testCase.Expectation.Binary!.Outcome);
+        Assert.IsTrue(testCase.Expectation.Binary.RewriteByteExact);
+        CollectionAssert.Contains(testCase.Requires.Core.ToArray(), "program-binary");
+    }
+
+    [TestMethod]
     public void RejectsUnsupportedYamlFeatures()
     {
         const string markdown = "---\nformatVersion: 1\nsuiteId: yaml.unsupported\nkind: bytecode\nlevel: atomic\ntitle: |\n---\n## Test: A\n";

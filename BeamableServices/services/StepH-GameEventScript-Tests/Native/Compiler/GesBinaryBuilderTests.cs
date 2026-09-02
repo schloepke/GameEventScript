@@ -219,47 +219,6 @@ public sealed class GesBinaryBuilderTests
     }
 
     [TestMethod]
-    public void HostLoadRejectsCyclicCallGraphFromUntrustedProgramData()
-    {
-        var builder = new GesBinaryBuilder().WithModuleName("UntrustedCycle");
-        using (builder.BeginHandler("Start"))
-        {
-            builder.ReturnVoid();
-        }
-
-        var validProgram = builder.Build();
-        var instructions = validProgram.Code.Instructions.ToArray();
-        instructions[^1] = new GameEventScriptBytecodeInstruction
-        {
-            OpCode = GameEventScriptBytecodeOpCode.Call,
-            DestinationRegister = 0,
-            TargetAddress = validProgram.Bindings.Entries[0].EntryAddress
-        };
-        var originalBind = validProgram.Bindings.Entries[0];
-        var bindings = new GameEventScriptBindingSegment([
-            new GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry(
-                originalBind.Kind, originalBind.Name, originalBind.ArgumentNames, originalBind.EntryAddress, originalBind.Id,
-                originalBind.RequiredTags, originalBind.ExcludedTags, requiredRegisterCount: 1, originalBind.RequiredCallStackDepth)
-        ]);
-        var untrustedProgram = new GameEventScriptProgram(
-            validProgram.FormatVersion,
-            validProgram.ModuleName,
-            validProgram.ProgramVersion,
-            1,
-            validProgram.RequiredCallStackDepth,
-            validProgram.StringConstants,
-            validProgram.UInt16IndexLists,
-            bindings,
-            new GameEventScriptCodeSegment(instructions),
-            buildMetadataSegment: validProgram.BuildMetadata);
-
-        var host = GameEventScriptHost.CreateBuilder().Build();
-        var exception = Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => host.Load(untrustedProgram));
-        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.CyclicCallGraph, exception.ErrorCode);
-        StringAssert.Contains(exception.Message, "Start -> Start");
-    }
-
-    [TestMethod]
     public void OptimizeCanRewritePlanBeforeBuild()
     {
         var builder = new GesBinaryBuilder()

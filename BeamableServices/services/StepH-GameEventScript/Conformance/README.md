@@ -31,11 +31,16 @@ as `case` or `expect`; custom trailing fence info strings are intentionally not
 accepted.
 
 The complete portable corpus lives under
-`StepH-GameEventScript-Tests/Conformance/Suites`. Its 73 suites
-contain 1,009 semantic cases and seven independent bytecode snapshots. Every case
+`StepH-GameEventScript-Tests/Conformance/Suites`. Its 74 suites
+contain 1,022 semantic cases and seven independent bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. Markdown is the sole normative authoring format for
 conformance cases.
+
+`program.binary-format` is also the executable `.gesb` V1 fixture manifest.
+The immutable resources live below `Conformance/Fixtures/GesbV1`; adapters map
+stable resource IDs to packaged bytes, while the portable parser and runner
+remain fileless and networkless.
 
 The C# adapter also discovers the five performance cases independently for an
 explicit, non-parallel measurement run. It writes the canonical result JSON, a

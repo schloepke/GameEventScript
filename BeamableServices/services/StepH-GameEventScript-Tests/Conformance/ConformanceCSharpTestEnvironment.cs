@@ -17,6 +17,7 @@ internal static class ConformanceCSharpTestEnvironment
     ];
 
     private static readonly Lazy<IReadOnlyList<ConformanceDocument>> LoadedDocuments = new(LoadDocuments);
+    private static readonly Lazy<IConformanceResourceResolver> LoadedResources = new(CreateResourceResolver);
 
     internal static IReadOnlyList<ConformanceDocument> Documents => LoadedDocuments.Value;
 
@@ -56,7 +57,8 @@ internal static class ConformanceCSharpTestEnvironment
             ConformanceTestExtensionRegistry.Instance,
             GameEventScriptConformanceExternalTypes.Registry,
             PerformanceProfile,
-            provider);
+            provider,
+            LoadedResources.Value);
 
     private static IReadOnlyList<ConformanceDocument> LoadDocuments()
     {
@@ -65,6 +67,24 @@ internal static class ConformanceCSharpTestEnvironment
             .OrderBy(path => path, StringComparer.Ordinal)
             .Select(path => ConformanceMarkdownParser.Parse(File.ReadAllBytes(path)))
             .ToArray();
+    }
+
+    private static IConformanceResourceResolver CreateResourceResolver()
+    {
+        var fixtureRoot = Path.Combine(GetConformanceDirectory(), "Fixtures");
+        var paths = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var document in Documents)
+        foreach (var testCase in document.Cases)
+        {
+            var fixture = testCase.BinaryFixture;
+            if (fixture is null) continue;
+            var path = Path.GetFullPath(Path.Combine(fixtureRoot, fixture.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+            if (!path.StartsWith(Path.GetFullPath(fixtureRoot) + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                throw new InvalidOperationException("Conformance resource escaped the fixture root.");
+            if (!paths.TryAdd(fixture.ResourceId, path))
+                throw new InvalidOperationException("Duplicate conformance resource ID '" + fixture.ResourceId + "'.");
+        }
+        return new FileResourceResolver(paths);
     }
 
     internal static string GetConformanceDirectory([CallerFilePath] string sourceFile = "")
@@ -79,6 +99,30 @@ internal static class ConformanceCSharpTestEnvironment
             var profile = testCase.Expectation.Performance!.Profiles.Single(value => value.Id == profileId);
             return new ConformancePerformanceMeasurement(profile.Metrics
                 .Select(metric => new ConformanceMeasuredMetric(metric.Id, metric.Reference, metric.Unit)).ToArray());
+        }
+    }
+
+    private sealed class FileResourceResolver : IConformanceResourceResolver
+    {
+        private readonly IReadOnlyDictionary<string, string> _paths;
+
+        internal FileResourceResolver(IReadOnlyDictionary<string, string> paths) => _paths = paths;
+
+        public ConformanceResourceResult Resolve(string resourceId, int maximumByteCount)
+        {
+            if (!_paths.TryGetValue(resourceId, out var path))
+                return new ConformanceResourceResult(ConformanceResourceStatus.NotFound, errorCode: "resource.notRegistered");
+            try
+            {
+                var length = new FileInfo(path).Length;
+                if (length > maximumByteCount)
+                    return new ConformanceResourceResult(ConformanceResourceStatus.LimitExceeded, errorCode: "resource.tooLarge");
+                return new ConformanceResourceResult(ConformanceResourceStatus.Found, File.ReadAllBytes(path));
+            }
+            catch (Exception)
+            {
+                return new ConformanceResourceResult(ConformanceResourceStatus.Error, errorCode: "resource.readFailed");
+            }
         }
     }
 }

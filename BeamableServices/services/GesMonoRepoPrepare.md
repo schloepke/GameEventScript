@@ -598,11 +598,11 @@ Fallzahlen sowie eindeutige Suite- und Case-IDs.
 Das portable Environment, Host-Szenarien und die öffentlichen sprachneutralen
 API-Verträge sind jetzt ausdrückbar und getestet:
 
-- Der Corpus umfasst 1.016 Fälle in 73 Suites: 1.009 semantische Fälle und
+- Der Corpus umfasst 1.029 Fälle in 74 Suites: 1.022 semantische Fälle und
   sieben einzeln ausführbare GESA-Snapshots.
-- Gegenüber dem ursprünglichen Bestand wurden 66 von 156 C#-Testmethoden nach
-  Markdown migriert oder als Duplikate entfernt. Die verbleibenden 91 Methoden
-  sind in `NativeTestRetention.md` einzeln nach Retention-Klasse begründet.
+- Die verbleibenden 84 C#-Testmethoden sind in `NativeTestRetention.md` nach
+  Retention-Klasse begründet: 38 bootstrappen die Conformance-Infrastruktur,
+  46 prüfen absichtlich sprach- oder implementationsspezifisches Verhalten.
 - `valueApi` prüft Value-Kinds, Reader/Flags, Einheiten, Equality/Hash,
   Containerkopien, skalare Map-Sortierung, Last-entry-wins, Records, Ranges und
   Message-Werte ohne GES-Ausführung.
@@ -626,27 +626,49 @@ API-Verträge sind jetzt ausdrückbar und getestet:
   einzelne normative Suite überschreitet 3.000 Zeilen; ein H2-Testblock wird
   dabei niemals zwischen Dateien geteilt.
 - `ConformanceCoverage.md` ordnet das portable Verhalten stabilen Case-IDs zu.
-  Ein indirekter zyklischer Callgraph bleibt bis 5.9 ein nativer
-  Builder-/Validator-Test, weil er nicht aus gültigem Source erzeugt werden kann.
 
-### 5.9 `.gesb`-Fixtures und Manifest ergänzen
+### 5.9 `.gesb`-Fixtures und Manifest ergänzen - DONE
 
-- Gültige und gezielt beschädigte `.gesb`-Dateien einchecken.
-- Eine ungültige Fixture mit indirektem zyklischem Callgraph und stabiler
-  portabler Case-ID aufnehmen; danach den temporären Hinweis in
-  `ConformanceCoverage.md` ersetzen.
-- Ein Manifest mit Fixture-ID, relativem Pfad, Source, Compileroptionen,
-  ProgramVersion, SHA-256 und erwarteten Read-, Validation- und
-  Runtime-Ergebnissen führen.
-- `.gesb` Read/Write/Validation einschließlich stabiler Formatfehler durch das
-  portable Conformance-Format abdecken.
-- Dieselben Fixture-Bytes in C#, Swift, Kotlin und C++ laden und mit identischen
-  Runtime-Ergebnissen ausführen.
-- Unterschiedliche BuildMetadata verschiedener Compiler zulassen; die Required
-  Runtime-Segmente müssen semantisch identisch bleiben.
-- Externe Fixture-Bytes ausschließlich über einen injizierten, begrenzten
-  Resource-Resolver beziehen; Parser und Runner greifen nie selbst auf das
-  Dateisystem oder Netzwerk zu.
+`program.binary-format` ist das ausführbare portable Manifest für 13 immutable
+`.gesb`-V1-Ressourcen. Jeder Fall enthält stabile Fixture- und Resource-IDs,
+Paketpfad, Source/Compileroptionen, Compiler-ID/-Version, ProgramVersion,
+SHA-256, optionale Ableitung sowie genaue Read-, Validation-, Rewrite- und
+gegebenenfalls Runtime-Erwartungen.
+
+Vier gültige Fixtures decken kanonische Runtime-/Debug-Programme, opaque
+optionale Sections und nichtkanonische Section-Reihenfolge ab. Neun gezielt
+beschädigte Fixtures decken Magic, Truncation, fehlende/doppelte Sections,
+UTF-8, unbekannte Required Sections, reservierte Kompression, ungültige
+Referenzen und einen aus gültigem Source nicht erzeugbaren indirekten
+Call-Zyklus ab. Der stabile Zyklusfall ist
+`program.binary-format/invalid-indirect-call-cycle`.
+
+Der neue öffentliche `programBinary`-Falltyp unterscheidet strukturelle
+`readError`- von semantischen `validationError`-Ergebnissen. Der Runner prüft
+die Ressourcenidentität vor dem Reader, validiert ProgramVersion und optionale
+Metadaten, schreibt gültige Programme vollständig neu und kann sie anschließend
+über die normale Host-Step-Pipeline ausführen. BuildMetadata bleibt reine
+Provenienz; die portable Runtime hängt nicht davon ab.
+
+`IConformanceResourceResolver` erhält nur Resource-ID und hartes
+`MaxResourceBytes`; der portable Parser und Runner interpretieren niemals
+Pfade und führen kein Datei- oder Netzwerk-I/O aus. Der C#-Adapter löst die im
+Manifest validierten relativen Pfade innerhalb des Fixture-Roots auf. Spätere
+Swift-, Kotlin- und C++-Runner verwenden exakt dieselben Dateien und IDs statt
+sprachspezifischer Kopien; ihre gemeinsame Ausführung wird unter 5.10
+abgenommen.
+
+Redundante native Read-/Validation-/Roundtrip-/Runtime-Tests wurden entfernt.
+Die verbleibenden 16 `.gesb`-/Program-Tests prüfen ausschließlich direkte
+C#-Implementierungsdetails und bewusst getrennte Retention-/Limitpfade.
+
+Abnahme:
+
+```text
+1029/1029 Markdown-Conformance-Fälle bestanden
+1125/1125 Nicht-Performance-Testausführungen bestanden
+6/6 Performance-/Allokationstests im Bestätigungslauf bestanden
+```
 
 ### 5.10 Cross-Language-Abnahme vorbereiten
 

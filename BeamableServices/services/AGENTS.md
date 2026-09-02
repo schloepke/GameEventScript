@@ -72,6 +72,33 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable `.gesb` Fixture Manifest and Resolver
+
+- `program.binary-format` is the executable manifest for 13 immutable `.gesb`
+  V1 resources: four valid canonical/noncanonical/opaque Programs and nine
+  targeted structural or semantic failures.
+- Every entry records stable fixture/resource IDs, packaged relative path,
+  source/compiler provenance, ProgramVersion, SHA-256, derivation and exact
+  read/validation/rewrite/runtime expectations.
+- The portable `programBinary` kind distinguishes structural `readError` from
+  semantic `validationError`, can canonically rewrite valid Programs, and can
+  execute them through the ordinary Host step pipeline.
+- `IConformanceResourceResolver` receives only resource ID and a hard maximum
+  byte count. Parser and runner remain fileless/networkless; the C# adapter owns
+  the checked fixture-root mapping.
+- The indirect cycle trust boundary is now the portable case
+  `program.binary-format/invalid-indirect-call-cycle`. Redundant native binary
+  tests were removed; 16 retained binary/Program methods cover direct C#
+  implementation concerns.
+
+Verification after this change:
+
+```text
+1029/1029 Markdown conformance cases passed
+1125/1125 non-performance test executions passed
+6/6 performance/allocation tests passed on confirmation run
+```
+
 ### Portable Conformance Environment and Host Semantics
 
 - `ConformanceEnvironmentV1.md` defines the fixed portable extension operations
@@ -85,8 +112,6 @@ The project has a portable Game Event Script host/VM architecture with a compact
   native-only Hosts and `hostCount` scenarios cover lifecycle snapshots and
   reuse of one immutable Program across independent Hosts.
 - `ConformanceCoverage.md` maps portable semantics to stable Markdown case IDs.
-  Indirect cyclic bytecode remains an internal validator test until point 5.9
-  adds the deliberately invalid `.gesb` fixture that can represent it.
 
 Verification after this change:
 
@@ -99,18 +124,17 @@ Verification after this change:
 ### Markdown-only Conformance Corpus and C# Adapters
 
 - The normative corpus lives in
-  `StepH-GameEventScript-Tests/Conformance/Suites` and contains 73 suites and
-  1,009 semantic cases.
+  `StepH-GameEventScript-Tests/Conformance/Suites` and contains 74 suites and
+  1,022 semantic cases.
 - Every case has an explicit stable ID, kind, and atomic/scenario
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
-- The active Markdown adapter exposes 1,016 independent cases, including seven
+- The active Markdown adapter exposes 1,029 independent cases, including seven
   bytecode snapshots, plus a whole-corpus
   identity test. Their results are collected into canonical
   `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
   second corpus execution.
-- `StepH-GameEventScript/NativeTestRetention.md` classifies all 91 C# methods;
-  applicable `.gesb` tests are intentionally re-audited under 5.9.
+- `StepH-GameEventScript/NativeTestRetention.md` classifies all 84 C# methods.
 - The test tree now has exactly two semantic roots: `Conformance` contains
   Markdown suites, fixtures, reports, and its C# runner/parser adapters directly
   in the root; `Native` contains the remaining C#-specific tests grouped by

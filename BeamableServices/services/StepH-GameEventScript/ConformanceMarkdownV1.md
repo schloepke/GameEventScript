@@ -270,6 +270,7 @@ discriminator is `gesBlock: case`. It supports:
 | `messageApi` | mapping | `messageApi` only | signature and message input |
 | `valueApi` | mapping | `valueApi` only | portable value construction, comparison and copy input |
 | `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
+| `binaryFixture` | mapping | `programBinary` only | immutable `.gesb` fixture manifest entry |
 | `performance` | mapping | `performance` only | workload configuration |
 
 Compile options are:
@@ -343,8 +344,41 @@ compiler builder in descriptor order. Programs are loaded into the host in the
 order their ID first occurs. Interleaving descriptors for different programs is
 valid but should be avoided for readability.
 
-No parser or runner opens a source path. External binary fixtures use the
-resource-resolver contract defined separately by their test kind.
+No parser or runner opens a source path. For `programBinary`, source fences are
+provenance: they record the logical compiler input named by the manifest but are
+not compiled or substituted by the runner. External binary bytes use only the
+resource-resolver contract defined below.
+
+### Binary fixture manifest entries
+
+Each `programBinary` test contains exactly one `binaryFixture` mapping:
+
+```yaml
+binaryFixture:
+  id: gesb-v1-valid-runtime
+  resourceId: gesb-v1.valid-runtime
+  relativePath: GesbV1/valid-runtime.gesb
+  sha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+  compareCompiledRuntime: true
+  derivation: optional human-readable transformation description
+```
+
+`id` and `resourceId` are stable portable IDs. `resourceId` is the only value
+given to the injected resolver. `relativePath` is packaging metadata using
+forward slashes; it must be relative, contain no empty, `.` or `..` component,
+and is never opened by the parser or runner. `sha256` is exactly 64 uppercase
+hexadecimal digits and identifies the complete resource bytes. Compiler ID and
+version, resolved `compile` options, source fences, and the required
+`programVersion` record reproducible provenance. `compareCompiledRuntime`
+defaults to false; when true it requires source and `compiler`, compiles exactly
+one source Program group with the recorded ProgramVersion, and compares only
+the canonical Required Runtime sections. BuildMetadata and optional debug/source
+sections therefore may differ between language compilers. `derivation` is used
+only when helpful to explain a deliberately altered fixture and is
+non-executable.
 
 ### Declarative native handlers
 
@@ -573,7 +607,7 @@ last-entry-wins semantics before scalar-ordinal key sorting.
 
 Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
 `valueApi`, `externalTypeApi`, `compileMetadata`, `bytecode`, `performance`, and
-`bytecodeSnapshot`. A kind's
+`bytecodeSnapshot`, and `programBinary`. A kind's
 required core capabilities are additive to explicit `requires.core`.
 
 The presence of `nativeHandlers` implicitly requires `native-handlers`.
@@ -759,6 +793,44 @@ has exactly one `gesa` block and no `gesBlock: expect` block. The compiler's
 canonical dumper output and the block payload are normalized to logical `LF`
 and compared byte-for-byte as UTF-8. No whitespace, address, symbol,
 source-comment, or metadata field is ignored.
+
+### `programBinary`
+
+Requires `program-binary`, one `binaryFixture` mapping, and one binary
+expectation. Source fences are optional provenance and are never compiled.
+`compile.binaryRoundTrip` is invalid because the input is already binary.
+
+```yaml
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  rewriteSha256: 594808EB171F039AF2182A22360C39183CC4960412EF3D76B97E3632603EECF8
+  moduleName: BinaryFixture
+  requiredRegisterCount: 3
+  requiredCallStackDepth: 0
+  opaqueSectionCount: 0
+```
+
+`outcome` is exactly `valid`, `readError`, or `validationError`. Read errors
+cover header, framing, section representation, strict UTF-8, and bounded table
+materialization (`GameEventScriptProgramFormatErrorCode` 1 through 21).
+Validation errors cover cross-reference, opcode/operand, call-graph, resource,
+and debug/source invariants (codes 22 through 38). Error outcomes require the
+canonical `errorCode` name and may constrain `byteOffset`, `sectionType`, and
+`entryIndex`; they reject all success fields.
+
+A valid outcome may constrain the fields above. `rewriteByteExact` compares the
+fixture with a fresh canonical writer result, while `rewriteSha256` identifies
+that result independently of whether the input order was canonical. The
+fixture's `programVersion` is always compared. When BuildMetadata is present,
+its compiler identity is compared with the manifest; runtime behavior never
+depends on it.
+
+A valid case may contain Steps and ordinary step expectations. That form also
+requires `host`, `vm`, `observer`, and `publish-sink`; the parsed fixture Program
+is loaded and executed instead of compiling the provenance source. Error cases
+cannot contain Steps. Initialization expectations are valid only together with
+Steps.
 
 ### `performance`
 

@@ -16,7 +16,15 @@ public enum ConformanceTestKind
     Performance = 6,
     BytecodeSnapshot = 7,
     ValueApi = 8,
-    ExternalTypeApi = 9
+    ExternalTypeApi = 9,
+    ProgramBinary = 10
+}
+
+public enum ConformanceBinaryOutcome
+{
+    Valid = 0,
+    ReadError = 1,
+    ValidationError = 2
 }
 
 public enum ConformanceTestLevel
@@ -145,6 +153,7 @@ public sealed class ConformanceCase
         ConformanceMessageApiCase? messageApi,
         ConformanceValueApiCase? valueApi,
         ConformanceExternalTypeApiCase? externalTypeApi,
+        ConformanceBinaryFixture? binaryFixture,
         ConformancePerformanceWorkload? performance,
         string? expectedAssembler,
         ConformanceSourceRange metadataBlockRange,
@@ -178,6 +187,7 @@ public sealed class ConformanceCase
         MessageApi = messageApi;
         ValueApi = valueApi;
         ExternalTypeApi = externalTypeApi;
+        BinaryFixture = binaryFixture;
         Performance = performance;
         ExpectedAssembler = expectedAssembler;
         MetadataBlockRange = metadataBlockRange;
@@ -212,6 +222,7 @@ public sealed class ConformanceCase
     public ConformanceMessageApiCase? MessageApi { get; }
     public ConformanceValueApiCase? ValueApi { get; }
     public ConformanceExternalTypeApiCase? ExternalTypeApi { get; }
+    public ConformanceBinaryFixture? BinaryFixture { get; }
     public ConformancePerformanceWorkload? Performance { get; }
     public string? ExpectedAssembler { get; }
     public ConformanceSourceRange MetadataBlockRange { get; }
@@ -244,6 +255,32 @@ public sealed class ConformanceCompileOptions
 
     public IReadOnlyList<string> DebugInfo { get; }
     public bool BinaryRoundTrip { get; }
+}
+
+public sealed class ConformanceBinaryFixture
+{
+    internal ConformanceBinaryFixture(string id, string resourceId, string relativePath, string sha256, string compilerId, string compilerVersion, ulong programVersion, bool compareCompiledRuntime, string? derivation)
+    {
+        Id = id;
+        ResourceId = resourceId;
+        RelativePath = relativePath;
+        Sha256 = sha256;
+        CompilerId = compilerId;
+        CompilerVersion = compilerVersion;
+        ProgramVersion = programVersion;
+        CompareCompiledRuntime = compareCompiledRuntime;
+        Derivation = derivation;
+    }
+
+    public string Id { get; }
+    public string ResourceId { get; }
+    public string RelativePath { get; }
+    public string Sha256 { get; }
+    public string CompilerId { get; }
+    public string CompilerVersion { get; }
+    public ulong ProgramVersion { get; }
+    public bool CompareCompiledRuntime { get; }
+    public string? Derivation { get; }
 }
 
 public sealed class ConformanceRuntimeLimits
@@ -588,7 +625,8 @@ public sealed class ConformanceExpectation
         ConformanceExternalTypeApiExpectation? externalTypeApi,
         ConformanceCompileMetadataExpectation? metadata,
         ConformanceOpcodeExpectation? opcodes,
-        ConformancePerformanceExpectation? performance)
+        ConformancePerformanceExpectation? performance,
+        ConformanceBinaryExpectation? binary)
     {
         Initialization = initialization;
         Error = error;
@@ -598,6 +636,7 @@ public sealed class ConformanceExpectation
         Metadata = metadata;
         Opcodes = opcodes;
         Performance = performance;
+        Binary = binary;
     }
 
     public ConformanceChannelExpectation Initialization { get; }
@@ -608,6 +647,48 @@ public sealed class ConformanceExpectation
     public ConformanceCompileMetadataExpectation? Metadata { get; }
     public ConformanceOpcodeExpectation? Opcodes { get; }
     public ConformancePerformanceExpectation? Performance { get; }
+    public ConformanceBinaryExpectation? Binary { get; }
+}
+
+public sealed class ConformanceBinaryExpectation
+{
+    internal ConformanceBinaryExpectation(
+        ConformanceBinaryOutcome outcome,
+        string? errorCode,
+        long? byteOffset,
+        ushort? sectionType,
+        int? entryIndex,
+        bool? rewriteByteExact,
+        string? rewriteSha256,
+        string? moduleName,
+        uint? requiredRegisterCount,
+        uint? requiredCallStackDepth,
+        uint? opaqueSectionCount)
+    {
+        Outcome = outcome;
+        ErrorCode = errorCode;
+        ByteOffset = byteOffset;
+        SectionType = sectionType;
+        EntryIndex = entryIndex;
+        RewriteByteExact = rewriteByteExact;
+        RewriteSha256 = rewriteSha256;
+        ModuleName = moduleName;
+        RequiredRegisterCount = requiredRegisterCount;
+        RequiredCallStackDepth = requiredCallStackDepth;
+        OpaqueSectionCount = opaqueSectionCount;
+    }
+
+    public ConformanceBinaryOutcome Outcome { get; }
+    public string? ErrorCode { get; }
+    public long? ByteOffset { get; }
+    public ushort? SectionType { get; }
+    public int? EntryIndex { get; }
+    public bool? RewriteByteExact { get; }
+    public string? RewriteSha256 { get; }
+    public string? ModuleName { get; }
+    public uint? RequiredRegisterCount { get; }
+    public uint? RequiredCallStackDepth { get; }
+    public uint? OpaqueSectionCount { get; }
 }
 
 public sealed class ConformanceChannelExpectation

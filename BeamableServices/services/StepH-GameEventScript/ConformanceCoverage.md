@@ -21,6 +21,7 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Random known-answer vectors, non-consuming bounds and nested streams | `runtime.atomic.random/case-0002` through `runtime.atomic.random/case-0007` |
 | Compiler handler/program resource metadata | `compile.binary-compiler/case-0001`, `api.messages/case-0007` |
 | Direct recursive call rejection | `compile.build-errors/case-0001` |
+| Indirect cyclic call graph rejection at the untrusted `.gesb` boundary | `program.binary-format/invalid-indirect-call-cycle` |
 | Native-only Host | `runtime.host-lifecycle/native-only` |
 | Same immutable Program in independent Hosts | `runtime.host-lifecycle/shared-program-multiple-hosts` |
 | Multiple Programs and deterministic load order | `runtime.host-dispatch/case-0007` |
@@ -45,12 +46,10 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Canonical binding, message-name and embedded-source dumps | `compile.program-dumps/compact-bindings`, `compile.program-dumps/message-name-and-source` |
 | Fixed extension environment (`echo`, `fail`, `floor`, navigation) | `runtime.atomic.external-access/case-0010`, `runtime.atomic.control-flow/case-0002`, `runtime.extensions-sequences/case-0001` |
 
-Indirect cyclic bytecode cannot be produced by valid GES source: forward calls
-are rejected before a multi-node source cycle can be formed. Its trust-boundary
-test therefore remains the internal builder/validator test
-`GesBinaryBuilderTests.BuildRejectsIndirectRecursiveCall` until 5.9 introduces
-invalid `.gesb` resources. At that point the fixture's stable portable ID must
-replace this paragraph before the C#-specific builder test is reduced.
+The complete portable `.gesb` fixture manifest is
+`program.binary-format`. It covers canonical and noncanonical valid Programs,
+opaque optional data, stable structural errors, stable semantic validation
+errors, bounded resource resolution, rewrite identity, and runtime execution.
 
 ## Intentionally language-specific coverage
 

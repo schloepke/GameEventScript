@@ -972,10 +972,37 @@ sealed class StepH.GameEventScript.Conformance.ConformanceArgument
 enum StepH.GameEventScript.Conformance.ConformanceBinary64ComparisonMode
   enum-field Exact = 0
   enum-field Ulp = 1
+sealed class StepH.GameEventScript.Conformance.ConformanceBinaryExpectation
+  property StepH.GameEventScript.Conformance.ConformanceBinaryOutcome Outcome { get }
+  property System.Boolean? RewriteByteExact { get }
+  property System.Int32? EntryIndex { get }
+  property System.Int64? ByteOffset { get }
+  property System.String ErrorCode { get }
+  property System.String ModuleName { get }
+  property System.String RewriteSha256 { get }
+  property System.UInt16? SectionType { get }
+  property System.UInt32? OpaqueSectionCount { get }
+  property System.UInt32? RequiredCallStackDepth { get }
+  property System.UInt32? RequiredRegisterCount { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceBinaryFixture
+  property System.Boolean CompareCompiledRuntime { get }
+  property System.String CompilerId { get }
+  property System.String CompilerVersion { get }
+  property System.String Derivation { get }
+  property System.String Id { get }
+  property System.String RelativePath { get }
+  property System.String ResourceId { get }
+  property System.String Sha256 { get }
+  property System.UInt64 ProgramVersion { get }
+enum StepH.GameEventScript.Conformance.ConformanceBinaryOutcome
+  enum-field Valid = 0
+  enum-field ReadError = 1
+  enum-field ValidationError = 2
 sealed class StepH.GameEventScript.Conformance.ConformanceCapabilityRequirements
   property System.Collections.Generic.IReadOnlyList<System.String> Core { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Optional { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceCase
+  property StepH.GameEventScript.Conformance.ConformanceBinaryFixture BinaryFixture { get }
   property StepH.GameEventScript.Conformance.ConformanceCapabilityRequirements Requires { get }
   property StepH.GameEventScript.Conformance.ConformanceComparisonOptions Comparison { get }
   property StepH.GameEventScript.Conformance.ConformanceCompileOptions Compile { get }
@@ -1078,6 +1105,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceDocument
   property System.String SuiteId { get }
   property System.String Title { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceExpectation
+  property StepH.GameEventScript.Conformance.ConformanceBinaryExpectation Binary { get }
   property StepH.GameEventScript.Conformance.ConformanceChannelExpectation Initialization { get }
   property StepH.GameEventScript.Conformance.ConformanceCompileMetadataExpectation Metadata { get }
   property StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic Error { get }
@@ -1290,6 +1318,16 @@ static class StepH.GameEventScript.Conformance.ConformanceReceivedWriterCodes
   field static System.String MissingRange
   field static System.String OverlappingRange
   field static System.String StaleRange
+sealed class StepH.GameEventScript.Conformance.ConformanceResourceResult
+  ctor ConformanceResourceResult(StepH.GameEventScript.Conformance.ConformanceResourceStatus status, System.Collections.Generic.IReadOnlyList<System.Byte> bytes, System.String errorCode)
+  property StepH.GameEventScript.Conformance.ConformanceResourceStatus Status { get }
+  property System.Collections.Generic.IReadOnlyList<System.Byte> Bytes { get }
+  property System.String ErrorCode { get }
+enum StepH.GameEventScript.Conformance.ConformanceResourceStatus
+  enum-field Found = 0
+  enum-field NotFound = 1
+  enum-field LimitExceeded = 2
+  enum-field Error = 3
 sealed class StepH.GameEventScript.Conformance.ConformanceResultDiagnostic
   property System.String Code { get }
   property System.String HandlerName { get }
@@ -1337,13 +1375,17 @@ static class StepH.GameEventScript.Conformance.ConformanceRunnerCodes
   field static System.String MissingPerformanceProfile
   field static System.String Passed
   field static System.String PerformanceRegression
+  field static System.String ResourceIntegrityMismatch
+  field static System.String ResourceLimitExceeded
+  field static System.String ResourceUnavailable
   field static System.String UnhandledException
 sealed class StepH.GameEventScript.Conformance.ConformanceRunnerEnvironment
-  ctor ConformanceRunnerEnvironment(System.String runnerId, System.String runnerVersion, System.String implementationId, System.String implementationVersion, System.Collections.Generic.IReadOnlyCollection<System.String> capabilities, StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog externalTypeCatalog, StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry externalTypeRegistry, System.String performanceProfileId, StepH.GameEventScript.Conformance.IConformancePerformanceProvider performanceProvider)
+  ctor ConformanceRunnerEnvironment(System.String runnerId, System.String runnerVersion, System.String implementationId, System.String implementationVersion, System.Collections.Generic.IReadOnlyCollection<System.String> capabilities, StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog externalTypeCatalog, StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry externalTypeRegistry, System.String performanceProfileId, StepH.GameEventScript.Conformance.IConformancePerformanceProvider performanceProvider, StepH.GameEventScript.Conformance.IConformanceResourceResolver resourceResolver)
   property StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
   property StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog ExternalTypeCatalog { get }
   property StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry ExternalTypeRegistry { get }
   property StepH.GameEventScript.Conformance.IConformancePerformanceProvider PerformanceProvider { get }
+  property StepH.GameEventScript.Conformance.IConformanceResourceResolver ResourceResolver { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Capabilities { get }
   property System.String ImplementationId { get }
   property System.String ImplementationVersion { get }
@@ -1355,6 +1397,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceRunnerLimits
   property StepH.GameEventScript.Conformance.ConformanceRunnerLimits Default { get }
   property System.Int32 MaxCases { get set }
   property System.Int32 MaxFramesPerStep { get set }
+  property System.Int32 MaxResourceBytes { get set }
 sealed class StepH.GameEventScript.Conformance.ConformanceRunnerOptions
   ctor ConformanceRunnerOptions()
   property StepH.GameEventScript.Conformance.ConformanceRunnerLimits Limits { get set }
@@ -1416,6 +1459,7 @@ enum StepH.GameEventScript.Conformance.ConformanceTestKind
   enum-field BytecodeSnapshot = 7
   enum-field ValueApi = 8
   enum-field ExternalTypeApi = 9
+  enum-field ProgramBinary = 10
 enum StepH.GameEventScript.Conformance.ConformanceTestLevel
   enum-field Atomic = 0
   enum-field Scenario = 1
@@ -1456,6 +1500,8 @@ sealed class StepH.GameEventScript.Conformance.ConformanceValueEntry
   property System.String Key { get }
 interface StepH.GameEventScript.Conformance.IConformancePerformanceProvider
   method StepH.GameEventScript.Conformance.ConformancePerformanceMeasurement Measure(StepH.GameEventScript.Conformance.ConformanceCase testCase, System.String profileId)
+interface StepH.GameEventScript.Conformance.IConformanceResourceResolver
+  method StepH.GameEventScript.Conformance.ConformanceResourceResult Resolve(System.String resourceId, System.Int32 maximumByteCount)
 interface StepH.GameEventScript.Conformance.IConformanceResultSink
   method System.Void CaseCompleted(StepH.GameEventScript.Conformance.ConformanceCaseResult result)
 static class StepH.GameEventScript.GameEventScriptManager

@@ -1,5 +1,6 @@
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Conformance;
+using System.Security.Cryptography;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 
@@ -327,6 +328,63 @@ second
         Assert.AreEqual("second", discovered[1][1]);
     }
 
+    [TestMethod]
+    public void ProgramBinaryUsesOnlyInjectedBoundedResourceBytes()
+    {
+        var bytes = GameEventScriptProgramWriter.ToArray(GameEventScriptBuilder.Create()
+            .AddScript("module Fixture\non Start { }", "fixture.ges")
+            .WithProgramVersion(42)
+            .WithDebugInfo(GameEventScriptDebugInfoOptions.None)
+            .Compile());
+        var hash = Convert.ToHexString(SHA256.HashData(bytes));
+        var document = Parse("programBinary", $$"""
+```yaml
+gesBlock: case
+id: case
+binaryFixture:
+  id: fixture
+  resourceId: fixture.bytes
+  relativePath: GesbV1/fixture.gesb
+  sha256: {{hash}}
+  compilerId: steph.ges.compiler.csharp
+  compilerVersion: 0.1.0
+  programVersion: 42
+```
+```yaml
+gesBlock: expect
+binary:
+  outcome: valid
+  rewriteByteExact: true
+  moduleName: Fixture
+```
+""", includeDefaultCase: false);
+        var resolver = new RecordingResourceResolver(bytes);
+        var environment = new ConformanceRunnerEnvironment("runner", "1", "impl", "1", ["program-binary"], resourceResolver: resolver);
+
+        var result = ConformanceRunner.RunCase(document, "case", environment, new ConformanceRunnerOptions
+        {
+            Limits = new ConformanceRunnerLimits { MaxResourceBytes = 1024 }
+        });
+
+        Assert.AreEqual(ConformanceCaseStatus.Passed, result.Status);
+        Assert.AreEqual("fixture.bytes", resolver.ResourceId);
+        Assert.AreEqual(1024, resolver.MaximumByteCount);
+
+        var oversized = ConformanceRunner.RunCase(document, "case", environment, new ConformanceRunnerOptions
+        {
+            Limits = new ConformanceRunnerLimits { MaxResourceBytes = 1 }
+        });
+        var missingResolver = ConformanceRunner.RunCase(document, "case", Environment(["program-binary"]));
+        var tamperedBytes = (byte[])bytes.Clone();
+        tamperedBytes[^1] ^= 0xFF;
+        var tampered = ConformanceRunner.RunCase(document, "case", new ConformanceRunnerEnvironment(
+            "runner", "1", "impl", "1", ["program-binary"], resourceResolver: new RecordingResourceResolver(tamperedBytes)));
+
+        Assert.AreEqual(ConformanceRunnerCodes.ResourceLimitExceeded, oversized.Code);
+        Assert.AreEqual(ConformanceRunnerCodes.InvalidEnvironment, missingResolver.Code);
+        Assert.AreEqual(ConformanceRunnerCodes.ResourceIntegrityMismatch, tampered.Code);
+    }
+
     private static ConformanceDocument Parse(string kind, string body, bool includeDefaultCase = true, string? optionalRequires = null)
     {
         var requires = optionalRequires is null ? string.Empty : "requires:\n  optional: [" + optionalRequires + "]\n";
@@ -350,6 +408,19 @@ second
         {
             CallCount++;
             return new ConformancePerformanceMeasurement([new ConformanceMeasuredMetric(id, value, unit)]);
+        }
+    }
+
+    private sealed class RecordingResourceResolver(byte[] bytes) : IConformanceResourceResolver
+    {
+        internal string? ResourceId { get; private set; }
+        internal int MaximumByteCount { get; private set; }
+
+        public ConformanceResourceResult Resolve(string resourceId, int maximumByteCount)
+        {
+            ResourceId = resourceId;
+            MaximumByteCount = maximumByteCount;
+            return new ConformanceResourceResult(ConformanceResourceStatus.Found, bytes);
         }
     }
 }

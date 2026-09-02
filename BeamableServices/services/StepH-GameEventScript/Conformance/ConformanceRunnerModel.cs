@@ -27,6 +27,9 @@ public static class ConformanceRunnerCodes
     public const string ExpectedLoadError = "conformance.load.expectedError";
     public const string MissingPerformanceProfile = "conformance.runner.missingPerformanceProfile";
     public const string PerformanceRegression = "conformance.performance.regression";
+    public const string ResourceUnavailable = "conformance.resource.unavailable";
+    public const string ResourceLimitExceeded = "conformance.resource.limitExceeded";
+    public const string ResourceIntegrityMismatch = "conformance.resource.integrityMismatch";
 }
 
 public sealed class ConformanceRunnerLimits
@@ -35,6 +38,7 @@ public sealed class ConformanceRunnerLimits
 
     public int MaxCases { get; init; } = 65535;
     public int MaxFramesPerStep { get; init; } = 1_000_000;
+    public int MaxResourceBytes { get; init; } = 64 * 1024 * 1024;
 }
 
 public sealed class ConformanceRunnerOptions
@@ -54,6 +58,44 @@ public interface IConformanceResultSink
 public interface IConformancePerformanceProvider
 {
     ConformancePerformanceMeasurement Measure(ConformanceCase testCase, string profileId);
+}
+
+public enum ConformanceResourceStatus
+{
+    Found = 0,
+    NotFound = 1,
+    LimitExceeded = 2,
+    Error = 3
+}
+
+public interface IConformanceResourceResolver
+{
+    ConformanceResourceResult Resolve(string resourceId, int maximumByteCount);
+}
+
+public sealed class ConformanceResourceResult
+{
+    public ConformanceResourceResult(ConformanceResourceStatus status, IReadOnlyList<byte>? bytes = null, string? errorCode = null)
+    {
+        Status = status;
+        if (status == ConformanceResourceStatus.Found)
+        {
+            if (bytes is null) throw new ArgumentNullException(nameof(bytes));
+            var copy = new byte[bytes.Count];
+            for (var index = 0; index < copy.Length; index++) copy[index] = bytes[index];
+            Bytes = Array.AsReadOnly(copy);
+        }
+        else
+        {
+            if (bytes is not null) throw new ArgumentException("A failed resource result cannot contain bytes.", nameof(bytes));
+            Bytes = Array.AsReadOnly(Array.Empty<byte>());
+        }
+        ErrorCode = errorCode;
+    }
+
+    public ConformanceResourceStatus Status { get; }
+    public IReadOnlyList<byte> Bytes { get; }
+    public string? ErrorCode { get; }
 }
 
 public sealed class ConformancePerformanceMeasurement
@@ -90,7 +132,8 @@ public sealed class ConformanceRunnerEnvironment
         IGameEventScriptExtensionRegistry? extensionRegistry = null,
         IGameEventScriptExternalTypeRegistry? externalTypeRegistry = null,
         string? performanceProfileId = null,
-        IConformancePerformanceProvider? performanceProvider = null)
+        IConformancePerformanceProvider? performanceProvider = null,
+        IConformanceResourceResolver? resourceResolver = null)
     {
         RunnerId = runnerId ?? throw new ArgumentNullException(nameof(runnerId));
         RunnerVersion = runnerVersion ?? throw new ArgumentNullException(nameof(runnerVersion));
@@ -107,6 +150,7 @@ public sealed class ConformanceRunnerEnvironment
         ExternalTypeRegistry = externalTypeRegistry;
         PerformanceProfileId = performanceProfileId;
         PerformanceProvider = performanceProvider;
+        ResourceResolver = resourceResolver;
     }
 
     public string RunnerId { get; }
@@ -119,6 +163,7 @@ public sealed class ConformanceRunnerEnvironment
     public IGameEventScriptExternalTypeRegistry? ExternalTypeRegistry { get; }
     public string? PerformanceProfileId { get; }
     public IConformancePerformanceProvider? PerformanceProvider { get; }
+    public IConformanceResourceResolver? ResourceResolver { get; }
 }
 
 public sealed class ConformanceMismatch

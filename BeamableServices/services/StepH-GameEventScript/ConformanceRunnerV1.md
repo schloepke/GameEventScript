@@ -96,8 +96,12 @@ maximum byte count and returns immutable bytes or a structured error. It never
 receives an instruction to interpret a path or URL. The runner itself never
 opens a file, accesses a package resource, or performs network I/O.
 
-The resolver is not used for embedded `ges` or `gesa` blocks. It is reserved for
-explicit fixture-bearing kinds such as future `.gesb` read/validation cases.
+The resolver is not used for embedded `ges` or `gesa` blocks. `programBinary`
+passes only the declared `resourceId` and `MaxResourceBytes`. A resolver returns
+immutable bytes or the structured status `notFound`, `limitExceeded`, or
+`error`. The runner independently rejects oversized returned data and verifies
+the manifest SHA-256 before decoding it. Resource failures and integrity
+mismatches are test-environment errors, never expected format failures.
 
 ## Preflight
 
@@ -217,6 +221,21 @@ Build metadata that is intentionally implementation-specific must not appear in
 a cross-language snapshot, or the case must declare a capability/profile scope
 that makes it non-cross-language. Required runtime segments and canonical
 portable dump content remain comparable.
+
+### Program binary
+
+`programBinary` resolves one bounded immutable `.gesb` resource, verifies its
+SHA-256, and calls the full Program reader. Structural read errors and semantic
+validation errors are classified by the stable format-error ranges specified
+in `ConformanceMarkdownV1.md` and compared without platform exception text.
+
+For a valid Program the runner compares manifest/build identity and all present
+metadata expectations, invokes the canonical writer, and compares requested
+byte equality and rewrite SHA-256. If Steps are present, it loads that parsed
+Program into a fresh Host and executes the ordinary initialization and step
+pipeline. Embedded source remains provenance and is never opened or compiled.
+The runner never interprets `relativePath`; packaging adapters map resource IDs
+to files, package resources, or caller-provided memory.
 
 ### Performance
 

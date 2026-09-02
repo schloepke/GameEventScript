@@ -113,6 +113,7 @@ public sealed class ConformanceCase
     {
         Id = id;
         FullId = fullId;
+        SuiteId = fullId.Substring(0, fullId.Length - id.Length - 1);
         Title = title;
         Kind = kind;
         Level = level;
@@ -140,6 +141,7 @@ public sealed class ConformanceCase
 
     public string Id { get; }
     public string FullId { get; }
+    public string SuiteId { get; }
     public string Title { get; }
     public ConformanceTestKind Kind { get; }
     public ConformanceTestLevel Level { get; }

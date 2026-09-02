@@ -95,14 +95,30 @@ The project has a portable Game Event Script host/VM architecture with a compact
   nodes are not public, and no Host/VM/Runtime/Compiler code depends on the
   package.
 - Native bootstrap fixtures cover valid and invalid authoring input. The runner
-  remains the next conformance step; the existing JSON corpus stays active until
+  uses only the normalized model; the existing JSON corpus stays active until
   deterministic migration proves parity.
 
-Verification after the parser/validator implementation:
+### Portable Conformance Runner
+
+- `ConformanceRunner` synchronously executes individual cases, documents, or
+  ordered corpora without Markdown/YAML or MSTest dependencies.
+- Its explicit environment declares identities, sorted capabilities, portable
+  registries, runner limits, and optional performance measurement support.
+- All V1 kinds are implemented: `scriptApi`, `compileError`, `loadError`,
+  `messageApi`, `compileMetadata`, `bytecode`, `bytecodeSnapshot`, and
+  `performance` after correctness execution.
+- Immutable results preserve pass/fail/skip/error, stable codes, mismatches,
+  diagnostics, runtime-limit events, assembler output, and performance bounds.
+  Canonical JSON, Markdown report, and received writers remain step 5.4.
+- MSTest-specific discovery/display/assertion code is confined to the test
+  adapter; the runner contains no test-framework assertions.
+
+Verification after the parser/runner implementation:
 
 ```text
-1100/1100 non-performance tests passed
+1107/1107 non-performance tests passed
 27/27 native Markdown parser bootstrap tests passed
+7/7 native conformance runner/adapter tests passed
 1/1 zero-allocation hot-path test passed
 1/1 JSON performance reference test passed on confirmation run
 ```

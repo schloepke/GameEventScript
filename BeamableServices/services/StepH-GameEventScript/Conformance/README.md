@@ -14,8 +14,14 @@ execution, threading, async work, or environment discovery.
 The implementation contains a structural Markdown scanner and a strict parser
 for the documented YAML subset. Their intermediate nodes are internal. Core
 Host, VM, Runtime, Compiler, and API code must never depend on this namespace.
-Runner, report, and received-output behavior belongs to the subsequent
-Conformance runner steps and consumes only the normalized public model.
+
+`ConformanceRunner` consumes only the normalized public model and provides
+synchronous case, document, and corpus execution. Its explicit environment
+declares implementation identity, capabilities, portable registries, and an
+optional performance profile/provider. Structured immutable results preserve
+passed/failed/skipped/error, mismatches, diagnostics, runtime-limit events,
+snapshot output, and performance measurements. JSON, Markdown-report, and
+received-output writers remain the separate next package step.
 
 Semantic test metadata uses ordinary `yaml` fences so standard Markdown tooling
 can highlight it. The required root field `gesBlock` classifies each such block

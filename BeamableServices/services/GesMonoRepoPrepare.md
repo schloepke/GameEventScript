@@ -440,7 +440,36 @@ JSON-Performance-Referenzlauf bleibt von dieser Parseränderung unberührt.
   Limits und Diagnostics anlegen. Der Parser selbst behält dafür native
   Bootstrap-Tests.
 
-### 5.3 Runner vom Autorenformat und MSTest entkoppeln
+### 5.3 Runner vom Autorenformat und MSTest entkoppeln - DONE
+
+`StepH.GameEventScript.Conformance.ConformanceRunner` ist nun eine öffentliche,
+synchrone, filelose Ausführungsschicht ausschließlich über dem normalisierten
+Dokumentmodell. `RunCase`, `RunDocument` und `RunCorpus` verwenden dieselbe
+Execution-Pipeline; Dokument- und Corpus-Reihenfolge bleiben stabil und ein
+optionaler Result-Sink erhält jedes immutable Case-Ergebnis genau einmal.
+
+Das explizite Runner-Environment enthält Runner-/Implementierungsidentität,
+sortierte Capabilities, optionale portable Extension-/External-Type-Registries
+sowie Performanceprofil und Measurement-Provider. Core- und optionale
+Capabilities führen normgerecht zu `error` beziehungsweise `skipped`.
+Corpus-Duplikate und Runnerlimits werden vor der ersten Ausführung geprüft.
+
+Alle acht Testarten werden ausgeführt: Script-API einschließlich Initialisierung,
+Frames, nativen Handlern und Local/Outbound-Beobachtung; Compile- und
+Loadfehler; Message-API; Compile-Metadaten; Opcode-Constraints;
+Bytecode-Snapshots sowie Performance nach vorheriger Korrektheitsprüfung.
+Binary64-Vergleich unterstützt exakte Bits und ULP, Performancegrenzen verwenden
+den kleinsten angegebenen Bound. Ergebnisobjekte enthalten Status, stabile
+Codes, Mismatches, Diagnostics, Runtime-Limits, Snapshottext und Messwerte.
+
+MSTest ist nur noch ein kleiner Adapter für Case-Discovery, Anzeige und die
+Abbildung des strukturierten Status auf Framework-Assertions. Kanonische JSON-,
+Markdown-Report- und Received-Writer bleiben wie vorgesehen Gegenstand von 5.4.
+
+Abnahme: 7/7 fokussierte Runner-/Adapter-Tests und 1107/1107 Nicht-Performance-Tests
+sind erfolgreich; der bestehende Zero-Allocation-Hot-Path und der bestätigte
+JSON-Performance-Referenzlauf bleiben separat verifiziert. Die öffentliche
+API-Snapshot-Erwartung enthält die Runner-Grenze.
 
 - Den Runner ausschließlich gegen das normalisierte Conformance-Dokumentmodell
   implementieren; Markdown-Parsing und Testausführung bleiben getrennte Phasen.
@@ -463,8 +492,8 @@ JSON-Performance-Referenzlauf bleibt von dieser Parseränderung unberührt.
 - Ein kanonisches sprachneutrales JSON-Ergebnisformat für CI und den Vergleich
   der Sprachports definieren. JSON ist hierbei Ergebnis- beziehungsweise
   Austauschformat, nicht mehr Autorenformat.
-- Zusätzlich einen menschenlesbaren Markdown-Gesamtbericht aus denselben
-  strukturierten Ergebnissen erzeugen.
+- Den strukturierten Gesamtbericht als einzige Grundlage für den in 5.4
+  implementierten menschenlesbaren Markdown-Writer bereitstellen.
 - Laufzeit- und Performancewerte außerhalb expliziter Performance-Expectations
   als nichtnormative Metadaten behandeln und Benchmarks von funktionaler
   Conformance trennen.

@@ -42,6 +42,17 @@ An environment contains:
 - an optional performance profile ID and performance measurement provider;
 - explicit runner limits.
 
+The performance provider receives the fully normalized case and selected
+profile ID after the runner has completed the ordinary correctness execution.
+It returns an immutable set of canonical Binary64 metric strings with explicit
+units. Measurement mechanics remain implementation-specific; metric validation,
+bound calculation, classification, and result construction remain in the
+portable runner.
+
+An optional result sink is notified once for every completed case, in execution
+order. It does not participate in comparison and receives the same immutable
+case result that is retained by the aggregate report.
+
 The runner does not obtain defaults from process culture, current directory,
 environment variables, wall-clock time, locale, timezone, or ambient random
 state. Adapters may use such inputs to construct an explicit environment, but

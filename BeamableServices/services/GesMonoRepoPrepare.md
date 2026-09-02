@@ -702,7 +702,7 @@ aus dem kanonischen Conformance-JSON-Writer.
 Das portable Environment, Host-Szenarien und die öffentlichen sprachneutralen
 API-Verträge sind jetzt ausdrückbar und getestet:
 
-- Der Corpus umfasst 1.016 Fälle in 40 Suites: 1.009 semantische Fälle und
+- Der Corpus umfasst 1.016 Fälle in 73 Suites: 1.009 semantische Fälle und
   sieben einzeln ausführbare GESA-Snapshots.
 - Gegenüber dem ursprünglichen Bestand wurden 66 von 156 C#-Testmethoden nach
   Markdown migriert oder als Duplikate entfernt. Die verbleibenden 91 Methoden
@@ -726,6 +726,9 @@ API-Verträge sind jetzt ausdrückbar und getestet:
 - Alle normativen Suites folgen derselben lesbaren Gliederung aus Warnhinweis,
   Suite-Prosa, horizontal getrennten Testfällen, Test-Prosa und benannten
   Abschnitten für Case, Source, Steps, Expectation und GESA-Snapshot.
+- Umfangreiche Matrizen sind in fachlich benannte Unter-Suites zerlegt. Keine
+  einzelne normative Suite überschreitet 3.000 Zeilen; ein H2-Testblock wird
+  dabei niemals zwischen Dateien geteilt.
 - `ConformanceCoverage.md` ordnet das portable Verhalten stabilen Case-IDs zu.
   Ein indirekter zyklischer Callgraph bleibt bis 5.9 ein nativer
   Builder-/Validator-Test, weil er nicht aus gültigem Source erzeugt werden kann.

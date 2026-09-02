@@ -101,7 +101,7 @@ Verification after this change:
 - The former 34-suite, 956-case JSON corpus was deterministically migrated to
   `StepH-GameEventScript-Tests/Conformance/Suites` and the JSON
   source fixtures were removed after old/new execution parity passed. The corpus
-  now contains 40 suites and 1,009 semantic cases after portable Host and API coverage was
+  now contains 73 suites and 1,009 semantic cases after portable Host and API coverage was
   added.
 - Every migrated case has an explicit stable ID, kind, and atomic/scenario
   level. The five performance cases contain profile-local KiB/ms baselines and
@@ -124,6 +124,9 @@ Verification after this change:
   `ConformanceMarkdownV1.md`: caution callout, suite prose, a thematic break and
   prose for every test, and named H3 sections for case metadata, source, steps,
   expectations, and assembler snapshots.
+- Large matrices are split into logically named sub-suites below matching
+  directories. No normative suite exceeds 3,000 lines, and an H2 test block is
+  never split across files.
 - Five explicit C# performance tests measure the five Markdown performance
   cases independently. They emit canonical JSON, a Markdown report, and a
   received Markdown approval candidate. Bytecode snapshots likewise emit a

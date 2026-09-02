@@ -31,7 +31,7 @@ as `case` or `expect`; custom trailing fence info strings are intentionally not
 accepted.
 
 The complete portable corpus lives under
-`StepH-GameEventScript-Tests/Conformance/Suites`. Its 40 suites
+`StepH-GameEventScript-Tests/Conformance/Suites`. Its 73 suites
 contain 1,009 semantic cases and seven independent bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. The former JSON source fixtures were removed after the

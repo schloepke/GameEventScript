@@ -280,30 +280,243 @@ Regressionstests statt eines weiteren großen Umbaus.
   kanonischen Bytes und expliziten Enum-/Opcode-IDs.
 - Der Abschluss ist in `PortableProgramModel.md` und `AGENTS.md` festgehalten.
 
-## 5. JSON-Conformance ausbauen
+## 5. Portable Conformance ausbauen
 
-Es gibt derzeit 34 JSON-Spec-Dateien und zusätzlich 65 eigenständige MSTest-Methoden. Die JSON-Infrastruktur ist bereits eine gute Basis, ist aber momentan selbst noch C#-zentriert.
+Es gibt derzeit 34 JSON-Spec-Dateien mit 956 Fällen, davon 839 `scriptApi`-
+Fälle. Die Infrastruktur ist bereits eine gute semantische Basis, ihr Format,
+Runner und Ergebnisweg sind aber noch C#- und MSTest-zentriert.
 
-Benötigt werden:
+Insbesondere fehlen ein formales Schema, explizite stabile Case-IDs,
+Capabilities, portable Skip-Regeln und ein sprachneutraler Ergebnisvertrag. Die
+heutige abgeleitete ID `SuiteName/Test.Name` ist nicht stabil und bereits ein
+Anzeigename kommt innerhalb derselben Suite doppelt vor. Der C#-Reader
+akzeptiert außerdem Kommentare, Trailing Commas und Property-Namen unabhängig
+von Groß-/Kleinschreibung; andere JSON-Implementierungen müssen dieses Verhalten
+nicht teilen.
 
-- formales JSON Schema
-- Schema-Versionierung
-- stabile eindeutige Case-IDs
-- Kategorien beziehungsweise Capability-Tags
-- klare Required-/Optional-Felder pro Testart
-- sprachneutraler Runner-Ein-/Ausgabevertrag
-- maschinenlesbare Ergebnisdatei
-- klare Skip-Regeln
-- portable Testregistries für Extensions und External Types
-- Observer-Trace-Format
-- Publish-Result-Format
-- Float-Toleranzen
-- Binary-Fixture-Unterstützung mit eingecheckten kanonischen `.gesb`-Dateien und
-  sprachneutralem Manifest für Source, Compileroptionen, ProgramVersion und
-  erwarteten Datei-Hash
-- Trennung zwischen Conformance-JSON und zukünftigem Produkt-/Wire-JSON
+Als zukünftiges Autorenformat ist Markdown vorgesehen. YAML-Frontmatter enthält
+die Suite-Einstellungen und Defaults. Ein `## Test: ...` leitet einen Testfall
+ein; der Fall endet am nächsten solchen H2-Heading oder am Dateiende. Normaler
+GES-Source steht in `ges`-Codeblöcken, Testmetadaten und Erwartungen verwenden
+ein eingeschränktes YAML-Profil, und geordnete Testschritte werden als klar
+definierte Markdown-Tabellen geschrieben. Freie Prosa, Notes und sonstige
+Markdown-Inhalte bleiben nichtnormativ.
 
-### In JSON zu verschieben
+Ein optionaler reservierter Abschnitt `## Fixtures` darf Werte und Matrizen zur
+besseren Lesbarkeit dokumentieren, wird in V1 aber vollständig vom Runner
+ignoriert. Falls später parameterisierte beziehungsweise Matrix-Tests daraus
+erzeugt werden sollen, benötigen sie ein neues explizites und versioniertes
+Konstrukt. Eine spätere Formatversion darf vorhandene dokumentierende Fixtures
+nicht still in ausführbare Semantik umdeuten.
+
+Das Autorenformat darf den sprachneutralen semantischen Vertrag nicht mit einem
+bestimmten Testframework oder einer Implementierungssprache koppeln. Ein
+normalisiertes maschinenlesbares Testmodell und Ergebnisformat bleiben
+erforderlich.
+
+Die Umsetzung erfolgt bewusst vor der Ergänzung weiterer Conformance-Fälle.
+Neue Semantik soll nicht mehr in das auslaufende JSON-Autorenformat eingebaut
+werden. Die bestehende Suite wird zunächst ohne fachliche Änderungen in das
+neue Format überführt; Erweiterungen folgen erst nach nachgewiesener Parität.
+
+### 5.1 Markdown- und Runner-Vertrag normativ spezifizieren
+
+- `ConformanceMarkdownV1.md` als normative Beschreibung des Autorenformats
+  anlegen.
+- UTF-8, Newlines, YAML-Frontmatter, Heading-, Codeblock- und Tabellengrammatik
+  exakt festlegen, ohne einen vollständigen Markdown-AST zum Teil der Semantik
+  zu machen.
+- `## Test: ...` als Testanfang und das nächste solche Heading beziehungsweise
+  das Dateiende als Testende definieren.
+- `ges`-Blöcke als Source, eingeschränktes YAML als Testmetadaten und
+  Expectations sowie Tabellen als geordnete Steps definieren.
+- `## Fixtures` als optionalen, vollständig nichtnormativen und vom V1-Parser
+  ignorierten Dokumentationsabschnitt festlegen. Eine spätere ausführbare
+  Matrixfunktion benötigt ein neues explizites, versioniertes Konstrukt.
+- Ein portables YAML-1.2-Subset ohne Anchors, Aliases, Merge Keys,
+  benutzerdefinierte Tags, Directives, Block-Scalars, implizite Datumswerte,
+  komplexe Keys, doppelte Mapping-Keys oder mehrere Dokumente definieren.
+- Stabile `suiteId` und Case-ID von veränderbaren Titeln und Anzeigenamen
+  trennen; Kategorien, Level, Tags und `requires`-Capabilities explizit
+  modellieren.
+- Vererbung und Overrides zwischen Suite-Frontmatter und Testmetadaten normativ
+  festlegen.
+- Required-/Optional-Felder je Testart und das normalisierte immutable
+  Conformance-Dokumentmodell definieren.
+- Vergleichsmodi für Binary64-Werte festlegen: exakt als Standard und explizite
+  ULP-Toleranz nur für die Operationen, die sie benötigen.
+- Performance-Workload, Korrektheit und Performance-Baseline getrennt
+  modellieren. Zeiten werden mit expliziter Zeiteinheit und Allokationen in
+  `KiB` angegeben; ein `KiB` entspricht exakt 1024 Bytes.
+- `bytecodeSnapshot` als eigene Testart mit normalem `ges`-Source und einem
+  erwarteten `gesa`-Block im Format „Game Event Script Assembler“ definieren.
+- `ConformanceRunnerV1.md` für Testarten, Capabilities, Skip-Regeln,
+  Ausführungsreihenfolge, Einzel-/Gesamtausführung, Reports und Ergebnisformat
+  anlegen.
+- Ungültige Daten, unbekannte Testarten und fehlende Core-Capabilities als
+  Fehler behandeln; nur fehlende optionale Capabilities dürfen einen Skip
+  erzeugen.
+- Conformance-Daten und -Ergebnisse klar von zukünftigem Produkt-/Wire-JSON
+  trennen.
+
+### 5.2 Portables Conformance-Package, Parser und Validator implementieren
+
+- Vorerst den Ordner und Namespace `StepH.GameEventScript.Conformance` innerhalb
+  des bestehenden Core-Projekts verwenden. Host, VM, Compiler und andere
+  Core-Bereiche dürfen nicht zurück auf Conformance verweisen.
+- Die öffentliche API so schneiden, dass der komplette Bereich im Monorepo
+  später mechanisch in ein eigenes optionales Modul verschoben werden kann.
+- Einen eigenen deterministischen Markdown-Strukturscanner statt eines
+  vollständigen CommonMark-Parsers implementieren.
+- Einen eigenen Parser ausschließlich für das normative YAML-Subset
+  implementieren; keine vollständige YAML-Implementierung und keine neue
+  Produktionsabhängigkeit einführen.
+- Frontmatter, Testgrenzen, GES-Codeblöcke, YAML-Blöcke und Step-Tabellen in ein
+  normalisiertes immutable Dokumentmodell binden.
+- SourceRanges der semantischen Blöcke erhalten, damit ein späterer
+  Received-Writer gezielt Performancewerte und `gesa`-Snapshots ersetzen kann,
+  ohne Prosa oder übrige Formatierung neu zu schreiben.
+- Byte-/textorientierte synchrone APIs ohne File-, Thread- oder Async-Abhängigkeit
+  anbieten. Filesystemzugriff bleibt Aufgabe des Aufrufers.
+- Stabile Parser- und Validation-Diagnostics mit Sourcepositionen sowie Limits
+  für Dokumentgröße, YAML-Tiefe, Testanzahl, Sourcegröße, Tabellenzeilen und
+  Scalar-Längen definieren.
+- Öffentliche Parser-APIs und Modelle bereitstellen, damit Nutzer denselben
+  Mechanismus für eigene Script-Selftests verwenden können; interne Markdown-
+  und YAML-Zwischenbäume bleiben nicht öffentlich.
+- Golden- und Invalid-Fixtures für Markdown, YAML, Tabellen, Vererbung, IDs,
+  Limits und Diagnostics anlegen. Der Parser selbst behält dafür native
+  Bootstrap-Tests.
+
+### 5.3 Runner vom Autorenformat und MSTest entkoppeln
+
+- Den Runner ausschließlich gegen das normalisierte Conformance-Dokumentmodell
+  implementieren; Markdown-Parsing und Testausführung bleiben getrennte Phasen.
+- Alle heute vorhandenen Testarten `scriptApi`, `compileError`, `loadError`,
+  `messageApi`, `compileMetadata`, `bytecode` und `performance` sowie die neue
+  Testart `bytecodeSnapshot` abbilden.
+- MSTest-Assertions aus dem Runner entfernen und MSTest zu einem dünnen Adapter
+  für Discovery und Anzeige machen.
+- Eine öffentliche synchrone Runner-API mit explizitem Environment, Optionen,
+  Capability-Menge und Result-Sink bereitstellen. Sie muss einzelne Cases sowie
+  ein Dokument oder den gesamten Corpus ausführen können.
+- Testframework-Adapter registrieren jeden H2-Case als separaten Test; die
+  Gesamtausführung bleibt eine zusätzliche Runner-/Report-Funktion und ersetzt
+  nicht die einzeln adressierbaren Tests.
+- Pro Case `passed`, `failed`, `skipped` oder `error`, stabile ID, normativen
+  Fehlercode, erwartete/tatsächliche Werte und optionale Diagnostics oder
+  Debug-Dumps liefern.
+- Runner-Implementierung, Runner-Version und unterstützte Capabilities
+  maschinenlesbar ausgeben.
+- Ein kanonisches sprachneutrales JSON-Ergebnisformat für CI und den Vergleich
+  der Sprachports definieren. JSON ist hierbei Ergebnis- beziehungsweise
+  Austauschformat, nicht mehr Autorenformat.
+- Zusätzlich einen menschenlesbaren Markdown-Gesamtbericht aus denselben
+  strukturierten Ergebnissen erzeugen.
+- Laufzeit- und Performancewerte außerhalb expliziter Performance-Expectations
+  als nichtnormative Metadaten behandeln und Benchmarks von funktionaler
+  Conformance trennen.
+
+### 5.4 Reports, Performance-Baselines und Snapshot-Updates implementieren
+
+- Drei klar getrennte Artefakte vorsehen:
+  - `ConformanceResults.json` als normatives maschinenlesbares Ergebnis,
+  - `ConformanceReport.md` als menschenlesbaren Gesamtbericht,
+  - `<Suite>.received.md` als optionalen Approval-Vorschlag mit aktualisierten
+    dynamischen Expectations.
+- Report- und Received-Writer bleiben filelos und liefern Text beziehungsweise
+  Bytes. CLI, MSTest oder ein anderer Adapter entscheidet, ob und wohin sie
+  geschrieben werden.
+- Der Markdown-Gesamtbericht enthält Gesamtstatus, Case-Zahlen,
+  Passed/Failed/Skipped/Error, Capability-Übersicht, Performanceübersicht und
+  Details fehlgeschlagener Cases anhand stabiler IDs.
+- Performanceparameter wie Iterationen, Warmup und Performanceprofil in den
+  Testmetadaten halten; fachliche Output-Erwartungen und Performancewerte im
+  Expectation-YAML getrennt abbilden.
+- Performance-Metriken pro Test mit Reference/Maximum, Einheit und optionaler
+  Regressionstoleranz definieren. Verbesserungen bestehen; nur Überschreitungen
+  der erlaubten Grenze schlagen fehl.
+- Performanceprofile explizit benennen, da Workload und Korrektheit portabel,
+  Zeit- und Allokationsbaselines aber sprach-, Runtime- und plattformbezogen
+  sein können.
+- Für `bytecodeSnapshot` jeden GES-/GESA-Vergleich als eigenen H2-Test ausführen
+  und den kanonischen Dumpertext nach normativer LF-Normalisierung exakt mit dem
+  `gesa`-Expectation-Block vergleichen.
+- Der Received-Writer ersetzt ausschließlich gemessene Performance-Referenzen
+  beziehungsweise den betroffenen `gesa`-Block anhand ihrer SourceRanges.
+  Toleranzen, Prosa, Tabellen, Kommentare und andere Testdaten bleiben
+  byteinhaltlich unverändert.
+- Niemals die Quell-Suite automatisch überschreiben. Eine `.received.md` wird
+  nur als explizit zu prüfender Diff-/Copy-Vorschlag erzeugt.
+
+### 5.5 Repräsentative vertikale Markdown-Migration durchführen
+
+- Vor der Massenmigration mindestens einen vorhandenen Fall jeder heutigen
+  Testart sowie einen `bytecodeSnapshot` nach Markdown übertragen.
+- Dabei Frontmatter, per-Test-Overrides, GES-Source, Expectations, Steps,
+  Compilerfehler, Loadfehler, Metadaten, Opcode-Erwartungen und Performanceinput
+  real gegen Parser und Runner prüfen.
+- Für jeden Pilotfall das normalisierte Modell und das Ausführungsergebnis mit
+  dem bisherigen JSON-Fall vergleichen.
+- Gefundene Lücken zuerst in Spezifikation, Parser oder Modell korrigieren und
+  das Format erst danach für die vollständige Migration festschreiben.
+- Ab diesem funktionsfähigen vertikalen Schnitt neue Conformance-Fälle nur noch
+  als Markdown anlegen. Ein akuter Regressionstest darf vorher ausnahmsweise
+  temporär noch als JSON entstehen.
+
+### 5.6 Bestehende JSON-Suite deterministisch migrieren
+
+- Einen internen einmaligen JSON-zu-Markdown-Migrator auf Basis der bestehenden
+  C#-Modelle bauen; er ist kein öffentliches API und keine dauerhafte
+  Kompatibilitätsschicht.
+- Allen 956 bestehenden Fällen stabile IDs zuweisen und den bereits vorhandenen
+  doppelten Anzeigenamen ohne Ableitung der ID vom Titel bereinigen.
+- `atomic`/`scenario` explizit materialisieren und nicht länger aus Dateipfaden
+  ableiten.
+- Deterministische, lesbare Markdown-, YAML- und Tabellenformatierung erzeugen.
+- Suite für Suite migrieren und jeweils Fallzahl, Sources, Inputs,
+  Expectations, Compileroptionen, Random-Sequenzen und Ausführungsergebnisse
+  gegen den bisherigen Stand vergleichen.
+- Die bisher zusammengefassten Performancefälle als einzelne H2-Tests mit
+  eigener YAML-Baseline materialisieren; die Werte aus
+  `PerformanceReport.reference.txt` in die jeweiligen Expectations überführen.
+- Den kombinierten `PerformanceBinaryDump.reference.gesa` in eigenständige
+  `bytecodeSnapshot`-Cases mit jeweils einem erwarteten `gesa`-Block aufteilen.
+- Während der mechanischen Migration keine fachlichen Erwartungen ändern.
+  Korrekturen erfolgen danach separat, damit Parser- und Semantikänderungen
+  unterscheidbar bleiben.
+- Nach bestätigter Parität die jeweilige JSON-Quelldatei entfernen; JSON und
+  Markdown werden nicht dauerhaft parallel gepflegt.
+
+### 5.7 Alte JSON-Conformance-Infrastruktur entfernen
+
+- Nach vollständiger Migration JSON-Modelle, JSON-Discovery und den temporären
+  Importer/Migrator entfernen.
+- Dateispezifische MSTest-Methoden durch generische Markdown-Discovery ersetzen.
+- Die alten kombinierten Performance-Report- und Binary-Dump-Referenzdateien
+  entfernen, sobald ihre Werte und Snapshots vollständig in den einzelnen
+  Markdown-Cases enthalten sind.
+- Sicherstellen, dass ausschließlich das normative Markdownformat zur
+  Testdefinition und ausschließlich das definierte Ergebnisformat zur
+  maschinellen Ausgabe verwendet werden.
+- Den vollständigen migrierten Corpus, API-Snapshot, Nicht-Performance-Suite und
+  Performance-Referenz verifizieren, bevor neue fachliche Fälle hinzukommen.
+
+### 5.8 Conformance-Environment und fehlende Semantik ausbauen
+
+- Deklarative Extension- und External-Type-Kataloge sowie eine kleine Menge
+  fest benannter portabler Testoperationen wie `echo`, `fail` und `floor`
+  definieren; keine beliebige Programmlogik im Testformat ablegen.
+- Native Handler als deklarative Aktionen ausdrücken.
+- Sink-Modi für fehlenden Sink, Annahme, Ablehnung und Exception modellieren.
+- Das vollständige Publish-Result und ein geordnetes Observer-Trace-Format für
+  Emit, Publish, Dispatch-Start/-End, Runtime-Limits und Diagnostics abbilden.
+- Eine Coverage-Matrix führen, die portables Verhalten stabilen Case-IDs
+  zuordnet. Ein sprachspezifischer Test wird erst entfernt oder reduziert, wenn
+  seine Semantik durch einen portablen Fall geschützt ist.
+
+Danach insbesondere folgende noch sprachspezifisch getestete Semantik direkt im
+Markdownformat ergänzen:
 
 - Message-Normalisierung und Signaturen
 - geordnete Argumente
@@ -311,10 +524,6 @@ Benötigt werden:
 - Lists, Maps, Records, Dice, Range, Vector und Point
 - Random-Known-Answer-Tests
 - Compiler-Metadaten
-- `.gesb` Read/Write/Validation einschließlich beschädigter Fixtures und stabiler
-  Formatfehler
-- dieselben eingecheckten `.gesb`-Fixtures in C#, Swift, Kotlin und C++ laden und
-  mit identischen Runtime-Ergebnissen ausführen
 - Direct- und Indirect-Call-Cycles
 - Native-only Host
 - mehrere Hosts mit demselben Program
@@ -331,7 +540,7 @@ Benötigt werden:
 - Pause/Resume mit Frame-Budget
 - External-Type-Semantik ohne Reflection
 
-### Sprachspezifisch zu behalten
+Sprachspezifisch zu behalten sind:
 
 - C# Public-API-Snapshot
 - Reflection- und Attribute-Tests
@@ -342,7 +551,42 @@ Benötigt werden:
 - C#-Allokationsmessungen
 - sprachspezifische Benchmarks
 
-Die Semantik dieser Tests sollte trotzdem möglichst durch JSON abgedeckt werden; der C#-Test prüft danach nur noch die Implementierungsbesonderheit.
+Die Semantik dieser Tests sollte trotzdem möglichst durch das portable
+Conformance-Format abgedeckt werden; der sprachspezifische Test prüft danach nur
+noch die Implementierungsbesonderheit.
+
+### 5.9 `.gesb`-Fixtures und Manifest ergänzen
+
+- Gültige und gezielt beschädigte `.gesb`-Dateien einchecken.
+- Ein Manifest mit Fixture-ID, relativem Pfad, Source, Compileroptionen,
+  ProgramVersion, SHA-256 und erwarteten Read-, Validation- und
+  Runtime-Ergebnissen führen.
+- `.gesb` Read/Write/Validation einschließlich stabiler Formatfehler durch das
+  portable Conformance-Format abdecken.
+- Dieselben Fixture-Bytes in C#, Swift, Kotlin und C++ laden und mit identischen
+  Runtime-Ergebnissen ausführen.
+- Unterschiedliche BuildMetadata verschiedener Compiler zulassen; die Required
+  Runtime-Segmente müssen semantisch identisch bleiben.
+- Externe Fixture-Bytes ausschließlich über einen injizierten, begrenzten
+  Resource-Resolver beziehen; Parser und Runner greifen nie selbst auf das
+  Dateisystem oder Netzwerk zu.
+
+### 5.10 Cross-Language-Abnahme vorbereiten
+
+- C# erzeugt zunächst die Referenzergebnisse des gemeinsamen Markdown-Corpus.
+- Jeder Port implementiert denselben Parser-, Dokumentmodell-, Runner- und
+  Ergebnisvertrag und führt denselben Corpus aus.
+- Gemeinsame Valid-/Invalid-Fixtures prüfen zusätzlich die identische
+  Markdown-/YAML-Interpretation aller Parser.
+- Eine Capability-Matrix zeigt implementierte optionale Bereiche und verbietet
+  das Überspringen von Required-Core-Fällen.
+- Ergebnisse werden über stabile Case-IDs statt Testframework-Namen verglichen.
+- Performance-Workloads und deren Korrektheitsanteil gehören zum gemeinsamen
+  Corpus; Performanceprofile und Baselines dürfen sprach- beziehungsweise
+  plattformspezifisch sein.
+- Bytecode-Snapshots bleiben für identische Compilerinputs und Optionen
+  sprachübergreifend vergleichbar; Unterschiede in ausdrücklich
+  sprachspezifischer BuildMetadata werden separat behandelt.
 
 ## 6. Öffentliche sprachneutrale API spezifizieren
 
@@ -364,6 +608,20 @@ Benötigt wird ein normatives API-Dokument für:
 - Observer
 - Extension Registry
 - External Type Catalog und Runtime Bindings
+- ConformanceDocument, Suite und Case
+- ConformanceParser, ParseResult, ParserLimits und ConformanceDiagnostic
+- ConformanceRunner und ConformanceEnvironment
+- CapabilitySet und ResourceResolver
+- CaseResult, RunSummary und RunReport
+- maschinenlesbarer ResultWriter und menschenlesbarer MarkdownReportWriter
+- ReceivedWriter für Performance-Baselines und Bytecode-Snapshots
+
+Die Conformance-Oberfläche gehört zunächst zum Namespace
+`StepH.GameEventScript.Conformance` im bestehenden Core-Projekt. Ihre API muss
+aber bereits so geschnitten sein, dass sie im Monorepo ohne konzeptionelle
+Änderung in ein eigenes optionales Modul verschoben werden kann. Core-Host, VM,
+Compiler und Programmodell dürfen nicht von Conformance abhängen; ausschließlich
+Conformance hängt von den öffentlichen Core-APIs ab.
 
 Dabei ausdrücklich festhalten:
 
@@ -377,6 +635,29 @@ Dabei ausdrücklich festhalten:
 - Callback-Reihenfolge
 - Fehlerbehandlung
 - Verhalten bei Observer- oder Sink-Exceptions
+
+Für die Conformance-API zusätzlich ausdrücklich festhalten:
+
+- Parser und Runner sind synchron, threadlos und besitzen keine File-, Netzwerk-
+  oder Testframework-Abhängigkeit.
+- Der Parser nimmt UTF-8-Bytes beziehungsweise Text entgegen und liefert nur ein
+  vollständig validiertes immutable Dokument oder strukturierte Diagnostics.
+- Markdown-/YAML-Zwischenbäume sind Implementierungsdetails und nicht Teil der
+  öffentlichen API.
+- ResourceResolver liefert externe Fixture-Bytes explizit und unter
+  konfigurierbaren Limits; der Runner öffnet niemals selbst Pfade oder URLs.
+- RunCase, RunDocument und RunCorpus sind getrennte Operationen. Ein
+  Testframework kann jeden Case einzeln registrieren, während dieselben
+  Ergebnisse zusätzlich zu einem Gesamtreport aggregiert werden können.
+- ResultWriter und MarkdownReportWriter schreiben ausschließlich in vom
+  Aufrufer bereitgestellte Ziele beziehungsweise Buffer.
+- ReceivedWriter erzeugt nur einen Approval-Vorschlag und überschreibt niemals
+  selbst das ursprüngliche Markdown-Dokument.
+- Performanceprofile und Baselines dürfen sprach-/plattformbezogen sein;
+  Workload, Korrektheit, Einheiten und Vergleichsregeln bleiben konzeptionell
+  gleich.
+- Öffentliche Modelle und Ergebnisse dürfen keine MSTest-, XCTest-, JUnit- oder
+  sonstigen Framework-Typen enthalten.
 
 Danach bekommt jede Sprache eine idiomatische Abbildung. Die APIs müssen konzeptionell gleich sein, nicht Zeichen für Zeichen.
 

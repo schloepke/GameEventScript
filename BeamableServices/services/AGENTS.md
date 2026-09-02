@@ -72,7 +72,32 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
-### Representative Conformance Markdown Migration
+### Complete JSON-to-Markdown Conformance Migration
+
+- The former 34-suite, 956-case JSON corpus was deterministically migrated to
+  `StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Migrated` and the JSON
+  source fixtures were removed after old/new execution parity passed.
+- Every migrated case has an explicit stable ID, kind, and atomic/scenario
+  level. The five performance cases contain profile-local KiB/ms baselines and
+  five separately executable GESA bytecode snapshots.
+- The active Markdown adapter exposes 961 independent cases plus a whole-corpus
+  identity/execution test. Legacy JSON test classes and the temporary migrator
+  are ignored pending their removal in work item 5.7.
+- Markdown V1 now explicitly represents the legacy negative message argument
+  mapping, the `any: true` runtime-limit wildcard, and embedded U+FEFF source
+  content. Runtime parity also fixed map, mixed-range, and non-finite-float
+  comparison differences found by the migration.
+
+Verification at the migration boundary:
+
+```text
+956/956 legacy-to-Markdown parity cases passed
+962/962 active Markdown corpus tests passed
+1127/1127 active non-performance tests passed (37 legacy tests intentionally ignored until 5.7)
+1/1 zero-allocation hot-path test passed
+```
+
+### Representative Conformance Markdown Migration (Superseded Pilot)
 
 - Added one executable Markdown pilot for every portable conformance kind:
   `scriptApi`, `compileError`, `loadError`, `messageApi`, `compileMetadata`,
@@ -82,8 +107,8 @@ The project has a portable Game Event Script host/VM architecture with a compact
   parity; the snapshot is paired with the existing performance dump.
 - The complete document also produces JSON/Markdown reports and an unchanged,
   byte-identical received file when references already match.
-- New conformance cases should now be Markdown. Existing JSON is retained only
-  until the deterministic bulk migration in step 5.6.
+- The pilot is retained only until its JSON-dependent harness is removed in
+  step 5.7; the complete Markdown corpus above is now authoritative.
 
 Verification after this change:
 
@@ -488,8 +513,8 @@ and retain a required pointer here.
 
 - Prioritize the language-neutral contracts, metadata, and portable Markdown
   conformance needed for the existing Swift/Kotlin/C++/C# monorepo before deeper
-  optimizer work. Keep the existing JSON corpus only until deterministic
-  Markdown migration proves parity.
+  optimizer work. Remove the now-inactive one-time JSON migration infrastructure
+  in work item 5.7.
 
 ### Deferred language and state features
 

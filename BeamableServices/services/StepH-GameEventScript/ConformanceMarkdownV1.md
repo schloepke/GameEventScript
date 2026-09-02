@@ -13,8 +13,10 @@ Conformance Markdown is test data. It is not the product message/wire format.
 
 ## Encoding and logical lines
 
-- A document is strict UTF-8. An optional UTF-8 BOM is accepted only at byte
-  offset zero and is not part of the document content.
+- A document is strict UTF-8. An optional UTF-8 BOM is recognized only at byte
+  offset zero and is not part of the document content. The same byte sequence
+  elsewhere represents the ordinary Unicode scalar U+FEFF and is retained,
+  including inside a GES source payload.
 - `LF`, `CRLF`, and `CR` are recognized as logical line endings. A parser
   interprets all three as `LF`; other Unicode line separators are ordinary text.
 - Source ranges are offsets and lengths into the original UTF-8 byte sequence,
@@ -389,7 +391,9 @@ the configured publish sink in call order. Sink outcome expectations are a
 separate host-observation concern.
 
 Each `runtimeLimits.include` or `.exclude` entry may constrain `name`,
-`detailContains`, and `limit`; at least one field is required. Each diagnostics
+`detailContains`, and `limit`; at least one field is required. The explicit
+wildcard `{ any: true }` may be used alone, most commonly in `exclude`, to match
+every runtime-limit observation. Each diagnostics
 entry uses the portable diagnostic expectation shape from the error kinds
 below, except that `phase` and `code` remain required. Entries and observations
 are compared in order; exclusions must not occur anywhere in the observation
@@ -496,6 +500,12 @@ messageApi:
     name: Start
     args: []
 ```
+
+For the single negative shape test `args` may instead be a mapping. The mapping
+is retained as ordered source data in the normalized model, but it is never
+accepted as message arguments. This form is valid only when the expectation is
+exactly `error: invalidArgumentsShape`; every constructible message continues
+to require an ordered argument sequence.
 
 Its expectation contains at least one of:
 

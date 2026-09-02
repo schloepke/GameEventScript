@@ -593,7 +593,37 @@ noch temporäre Quelle für Schritt 5.6.
   als Markdown anlegen. Ein akuter Regressionstest darf vorher ausnahmsweise
   temporär noch als JSON entstehen.
 
-### 5.6 Bestehende JSON-Suite deterministisch migrieren
+### 5.6 Bestehende JSON-Suite deterministisch migrieren - DONE
+
+Der deterministische Einmal-Migrator hat 34 Suites und alle 956 bisherigen
+Fälle nach `Conformance/SpecsMarkdown/Migrated` übertragen. Die lokalen IDs
+`case-0001` usw. sind explizit materialisiert und unabhängig von den
+Anzeigeüberschriften; der doppelte Titel im Message-Member-Test wurde als
+`message handler member and index access` eindeutig gemacht. Jeder Fall trägt
+sein aufgelöstes `atomic`/`scenario`-Level. Sourceinputs, getrennte Programs,
+Steps, native Handler, Runtime-Limits, Diagnosen, Random-Sequenzen,
+Binary64-Vergleich und sämtliche fachlichen Expectations liegen nun im
+Markdownmodell vor.
+
+Der Migrationslauf hat alle 956 Fälle nacheinander über den bisherigen und den
+neuen Runner ausgeführt und gleiche erfolgreiche Ergebnisse bestätigt. Dabei
+wurden alte Map-Objekte in die normative geordnete Entry-Form und numerische
+Strings bedeutungsgleich in shortest-roundtrip Binary64 überführt. Zwei zuvor
+implizite Negativformen sind nun explizit spezifiziert: eine ungeordnete
+Message-Argument-Map ausschließlich für `invalidArgumentsShape` sowie
+`{ any: true }` als Runtime-Limit-Wildcard. U+FEFF innerhalb eines GES-Fence ist
+Sourceinhalt und kein Dokument-BOM. Außerdem wurden zwei bereits im neuen
+Vergleicher sichtbare Paritätsfehler für leere Maps, Integer-/Float-Ranges und
+nicht-finite Float-Einheiten korrigiert.
+
+Die fünf Performancefälle enthalten je zwölf portable KiB-/Millisekunden-
+Baselines aus dem bisherigen Referenzreport. Jeder Fall besitzt zusätzlich
+einen eigenen, aus dem bisherigen kombinierten Referenzdump extrahierten
+`bytecodeSnapshot`. Der aktive C#-Adapter entdeckt 961 H2-Fälle einzeln; ein
+zusätzlicher Corpus-Test prüft Suite-/Case-Eindeutigkeit und führt den gesamten
+Corpus aus. Nach bestätigter Parität wurden alle 34 JSON-Quelldateien entfernt.
+Der nun tote Einmal-Migrator, die ignorierten Legacy-Testklassen und die alten
+kombinierten Referenzdateien werden geschlossen in Schritt 5.7 entfernt.
 
 - Einen internen einmaligen JSON-zu-Markdown-Migrator auf Basis der bestehenden
   C#-Modelle bauen; er ist kein öffentliches API und keine dauerhafte

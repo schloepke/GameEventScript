@@ -7,6 +7,7 @@ using StepH.GameEventScript.Conformance;
 namespace StepH_GameEventScript_Tests.Conformance;
 
 [TestClass]
+[Ignore("The representative pilot was superseded by the complete migrated Markdown corpus.")]
 public sealed class ConformanceMarkdownPilotTests : GameEventScriptJsonConformanceTestBase
 {
     private const string PerformanceProfile = "csharp-dotnet-release-macos-arm64";

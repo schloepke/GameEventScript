@@ -329,13 +329,15 @@ public sealed class ConformanceObservationExpectation
 
 public sealed class ConformanceRuntimeLimitExpectation
 {
-    internal ConformanceRuntimeLimitExpectation(string? name, string? detailContains, ulong? limit)
+    internal ConformanceRuntimeLimitExpectation(bool any, string? name, string? detailContains, ulong? limit)
     {
+        Any = any;
         Name = name;
         DetailContains = detailContains;
         Limit = limit;
     }
 
+    public bool Any { get; }
     public string? Name { get; }
     public string? DetailContains { get; }
     public ulong? Limit { get; }
@@ -488,16 +490,25 @@ public sealed class ConformanceChannelExpectation
 
 public sealed class ConformanceMessageApiCase
 {
-    internal ConformanceMessageApiCase(string signatureName, IReadOnlyList<string> parameters, ConformanceMessage message)
+    internal ConformanceMessageApiCase(
+        string signatureName,
+        IReadOnlyList<string> parameters,
+        ConformanceMessage message,
+        bool argumentsWereMapping,
+        IReadOnlyList<ConformanceValueEntry> unorderedArguments)
     {
         SignatureName = signatureName;
         Parameters = ConformanceDocument.Copy(parameters);
         Message = message;
+        ArgumentsWereMapping = argumentsWereMapping;
+        UnorderedArguments = ConformanceDocument.Copy(unorderedArguments);
     }
 
     public string SignatureName { get; }
     public IReadOnlyList<string> Parameters { get; }
     public ConformanceMessage Message { get; }
+    public bool ArgumentsWereMapping { get; }
+    public IReadOnlyList<ConformanceValueEntry> UnorderedArguments { get; }
 }
 
 public sealed class ConformanceMessageApiExpectation

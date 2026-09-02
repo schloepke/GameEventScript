@@ -1,0 +1,1080 @@
+---
+formatVersion: 1
+suiteId: "runtime.atomic.sort-group-distinct"
+title: "RuntimeAtomicSortGroupDistinct"
+categories: [conformance]
+tags: [migrated-json-v1]
+---
+
+# RuntimeAtomicSortGroupDistinct
+
+Mechanically migrated from the former JSON conformance corpus.
+
+## Test: distinct direct source kinds
+
+```yaml
+gesBlock: case
+id: case-0001
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "distinct direct source kinds.ges"
+    program: main
+```
+
+```ges
+module AtomicDistinctDirectKinds
+on Start {
+  let vNothing be nothing
+  let vBoolean be true
+  let vInteger be 10
+  let vFloat be 10.5
+  let vPercentage be 25%
+  let vText be 'abba'
+  let vTag be #abba
+  let vVector be :vector(1, 2, 1)
+  let vPoint be :point(1, 2, 1)
+  let vList be [3, 1, 3, 2, 1]
+  let vEmptyList be []
+  let vMap be [b: 2, a: 1, c: 2]
+  let vDice as :dice be [6, 5, 5, 3, 3]
+  let vEmptyDice as :dice be []
+  let vRange as :range be from 1 to 3
+  emit Done(nothingValue: vNothing[:distinct], booleanValue: vBoolean[:distinct], integerValue: vInteger[:distinct], floatValue: vFloat[:distinct], percentageValue: vPercentage[:distinct], textValue: vText[:distinct], tagValue: vTag[:distinct], vectorValue: vVector[:distinct], pointValue: vPoint[:distinct], listValue: vList[:distinct], emptyListValue: vEmptyList[:distinct], mapValue: vMap[:distinct], diceValue: vDice[:distinct], emptyDiceValue: vEmptyDice[:distinct], rangeValue: vRange[:distinct])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "nothingValue"
+            value:
+              type: ":nothing"
+          - name: "booleanValue"
+            value:
+              type: ":nothing"
+          - name: "integerValue"
+            value:
+              type: ":nothing"
+          - name: "floatValue"
+            value:
+              type: ":nothing"
+          - name: "percentageValue"
+            value:
+              type: ":nothing"
+          - name: "textValue"
+            value:
+              type: ":nothing"
+          - name: "tagValue"
+            value:
+              type: ":nothing"
+          - name: "vectorValue"
+            value:
+              type: ":nothing"
+          - name: "pointValue"
+            value:
+              type: ":nothing"
+          - name: "listValue"
+            value:
+              type: ":list"
+              items:
+                - type: ":integer"
+                  value: "3"
+                - type: ":integer"
+                  value: "1"
+                - type: ":integer"
+                  value: "2"
+          - name: "emptyListValue"
+            value:
+              type: ":list"
+              items: []
+          - name: "mapValue"
+            value:
+              type: ":nothing"
+          - name: "diceValue"
+            value:
+              type: ":dice"
+              rolls:
+                - 6
+                - 5
+                - 3
+          - name: "emptyDiceValue"
+            value:
+              type: ":dice"
+              rolls: []
+          - name: "rangeValue"
+            value:
+              type: ":nothing"
+```
+
+## Test: distinct by direct source kinds
+
+```yaml
+gesBlock: case
+id: case-0002
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "distinct by direct source kinds.ges"
+    program: main
+```
+
+```ges
+module AtomicDistinctByDirectKinds
+on Start {
+  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]
+  let values be [1, 2, 3, 4, 5]
+  let words be ['alpha', 'alpine', 'beta', 'bravo']
+  let emptyList be []
+  let dice as :dice be [6, 5, 5, 3]
+  let range as :range be from 1 to 3
+  let map be [a: 1, b: 2]
+  let byFaction be units[:distinct by unit => unit.faction]
+  let byParity be values[:distinct by value => value mod 2]
+  let byHasHighHp be units[:distinct by unit => unit.hp > 7]
+  let byFirstLetter be words[:distinct by word => word[1]]
+  let byEmpty be emptyList[:distinct by item => item]
+  emit Done(factionLen: byFaction[:count], factionFirst: byFaction[1].name, factionSecond: byFaction[2].name, parityLen: byParity[:count], parityFirst: byParity[1], paritySecond: byParity[2], boolLen: byHasHighHp[:count], boolFirst: byHasHighHp[1].name, boolSecond: byHasHighHp[2].name, textLen: byFirstLetter[:count], textFirst: byFirstLetter[1], textSecond: byFirstLetter[2], emptyLen: byEmpty[:count], nothingValue: nothing[:distinct by value => value], booleanValue: true[:distinct by value => value], integerValue: 10[:distinct by value => value], floatValue: 10.5[:distinct by value => value], percentageValue: 25%[:distinct by value => value], textValue: 'abba'[:distinct by value => value], tagValue: #abba[:distinct by value => value], vectorValue: :vector(1, 2, 3)[:distinct by value => value], pointValue: :point(1, 2, 3)[:distinct by value => value], diceValue: dice[:distinct by value => value], rangeValue: range[:distinct by value => value], mapValue: map[:distinct by value => value])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "factionLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "factionFirst"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "factionSecond"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "parityLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "parityFirst"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "paritySecond"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "boolLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "boolFirst"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "boolSecond"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "textLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "textFirst"
+            value:
+              type: ":text"
+              value: "alpha"
+          - name: "textSecond"
+            value:
+              type: ":text"
+              value: "beta"
+          - name: "emptyLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "nothingValue"
+            value:
+              type: ":nothing"
+          - name: "booleanValue"
+            value:
+              type: ":nothing"
+          - name: "integerValue"
+            value:
+              type: ":nothing"
+          - name: "floatValue"
+            value:
+              type: ":nothing"
+          - name: "percentageValue"
+            value:
+              type: ":nothing"
+          - name: "textValue"
+            value:
+              type: ":nothing"
+          - name: "tagValue"
+            value:
+              type: ":nothing"
+          - name: "vectorValue"
+            value:
+              type: ":nothing"
+          - name: "pointValue"
+            value:
+              type: ":nothing"
+          - name: "diceValue"
+            value:
+              type: ":nothing"
+          - name: "rangeValue"
+            value:
+              type: ":nothing"
+          - name: "mapValue"
+            value:
+              type: ":nothing"
+```
+
+## Test: distinct and distinct by transformed iterators
+
+```yaml
+gesBlock: case
+id: case-0003
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "distinct and distinct by transformed iterators.ges"
+    program: main
+```
+
+```ges
+module AtomicDistinctIterators
+on Start {
+  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]
+  let dice as :dice be [6, 5, 5, 3]
+  let iteratorDistinct be [1, 2, 1, 3, 2][:select value => value][:distinct]
+  let iteratorDistinctBy be units[:filter unit where unit.hp > 0][:distinct by unit => unit.faction]
+  let iteratorDistinctByBool be units[:filter unit where true][:distinct by unit => unit.hp > 7]
+  let diceIteratorDistinctBy be dice[:filter value where true][:distinct by value => value]
+  let emptyIteratorDistinct be [1, 2][:filter value where false][:distinct]
+  let emptyIteratorDistinctBy be units[:filter unit where false][:distinct by unit => unit.faction]
+  emit Done(iteratorLen: iteratorDistinct[:count], iteratorFirst: iteratorDistinct[1], iteratorSecond: iteratorDistinct[2], iteratorThird: iteratorDistinct[3], byLen: iteratorDistinctBy[:count], byFirst: iteratorDistinctBy[1].name, bySecond: iteratorDistinctBy[2].name, boolLen: iteratorDistinctByBool[:count], boolFirst: iteratorDistinctByBool[1].name, boolSecond: iteratorDistinctByBool[2].name, diceLen: diceIteratorDistinctBy[:count], diceFirst: diceIteratorDistinctBy[1], diceSecond: diceIteratorDistinctBy[2], diceThird: diceIteratorDistinctBy[3], emptyLen: emptyIteratorDistinct[:count], emptyByLen: emptyIteratorDistinctBy[:count])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "iteratorLen"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "iteratorFirst"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "iteratorSecond"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "iteratorThird"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "byLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "byFirst"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "bySecond"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "boolLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "boolFirst"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "boolSecond"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "diceLen"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "diceFirst"
+            value:
+              type: ":integer"
+              value: "6"
+          - name: "diceSecond"
+            value:
+              type: ":integer"
+              value: "5"
+          - name: "diceThird"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "emptyLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "emptyByLen"
+            value:
+              type: ":integer"
+              value: "0"
+```
+
+## Test: sort direct and iterator source kinds
+
+```yaml
+gesBlock: case
+id: case-0004
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "sort direct and iterator source kinds.ges"
+    program: main
+```
+
+```ges
+module AtomicSortKinds
+on Start {
+  let values be [3, 1, 2, 2]
+  let textValues be ['beta', 'alpha', 'alpha']
+  let tagValues be [#beta, #alpha, #gamma]
+  let unitValues be [1m, 3m, 2m]
+  let emptyList be []
+  let dice as :dice be [6, 4, 2]
+  let emptyDice as :dice be []
+  let range as :range be from 3 to 1 step -1
+  let floatRange as :range be from 3.5 to 2.5 step -0.5
+  let map be [b: 2, a: 1]
+  let iteratorSorted be [1, 2, 3][:select value => 0 - value][:sort ascending]
+  let iteratorDescending be [1, 2, 3][:filter value where true][:sort descending]
+  let emptyIteratorSorted be [1, 2][:filter value where false][:sort ascending]
+  let ascending be values[:sort ascending]
+  let descending be values[:sort descending]
+  let textAscending be textValues[:sort ascending]
+  let tagDescending be tagValues[:sort descending]
+  let unitAscending be unitValues[:sort ascending]
+  let diceAscending be dice[:sort ascending]
+  let diceDescending be dice[:sort descending]
+  let rangeAscending be range[:sort ascending]
+  let rangeDescending be range[:sort descending]
+  let floatRangeAscending be floatRange[:sort ascending]
+  emit Done(asc_1: ascending[1], asc_2: ascending[2], asc_3: ascending[3], asc_4: ascending[4], desc_1: descending[1], desc_2: descending[2], desc_3: descending[3], desc_4: descending[4], text_1: textAscending[1], text_2: textAscending[2], text_3: textAscending[3], tag_1: tagDescending[1], tag_2: tagDescending[2], tag_3: tagDescending[3], unit_1: unitAscending[1], unit_2: unitAscending[2], unit_3: unitAscending[3], emptyListLen: emptyList[:count], dice_1: diceAscending[1], dice_2: diceAscending[2], dice_3: diceAscending[3], diceAscIsList: diceAscending is :list, diceDesc_1: diceDescending[1], diceDesc_2: diceDescending[2], diceDesc_3: diceDescending[3], diceDescIsList: diceDescending is :list, emptyDiceLen: emptyDice[:count], range_1: rangeAscending[1], range_2: rangeAscending[2], range_3: rangeAscending[3], rangeAscIsRange: rangeAscending is :range, rangeDesc_1: rangeDescending[1], rangeDesc_2: rangeDescending[2], rangeDesc_3: rangeDescending[3], rangeDescIsRange: rangeDescending is :range, floatRange_1: floatRangeAscending[1], floatRange_2: floatRangeAscending[2], floatRange_3: floatRangeAscending[3], iterator_1: iteratorSorted[1], iterator_2: iteratorSorted[2], iterator_3: iteratorSorted[3], iteratorDesc_1: iteratorDescending[1], iteratorDesc_2: iteratorDescending[2], iteratorDesc_3: iteratorDescending[3], emptyIteratorLen: emptyIteratorSorted[:count], nothingValue: nothing[:sort ascending], integerValue: 10[:sort ascending], textValue: 'ba'[:sort ascending], tagValue: #ba[:sort ascending], mapValue: map[:sort ascending])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "asc_1"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "asc_2"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "asc_3"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "asc_4"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "desc_1"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "desc_2"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "desc_3"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "desc_4"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "text_1"
+            value:
+              type: ":text"
+              value: "alpha"
+          - name: "text_2"
+            value:
+              type: ":text"
+              value: "alpha"
+          - name: "text_3"
+            value:
+              type: ":text"
+              value: "beta"
+          - name: "tag_1"
+            value:
+              type: ":tag"
+              value: "gamma"
+          - name: "tag_2"
+            value:
+              type: ":tag"
+              value: "beta"
+          - name: "tag_3"
+            value:
+              type: ":tag"
+              value: "alpha"
+          - name: "unit_1"
+            value:
+              type: ":integer"
+              value: "1"
+              unit: ":meter"
+          - name: "unit_2"
+            value:
+              type: ":integer"
+              value: "2"
+              unit: ":meter"
+          - name: "unit_3"
+            value:
+              type: ":integer"
+              value: "3"
+              unit: ":meter"
+          - name: "emptyListLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "dice_1"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "dice_2"
+            value:
+              type: ":integer"
+              value: "4"
+          - name: "dice_3"
+            value:
+              type: ":integer"
+              value: "6"
+          - name: "diceAscIsList"
+            value:
+              type: ":boolean"
+              value: true
+          - name: "diceDesc_1"
+            value:
+              type: ":integer"
+              value: "6"
+          - name: "diceDesc_2"
+            value:
+              type: ":integer"
+              value: "4"
+          - name: "diceDesc_3"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "diceDescIsList"
+            value:
+              type: ":boolean"
+              value: true
+          - name: "emptyDiceLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "range_1"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "range_2"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "range_3"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "rangeAscIsRange"
+            value:
+              type: ":boolean"
+              value: true
+          - name: "rangeDesc_1"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "rangeDesc_2"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "rangeDesc_3"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "rangeDescIsRange"
+            value:
+              type: ":boolean"
+              value: true
+          - name: "floatRange_1"
+            value:
+              type: ":float"
+              value: "2.5"
+          - name: "floatRange_2"
+            value:
+              type: ":float"
+              value: "3"
+          - name: "floatRange_3"
+            value:
+              type: ":float"
+              value: "3.5"
+          - name: "iterator_1"
+            value:
+              type: ":integer"
+              value: "-3"
+          - name: "iterator_2"
+            value:
+              type: ":integer"
+              value: "-2"
+          - name: "iterator_3"
+            value:
+              type: ":integer"
+              value: "-1"
+          - name: "iteratorDesc_1"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "iteratorDesc_2"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "iteratorDesc_3"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "emptyIteratorLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "nothingValue"
+            value:
+              type: ":nothing"
+          - name: "integerValue"
+            value:
+              type: ":nothing"
+          - name: "textValue"
+            value:
+              type: ":nothing"
+          - name: "tagValue"
+            value:
+              type: ":nothing"
+          - name: "mapValue"
+            value:
+              type: ":nothing"
+```
+
+## Test: order by source kinds
+
+```yaml
+gesBlock: case
+id: case-0005
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "order by source kinds.ges"
+    program: main
+```
+
+```ges
+module AtomicOrderByKinds
+on Start {
+  let units be [[name: 'Knight', hp: 10, faction: #melee], [name: 'Rook', hp: 8, faction: #melee], [name: 'Archer', hp: 6, faction: #ranged], [name: 'Scout', hp: 8, faction: #ranged]]
+  let values be [1, 3, 2]
+  let textValues be ['bb', 'a', 'ccc']
+  let emptyList be []
+  let dice as :dice be [6, 5, 3]
+  let range as :range be from 1 to 3
+  let map be [b: 2, a: 1]
+  let byHpAscending be units[:order by unit => unit.hp ascending]
+  let byHpDescending be units[:order by unit => unit.hp descending]
+  let byFactionAscending be units[:order by unit => unit.faction ascending]
+  let valuesDescending be values[:order by value => value descending]
+  let textByLength be textValues[:order by text => text[:count] ascending]
+  let emptyOrdered be emptyList[:order by item => item ascending]
+  let diceAscending be dice[:order by value => value ascending]
+  let rangeDescending be range[:order by value => value descending]
+  let iteratorOrdered be units[:filter unit where unit.hp > 0][:order by unit => unit.name ascending]
+  let iteratorByHpDescending be units[:filter unit where true][:order by unit => unit.hp descending]
+  let emptyIteratorOrdered be units[:filter unit where false][:order by unit => unit.hp ascending]
+  emit Done(hpAsc_1: byHpAscending[1].name, hpAsc_2: byHpAscending[2].name, hpAsc_3: byHpAscending[3].name, hpAsc_4: byHpAscending[4].name, hpDesc_1: byHpDescending[1].name, hpDesc_2: byHpDescending[2].name, hpDesc_3: byHpDescending[3].name, hpDesc_4: byHpDescending[4].name, faction_1: byFactionAscending[1].name, faction_2: byFactionAscending[2].name, faction_3: byFactionAscending[3].name, faction_4: byFactionAscending[4].name, values_1: valuesDescending[1], values_2: valuesDescending[2], values_3: valuesDescending[3], text_1: textByLength[1], text_2: textByLength[2], text_3: textByLength[3], emptyLen: emptyOrdered[:count], dice_1: diceAscending[1], dice_2: diceAscending[2], dice_3: diceAscending[3], range_1: rangeDescending[1], range_2: rangeDescending[2], range_3: rangeDescending[3], iterator_1: iteratorOrdered[1].name, iterator_2: iteratorOrdered[2].name, iterator_3: iteratorOrdered[3].name, iterator_4: iteratorOrdered[4].name, iteratorHp_1: iteratorByHpDescending[1].name, iteratorHp_2: iteratorByHpDescending[2].name, iteratorHp_3: iteratorByHpDescending[3].name, iteratorHp_4: iteratorByHpDescending[4].name, emptyIteratorLen: emptyIteratorOrdered[:count], nothingValue: nothing[:order by value => value ascending], integerValue: 10[:order by value => value ascending], textValue: 'ba'[:order by value => value ascending], mapValue: map[:order by value => value ascending])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "hpAsc_1"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "hpAsc_2"
+            value:
+              type: ":text"
+              value: "Rook"
+          - name: "hpAsc_3"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "hpAsc_4"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "hpDesc_1"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "hpDesc_2"
+            value:
+              type: ":text"
+              value: "Rook"
+          - name: "hpDesc_3"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "hpDesc_4"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "faction_1"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "faction_2"
+            value:
+              type: ":text"
+              value: "Rook"
+          - name: "faction_3"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "faction_4"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "values_1"
+            value:
+              type: ":integer"
+              value: "3"
+          - name: "values_2"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "values_3"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "text_1"
+            value:
+              type: ":text"
+              value: "a"
+          - name: "text_2"
+            value:
+              type: ":text"
+              value: "bb"
+          - name: "text_3"
+            value:
+              type: ":text"
+              value: "ccc"
+          - name: "emptyLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "dice_1"
+            value:
+              type: ":nothing"
+          - name: "dice_2"
+            value:
+              type: ":nothing"
+          - name: "dice_3"
+            value:
+              type: ":nothing"
+          - name: "range_1"
+            value:
+              type: ":nothing"
+          - name: "range_2"
+            value:
+              type: ":nothing"
+          - name: "range_3"
+            value:
+              type: ":nothing"
+          - name: "iterator_1"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "iterator_2"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "iterator_3"
+            value:
+              type: ":text"
+              value: "Rook"
+          - name: "iterator_4"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "iteratorHp_1"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "iteratorHp_2"
+            value:
+              type: ":text"
+              value: "Rook"
+          - name: "iteratorHp_3"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "iteratorHp_4"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "emptyIteratorLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "nothingValue"
+            value:
+              type: ":nothing"
+          - name: "integerValue"
+            value:
+              type: ":nothing"
+          - name: "textValue"
+            value:
+              type: ":nothing"
+          - name: "mapValue"
+            value:
+              type: ":nothing"
+```
+
+## Test: group by source kinds
+
+```yaml
+gesBlock: case
+id: case-0006
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "group by source kinds.ges"
+    program: main
+```
+
+```ges
+module AtomicGroupByKinds
+on Start {
+  let units be [[name: 'Knight', faction: #melee, hp: 10], [name: 'Rook', faction: #melee, hp: 8], [name: 'Archer', faction: #ranged, hp: 6], [name: 'Scout', faction: #ranged, hp: 3]]
+  let values be [1, 2, 3, 4]
+  let emptyList be []
+  let dice as :dice be [6, 5, 5, 3]
+  let range as :range be from 1 to 4
+  let map be [b: 'aa', a: 'z', c: 'bb']
+  let emptyMap be [:]
+  let unitGroups be units[:group by unit => unit.faction]
+  let parityGroups be values[:group by value => value mod 2]
+  let boolGroups be units[:group by unit => unit.hp > 7]
+  let emptyListGroups be emptyList[:group by value => value]
+  let mapGroups be map[:group by value => value[:count]]
+  let emptyMapGroups be emptyMap[:group by value => value]
+  let iteratorGroups be units[:filter unit where unit.hp > 0][:group by unit => unit.faction]
+  let emptyIteratorGroups be units[:filter unit where false][:group by unit => unit.faction]
+  let diceGroups be dice[:group by value => value]
+  let rangeGroups be range[:group by value => value mod 2]
+  let textGroups be 'aba'[:group by value => value]
+  let emptyGroups be 10[:group by value => value]
+  emit Done(meleeLen: unitGroups[#melee][:count], meleeFirst: unitGroups[#melee][1].name, meleeSecond: unitGroups[#melee][2].name, rangedLen: unitGroups[#ranged][:count], rangedFirst: unitGroups[#ranged][1].name, rangedSecond: unitGroups[#ranged][2].name, oddLen: parityGroups['1'][:count], oddFirst: parityGroups['1'][1], evenLen: parityGroups['0'][:count], evenFirst: parityGroups['0'][1], trueLen: boolGroups['True'][:count], trueFirst: boolGroups['True'][1].name, falseLen: boolGroups['False'][:count], falseFirst: boolGroups['False'][1].name, emptyListLen: emptyList[:count], mapOneLen: mapGroups['1'][:count], mapOneFirst: mapGroups['1'][1], mapTwoLen: mapGroups['2'][:count], mapTwoFirst: mapGroups['2'][1], mapTwoSecond: mapGroups['2'][2], emptyMapLen: emptyMap[:count], iteratorMeleeLen: iteratorGroups[#melee][:count], iteratorRangedSecond: iteratorGroups[#ranged][2].name, emptyIteratorLen: emptyIteratorGroups[:count], diceFiveLen: diceGroups['5'][:count], diceSixFirst: diceGroups['6'][1], rangeEvenLen: rangeGroups['0'][:count], textALen: textGroups['a'][:count], emptyLen: emptyGroups[:count])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "meleeLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "meleeFirst"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "meleeSecond"
+            value:
+              type: ":text"
+              value: "Rook"
+          - name: "rangedLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "rangedFirst"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "rangedSecond"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "oddLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "oddFirst"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "evenLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "evenFirst"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "trueLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "trueFirst"
+            value:
+              type: ":text"
+              value: "Knight"
+          - name: "falseLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "falseFirst"
+            value:
+              type: ":text"
+              value: "Archer"
+          - name: "emptyListLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "mapOneLen"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "mapOneFirst"
+            value:
+              type: ":text"
+              value: "z"
+          - name: "mapTwoLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "mapTwoFirst"
+            value:
+              type: ":text"
+              value: "aa"
+          - name: "mapTwoSecond"
+            value:
+              type: ":text"
+              value: "bb"
+          - name: "emptyMapLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "iteratorMeleeLen"
+            value:
+              type: ":integer"
+              value: "2"
+          - name: "iteratorRangedSecond"
+            value:
+              type: ":text"
+              value: "Scout"
+          - name: "emptyIteratorLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "diceFiveLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "diceSixFirst"
+            value:
+              type: ":nothing"
+          - name: "rangeEvenLen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "textALen"
+            value:
+              type: ":integer"
+              value: "0"
+          - name: "emptyLen"
+            value:
+              type: ":integer"
+              value: "0"
+```
+
+## Test: text and map ordering follows unicode scalar order
+
+```yaml
+gesBlock: case
+id: case-0007
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "text and map ordering follows unicode scalar order.ges"
+    program: main
+```
+
+```ges
+module AtomicUnicodeScalarSort
+on Start(values) {
+  let sorted be ['', '𐀀'][:sort ascending]
+  emit Done(firstText: sorted[1], secondText: sorted[2], firstMapValue: values[:first], lastMapValue: values[:last])
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args:
+        - name: "values"
+          value:
+            type: ":map"
+            entries:
+              - key: "\uD800\uDC00"
+                value:
+                  type: ":integer"
+                  value: "2"
+              - key: "\uE000"
+                value:
+                  type: ":integer"
+                  value: "1"
+    local:
+      - name: "Done"
+        args:
+          - name: "firstText"
+            value:
+              type: ":text"
+              value: "\uE000"
+          - name: "secondText"
+            value:
+              type: ":text"
+              value: "\uD800\uDC00"
+          - name: "firstMapValue"
+            value:
+              type: ":integer"
+              value: "1"
+          - name: "lastMapValue"
+            value:
+              type: ":integer"
+              value: "2"
+```

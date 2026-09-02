@@ -13,6 +13,7 @@ using StepH.GameEventScript.Runtime;
 namespace StepH_GameEventScript_Tests.Conformance;
 
 [TestClass]
+[Ignore("Legacy JSON sources were retired after the verified Markdown migration; infrastructure is removed in step 5.7.")]
 public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonConformanceTestBase
 {
     [TestMethod]
@@ -185,6 +186,7 @@ public sealed class GameEventScriptJsonConformanceTests : GameEventScriptJsonCon
 }
 
 [TestClass]
+[Ignore("Legacy combined JSON performance runner is replaced in step 5.7.")]
 public sealed class GameEventScriptJsonPerformanceTests : GameEventScriptJsonConformanceTestBase
 {
     private static readonly bool RunPerformanceReport = true;

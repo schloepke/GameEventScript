@@ -266,6 +266,14 @@ public static class ConformanceRunner
         try
         {
             var definition = testCase.MessageApi!;
+            if (definition.ArgumentsWereMapping)
+            {
+                const string code = "invalidArgumentsShape";
+                return string.Equals(code, expected.Error, StringComparison.Ordinal)
+                    ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed)
+                    : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch,
+                        mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, code) });
+            }
             var signature = GameEventScriptMessageSignature.Create(definition.SignatureName, definition.Parameters);
             var message = ConformanceRuntimeValueCodec.DecodeMessage(definition.Message);
             if (expected.Error is not null) return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, null) });

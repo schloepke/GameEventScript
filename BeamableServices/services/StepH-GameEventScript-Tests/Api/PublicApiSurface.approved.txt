@@ -1113,6 +1113,8 @@ sealed class StepH.GameEventScript.Conformance.ConformanceMessage
   property System.String Name { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiCase
   property StepH.GameEventScript.Conformance.ConformanceMessage Message { get }
+  property System.Boolean ArgumentsWereMapping { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceValueEntry> UnorderedArguments { get }
   property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
   property System.String SignatureName { get }
 sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiExpectation
@@ -1286,6 +1288,7 @@ sealed class StepH.GameEventScript.Conformance.ConformanceRunnerOptions
   property System.Boolean IncludeActualAssemblerOnSuccess { get set }
   property System.Boolean IncludeTechnicalDetails { get set }
 sealed class StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation
+  property System.Boolean Any { get }
   property System.String DetailContains { get }
   property System.String Name { get }
   property System.UInt64? Limit { get }

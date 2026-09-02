@@ -142,6 +142,39 @@ steps:
     }
 
     [TestMethod]
+    public void PreservesEmbeddedByteOrderMarkScalarInsideGesSource()
+    {
+        var markdown = "---\nformatVersion: 1\nsuiteId: unicode.bom\nkind: bytecode\nlevel: atomic\n---\n## Test: Embedded BOM\n```yaml\ngesBlock: case\nid: source\n```\n```ges\n\ufeffon Start {}\n```\n```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```\n";
+
+        var document = ConformanceMarkdownParser.Parse(markdown);
+
+        Assert.AreEqual("\ufeffon Start {}", document.Cases[0].Sources[0].Text);
+    }
+
+    [TestMethod]
+    public void ParsesExplicitMessageArgumentMappingNegativeCase()
+    {
+        const string markdown = "---\nformatVersion: 1\nsuiteId: message.invalid-shape\nkind: messageApi\nlevel: atomic\n---\n## Test: Mapping\n```yaml\ngesBlock: case\nid: mapping\nmessageApi:\n  signature: { name: Score, parameters: [score] }\n  message:\n    name: Score\n    args:\n      score: { type: \":integer\", value: \"1\" }\n```\n```yaml\ngesBlock: expect\nmessage: { error: invalidArgumentsShape }\n```\n";
+
+        var test = ConformanceMarkdownParser.Parse(markdown).Cases[0];
+
+        Assert.IsTrue(test.MessageApi!.ArgumentsWereMapping);
+        Assert.HasCount(1, test.MessageApi.UnorderedArguments);
+        Assert.AreEqual("score", test.MessageApi.UnorderedArguments[0].Key);
+    }
+
+    [TestMethod]
+    public void ParsesExplicitRuntimeLimitWildcard()
+    {
+        const string markdown = "---\nformatVersion: 1\nsuiteId: limits.wildcard\nkind: scriptApi\nlevel: atomic\n---\n## Test: No limits\n```yaml\ngesBlock: case\nid: none\n```\n```ges\non Start {}\n```\n### Steps\n| step | receive | pump | budget |\n| --- | --- | --- | --- |\n| run | Start | completion | |\n```yaml\ngesBlock: expect\nsteps:\n  run:\n    runtimeLimits:\n      exclude:\n        - any: true\n```\n";
+
+        var wildcard = ConformanceMarkdownParser.Parse(markdown).Cases[0].Steps[0].Expectation.Observations.ExcludedRuntimeLimits[0];
+
+        Assert.IsTrue(wildcard.Any);
+        Assert.IsNull(wildcard.Name);
+    }
+
+    [TestMethod]
     public void ParsesPerformanceReferenceRangesAndIndependentSources()
     {
         const string markdown = """
@@ -402,13 +435,14 @@ code
     }
 
     [TestMethod]
-    public void RejectsBomOutsideByteOffsetZero()
+    public void TreatsEmbeddedUfeffAsContentInsteadOfDocumentBom()
     {
-        var bytes = Encoding.UTF8.GetBytes("---\nformatVersion: 1\nsuiteId: bom.invalid\n\ufeffkind: bytecode\n---\n");
+        var bytes = Encoding.UTF8.GetBytes("---\nformatVersion: 1\nsuiteId: bom.content\nkind: bytecodeSnapshot\nlevel: atomic\n---\n\ufeffprose\n## Test: One\n```yaml\ngesBlock: case\nid: one\n```\n```ges\non A() {}\n```\n```gesa\ncode\n```\n");
 
-        var exception = Assert.ThrowsExactly<ConformanceParseException>(() => ConformanceMarkdownParser.Parse(bytes));
+        var document = ConformanceMarkdownParser.Parse(bytes);
 
-        Assert.AreEqual(ConformanceDiagnosticCodes.InvalidUtf8, exception.Diagnostics[0].Code);
+        Assert.IsFalse(document.Source.HasByteOrderMark);
+        Assert.AreEqual("one", document.Cases[0].Id);
     }
 
     [TestMethod]

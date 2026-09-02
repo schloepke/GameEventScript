@@ -97,10 +97,6 @@ internal sealed class ConformanceText
             {
                 throw new ConformanceFailure(ConformanceDiagnosticCodes.InvalidUtf8, "The conformance document contains a NUL byte.", new ConformanceSourceRange(index - start, 1, 1, 1, 1, 2));
             }
-            if (index + 2 < original.Length && original[index] == 0xef && original[index + 1] == 0xbb && original[index + 2] == 0xbf)
-            {
-                throw new ConformanceFailure(ConformanceDiagnosticCodes.InvalidUtf8, "A UTF-8 BOM is accepted only at byte offset zero.", new ConformanceSourceRange(index - start, 3, 1, 1, 1, 2));
-            }
         }
 
         var lines = new List<ConformanceLine>();

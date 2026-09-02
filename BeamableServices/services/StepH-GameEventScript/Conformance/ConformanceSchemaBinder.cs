@@ -48,8 +48,11 @@ internal static class ConformanceSchemaBinder
             var random = BindRandom(Optional(caseNode, "random"));
             var messageApi = BindMessageApi(Optional(caseNode, "messageApi"));
             var workload = BindPerformanceWorkload(Optional(caseNode, "performance"));
-            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, messageApi, workload);
             var expectations = BindExpectation(defaults.Kind.Value, expectationNode);
+            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, messageApi, workload);
+            if (messageApi?.ArgumentsWereMapping == true &&
+                !string.Equals(expectations.MessageApi?.Error, "invalidArgumentsShape", StringComparison.Ordinal))
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A messageApi argument mapping is valid only with expected error 'invalidArgumentsShape'.", caseNode.Range);
             var steps = BindSteps(testSyntax.Steps, expectationNode);
             var core = new List<string>(defaults.Requires.Core);
             var optional = new List<string>(defaults.Requires.Optional);
@@ -193,8 +196,24 @@ internal static class ConformanceSchemaBinder
         Closed(node, "signature", "message");
         var signature = Required(node, "signature");
         Closed(signature, "name", "parameters");
-        var message = BindMessage(Required(node, "message"));
-        return new ConformanceMessageApiCase(RequiredString(signature, "name"), OptionalStringList(signature, "parameters") ?? new List<string>(), message);
+        var messageNode = Required(node, "message");
+        Closed(messageNode, "name", "tags", "args");
+        var name = RequiredString(messageNode, "name");
+        var tags = OptionalStringList(messageNode, "tags") ?? new List<string>();
+        var args = Optional(messageNode, "args");
+        if (args?.Kind == YamlNodeKind.Mapping)
+        {
+            var unordered = new List<ConformanceValueEntry>(args.Properties.Count);
+            foreach (var property in args.Properties)
+                unordered.Add(new ConformanceValueEntry(property.Name, BindValue(property.Value)));
+            return new ConformanceMessageApiCase(
+                RequiredString(signature, "name"), OptionalStringList(signature, "parameters") ?? new List<string>(),
+                new ConformanceMessage(name, tags, Array.Empty<ConformanceArgument>()), true, unordered);
+        }
+        var message = new ConformanceMessage(name, tags, args is null ? Array.Empty<ConformanceArgument>() : BindArguments(args));
+        return new ConformanceMessageApiCase(
+            RequiredString(signature, "name"), OptionalStringList(signature, "parameters") ?? new List<string>(),
+            message, false, Array.Empty<ConformanceValueEntry>());
     }
 
     private static ConformancePerformanceWorkload? BindPerformanceWorkload(YamlNode? node)
@@ -325,12 +344,14 @@ internal static class ConformanceSchemaBinder
         RequireKind(node, YamlNodeKind.Sequence, "Runtime-limit expectations must be a sequence.");
         foreach (var item in node.Items)
         {
-            Closed(item, "name", "detailContains", "limit");
+            Closed(item, "any", "name", "detailContains", "limit");
+            var any = OptionalBoolean(item, "any") ?? false;
             var name = OptionalString(item, "name");
             var detail = OptionalString(item, "detailContains");
             var limit = OptionalUInt64(item, "limit");
-            if (name is null && detail is null && limit is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "A runtime-limit expectation requires at least one field.", item.Range);
-            result.Add(new ConformanceRuntimeLimitExpectation(name, detail, limit));
+            if (!any && name is null && detail is null && limit is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "A runtime-limit expectation requires a constraint or 'any: true'.", item.Range);
+            if (any && (name is not null || detail is not null || limit is not null)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A wildcard runtime-limit expectation cannot contain additional constraints.", item.Range);
+            result.Add(new ConformanceRuntimeLimitExpectation(any, name, detail, limit));
         }
         return result;
     }

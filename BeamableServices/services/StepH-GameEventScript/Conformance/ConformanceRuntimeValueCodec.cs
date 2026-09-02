@@ -97,8 +97,10 @@ internal static class ConformanceRuntimeValueCodec
             case GameEventScriptBytecodeTypeKind.Boolean: return expected.AsBoolean() == actual.AsBoolean();
             case GameEventScriptBytecodeTypeKind.Integer: return expected.ValueUnit == actual.ValueUnit && expected.AsInteger() == actual.AsInteger();
             case GameEventScriptBytecodeTypeKind.Float:
+                return (!double.IsFinite(expected.AsNumber()) || expected.ValueUnit == actual.ValueUnit) &&
+                       Binary64Equal(expected.AsNumber(), actual.AsNumber(), comparison);
             case GameEventScriptBytecodeTypeKind.Percentage:
-                return expected.ValueUnit == actual.ValueUnit && Binary64Equal(expected.AsNumber(), actual.AsNumber(), comparison);
+                return Binary64Equal(expected.AsNumber(), actual.AsNumber(), comparison);
             case GameEventScriptBytecodeTypeKind.Text:
             case GameEventScriptBytecodeTypeKind.Tag: return string.Equals(expected.AsText(), actual.AsText(), StringComparison.Ordinal);
             case GameEventScriptBytecodeTypeKind.Vector:
@@ -120,7 +122,8 @@ internal static class ConformanceRuntimeValueCodec
             case GameEventScriptBytecodeTypeKind.Map:
             case GameEventScriptBytecodeTypeKind.Custom:
             {
-                if (!string.Equals(expected.CustomTypeName, actual.CustomTypeName, StringComparison.Ordinal)) return false;
+                if (expected.ValueKind == GameEventScriptBytecodeTypeKind.Custom &&
+                    !string.Equals(expected.CustomTypeName, actual.CustomTypeName, StringComparison.Ordinal)) return false;
                 var left = expected.AsMap();
                 var right = actual.AsMap();
                 if (left is null || right is null || left.Length != right.Length) return false;
@@ -144,13 +147,17 @@ internal static class ConformanceRuntimeValueCodec
             }
             case GameEventScriptBytecodeTypeKind.Range:
             {
-                var leftInteger = expected.IntegerRange;
-                var rightInteger = actual.IntegerRange;
-                if (leftInteger is not null || rightInteger is not null)
-                    return leftInteger is not null && rightInteger is not null && leftInteger.From == rightInteger.From && leftInteger.To == rightInteger.To && leftInteger.Step == rightInteger.Step;
-                var left = expected.FloatRange;
-                var right = actual.FloatRange;
-                return left is not null && right is not null && Binary64Equal(left.From, right.From, comparison) && Binary64Equal(left.To, right.To, comparison) && Binary64Equal(left.Step, right.Step, comparison);
+                var leftFrom = expected.IntegerRange?.From ?? expected.FloatRange?.From;
+                var leftTo = expected.IntegerRange?.To ?? expected.FloatRange?.To;
+                var leftStep = expected.IntegerRange?.Step ?? expected.FloatRange?.Step;
+                var rightFrom = actual.IntegerRange?.From ?? actual.FloatRange?.From;
+                var rightTo = actual.IntegerRange?.To ?? actual.FloatRange?.To;
+                var rightStep = actual.IntegerRange?.Step ?? actual.FloatRange?.Step;
+                return leftFrom is not null && leftTo is not null && leftStep is not null &&
+                       rightFrom is not null && rightTo is not null && rightStep is not null &&
+                       Binary64Equal(leftFrom.Value, rightFrom.Value, comparison) &&
+                       Binary64Equal(leftTo.Value, rightTo.Value, comparison) &&
+                       Binary64Equal(leftStep.Value, rightStep.Value, comparison);
             }
             case GameEventScriptBytecodeTypeKind.Message:
                 return expected.Message is not null && actual.Message is not null && RuntimeMessagesEqual(expected.Message, actual.Message, comparison);

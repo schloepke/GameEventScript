@@ -45,6 +45,38 @@ are prose. They are retained by the source document but ignored by the parser.
 An unrecognized fenced block whose info string starts with `ges` inside a test
 is an error, because it is likely a misspelled semantic block.
 
+### Canonical human-readable layout
+
+Normative suites in the checked-in corpus must use a single H1 display title
+immediately followed by this caution callout:
+
+```markdown
+> [!CAUTION]
+> **Executable Conformance Test Markdown**
+>
+> - This file controls executable conformance tests; it is not free-form documentation.
+> - Keep its structural elements in the form required by the Conformance Test Markdown syntax.
+> - Validate every edit with a conforming parser and runner.
+```
+
+A short suite-level explanation follows the callout. Every test must be
+preceded by a `---` thematic break, followed by its `## Test: ` heading and a
+short prose explanation of the behavior under test. Semantic blocks use these
+H3 display headings:
+
+| Heading | Content that follows |
+| --- | --- |
+| `### Case description` | the `gesBlock: case` YAML fence |
+| `### Source code under test` | one or more `ges` source fences |
+| `### Steps` | the executable Steps table |
+| `### Expectation` | the `gesBlock: expect` YAML fence |
+| `### Expected Game Event Script Assembler` | the `gesa` snapshot fence |
+
+Except for the already semantic `### Steps` heading, these presentation
+elements remain nonsemantic in V1. A conforming parser must derive behavior from
+the semantic fences and Steps table rather than from prose or presentation
+headings.
+
 ### Frontmatter
 
 After the optional BOM, the first logical line must be exactly `---`. The next
@@ -230,10 +262,14 @@ discriminator is `gesBlock: case`. It supports:
 | `sources` | source descriptor sequence | conditional | names and program grouping |
 | `random` | mapping | no | deterministic random configuration |
 | `publishSink` | `accept`, `absent`, `reject`, or `throw` | no | configured publish-sink behavior; default `accept` |
+| `externalTypeRegistry` | `environment`, `absent`, or `mismatch` | no | runtime registry used for External-Type link tests; default `environment` |
 | `hostCount` | positive integer | no | run the same compiled Programs and expectations independently in this many Hosts; default `1` |
 | `deferredPrograms` | ID sequence | no | source-program groups loaded only by a native host action |
 | `nativeHandlers` | sequence | no | declarative portable native handlers |
+| `stepActions` | mapping | no | ordered host actions performed immediately before a named step's Receive |
 | `messageApi` | mapping | `messageApi` only | signature and message input |
+| `valueApi` | mapping | `valueApi` only | portable value construction, comparison and copy input |
+| `externalTypeApi` | mapping | `externalTypeApi` only | portable external-type catalog input |
 | `performance` | mapping | `performance` only | workload configuration |
 
 Compile options are:
@@ -320,6 +356,7 @@ nativeHandlers:
   - id: notify-handler
     message: Notify
     parameters: [playerId, count]
+    messageName: false
     priority: 0
     initiallySubscribed: true
     throw: false
@@ -331,19 +368,23 @@ nativeHandlers:
         forwardArguments: true
 ```
 
-`message` is required. `id` defaults to the stable metadata-order name
+`message` is required. `messageName: true` selects name-only matching and then
+`parameters` must be empty; its default is false. `id` defaults to the stable metadata-order name
 `native-0001`, `native-0002`, and so on. `parameters` defaults to an empty
 ordered sequence, `priority` to zero, `initiallySubscribed` to true, `throw` to
 false, and `actions`/`emit` to empty. An emit entry requires `name` and exactly
 one of `forwardArguments: true` or an ordered `args` sequence.
 
 Each action mapping contains exactly one of `loadProgram`, `detachProgram`,
-`subscribeHandler`, or `unsubscribeHandler`. Its value is an existing program
+`subscribeHandler`, or `unsubscribeHandler`, plus an optional boolean
+`expectResult`. Its operation value is an existing program
 or native-handler ID of the appropriate kind. Only a program listed in
 `deferredPrograms` may be a `loadProgram` target. Actions execute in metadata
-order before emits. Repeated load/subscribe and detach/unsubscribe operations
-are idempotent no-ops after the first state change. The set is intentionally
-closed and declarative; arbitrary native code is not test data.
+order before emits. `expectResult` compares the portable boolean operation
+result. Repeated detach/unsubscribe operations return false after the first
+state change; load/subscribe ensure the target is active and return true. The
+set is intentionally closed and declarative; arbitrary native code is not test
+data.
 
 A `scriptApi` case with at least one native handler may have no GES source and
 thereby defines a native-only Host. `hostCount` is bounded by the parser's
@@ -357,6 +398,16 @@ reuse and isolation tests, not performance measurement.
 false; `throw` records the call and throws a platform exception which the Host
 must convert to the portable `runtime.publishSinkFailure` diagnostic. Outbound
 messages record calls handed to the sink, regardless of acceptance.
+
+`externalTypeRegistry` leaves the runner environment's registry unchanged for
+`environment`, installs no runtime registry for `absent`, and installs a fixed
+constructor with a deliberately different definition for `mismatch`. The
+compiler still uses the environment's portable catalog in all three modes.
+
+`stepActions` is a mapping from an existing Step ID to the same ordered,
+closed host-action sequence used by native handlers. These actions execute
+immediately before that step's `Receive`. This makes enqueue/load ordering and
+changes while a VM is paused expressible without embedding test callbacks.
 
 ## Ordered steps
 
@@ -373,8 +424,9 @@ Each following nonblank pipe-table row has four cells:
 
 - `step` is an ID unique within the case;
 - `receive` is the exact incoming message name;
-- `pump` is `completion` or `frames`;
-- `budget` is empty for `completion` and a positive UInt32 for `frames`.
+- `pump` is `completion`, `frames`, `enqueue`, or `frame`;
+- `budget` is empty for `completion` and `enqueue`, and a positive UInt32 for
+  `frames` and `frame`.
 
 Cells are trimmed of surrounding ASCII space and tab. Backslash escapes, inline
 Markdown, multiline cells, and additional columns are not supported. A table
@@ -384,7 +436,9 @@ the test kind requires steps.
 For `completion`, the runner calls the synchronous run-to-completion operation
 once. For `frames`, it repeatedly executes frames of the specified budget until
 the host is idle or reports a runtime limit. The expectation records whether at
-least one frame returned `paused`.
+least one frame returned `paused`. `enqueue` performs no pump after `Receive`.
+`frame` performs exactly one `ExecuteFrame(budget)` call and records whether
+that result was paused.
 
 The corresponding `yaml` block with `gesBlock: expect` keys its detailed input
 and outputs by step ID:
@@ -505,20 +559,21 @@ Values use the existing portable conformance shape:
 | `:list` | ordered `items` value sequence |
 | `:map` | `entries`, an ordered sequence of `{ key, value }` |
 | `:dice` | ordered Int32 `rolls` |
-| `:range` | Binary64 strings `from`, `to`, `step` |
+| `:range` | numeric strings `from`, `to`, `step`; optional `rangeKind` is `integer` or `float` |
 | `:message` | nested `message` |
 | any declared custom type | ordered `entries` sequence |
 
 Numeric strings and special values follow `PortableNumberSemantics.md`.
 Message names, argument names, tags, units, and custom types follow the portable
 Core contracts. Map/record semantic comparison follows
-`PortableDeterminismSemantics.md`; their encoded entry sequence is retained for
-diagnostics and duplicate-key validation.
+`PortableDeterminismSemantics.md`. Duplicate construction keys use
+last-entry-wins semantics before scalar-ordinal key sorting.
 
 ## Expectation fields by test kind
 
 Supported V1 kinds are `scriptApi`, `compileError`, `loadError`, `messageApi`,
-`compileMetadata`, `bytecode`, `performance`, and `bytecodeSnapshot`. A kind's
+`valueApi`, `externalTypeApi`, `compileMetadata`, `bytecode`, `performance`, and
+`bytecodeSnapshot`. A kind's
 required core capabilities are additive to explicit `requires.core`.
 
 The presence of `nativeHandlers` implicitly requires `native-handlers`.
@@ -576,6 +631,10 @@ messageApi:
   message:
     name: Start
     args: []
+  compareSignature: { name: Start, parameters: [a, b] }
+  compareMessage: { name: Start, args: [] }
+  compareHandler: { name: Start, parameters: [a, b] }
+  createArguments: []
 ```
 
 For the single negative shape test `args` may instead be a mapping. The mapping
@@ -593,11 +652,67 @@ message:
   messageSignatureId: "Start()"
   matches: false
   argumentCount: 0
+  signatureEquals: true
+  signatureHashEquals: true
+  messageEquals: true
+  messageHashEquals: true
+  handlerEquals: true
+  handlerHashEquals: true
+  createdMessageSignatureId: "Start(a,b)"
   error: duplicateArgumentName
 ```
 
 If `error` is present, successful construction fails the case and the other
 fields must be absent. Message error codes are stable ASCII identifiers.
+
+### `valueApi`
+
+Requires `value-api` and no GES source. `valueApi.value` is constructed through
+the portable public value API. Optional `equalTo` and `notEqualTo` values test
+semantic equality. `mutateSourceAfterCreate: true` mutates source arrays after
+construction to verify defensive storage.
+
+```yaml
+valueApi:
+  value:
+    type: ":list"
+    items: [{ type: ":integer", value: "1" }]
+  equalTo:
+    type: ":list"
+    items: [{ type: ":integer", value: "1" }]
+  mutateSourceAfterCreate: true
+```
+
+The expectation requires `normalized` and may constrain flags, boolean
+conversion, length, custom type name, equality and the equal-value hash
+invariant.
+
+```yaml
+value:
+  normalized:
+    type: ":list"
+    items: [{ type: ":integer", value: "1" }]
+  hasValue: true
+  length: 1
+  equal: true
+  equalHash: true
+```
+
+### `externalTypeApi`
+
+Requires `external-types` and no GES source. V1 constructs a catalog from the
+ordered `typeNames` list. Its expectation contains either `typeCount` or the
+stable error `duplicateTypeName`.
+
+```yaml
+externalTypeApi:
+  typeNames: [sample, sample]
+```
+
+```yaml
+externalType:
+  error: duplicateTypeName
+```
 
 ### `compileMetadata`
 

@@ -45,6 +45,11 @@ internal static class ConformanceRuntimeValueCodec
                 for (var index = 0; index < rolls.Length; index++) rolls[index] = value.Rolls[index];
                 return GesValue.GesDice(rolls);
             }
+            case ":range" when string.Equals(value.RangeKind, "integer", StringComparison.Ordinal):
+                return GesValue.GesRange(
+                    long.Parse(value.From!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture),
+                    long.Parse(value.To!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture),
+                    long.Parse(value.Step!, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture));
             case ":range": return GesValue.GesRange(ParseBinary64(value.From!), ParseBinary64(value.To!), ParseBinary64(value.Step!));
             case ":message": return GesValue.GesMessage(DecodeMessage(value.Message!));
             default:
@@ -58,6 +63,56 @@ internal static class ConformanceRuntimeValueCodec
                 }
                 return GesValue.GesRecord(value.Type.Substring(1), keys, values);
             }
+        }
+    }
+
+    internal static GesValue DecodeValueAndMutateSource(ConformanceValue value)
+    {
+        switch (value.Type)
+        {
+            case ":list":
+            {
+                var items = new GesValue[value.Items.Count];
+                for (var index = 0; index < items.Length; index++) items[index] = DecodeValue(value.Items[index]);
+                var result = GesValue.GesList(items);
+                if (items.Length > 0) items[0] = GesValue.GesNothing();
+                return result;
+            }
+            case ":map":
+            {
+                var keys = new string[value.Entries.Count];
+                var values = new GesValue[value.Entries.Count];
+                for (var index = 0; index < keys.Length; index++)
+                {
+                    keys[index] = value.Entries[index].Key;
+                    values[index] = DecodeValue(value.Entries[index].Value);
+                }
+                var result = GesValue.GesMap(keys, values);
+                if (keys.Length > 0) { keys[0] = "mutated"; values[0] = GesValue.GesNothing(); }
+                return result;
+            }
+            case ":dice":
+            {
+                var rolls = new int[value.Rolls.Count];
+                for (var index = 0; index < rolls.Length; index++) rolls[index] = value.Rolls[index];
+                var result = GesValue.GesDice(rolls);
+                if (rolls.Length > 0) rolls[0] = int.MinValue;
+                return result;
+            }
+            case var type when type.Length > 1 && type is not ":nothing" and not ":text" and not ":tag" and not ":boolean" and not ":integer" and not ":float" and not ":percentage" and not ":vector" and not ":point" and not ":range" and not ":message":
+            {
+                var keys = new string[value.Entries.Count];
+                var values = new GesValue[value.Entries.Count];
+                for (var index = 0; index < keys.Length; index++)
+                {
+                    keys[index] = value.Entries[index].Key;
+                    values[index] = DecodeValue(value.Entries[index].Value);
+                }
+                var result = GesValue.GesRecord(value.Type.Substring(1), keys, values);
+                if (keys.Length > 0) { keys[0] = "mutated"; values[0] = GesValue.GesNothing(); }
+                return result;
+            }
+            default: return DecodeValue(value);
         }
     }
 
@@ -88,7 +143,7 @@ internal static class ConformanceRuntimeValueCodec
         return true;
     }
 
-    private static bool ValuesEqual(in GesValue expected, in GesValue actual, ConformanceComparisonOptions comparison)
+    internal static bool ValuesEqual(in GesValue expected, in GesValue actual, ConformanceComparisonOptions comparison)
     {
         if (expected.ValueKind != actual.ValueKind) return false;
         switch (expected.ValueKind)

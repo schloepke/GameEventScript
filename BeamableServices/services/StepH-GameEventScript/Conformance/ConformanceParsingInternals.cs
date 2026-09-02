@@ -647,7 +647,19 @@ internal sealed class RestrictedYamlParser
             {
                 var c = _text[_position++];
                 if (c == '"') return _owner.New(YamlNodeKind.String, builder.ToString(), Range(start, _position - start));
-                if (c != '\\') { if (char.IsSurrogate(c)) throw Error(ConformanceDiagnosticCodes.YamlInvalidScalar, "Unpaired surrogate in string.", Range(_position - 1)); builder.Append(c); continue; }
+                if (c != '\\')
+                {
+                    if (char.IsHighSurrogate(c))
+                    {
+                        if (_position >= _text.Length || !char.IsLowSurrogate(_text[_position]))
+                            throw Error(ConformanceDiagnosticCodes.YamlInvalidScalar, "Unpaired surrogate in string.", Range(_position - 1));
+                        builder.Append(c).Append(_text[_position++]);
+                        continue;
+                    }
+                    if (char.IsLowSurrogate(c)) throw Error(ConformanceDiagnosticCodes.YamlInvalidScalar, "Unpaired surrogate in string.", Range(_position - 1));
+                    builder.Append(c);
+                    continue;
+                }
                 if (_position >= _text.Length) break;
                 var escaped = _text[_position++];
                 switch (escaped)

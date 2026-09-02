@@ -515,6 +515,16 @@ code
         Assert.IsInstanceOfType<System.Collections.ObjectModel.ReadOnlyCollection<ConformanceCase>>(document.Cases);
     }
 
+    [TestMethod]
+    public void AcceptsLiteralAstralScalarsInDoubleQuotedYamlStrings()
+    {
+        const string markdown = "---\nformatVersion: 1\nsuiteId: astral.scalar\nkind: valueApi\nlevel: atomic\n---\n## Test: One\n```yaml\ngesBlock: case\nid: one\nvalueApi:\n  value: { type: \":text\", value: \"𐀀\" }\n```\n```yaml\ngesBlock: expect\nvalue:\n  normalized: { type: \":text\", value: \"𐀀\" }\n```\n";
+
+        var document = ConformanceMarkdownParser.Parse(markdown);
+
+        Assert.AreEqual("𐀀", document.Cases[0].ValueApi!.Value.Value);
+    }
+
     private static string FindFixture(string relativePath)
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

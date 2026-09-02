@@ -14,7 +14,9 @@ public enum ConformanceTestKind
     CompileMetadata = 4,
     Bytecode = 5,
     Performance = 6,
-    BytecodeSnapshot = 7
+    BytecodeSnapshot = 7,
+    ValueApi = 8,
+    ExternalTypeApi = 9
 }
 
 public enum ConformanceTestLevel
@@ -26,7 +28,9 @@ public enum ConformanceTestLevel
 public enum ConformancePumpMode
 {
     Completion = 0,
-    Frames = 1
+    Frames = 1,
+    Enqueue = 2,
+    Frame = 3
 }
 
 public enum ConformanceBinary64ComparisonMode
@@ -41,6 +45,13 @@ public enum ConformancePublishSinkMode
     Absent = 1,
     Reject = 2,
     Throw = 3
+}
+
+public enum ConformanceExternalTypeRegistryMode
+{
+    Environment = 0,
+    Absent = 1,
+    Mismatch = 2
 }
 
 public enum ConformanceObserverEventKind
@@ -123,6 +134,7 @@ public sealed class ConformanceCase
         ConformanceRuntimeLimits runtimeLimits,
         ConformanceComparisonOptions comparison,
         ConformancePublishSinkMode publishSink,
+        ConformanceExternalTypeRegistryMode externalTypeRegistry,
         uint hostCount,
         IReadOnlyList<string> deferredPrograms,
         ConformanceRandomConfiguration? random,
@@ -131,6 +143,8 @@ public sealed class ConformanceCase
         IReadOnlyList<ConformanceStep> steps,
         ConformanceExpectation expectation,
         ConformanceMessageApiCase? messageApi,
+        ConformanceValueApiCase? valueApi,
+        ConformanceExternalTypeApiCase? externalTypeApi,
         ConformancePerformanceWorkload? performance,
         string? expectedAssembler,
         ConformanceSourceRange metadataBlockRange,
@@ -153,6 +167,7 @@ public sealed class ConformanceCase
         RuntimeLimits = runtimeLimits;
         Comparison = comparison;
         PublishSink = publishSink;
+        ExternalTypeRegistry = externalTypeRegistry;
         HostCount = hostCount;
         DeferredPrograms = ConformanceDocument.Copy(deferredPrograms);
         Random = random;
@@ -161,6 +176,8 @@ public sealed class ConformanceCase
         Steps = ConformanceDocument.Copy(steps);
         Expectation = expectation;
         MessageApi = messageApi;
+        ValueApi = valueApi;
+        ExternalTypeApi = externalTypeApi;
         Performance = performance;
         ExpectedAssembler = expectedAssembler;
         MetadataBlockRange = metadataBlockRange;
@@ -184,6 +201,7 @@ public sealed class ConformanceCase
     public ConformanceRuntimeLimits RuntimeLimits { get; }
     public ConformanceComparisonOptions Comparison { get; }
     public ConformancePublishSinkMode PublishSink { get; }
+    public ConformanceExternalTypeRegistryMode ExternalTypeRegistry { get; }
     public uint HostCount { get; }
     public IReadOnlyList<string> DeferredPrograms { get; }
     public ConformanceRandomConfiguration? Random { get; }
@@ -192,6 +210,8 @@ public sealed class ConformanceCase
     public IReadOnlyList<ConformanceStep> Steps { get; }
     public ConformanceExpectation Expectation { get; }
     public ConformanceMessageApiCase? MessageApi { get; }
+    public ConformanceValueApiCase? ValueApi { get; }
+    public ConformanceExternalTypeApiCase? ExternalTypeApi { get; }
     public ConformancePerformanceWorkload? Performance { get; }
     public string? ExpectedAssembler { get; }
     public ConformanceSourceRange MetadataBlockRange { get; }
@@ -278,11 +298,12 @@ public sealed class ConformanceSourceInput
 
 public sealed class ConformanceNativeHandler
 {
-    internal ConformanceNativeHandler(string id, string message, IReadOnlyList<string> parameters, int priority, bool initiallySubscribed, bool throws, IReadOnlyList<ConformanceNativeAction> actions, IReadOnlyList<ConformanceNativeEmit> emits)
+    internal ConformanceNativeHandler(string id, string message, IReadOnlyList<string> parameters, bool messageNameOnly, int priority, bool initiallySubscribed, bool throws, IReadOnlyList<ConformanceNativeAction> actions, IReadOnlyList<ConformanceNativeEmit> emits)
     {
         Id = id;
         Message = message;
         Parameters = ConformanceDocument.Copy(parameters);
+        MessageNameOnly = messageNameOnly;
         Priority = priority;
         InitiallySubscribed = initiallySubscribed;
         Throws = throws;
@@ -293,6 +314,7 @@ public sealed class ConformanceNativeHandler
     public string Id { get; }
     public string Message { get; }
     public IReadOnlyList<string> Parameters { get; }
+    public bool MessageNameOnly { get; }
     public int Priority { get; }
     public bool InitiallySubscribed { get; }
     public bool Throws { get; }
@@ -302,14 +324,16 @@ public sealed class ConformanceNativeHandler
 
 public sealed class ConformanceNativeAction
 {
-    internal ConformanceNativeAction(ConformanceNativeActionKind kind, string target)
+    internal ConformanceNativeAction(ConformanceNativeActionKind kind, string target, bool? expectedResult)
     {
         Kind = kind;
         Target = target;
+        ExpectedResult = expectedResult;
     }
 
     public ConformanceNativeActionKind Kind { get; }
     public string Target { get; }
+    public bool? ExpectedResult { get; }
 }
 
 public sealed class ConformanceNativeEmit
@@ -328,12 +352,13 @@ public sealed class ConformanceNativeEmit
 
 public sealed class ConformanceStep
 {
-    internal ConformanceStep(string id, string receive, ConformancePumpMode pump, uint? budget, ConformanceStepExpectation expectation, ConformanceSourceRange range)
+    internal ConformanceStep(string id, string receive, ConformancePumpMode pump, uint? budget, IReadOnlyList<ConformanceNativeAction> actions, ConformanceStepExpectation expectation, ConformanceSourceRange range)
     {
         Id = id;
         Receive = receive;
         Pump = pump;
         Budget = budget;
+        Actions = ConformanceDocument.Copy(actions);
         Expectation = expectation;
         Range = range;
     }
@@ -342,6 +367,7 @@ public sealed class ConformanceStep
     public string Receive { get; }
     public ConformancePumpMode Pump { get; }
     public uint? Budget { get; }
+    public IReadOnlyList<ConformanceNativeAction> Actions { get; }
     public ConformanceStepExpectation Expectation { get; }
     public ConformanceSourceRange Range { get; }
 }
@@ -514,6 +540,7 @@ public sealed class ConformanceValue
         From = Read(scalars, "from");
         To = Read(scalars, "to");
         Step = Read(scalars, "step");
+        RangeKind = Read(scalars, "rangeKind");
         Items = ConformanceDocument.Copy(items);
         Entries = ConformanceDocument.Copy(entries);
         Rolls = ConformanceDocument.Copy(rolls);
@@ -529,6 +556,7 @@ public sealed class ConformanceValue
     public string? From { get; }
     public string? To { get; }
     public string? Step { get; }
+    public string? RangeKind { get; }
     public IReadOnlyList<ConformanceValue> Items { get; }
     public IReadOnlyList<ConformanceValueEntry> Entries { get; }
     public IReadOnlyList<int> Rolls { get; }
@@ -556,6 +584,8 @@ public sealed class ConformanceExpectation
         ConformanceChannelExpectation initialization,
         ConformanceExpectedDiagnostic? error,
         ConformanceMessageApiExpectation? messageApi,
+        ConformanceValueApiExpectation? valueApi,
+        ConformanceExternalTypeApiExpectation? externalTypeApi,
         ConformanceCompileMetadataExpectation? metadata,
         ConformanceOpcodeExpectation? opcodes,
         ConformancePerformanceExpectation? performance)
@@ -563,6 +593,8 @@ public sealed class ConformanceExpectation
         Initialization = initialization;
         Error = error;
         MessageApi = messageApi;
+        ValueApi = valueApi;
+        ExternalTypeApi = externalTypeApi;
         Metadata = metadata;
         Opcodes = opcodes;
         Performance = performance;
@@ -571,6 +603,8 @@ public sealed class ConformanceExpectation
     public ConformanceChannelExpectation Initialization { get; }
     public ConformanceExpectedDiagnostic? Error { get; }
     public ConformanceMessageApiExpectation? MessageApi { get; }
+    public ConformanceValueApiExpectation? ValueApi { get; }
+    public ConformanceExternalTypeApiExpectation? ExternalTypeApi { get; }
     public ConformanceCompileMetadataExpectation? Metadata { get; }
     public ConformanceOpcodeExpectation? Opcodes { get; }
     public ConformancePerformanceExpectation? Performance { get; }
@@ -597,13 +631,21 @@ public sealed class ConformanceMessageApiCase
         IReadOnlyList<string> parameters,
         ConformanceMessage message,
         bool argumentsWereMapping,
-        IReadOnlyList<ConformanceValueEntry> unorderedArguments)
+        IReadOnlyList<ConformanceValueEntry> unorderedArguments,
+        ConformanceMessageSignatureDefinition? compareSignature,
+        ConformanceMessage? compareMessage,
+        ConformanceMessageSignatureDefinition? compareHandler,
+        IReadOnlyList<ConformanceValue> createArguments)
     {
         SignatureName = signatureName;
         Parameters = ConformanceDocument.Copy(parameters);
         Message = message;
         ArgumentsWereMapping = argumentsWereMapping;
         UnorderedArguments = ConformanceDocument.Copy(unorderedArguments);
+        CompareSignature = compareSignature;
+        CompareMessage = compareMessage;
+        CompareHandler = compareHandler;
+        CreateArguments = ConformanceDocument.Copy(createArguments);
     }
 
     public string SignatureName { get; }
@@ -611,17 +653,53 @@ public sealed class ConformanceMessageApiCase
     public ConformanceMessage Message { get; }
     public bool ArgumentsWereMapping { get; }
     public IReadOnlyList<ConformanceValueEntry> UnorderedArguments { get; }
+    public ConformanceMessageSignatureDefinition? CompareSignature { get; }
+    public ConformanceMessage? CompareMessage { get; }
+    public ConformanceMessageSignatureDefinition? CompareHandler { get; }
+    public IReadOnlyList<ConformanceValue> CreateArguments { get; }
+}
+
+public sealed class ConformanceMessageSignatureDefinition
+{
+    internal ConformanceMessageSignatureDefinition(string name, IReadOnlyList<string> parameters)
+    {
+        Name = name;
+        Parameters = ConformanceDocument.Copy(parameters);
+    }
+
+    public string Name { get; }
+    public IReadOnlyList<string> Parameters { get; }
 }
 
 public sealed class ConformanceMessageApiExpectation
 {
-    internal ConformanceMessageApiExpectation(string? name, string? signatureId, string? messageSignatureId, bool? matches, uint? argumentCount, string? error)
+    internal ConformanceMessageApiExpectation(
+        string? name,
+        string? signatureId,
+        string? messageSignatureId,
+        bool? matches,
+        uint? argumentCount,
+        bool? signatureEquals,
+        bool? signatureHashEquals,
+        bool? messageEquals,
+        bool? messageHashEquals,
+        bool? handlerEquals,
+        bool? handlerHashEquals,
+        string? createdMessageSignatureId,
+        string? error)
     {
         Name = name;
         SignatureId = signatureId;
         MessageSignatureId = messageSignatureId;
         Matches = matches;
         ArgumentCount = argumentCount;
+        SignatureEquals = signatureEquals;
+        SignatureHashEquals = signatureHashEquals;
+        MessageEquals = messageEquals;
+        MessageHashEquals = messageHashEquals;
+        HandlerEquals = handlerEquals;
+        HandlerHashEquals = handlerHashEquals;
+        CreatedMessageSignatureId = createdMessageSignatureId;
         Error = error;
     }
 
@@ -630,6 +708,90 @@ public sealed class ConformanceMessageApiExpectation
     public string? MessageSignatureId { get; }
     public bool? Matches { get; }
     public uint? ArgumentCount { get; }
+    public bool? SignatureEquals { get; }
+    public bool? SignatureHashEquals { get; }
+    public bool? MessageEquals { get; }
+    public bool? MessageHashEquals { get; }
+    public bool? HandlerEquals { get; }
+    public bool? HandlerHashEquals { get; }
+    public string? CreatedMessageSignatureId { get; }
+    public string? Error { get; }
+}
+
+public sealed class ConformanceValueApiCase
+{
+    internal ConformanceValueApiCase(ConformanceValue value, ConformanceValue? equalTo, ConformanceValue? notEqualTo, bool mutateSourceAfterCreate)
+    {
+        Value = value;
+        EqualTo = equalTo;
+        NotEqualTo = notEqualTo;
+        MutateSourceAfterCreate = mutateSourceAfterCreate;
+    }
+
+    public ConformanceValue Value { get; }
+    public ConformanceValue? EqualTo { get; }
+    public ConformanceValue? NotEqualTo { get; }
+    public bool MutateSourceAfterCreate { get; }
+}
+
+public sealed class ConformanceValueApiExpectation
+{
+    internal ConformanceValueApiExpectation(
+        ConformanceValue normalized,
+        bool? isNumeric,
+        bool? hasValue,
+        bool? isNothing,
+        bool? hasUnit,
+        bool? asBoolean,
+        uint? length,
+        string? customTypeName,
+        bool? equal,
+        bool? equalHash,
+        bool? notEqual)
+    {
+        Normalized = normalized;
+        IsNumeric = isNumeric;
+        HasValue = hasValue;
+        IsNothing = isNothing;
+        HasUnit = hasUnit;
+        AsBoolean = asBoolean;
+        Length = length;
+        CustomTypeName = customTypeName;
+        Equal = equal;
+        EqualHash = equalHash;
+        NotEqual = notEqual;
+    }
+
+    public ConformanceValue Normalized { get; }
+    public bool? IsNumeric { get; }
+    public bool? HasValue { get; }
+    public bool? IsNothing { get; }
+    public bool? HasUnit { get; }
+    public bool? AsBoolean { get; }
+    public uint? Length { get; }
+    public string? CustomTypeName { get; }
+    public bool? Equal { get; }
+    public bool? EqualHash { get; }
+    public bool? NotEqual { get; }
+}
+
+public sealed class ConformanceExternalTypeApiCase
+{
+    internal ConformanceExternalTypeApiCase(IReadOnlyList<string> typeNames)
+        => TypeNames = ConformanceDocument.Copy(typeNames);
+
+    public IReadOnlyList<string> TypeNames { get; }
+}
+
+public sealed class ConformanceExternalTypeApiExpectation
+{
+    internal ConformanceExternalTypeApiExpectation(uint? typeCount, string? error)
+    {
+        TypeCount = typeCount;
+        Error = error;
+    }
+
+    public uint? TypeCount { get; }
     public string? Error { get; }
 }
 

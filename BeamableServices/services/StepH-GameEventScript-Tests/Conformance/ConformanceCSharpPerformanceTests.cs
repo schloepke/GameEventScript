@@ -5,6 +5,7 @@ using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Compiler;
 using StepH.GameEventScript.Conformance;
 using StepH.GameEventScript.Runtime;
+using StepH_GameEventScript_Tests.Native.Runtime;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 
@@ -52,7 +53,7 @@ public sealed class ConformanceCSharpPerformanceTests
             .ToArray();
         var report = ConformanceCSharpTestEnvironment.Report(environment, ordered);
 
-        var root = Path.Combine(ConformanceCSharpTestEnvironment.GetSourceDirectory(), "SpecsMarkdown", "Received", "performance");
+        var root = Path.Combine(ConformanceCSharpTestEnvironment.GetConformanceDirectory(), "Received", "performance");
         Directory.CreateDirectory(root);
         File.WriteAllBytes(Path.Combine(root, document.SuiteId + ".received.md"), ConformanceReceivedMarkdownWriter.ToArray(document, report));
         File.WriteAllBytes(Path.Combine(root, document.SuiteId + ".results.json"), ConformanceResultJsonWriter.ToArray(report));

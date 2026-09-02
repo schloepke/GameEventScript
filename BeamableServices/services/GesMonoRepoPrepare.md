@@ -554,7 +554,7 @@ Performanceupdates mit BOM/CRLF, GESA-Updates sowie stale Reports ab.
 ### 5.5 Repräsentative vertikale Markdown-Migration durchführen - DONE
 
 Der inzwischen entfernte vertikale Pilot lag als echte Markdown-Suite unter
-`StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Pilot/representative.md`.
+einem temporären Pilotdokument, das nach der vollständigen Migration entfernt wurde.
 Er übernimmt aus dem bisherigen JSON-Bestand je einen `scriptApi`-,
 `compileError`-, `loadError`-, `messageApi`-, `compileMetadata`-, `bytecode`-
 und `performance`-Fall sowie den bisherigen ersten Performance-Dump als
@@ -596,7 +596,7 @@ noch temporäre Quelle für Schritt 5.6.
 ### 5.6 Bestehende JSON-Suite deterministisch migrieren - DONE
 
 Der deterministische Einmal-Migrator hat 34 Suites und alle 956 bisherigen
-Fälle nach `Conformance/SpecsMarkdown/Migrated` übertragen. Die lokalen IDs
+Fälle nach `Conformance/Suites` übertragen. Die lokalen IDs
 `case-0001` usw. sind explizit materialisiert und unabhängig von den
 Anzeigeüberschriften; der doppelte Titel im Message-Member-Test wurde als
 `message handler member and index access` eindeutig gemacht. Jeder Fall trägt
@@ -660,7 +660,7 @@ Autorenformat.
 Die fünf Performancefälle werden zusätzlich durch einen expliziten,
 nicht-parallelen C#-Performanceadapter einzeln gemessen. Er verwendet die im
 jeweiligen Markdownfall enthaltenen Profilgrenzen und erzeugt unter
-`Conformance/SpecsMarkdown/Received/performance` einen kanonischen JSON-Report,
+`Conformance/Received/performance` einen kanonischen JSON-Report,
 einen Markdown-Gesamtbericht und eine suite-benannte `.received.md` mit den gemessenen
 Approval-Werten. Die fünf separaten Bytecode-Snapshot-Cases erzeugen analog eine
 aggregierte Approval-Datei unter `Received/snapshots`. Kein Adapter überschreibt
@@ -699,87 +699,36 @@ aus dem kanonischen Conformance-JSON-Writer.
 
 ### 5.8 Conformance-Environment und fehlende Semantik ausbauen - DONE
 
-Das portable Environment und die noch fehlenden Host-Szenarien sind jetzt
-ausdrückbar und getestet:
+Das portable Environment, Host-Szenarien und die öffentlichen sprachneutralen
+API-Verträge sind jetzt ausdrückbar und getestet:
 
-- `ConformanceEnvironmentV1.md` definiert den festen, kleinen Extension-Katalog
-  (`floor`, `max`, Navigation, `echo`, `truth`, `fail`, `vectorSum`) sowie den
-  manuellen External Type `aim`. Andere Ports benötigen dafür weder Reflection
-  noch beliebigen Testcode aus YAML.
-- Native Handler besitzen optionale stabile IDs, initialen Subscription-Status
-  und eine geschlossene, geordnete Aktionsmenge für Load, Detach, Subscribe und
-  Unsubscribe. Ein Script-API-Fall darf dadurch auch einen Native-only Host
-  beschreiben.
-- `publishSink` bildet `absent`, `accept`, `reject` und `throw` ab. Optionales
-  `trace` vergleicht die vollständige geordnete Observer-Sequenz; Publish verlangt
-  dabei alle vier Result-Felder.
-- `hostCount` lädt dieselben kompilierten immutable Programs in mehrere
-  unabhängige Hosts und vergleicht die komplette Erwartung pro Host. Deferred
-  Programs ermöglichen Load und Initialization während eines Dispatchs.
-- Neue portable Suites decken die vier Sinkpfade, Observerreihenfolge,
-  Native-only, Program-Reuse, VM-Reset, Lifecycle-Snapshots und per-Handler
-  zurückgesetzte Runtime-Limits ab. Die bereits migrierten Semantikfälle bleiben
-  die Grundlage für Values, Collections, Random, Metadaten, Queueing,
-  Pause/Resume und External Types.
-- `ConformanceCoverage.md` ordnet die portablen Verhaltensbereiche stabilen
-  Case-IDs zu und dokumentiert die bewusst C#-spezifisch bleibenden Tests.
-
-Ein indirekter zyklischer Callgraph kann nicht aus gültigem GES-Source erzeugt
-werden, weil Vorwärtsreferenzen vorher abgelehnt werden. Sein portabler
-Trust-Boundary-Fall wird deshalb korrekt unter 5.9 als gezielt ungültige
-`.gesb`-Fixture ergänzt; bis dahin bleibt der interne Builder-/Validator-Test
-bestehen.
-
-- Deklarative Extension- und External-Type-Kataloge sowie eine kleine Menge
-  fest benannter portabler Testoperationen wie `echo`, `fail` und `floor`
-  definieren; keine beliebige Programmlogik im Testformat ablegen.
-- Native Handler als deklarative Aktionen ausdrücken.
-- Sink-Modi für fehlenden Sink, Annahme, Ablehnung und Exception modellieren.
-- Das vollständige Publish-Result und ein geordnetes Observer-Trace-Format für
-  Emit, Publish, Dispatch-Start/-End, Runtime-Limits und Diagnostics abbilden.
-- Eine Coverage-Matrix führen, die portables Verhalten stabilen Case-IDs
-  zuordnet. Ein sprachspezifischer Test wird erst entfernt oder reduziert, wenn
-  seine Semantik durch einen portablen Fall geschützt ist.
-
-Danach insbesondere folgende noch sprachspezifisch getestete Semantik direkt im
-Markdownformat ergänzen:
-
-- Message-Normalisierung und Signaturen
-- geordnete Argumente
-- Value-Semantik und Value-Kinds
-- Lists, Maps, Records, Dice, Range, Vector und Point
-- Random-Known-Answer-Tests
-- Compiler-Metadaten
-- Direct- und Indirect-Call-Cycles
-- Native-only Host
-- mehrere Hosts mit demselben Program
-- mehrere Programs in einem Host
-- VM-Reset zwischen Handlern
-- Receive/Emit/Publish
-- Publish ohne Sink, mit Annahme, Ablehnung und Exception
-- Observer-Ereignisse
-- Load/Detach/Subscribe/Unsubscribe während Dispatch
-- Snapshot-Semantik
-- Initialization-Reihenfolge
-- Queue-Limits
-- Runtime-Limits pro Handler
-- Pause/Resume mit Frame-Budget
-- External-Type-Semantik ohne Reflection
-
-Sprachspezifisch zu behalten sind:
-
-- C# Public-API-Snapshot
-- Reflection- und Attribute-Tests
-- CLR-Konvertierungen
-- C# Auto-Runner und Threading
-- interne Builder-/Rewriter-Tests
-- konkrete Struct-Layouts
-- C#-Allokationsmessungen
-- sprachspezifische Benchmarks
-
-Die Semantik dieser Tests sollte trotzdem möglichst durch das portable
-Conformance-Format abgedeckt werden; der sprachspezifische Test prüft danach nur
-noch die Implementierungsbesonderheit.
+- Der Corpus umfasst 1.016 Fälle in 40 Suites: 1.009 semantische Fälle und
+  sieben einzeln ausführbare GESA-Snapshots.
+- Gegenüber dem ursprünglichen Bestand wurden 66 von 156 C#-Testmethoden nach
+  Markdown migriert oder als Duplikate entfernt. Die verbleibenden 91 Methoden
+  sind in `NativeTestRetention.md` einzeln nach Retention-Klasse begründet.
+- `valueApi` prüft Value-Kinds, Reader/Flags, Einheiten, Equality/Hash,
+  Containerkopien, skalare Map-Sortierung, Last-entry-wins, Records, Ranges und
+  Message-Werte ohne GES-Ausführung.
+- `messageApi` prüft zusätzlich Signature-, Message- und Handler-Equality samt
+  Equal-Hash-Invariante und das Binden geordneter Werte an Signaturen.
+- Deklarative Host-Aktionen können ihr boolesches Ergebnis erwarten. Damit sind
+  `Detach` und `Unsubscribe` inklusive Idempotenz und bereits eingereihter
+  Snapshots portabel abgedeckt.
+- `externalTypeApi` deckt den portablen Katalog ohne Reflection ab. Zwei neue
+  GESA-Snapshots ersetzen die bisherigen C#-Tests für kompakte Bindings,
+  Message-name-Handler und eingebetteten Source im Dumper.
+- Die Teststruktur besitzt nur noch `Conformance` und `Native` als fachliche
+  Wurzeln. `Conformance` enthält Markdown, Fixtures, Reports und direkt in
+  seinem Root die C#-Runner-/Parser-Adapter, damit IDEs sie als Conformance
+  anzeigen. `Native` enthält die verbleibenden C#-spezifischen Tests für
+  API-Surface, Binary-Format, Compiler, Core, Runtime und CSharpBridge.
+- Alle normativen Suites folgen derselben lesbaren Gliederung aus Warnhinweis,
+  Suite-Prosa, horizontal getrennten Testfällen, Test-Prosa und benannten
+  Abschnitten für Case, Source, Steps, Expectation und GESA-Snapshot.
+- `ConformanceCoverage.md` ordnet das portable Verhalten stabilen Case-IDs zu.
+  Ein indirekter zyklischer Callgraph bleibt bis 5.9 ein nativer
+  Builder-/Validator-Test, weil er nicht aus gültigem Source erzeugt werden kann.
 
 ### 5.9 `.gesb`-Fixtures und Manifest ergänzen
 

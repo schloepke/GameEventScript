@@ -67,6 +67,7 @@ Capability IDs use the authoring ID grammar. V1 defines these core IDs:
 - `host`
 - `vm`
 - `message-api`
+- `value-api`
 - `external-types`
 - `native-handlers`
 - `publish-sink`
@@ -124,10 +125,13 @@ not an implementation exception escaping the runner.
   lifecycle actions operate only on validated IDs and are idempotent.
 - The runner performs one initialization run-to-completion pump after setup and
   before the first step, even when no initialization output is expected.
-- A runtime step first calls `Receive`, records its acceptance, and then uses
-  the table's pump mode. `completion` makes one run-to-completion call. `frames`
-  repeatedly calls `ExecuteFrame(budget)` until idle or runtime-limit state and
-  records whether any result was paused.
+- A runtime step first applies its optional ordered `stepActions`, then calls
+  `Receive`, records its acceptance, and uses the table's pump mode.
+  `completion` makes one run-to-completion call. `frames` repeatedly calls
+  `ExecuteFrame(budget)` until idle or runtime-limit state, `frame` calls it
+  exactly once, and `enqueue` performs no pump. Frame modes record whether a
+  result was paused. When an action declares `expectResult`, its boolean result
+  is compared before `Receive`.
 - Native handlers are atomic according to the portable Host contract.
 - Local messages, outbound sink messages, runtime-limit observations, and
   runtime diagnostics are recorded and compared separately. When an expectation
@@ -177,9 +181,23 @@ details are never compared.
 
 ### Message API
 
-The runner constructs the signature and message through public portable message
+The runner constructs signatures and messages through public portable message
 APIs. When an error is expected, only its stable message error code is compared.
-Otherwise every present normalized property expectation is exact.
+Otherwise every present normalized property expectation is exact. Optional
+comparisons cover signature, message and handler equality plus the equal-value
+hash invariant; ordered values may also be bound through a signature.
+
+### Value API
+
+The runner constructs a portable value, optionally mutates its source arrays,
+then compares its normalized representation, public flags/readers, equality and
+equal-value hash invariant. This kind does not compile or execute GES source.
+
+### External type API
+
+The runner constructs the declared portable external-type catalog and compares
+its count or stable duplicate-name error. No Reflection or platform type is
+involved.
 
 ### Compile metadata and bytecode constraints
 

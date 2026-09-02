@@ -13,7 +13,7 @@ internal static class ConformanceCSharpTestEnvironment
     private static readonly string[] Capabilities =
     [
         "bytecode-snapshot", "compiler", "external-types", "host", "message-api",
-        "native-handlers", "observer", "performance", "program-binary", "publish-sink", "vm"
+        "native-handlers", "observer", "performance", "program-binary", "publish-sink", "value-api", "vm"
     ];
 
     private static readonly Lazy<IReadOnlyList<ConformanceDocument>> LoadedDocuments = new(LoadDocuments);
@@ -60,14 +60,14 @@ internal static class ConformanceCSharpTestEnvironment
 
     private static IReadOnlyList<ConformanceDocument> LoadDocuments()
     {
-        var root = Path.Combine(GetSourceDirectory(), "SpecsMarkdown", "Migrated");
+        var root = Path.Combine(GetConformanceDirectory(), "Suites");
         return Directory.EnumerateFiles(root, "*.md", SearchOption.AllDirectories)
             .OrderBy(path => path, StringComparer.Ordinal)
             .Select(path => ConformanceMarkdownParser.Parse(File.ReadAllBytes(path)))
             .ToArray();
     }
 
-    internal static string GetSourceDirectory([CallerFilePath] string sourceFile = "")
+    internal static string GetConformanceDirectory([CallerFilePath] string sourceFile = "")
         => Path.GetDirectoryName(sourceFile)!;
 
     private sealed class EchoPerformanceProvider : IConformancePerformanceProvider

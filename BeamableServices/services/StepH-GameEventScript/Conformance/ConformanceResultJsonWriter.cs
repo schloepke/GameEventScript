@@ -188,7 +188,10 @@ public static class ConformanceResultJsonWriter
         ConformanceTestKind.CompileMetadata => "compileMetadata",
         ConformanceTestKind.Bytecode => "bytecode",
         ConformanceTestKind.Performance => "performance",
-        _ => "bytecodeSnapshot"
+        ConformanceTestKind.BytecodeSnapshot => "bytecodeSnapshot",
+        ConformanceTestKind.ValueApi => "valueApi",
+        ConformanceTestKind.ExternalTypeApi => "externalTypeApi",
+        _ => "unknown"
     };
 
     internal static string Name(ConformanceTestLevel value) => value == ConformanceTestLevel.Atomic ? "atomic" : "scenario";

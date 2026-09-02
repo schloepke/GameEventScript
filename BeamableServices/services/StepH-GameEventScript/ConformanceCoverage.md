@@ -9,13 +9,16 @@ here. Add or update this matrix in the same change as new portable behavior.
 
 | Behavior | Stable portable case IDs |
 | --- | --- |
-| Message normalization, signature construction and matching | `api.messages/case-0001` through `api.messages/case-0006` |
+| Message normalization, signature construction and matching | `api.messages/case-0001` through `api.messages/case-0012`, `api.messages/signature-equality`, `api.messages/signature-create-message` |
+| Signature, Message and Handler equality/hash contracts | `api.messages/signature-equality`, `api.messages/signature-parameter-inequality`, `api.messages/signature-arity-inequality`, `api.messages/message-equality`, `api.messages/message-argument-inequality`, `api.messages/message-tag-inequality`, `api.messages/unlabeled-message-equality`, `api.messages/handler-equality`, `api.messages/handler-inequality` |
 | Explicit ordered arguments and rejection of unordered/duplicate forms | `api.messages/case-0001`, `api.messages/case-0004`, `api.messages/case-0005`, `api.messages/case-0006` |
-| Value kinds and primitive/custom value semantics | `runtime.atomic.create-values/case-0009`, `runtime.types-and-values/case-0035` |
+| Public Value kinds, readers, flags and equality/hash | `api.values/primitives`, `api.values/measured-float`, `api.values/percentage`, `api.values/vector`, `api.values/point`, `api.values/text`, `api.values/tag-case-sensitive`, `api.values/nan-is-nothing` |
+| Value container ordering, duplicate keys and defensive copies | `api.values/list-defensive-copy`, `api.values/dice-defensive-copy`, `api.values/map-ordering-and-copy`, `api.values/record` |
+| Integer/float Range storage and Message values | `api.values/integer-range`, `api.values/float-range`, `api.values/message-value` |
 | List, Map, Vector, Point, Dice and Range construction | `runtime.atomic.create-values/case-0002` through `runtime.atomic.create-values/case-0007` |
 | Record and external-value construction | `runtime.atomic.custom-types/case-0001`, `runtime.atomic.custom-types/case-0003` |
 | Collection/member/index semantics | `runtime.atomic.member-index-access/case-0008` through `runtime.atomic.member-index-access/case-0016` |
-| Random known-answer vectors and nested streams | `runtime.atomic.random/case-0002` through `runtime.atomic.random/case-0005` |
+| Random known-answer vectors, non-consuming bounds and nested streams | `runtime.atomic.random/case-0002` through `runtime.atomic.random/case-0007` |
 | Compiler handler/program resource metadata | `compile.binary-compiler/case-0001`, `api.messages/case-0007` |
 | Direct recursive call rejection | `compile.build-errors/case-0001` |
 | Native-only Host | `runtime.host-lifecycle/native-only` |
@@ -27,12 +30,19 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Full Publish result | the four `runtime.host-observer/publish-*` cases |
 | Ordered Emit/Publish/Dispatch/limit/diagnostic observer events | `runtime.host-observer/publish-sink-exception`, `runtime.host-observer/emit-and-runtime-limit-order` |
 | Load/Detach/Subscribe/Unsubscribe during dispatch | `runtime.host-lifecycle/detach-unsubscribe-snapshot`, `runtime.host-lifecycle/load-subscribe-after-dispatch` |
+| Idempotent Subscription/Instance handle results | `runtime.host-lifecycle/subscription-handle-state`, `runtime.host-lifecycle/instance-handle-state` |
 | Enqueue-time subscription snapshot | `runtime.host-lifecycle/detach-unsubscribe-snapshot` |
-| Initialization once per instance and load ordering | `runtime.host-dispatch/case-0008`, `runtime.host-lifecycle/load-subscribe-after-dispatch` |
-| Queue limits count logical messages | `runtime.control-flow/case-0006` |
+| Initialization once per instance and load/queue ordering | `runtime.host-dispatch/case-0008`, `runtime.host-lifecycle/load-subscribe-after-dispatch`, `runtime.host-lifecycle/initialization-queue-order` |
+| Loading while a handler is paused preserves VM state | `runtime.host-lifecycle/load-while-paused` |
+| Native message-name matching | `runtime.host-lifecycle/native-message-name-subscription` |
+| Native handlers are atomic under frame budgets | `runtime.host-lifecycle/native-handler-frame-atomicity` |
+| Queue limits count logical messages and preserve observer order | `runtime.control-flow/case-0006`, `runtime.host-observer/queue-limit-observer-order` |
 | Runtime limits reset per script handler | `runtime.host-lifecycle/runtime-limits-per-handler` |
 | Pause/resume under frame budget | `runtime.host-dispatch/case-0009` |
 | External types without Reflection | `runtime.atomic.custom-types/case-0003` |
+| Missing and mismatched external runtime constructors | `compile.external-type-linking/missing-runtime-constructor`, `compile.external-type-linking/mismatched-runtime-constructor` |
+| Portable external-type catalog duplicate rejection | `api.external-types/duplicate-type-name` |
+| Canonical binding, message-name and embedded-source dumps | `compile.program-dumps/compact-bindings`, `compile.program-dumps/message-name-and-source` |
 | Fixed extension environment (`echo`, `fail`, `floor`, navigation) | `runtime.atomic.external-access/case-0010`, `runtime.atomic.control-flow/case-0002`, `runtime.extensions-sequences/case-0001` |
 
 Indirect cyclic bytecode cannot be produced by valid GES source: forward calls
@@ -51,7 +61,9 @@ semantics also has a portable case:
 - Reflection, attributes and CLR conversion adapters;
 - C# auto-runner synchronization and threading;
 - internal builder/rewriter structure and optimizer pass tests;
-- concrete C# struct layouts;
+- concrete C# struct layouts and defensive-array implementation checks;
 - C# allocation measurements and platform/runtime benchmark profiles.
 
 These tests must not become required behavior for Swift, Kotlin or C++ ports.
+The complete file-level inventory and the reason every remaining native C# test
+still exists are maintained in `NativeTestRetention.md`.

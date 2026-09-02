@@ -1,0 +1,1556 @@
+enum StepH.GameEventScript.Api.GameEventScriptBinaryBindKind
+  enum-field MessageHandler = 16
+  enum-field MessageNameHandler = 17
+  enum-field Function = 18
+  enum-field Predicate = 19
+  enum-field ExtensionCall = 32
+  enum-field OutboundMessage = 33
+  enum-field Record = 48
+  enum-field ExternalType = 49
+static class StepH.GameEventScript.Api.GameEventScriptBinaryFormat
+  field static System.Byte MagicB
+  field static System.Byte MagicE
+  field static System.Byte MagicG
+  field static System.Byte MagicS
+  field static System.UInt16 Version
+  field static System.UInt32 HeaderSize
+  field static System.UInt32 SectionHeaderSize
+struct StepH.GameEventScript.Api.GameEventScriptBindingSegment
+  ctor GameEventScriptBindingSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry> entries)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry> Entries { get }
+  property System.UInt16 EntryCount { get }
+struct StepH.GameEventScript.Api.GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry
+  ctor GameEventScriptBinaryBindEntry(StepH.GameEventScript.Api.GameEventScriptBinaryBindKind kind, System.UInt16 name, System.Collections.Generic.IReadOnlyList<System.UInt16> argumentNames, System.UInt16 entryAddress, System.UInt16 id, System.Collections.Generic.IReadOnlyList<System.UInt16> requiredTags, System.Collections.Generic.IReadOnlyList<System.UInt16> excludedTags, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth)
+  property StepH.GameEventScript.Api.GameEventScriptBinaryBindKind Kind { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt16> ArgumentNames { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt16> ExcludedTags { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt16> RequiredTags { get }
+  property System.UInt16 EntryAddress { get }
+  property System.UInt16 Id { get }
+  property System.UInt16 Name { get }
+  property System.UInt16 RequiredCallStackDepth { get }
+  property System.UInt16 RequiredRegisterCount { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBuildMetadataSegment
+  ctor GameEventScriptBuildMetadataSegment(System.String compilerId, System.String compilerVersion)
+  property System.String CompilerId { get }
+  property System.String CompilerVersion { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptBuilder
+  ctor GameEventScriptBuilder()
+  method StepH.GameEventScript.Api.GameEventScriptBuilder AddFile(System.String path)
+  method StepH.GameEventScript.Api.GameEventScriptBuilder AddScript(System.String text, System.String sourceName)
+  method StepH.GameEventScript.Api.GameEventScriptBuilder WithDebugInfo(StepH.GameEventScript.Api.GameEventScriptDebugInfoOptions options)
+  method StepH.GameEventScript.Api.GameEventScriptBuilder WithExternalTypeCatalog(StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog catalog)
+  method StepH.GameEventScript.Api.GameEventScriptBuilder WithProgramVersion(System.UInt64 version)
+  method StepH.GameEventScript.Api.GameEventScriptProgram Compile(StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+  method static StepH.GameEventScript.Api.GameEventScriptBuilder Create()
+struct StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction
+  field StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode OpCode
+  field System.Byte UnitAndFlags
+  field System.UInt64 Payload
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind TypeKind { get set }
+  property System.Double F64 { get set }
+  property System.Int16 AS { get set }
+  property System.Int16 BS { get set }
+  property System.Int16 CS { get set }
+  property System.Int16 Count { get set }
+  property System.Int16 DS { get set }
+  property System.Int16 ImmediateX { get set }
+  property System.Int16 ImmediateY { get set }
+  property System.Int64 I64 { get set }
+  property System.UInt16 AU { get set }
+  property System.UInt16 BU { get set }
+  property System.UInt16 BindId { get set }
+  property System.UInt16 CU { get set }
+  property System.UInt16 ConditionRegister { get set }
+  property System.UInt16 DU { get set }
+  property System.UInt16 DestinationRegister { get set }
+  property System.UInt16 EntryAddress { get set }
+  property System.UInt16 Index { get set }
+  property System.UInt16 ListIndex { get set }
+  property System.UInt16 MessageDestination { get set }
+  property System.UInt16 SecondaryListIndex { get set }
+  property System.UInt16 SecondaryStringIndex { get set }
+  property System.UInt16 StringIndex { get set }
+  property System.UInt16 TargetAddress { get set }
+  property System.UInt16 TypeOperand { get set }
+  property System.UInt16 XRegister { get set }
+  property System.UInt16 YRegister { get set }
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit
+  enum-field UnitNone = 0
+  enum-field UnitDegree = 1
+  enum-field UnitMeter = 2
+  enum-field UnitSecond = 3
+  enum-field UnitInvalid = 255
+static class StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnits
+  method static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? ParseQuantityTypeName(System.String typeName)
+  method static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit? ParseTypeName(System.String typeName)
+  method static System.Boolean IsNumericUnit(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method static System.Boolean IsQuantityTypeName(System.String typeName)
+  method static System.String ToSuffix(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method static System.String ToTypeName(StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode
+  enum-field Nop = 0
+  enum-field RegisterLocals = 1
+  enum-field Jump = 2
+  enum-field JumpIfTrue = 3
+  enum-field JumpIfFalse = 4
+  enum-field JumpIfNotTrue = 5
+  enum-field JumpIfNothing = 6
+  enum-field Call = 7
+  enum-field CreateSeries = 8
+  enum-field CallExternal = 9
+  enum-field ReturnVoid = 10
+  enum-field ReturnValue = 11
+  enum-field EmitMessage = 12
+  enum-field EmitMessageWithTags = 13
+  enum-field EmitMessageValue = 14
+  enum-field EmitMessageValueWithTags = 15
+  enum-field PublishMessage = 16
+  enum-field PublishMessageWithTags = 17
+  enum-field PublishMessageValue = 18
+  enum-field PublishMessageValueWithTags = 19
+  enum-field Cast = 20
+  enum-field CastCustom = 21
+  enum-field CastUnit = 22
+  enum-field CastNumeric = 23
+  enum-field CheckType = 24
+  enum-field CheckCustomType = 25
+  enum-field CheckUnit = 26
+  enum-field CheckNumeric = 27
+  enum-field CheckInteger = 28
+  enum-field CheckFractional = 29
+  enum-field Move = 30
+  enum-field MemberAccess = 31
+  enum-field IndexAccess = 32
+  enum-field PropertyAccess = 33
+  enum-field BindHandler = 34
+  enum-field LoadNothing = 35
+  enum-field LoadTrue = 36
+  enum-field LoadFalse = 37
+  enum-field LoadInteger = 38
+  enum-field LoadFloat = 39
+  enum-field LoadPercentage = 40
+  enum-field LoadText = 41
+  enum-field LoadTag = 42
+  enum-field LoadHandler = 43
+  enum-field LoadMessage = 44
+  enum-field StageRegister = 45
+  enum-field StageNothing = 46
+  enum-field StageTrue = 47
+  enum-field StageFalse = 48
+  enum-field StageInteger = 49
+  enum-field StageFloat = 50
+  enum-field StageText = 51
+  enum-field StageTag = 52
+  enum-field StagePercentage = 53
+  enum-field CreateDice = 54
+  enum-field CreateVector = 55
+  enum-field CreatePoint = 56
+  enum-field CreateList = 57
+  enum-field CreateMap = 58
+  enum-field CreateRange = 59
+  enum-field CreateRangeWithStep = 60
+  enum-field CreateRangeIterator = 61
+  enum-field CreateRangeIteratorWithStep = 62
+  enum-field CreateRangeIteratorShort = 63
+  enum-field CreateRecord = 64
+  enum-field CreateRecordValue = 65
+  enum-field CreateExternalType = 66
+  enum-field HasValue = 67
+  enum-field IsEmpty = 68
+  enum-field Default = 69
+  enum-field Or = 80
+  enum-field And = 81
+  enum-field Xor = 82
+  enum-field Implies = 83
+  enum-field Not = 84
+  enum-field Equal = 85
+  enum-field NotEqual = 86
+  enum-field Less = 87
+  enum-field Greater = 88
+  enum-field LessOrEqual = 89
+  enum-field GreaterOrEqual = 90
+  enum-field Add = 91
+  enum-field Subtract = 92
+  enum-field Multiply = 93
+  enum-field Divide = 94
+  enum-field Power = 95
+  enum-field IntegerDivide = 96
+  enum-field Modulo = 97
+  enum-field Remainder = 98
+  enum-field Min = 99
+  enum-field Max = 100
+  enum-field Negate = 101
+  enum-field Abs = 102
+  enum-field LogN = 103
+  enum-field Chance = 104
+  enum-field Clamp = 105
+  enum-field RandomTake = 106
+  enum-field RandomTakeFloat = 107
+  enum-field RandomPush = 108
+  enum-field RandomPushConstant = 109
+  enum-field RandomPop = 110
+  enum-field Term = 111
+  enum-field Exp = 112
+  enum-field Floor = 113
+  enum-field Ceil = 114
+  enum-field Truncate = 115
+  enum-field RoundHalfEven = 116
+  enum-field RoundHalfUp = 117
+  enum-field RoundHalfDown = 118
+  enum-field DegreeToRadians = 119
+  enum-field DegreeFromRadians = 120
+  enum-field WrapDegree = 121
+  enum-field Sin = 122
+  enum-field Cos = 123
+  enum-field Tan = 124
+  enum-field Asin = 125
+  enum-field Acos = 126
+  enum-field Atan = 127
+  enum-field Atan2 = 128
+  enum-field Hypot2D = 129
+  enum-field Hypot3D = 130
+  enum-field Distance = 131
+  enum-field Distance2D = 132
+  enum-field Distance3D = 133
+  enum-field DistanceSquared = 134
+  enum-field DistanceSquared2D = 135
+  enum-field DistanceSquared3D = 136
+  enum-field LengthSquared = 137
+  enum-field LengthSquared2D = 138
+  enum-field LengthSquared3D = 139
+  enum-field Normalize = 140
+  enum-field Normalize2D = 141
+  enum-field Normalize3D = 142
+  enum-field Dot = 143
+  enum-field Dot2D = 144
+  enum-field Dot3D = 145
+  enum-field Cross = 146
+  enum-field Cross2D = 147
+  enum-field Cross3D = 148
+  enum-field AngleBetween = 149
+  enum-field AngleBetween2D = 150
+  enum-field AngleBetween3D = 151
+  enum-field TakeFirst = 160
+  enum-field DropFirst = 161
+  enum-field TakeLast = 162
+  enum-field DropLast = 163
+  enum-field TakeHighest = 164
+  enum-field TakeLowest = 165
+  enum-field DropHighest = 166
+  enum-field DropLowest = 167
+  enum-field OneRandom = 168
+  enum-field TakeRandom = 169
+  enum-field OneWeighted = 170
+  enum-field TakeWeighted = 171
+  enum-field Count = 172
+  enum-field StartsWith = 173
+  enum-field EndsWith = 174
+  enum-field Contains = 175
+  enum-field ContainsAny = 176
+  enum-field ContainsAll = 177
+  enum-field HasAny = 178
+  enum-field HasAll = 179
+  enum-field ContainsValue = 180
+  enum-field Union = 181
+  enum-field Intersect = 182
+  enum-field Zip = 183
+  enum-field KeysOfMap = 184
+  enum-field ValuesOfMap = 185
+  enum-field EntriesOfMap = 186
+  enum-field First = 187
+  enum-field Last = 188
+  enum-field Single = 189
+  enum-field IteratorCreate = 190
+  enum-field IteratorCreateOrJump = 191
+  enum-field IteratorNext = 192
+  enum-field IteratorClose = 193
+  enum-field Distinct = 194
+  enum-field SortAscending = 195
+  enum-field SortDescending = 196
+  enum-field Reverse = 197
+  enum-field Shuffle = 198
+  enum-field ListBuilderCreate = 199
+  enum-field ListBuilderAdd = 200
+  enum-field ListBuilderFinish = 201
+  enum-field MapBuilderCreate = 202
+  enum-field MapBuilderAdd = 203
+  enum-field MapBuilderFinish = 204
+  enum-field DistinctBuilderCreate = 205
+  enum-field DistinctBuilderAdd = 206
+  enum-field DistinctBuilderFinish = 207
+  enum-field GroupBuilderCreate = 208
+  enum-field GroupBuilderAdd = 209
+  enum-field GroupBuilderFinish = 210
+  enum-field OrderBuilderCreate = 211
+  enum-field OrderBuilderAdd = 212
+  enum-field OrderBuilderFinishAscending = 213
+  enum-field OrderBuilderFinishDescending = 214
+  enum-field HasPattern = 215
+  enum-field TakePattern = 216
+enum StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind
+  enum-field CountAny = 0
+  enum-field CountFace = 1
+  enum-field FullHouse = 2
+  enum-field Straight = 3
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeSeriesKind
+  enum-field Fibonacci = 1
+  enum-field Factorial = 2
+enum StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind
+  enum-field Nothing = 0
+  enum-field Boolean = 2
+  enum-field Integer = 3
+  enum-field Float = 4
+  enum-field Percentage = 5
+  enum-field Tag = 6
+  enum-field Text = 7
+  enum-field Vector = 8
+  enum-field Point = 9
+  enum-field Range = 10
+  enum-field Handler = 16
+  enum-field Message = 17
+  enum-field List = 32
+  enum-field Dice = 33
+  enum-field Map = 34
+  enum-field ListBuilder = 35
+  enum-field MapBuilder = 36
+  enum-field DistinctBuilder = 37
+  enum-field GroupBuilder = 38
+  enum-field OrderBuilder = 39
+  enum-field Iterator = 48
+  enum-field Series = 49
+  enum-field Custom = 255
+struct StepH.GameEventScript.Api.GameEventScriptCodeSegment
+  ctor GameEventScriptCodeSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> instructions)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction Item { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptBytecodeInstruction> Instructions { get }
+  property System.Int32 Count { get }
+  property System.Int32 Length { get }
+class StepH.GameEventScript.Api.GameEventScriptCompileException
+  ctor GameEventScriptCompileException(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  ctor GameEventScriptCompileException(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptDiagnostic> diagnostics)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptDiagnostic> Diagnostics { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptCompileOptions
+  ctor GameEventScriptCompileOptions()
+  property StepH.GameEventScript.Api.GameEventScriptDebugInfoOptions DebugInfo { get set }
+  property System.UInt64 ProgramVersion { get set }
+sealed class StepH.GameEventScript.Api.GameEventScriptContext
+  method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(System.String message)
+  method StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(System.String message, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
+  method System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Boolean Emit(System.String message)
+  method System.Boolean Emit(System.String message, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
+  property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
+  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
+  property StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
+  property System.Boolean IsIdle { get }
+  property System.Int32 PendingMessageCount { get }
+enum StepH.GameEventScript.Api.GameEventScriptDebugInfoOptions
+  enum-field None = 0
+  enum-field DebugSymbols = 1
+  enum-field SourceMap = 2
+  enum-field SourceArchive = 4
+  enum-field All = 7
+struct StepH.GameEventScript.Api.GameEventScriptDebugSymbol
+  ctor GameEventScriptDebugSymbol(StepH.GameEventScript.Api.GameEventScriptDebugSymbolKind Kind, System.UInt16 RegisterId, System.String Name, System.UInt32 CodeStart, System.UInt32 CodeLength)
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptDebugSymbol other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptDebugSymbolKind& Kind, System.UInt16& RegisterId, System.String& Name, System.UInt32& CodeStart, System.UInt32& CodeLength)
+  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptDebugSymbol left, StepH.GameEventScript.Api.GameEventScriptDebugSymbol right)
+  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptDebugSymbol left, StepH.GameEventScript.Api.GameEventScriptDebugSymbol right)
+  property StepH.GameEventScript.Api.GameEventScriptDebugSymbolKind Kind { get set }
+  property System.String Name { get set }
+  property System.UInt16 RegisterId { get set }
+  property System.UInt32 CodeLength { get set }
+  property System.UInt32 CodeStart { get set }
+enum StepH.GameEventScript.Api.GameEventScriptDebugSymbolKind
+  enum-field Parameter = 1
+  enum-field Local = 2
+sealed class StepH.GameEventScript.Api.GameEventScriptDebugSymbolsSegment
+  ctor GameEventScriptDebugSymbolsSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptDebugSymbol> symbols)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptDebugSymbol> Symbols { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptDiagnostic
+  ctor GameEventScriptDiagnostic(StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase Phase, System.String Code, System.String Message, System.String Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind, StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation, System.String ProgramName, System.String HandlerName, System.String TechnicalDetails)
+  method StepH.GameEventScript.Api.GameEventScriptDiagnostic <Clone>$()
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptDiagnostic other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase& Phase, System.String& Code, System.String& Message, System.String& Symbol, StepH.GameEventScript.Api.GameEventScriptSymbolKind& SymbolKind, StepH.GameEventScript.Api.GameEventScriptSourceLocation& SourceLocation, System.String& ProgramName, System.String& HandlerName, System.String& TechnicalDetails)
+  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptDiagnostic left, StepH.GameEventScript.Api.GameEventScriptDiagnostic right)
+  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptDiagnostic left, StepH.GameEventScript.Api.GameEventScriptDiagnostic right)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase Phase { get set }
+  property StepH.GameEventScript.Api.GameEventScriptSourceLocation SourceLocation { get set }
+  property StepH.GameEventScript.Api.GameEventScriptSymbolKind SymbolKind { get set }
+  property System.String Code { get set }
+  property System.String HandlerName { get set }
+  property System.String Message { get set }
+  property System.String ProgramName { get set }
+  property System.String Symbol { get set }
+  property System.String TechnicalDetails { get set }
+static class StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes
+  field static System.String CompileCyclicCallGraph
+  field static System.String CompileInvalidArity
+  field static System.String CompileInvalidResourceMetadata
+  field static System.String CompileInvariantViolation
+  field static System.String CompileNumericLimitExceeded
+  field static System.String CompileUnresolvedSymbol
+  field static System.String CompileUnsupportedConstruct
+  field static System.String LinkCyclicCallGraph
+  field static System.String LinkInvalidExtensionReference
+  field static System.String LinkInvalidProgram
+  field static System.String LinkMismatchedExternalTypeConstructor
+  field static System.String LinkMissingExtension
+  field static System.String LinkMissingExternalTypeConstructor
+  field static System.String LinkRequiredCallStackDepthExceeded
+  field static System.String LinkRequiredRegisterCountExceeded
+  field static System.String ParseSyntax
+  field static System.String RuntimeCallStackOverflow
+  field static System.String RuntimeIllegalOpcode
+  field static System.String RuntimeInstructionPointerOutOfRange
+  field static System.String RuntimeInvalidExtensionBinding
+  field static System.String RuntimeInvalidExternalTypeBinding
+  field static System.String RuntimeInvalidMessageShape
+  field static System.String RuntimeInvalidRecordConstructor
+  field static System.String RuntimeInvalidSeriesKind
+  field static System.String RuntimeNativeHandlerFailure
+  field static System.String RuntimePreparationFailed
+  field static System.String RuntimePublishSinkFailure
+  field static System.String RuntimeRandomStackOverflow
+  field static System.String RuntimeRandomStackUnderflow
+  field static System.String RuntimeRegisterOverflow
+  field static System.String RuntimeUnhandledFailure
+  field static System.String RuntimeVmStateConflict
+  field static System.String ValidateDuplicateDefinitionParameter
+  field static System.String ValidateDuplicateFunction
+  field static System.String ValidateDuplicateHandlerParameter
+  field static System.String ValidateDuplicatePredicate
+  field static System.String ValidateDuplicatePublishArgument
+  field static System.String ValidateDuplicateType
+  field static System.String ValidateDuplicateVariable
+  field static System.String ValidateInvalidIdentifierCase
+  field static System.String ValidateInvalidMessageCase
+  field static System.String ValidateInvalidPredicate
+  field static System.String ValidateInvalidTypeConstructor
+  field static System.String ValidateMissingCallable
+  field static System.String ValidatePredicateFunctionConflict
+  field static System.String ValidateWrongFunctionArity
+  field static System.String ValidateWrongPredicateArity
+  method static System.String Decode(StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode code)
+enum StepH.GameEventScript.Api.GameEventScriptDiagnosticPhase
+  enum-field Parse = 1
+  enum-field Validate = 2
+  enum-field Compile = 3
+  enum-field Decode = 4
+  enum-field Link = 5
+  enum-field Runtime = 6
+sealed class StepH.GameEventScript.Api.GameEventScriptDynamicLinkException
+  ctor GameEventScriptDynamicLinkException(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
+struct StepH.GameEventScript.Api.GameEventScriptExecutionResult
+  ctor GameEventScriptExecutionResult(StepH.GameEventScript.Api.GameEventScriptExecutionState state, System.Int32 executedOpcodes, System.Int32 processedMessages, System.Int32 emittedMessages, System.Int32 publishedMessages, StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
+  property StepH.GameEventScript.Api.GameEventScriptExecutionState State { get }
+  property System.Int32 EmittedMessages { get }
+  property System.Int32 ExecutedOpcodes { get }
+  property System.Int32 ProcessedMessages { get }
+  property System.Int32 PublishedMessages { get }
+enum StepH.GameEventScript.Api.GameEventScriptExecutionState
+  enum-field Paused = 0
+  enum-field Completed = 1
+  enum-field RuntimeLimitReached = 2
+  enum-field RuntimeError = 3
+sealed class StepH.GameEventScript.Api.GameEventScriptExtensionReference
+  ctor GameEventScriptExtensionReference(System.String extensionName, System.String functionName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
+  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
+  property System.String ExtensionName { get }
+  property System.String FunctionName { get }
+  property System.String SignatureId { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeCatalog
+  ctor GameEventScriptExternalTypeCatalog(System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> types)
+  method StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition Resolve(System.String typeName)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> Types { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition
+  ctor GameEventScriptExternalTypeConstructorDefinition(System.String typeName, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition> parameters)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition> Parameters { get }
+  property System.String SignatureId { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference
+  ctor GameEventScriptExternalTypeConstructorReference(System.String typeName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
+  method static System.String CreateSignatureId(System.String typeName, System.Collections.Generic.IEnumerable<System.String> argumentLabels)
+  property System.Collections.Generic.IReadOnlyList<System.String> ArgumentLabels { get }
+  property System.String SignatureId { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition
+  ctor GameEventScriptExternalTypeDefinition(System.String name, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition> fields, System.Collections.Generic.IEnumerable<StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition> constructors)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition> Constructors { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition> Fields { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeFieldDefinition
+  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GameEventScriptExternalTypeFieldDefinition(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptExternalTypeParameterDefinition
+  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GameEventScriptExternalTypeParameterDefinition(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+abstract class StepH.GameEventScript.Api.GameEventScriptFatalRuntimeException
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptFloatRange
+  ctor GameEventScriptFloatRange(System.Double from, System.Double to, System.Double step)
+  property System.Double From { get }
+  property System.Double Step { get }
+  property System.Double To { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptHost
+  method StepH.GameEventScript.Api.GameEventScriptExecutionResult ExecuteFrame(System.Int32 opcodeBudget)
+  method StepH.GameEventScript.Api.GameEventScriptExecutionResult RunToCompletion()
+  method StepH.GameEventScript.Api.GameEventScriptInstance Load(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription SubscribeMessageName(System.String messageName, StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method System.Boolean Receive(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateBuilder()
+  property System.Boolean IsIdle { get }
+  property System.Int32 PendingMessageCount { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptHostBuilder
+  ctor GameEventScriptHostBuilder()
+  method StepH.GameEventScript.Api.GameEventScriptHost Build()
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithExternalTypeRegistry(StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry registry)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithPublishSink(StepH.GameEventScript.Api.IGameEventScriptPublishSink publishSink)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRandom(StepH.GameEventScript.Api.GameEventScriptRandomGenerator random)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRegistry(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry registry)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeLimits(StepH.GameEventScript.Api.GameEventScriptRuntimeLimits limits)
+  method StepH.GameEventScript.Api.GameEventScriptHostBuilder WithRuntimeObserver(StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver observer)
+sealed class StepH.GameEventScript.Api.GameEventScriptInstance
+  method System.Boolean Detach()
+  property StepH.GameEventScript.Api.GameEventScriptProgram Program { get }
+  property System.Boolean IsAttached { get }
+enum StepH.GameEventScript.Api.GameEventScriptInstructionFlag
+  enum-field None = 0
+  enum-field NormalizeResultAsPredicate = 32
+sealed class StepH.GameEventScript.Api.GameEventScriptIntegerRange
+  ctor GameEventScriptIntegerRange(System.Int64 from, System.Int64 to, System.Int64 step)
+  property System.Int64 From { get }
+  property System.Int64 Step { get }
+  property System.Int64 To { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptMessage
+  method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.Collections.Generic.IEnumerable<System.String> tags)
+  method StepH.GameEventScript.Api.GameEventScriptMessage WithTags(System.String[] tags)
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptMessage other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean HasTag(System.String tag)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
+  property StepH.GameEventScript.Api.GameEventScriptMessageArguments Arguments { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
+  property System.String Name { get }
+  property System.String SignatureId { get }
+struct StepH.GameEventScript.Api.GameEventScriptMessageArgument
+  ctor GameEventScriptMessageArgument(System.String name, StepH.GameEventScript.Runtime.Values.GesValue value)
+  property StepH.GameEventScript.Runtime.Values.GesValue Value { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptMessageArguments
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit UnitAt(System.Int32 index)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind KindAt(System.Int32 index)
+  method StepH.GameEventScript.Runtime.Values.GesValue ValueAt(System.Int32 index)
+  method System.Boolean ContainsKey(System.String name)
+  method System.Boolean GetAsBoolean(System.Int32 index)
+  method System.Boolean GetAsBoolean(System.String name)
+  method System.Boolean HasValueAt(System.Int32 index)
+  method System.Boolean IsNothingAt(System.Int32 index)
+  method System.Boolean IsNumericAt(System.Int32 index)
+  method System.Collections.Generic.IEnumerator<StepH.GameEventScript.Api.GameEventScriptMessageArgument> GetEnumerator()
+  method System.Double GetAsNumber(System.Int32 index)
+  method System.Double GetAsNumber(System.String name)
+  method System.Int32 IndexOf(System.String name)
+  method System.Int64 GetAsInteger(System.Int32 index)
+  method System.Int64 GetAsInteger(System.String name)
+  method System.String GetAsText(System.Int32 index)
+  method System.String GetAsText(System.String name)
+  method System.String NameAt(System.Int32 index)
+  method System.String ToString()
+  method static StepH.GameEventScript.Api.GameEventScriptMessageArguments Create(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptMessageArgument> arguments)
+  property StepH.GameEventScript.Api.GameEventScriptMessageArguments Empty { get }
+  property StepH.GameEventScript.Runtime.Values.GesValue Item { get }
+  property StepH.GameEventScript.Runtime.Values.GesValue Item { get }
+  property System.Collections.Generic.IEnumerable<StepH.GameEventScript.Runtime.Values.GesValue> Values { get }
+  property System.Collections.Generic.IEnumerable<System.String> Keys { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> SignatureLabels { get }
+  property System.Int32 Count { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptMessageSignature
+  field static StepH.GameEventScript.Api.GameEventScriptMessageSignature Empty
+  field static System.String UnlabeledParameterName
+  method StepH.GameEventScript.Api.GameEventScriptMessage CreateMessage(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Runtime.Values.GesValue> arguments)
+  method StepH.GameEventScript.Api.GameEventScriptMessage WithArguments(StepH.GameEventScript.Runtime.Values.GesValue[] arguments)
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptMessageSignature other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Boolean Matches(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Int32 GetHashCode()
+  method static StepH.GameEventScript.Api.GameEventScriptMessageSignature Create(System.String name, System.Collections.Generic.IEnumerable<System.String> parameters)
+  method static System.String CreateSignatureId(System.String name, System.Collections.Generic.IEnumerable<System.String> parameterNames)
+  method static System.String NormalizeMessageName(System.String name)
+  method static System.String NormalizeParameterName(System.String name)
+  property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
+  property System.String Name { get }
+  property System.String SignatureId { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptOpaqueSection
+  ctor GameEventScriptOpaqueSection(System.UInt16 sectionType, StepH.GameEventScript.Api.GameEventScriptSectionFlags flags, System.UInt16 sectionVersion, System.Collections.Generic.IReadOnlyList<System.Byte> rawPayload, System.Int32 originalOrdinal)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.Byte> RawPayload { get }
+  property StepH.GameEventScript.Api.GameEventScriptSectionFlags Flags { get }
+  property System.Int32 OriginalOrdinal { get }
+  property System.UInt16 SectionType { get }
+  property System.UInt16 SectionVersion { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptProgram
+  property StepH.GameEventScript.Api.GameEventScriptBindingSegment Bindings { get }
+  property StepH.GameEventScript.Api.GameEventScriptBuildMetadataSegment BuildMetadata { get }
+  property StepH.GameEventScript.Api.GameEventScriptCodeSegment Code { get }
+  property StepH.GameEventScript.Api.GameEventScriptDebugSymbolsSegment DebugSymbols { get }
+  property StepH.GameEventScript.Api.GameEventScriptProgramMetadataSegment Metadata { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptOpaqueSection> OpaqueSections { get }
+  property StepH.GameEventScript.Api.GameEventScriptSourceArchiveSegment SourceArchive { get }
+  property StepH.GameEventScript.Api.GameEventScriptSourceMapSegment SourceMap { get }
+  property StepH.GameEventScript.Api.GameEventScriptStringConstantSegment StringConstants { get }
+  property StepH.GameEventScript.Api.GameEventScriptUInt16IndexListSegment UInt16IndexLists { get }
+  property System.String ModuleName { get }
+  property System.UInt16 FormatVersion { get }
+  property System.UInt16 RequiredCallStackDepth { get }
+  property System.UInt16 RequiredRegisterCount { get }
+  property System.UInt64 ProgramVersion { get }
+static class StepH.GameEventScript.Api.GameEventScriptProgramDumper
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram program)
+  method static System.String Dump(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Boolean includeInstructionAddresses)
+enum StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode
+  enum-field InvalidMagic = 1
+  enum-field UnsupportedFormatVersion = 2
+  enum-field InvalidHeaderFlags = 3
+  enum-field InvalidHeaderSize = 4
+  enum-field FileSizeMismatch = 5
+  enum-field FileTooLarge = 6
+  enum-field TooManySections = 7
+  enum-field TruncatedSectionHeader = 8
+  enum-field TruncatedSectionPayload = 9
+  enum-field SectionTooLarge = 10
+  enum-field InvalidSectionType = 11
+  enum-field InvalidSectionFlags = 12
+  enum-field InvalidSectionReserved = 13
+  enum-field UnsupportedSectionVersion = 14
+  enum-field UnsupportedCompression = 15
+  enum-field MissingRequiredSection = 16
+  enum-field DuplicateSection = 17
+  enum-field UnknownRequiredSection = 18
+  enum-field InvalidPayloadLength = 19
+  enum-field InvalidUtf8 = 20
+  enum-field TooManyEntries = 21
+  enum-field InvalidStringIndex = 22
+  enum-field InvalidListIndex = 23
+  enum-field InvalidBindingKind = 24
+  enum-field DuplicateBindingId = 25
+  enum-field InvalidEntryAddress = 26
+  enum-field InvalidOpcode = 27
+  enum-field InvalidOperand = 28
+  enum-field InvalidJumpAddress = 29
+  enum-field InvalidCallAddress = 30
+  enum-field CyclicCallGraph = 31
+  enum-field InvalidResourceMetadata = 32
+  enum-field InvalidDebugSymbol = 33
+  enum-field InvalidSourceMap = 34
+  enum-field InvalidSourceArchive = 35
+  enum-field SourceMetadataMismatch = 36
+  enum-field ReaderLimitExceeded = 37
+  enum-field InvalidProgram = 38
+sealed class StepH.GameEventScript.Api.GameEventScriptProgramFormatException
+  ctor GameEventScriptProgramFormatException(StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode errorCode, System.String message, System.Int64? byteOffset, System.UInt16? sectionType, System.Int32? entryIndex, System.Exception innerException)
+  property StepH.GameEventScript.Api.GameEventScriptDiagnostic Diagnostic { get }
+  property StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode ErrorCode { get }
+  property System.Int32? EntryIndex { get }
+  property System.Int64? ByteOffset { get }
+  property System.UInt16? SectionType { get }
+struct StepH.GameEventScript.Api.GameEventScriptProgramMetadataSegment
+  ctor GameEventScriptProgramMetadataSegment(System.String moduleName, System.UInt16 requiredRegisterCount, System.UInt16 requiredCallStackDepth, System.UInt64 programVersion)
+  property System.String ModuleName { get }
+  property System.UInt16 RequiredCallStackDepth { get }
+  property System.UInt16 RequiredRegisterCount { get }
+  property System.UInt64 ProgramVersion { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptProgramReadLimits
+  ctor GameEventScriptProgramReadLimits()
+  property StepH.GameEventScript.Api.GameEventScriptProgramReadLimits Default { get }
+  property System.Int32 MaxBindings { get set }
+  property System.Int32 MaxFileBytes { get set }
+  property System.Int32 MaxIndexLists { get set }
+  property System.Int32 MaxInstructions { get set }
+  property System.Int32 MaxRetainedOpaqueBytes { get set }
+  property System.Int32 MaxSectionCount { get set }
+  property System.Int32 MaxSourceArchiveBytes { get set }
+  property System.Int32 MaxStringEntries { get set }
+sealed class StepH.GameEventScript.Api.GameEventScriptProgramReadOptions
+  ctor GameEventScriptProgramReadOptions()
+  property StepH.GameEventScript.Api.GameEventScriptProgramReadLimits Limits { get set }
+  property StepH.GameEventScript.Api.GameEventScriptProgramRetention Retention { get set }
+static class StepH.GameEventScript.Api.GameEventScriptProgramReader
+  method static StepH.GameEventScript.Api.GameEventScriptProgram Read(System.ReadOnlySpan<System.Byte> bytes, StepH.GameEventScript.Api.GameEventScriptProgramReadOptions options)
+enum StepH.GameEventScript.Api.GameEventScriptProgramRetention
+  enum-field PreserveAll = 0
+  enum-field PreserveKnown = 1
+  enum-field RuntimeOnly = 2
+static class StepH.GameEventScript.Api.GameEventScriptProgramValidator
+  method static System.Void Validate(StepH.GameEventScript.Api.GameEventScriptProgram program)
+static class StepH.GameEventScript.Api.GameEventScriptProgramWriter
+  method static System.Byte[] ToArray(StepH.GameEventScript.Api.GameEventScriptProgram program)
+  method static System.Int32 GetEncodedSize(StepH.GameEventScript.Api.GameEventScriptProgram program)
+  method static System.Int32 Write(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Span<System.Byte> destination)
+struct StepH.GameEventScript.Api.GameEventScriptPublishResult
+  ctor GameEventScriptPublishResult(System.Boolean localAccepted, System.Boolean outboundAttempted, System.Boolean outboundAccepted)
+  property System.Boolean AnyAccepted { get }
+  property System.Boolean LocalAccepted { get }
+  property System.Boolean OutboundAccepted { get }
+  property System.Boolean OutboundAttempted { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptRandomGenerator
+  method System.Double NextFloat(System.Double firstBound, System.Double secondBound)
+  method System.Int64 NextInclusiveInteger(System.Int64 minInclusive, System.Int64 maxInclusive)
+  method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator Create()
+  method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int32 seed)
+  method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSeed(System.Int64 seed)
+  method static StepH.GameEventScript.Api.GameEventScriptRandomGenerator FromSequence(System.Double[] values)
+struct StepH.GameEventScript.Api.GameEventScriptReadOnlyArray`1
+  ctor GameEventScriptReadOnlyArray`1(System.Collections.Generic.IReadOnlyList<T> items)
+  method System.Collections.Generic.IEnumerator<T> GetEnumerator()
+  property System.Int32 Count { get }
+  property System.Int32 Length { get }
+  property T Item { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptRuntimeLimits
+  ctor GameEventScriptRuntimeLimits()
+  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits Default { get }
+  property System.Int32 MaxCallDepth { get set }
+  property System.Int32 MaxDiceCount { get set }
+  property System.Int32 MaxDiceSides { get set }
+  property System.Int32 MaxExecutionSteps { get set }
+  property System.Int32 MaxGeneratedCollectionItems { get set }
+  property System.Int32 MaxLoopIterations { get set }
+  property System.Int32 MaxProcessedEventsPerRun { get set }
+  property System.Int32 MaxQueuedMessagesPerRun { get set }
+  property System.Int32 MaxRangeItems { get set }
+  property System.Int32 MaxRegisterValues { get set }
+enum StepH.GameEventScript.Api.GameEventScriptSectionFlags
+  enum-field None = 0
+  enum-field Required = 1
+  enum-field CompressionMask = 240
+enum StepH.GameEventScript.Api.GameEventScriptSectionType
+  enum-field ProgramMetadata = 1
+  enum-field StringConstants = 2
+  enum-field UInt16IndexLists = 3
+  enum-field Bindings = 4
+  enum-field Code = 16
+  enum-field DebugSymbols = 32
+  enum-field SourceMap = 33
+  enum-field SourceArchive = 34
+  enum-field BuildMetadata = 48
+  enum-field ReservedSignature = 64
+  enum-field NamedCustom = 65534
+sealed class StepH.GameEventScript.Api.GameEventScriptSourceArchiveEntry
+  ctor GameEventScriptSourceArchiveEntry(System.UInt32 sourceId, System.String sourceName, System.Collections.Generic.IReadOnlyList<System.Byte> utf8Content)
+  method System.String ResolveText()
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.Byte> Utf8Content { get }
+  property System.String SourceName { get }
+  property System.UInt32 SourceId { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptSourceArchiveSegment
+  ctor GameEventScriptSourceArchiveSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptSourceArchiveEntry> sources)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptSourceArchiveEntry> Sources { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptSourceLocation
+  ctor GameEventScriptSourceLocation(System.String SourceName, System.Int32? Line, System.Int32? Column, System.Int32? EndLine, System.Int32? EndColumn, System.String ModuleName, System.UInt32? SourceId)
+  method StepH.GameEventScript.Api.GameEventScriptSourceLocation <Clone>$()
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptSourceLocation other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.String& SourceName, System.Int32?& Line, System.Int32?& Column, System.Int32?& EndLine, System.Int32?& EndColumn, System.String& ModuleName, System.UInt32?& SourceId)
+  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptSourceLocation left, StepH.GameEventScript.Api.GameEventScriptSourceLocation right)
+  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptSourceLocation left, StepH.GameEventScript.Api.GameEventScriptSourceLocation right)
+  property System.Int32? Column { get set }
+  property System.Int32? EndColumn { get set }
+  property System.Int32? EndLine { get set }
+  property System.Int32? Line { get set }
+  property System.String ModuleName { get set }
+  property System.String SourceName { get set }
+  property System.UInt32? SourceId { get set }
+struct StepH.GameEventScript.Api.GameEventScriptSourceMapEntry
+  ctor GameEventScriptSourceMapEntry(System.UInt32 CodeStart, System.UInt32 CodeLength, System.UInt32 SourceId, System.UInt32 SourceStartByteOffset, System.UInt32 SourceByteLength)
+  method System.Boolean Equals(StepH.GameEventScript.Api.GameEventScriptSourceMapEntry other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Int32 GetHashCode()
+  method System.String ToString()
+  method System.Void Deconstruct(System.UInt32& CodeStart, System.UInt32& CodeLength, System.UInt32& SourceId, System.UInt32& SourceStartByteOffset, System.UInt32& SourceByteLength)
+  method static System.Boolean op_Equality(StepH.GameEventScript.Api.GameEventScriptSourceMapEntry left, StepH.GameEventScript.Api.GameEventScriptSourceMapEntry right)
+  method static System.Boolean op_Inequality(StepH.GameEventScript.Api.GameEventScriptSourceMapEntry left, StepH.GameEventScript.Api.GameEventScriptSourceMapEntry right)
+  property System.UInt32 CodeLength { get set }
+  property System.UInt32 CodeStart { get set }
+  property System.UInt32 SourceByteLength { get set }
+  property System.UInt32 SourceId { get set }
+  property System.UInt32 SourceStartByteOffset { get set }
+sealed class StepH.GameEventScript.Api.GameEventScriptSourceMapSegment
+  ctor GameEventScriptSourceMapSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptSourceMapSource> sources, System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptSourceMapEntry> entries)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptSourceMapEntry> Entries { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptSourceMapSource> Sources { get }
+sealed class StepH.GameEventScript.Api.GameEventScriptSourceMapSource
+  ctor GameEventScriptSourceMapSource(System.UInt32 sourceId, System.String sourceName, System.UInt32 sourceByteLength, System.Collections.Generic.IReadOnlyList<System.Byte> sha256, System.Collections.Generic.IReadOnlyList<System.UInt32> lineStartByteOffsets)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.Byte> Sha256 { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt32> LineStartByteOffsets { get }
+  property System.String SourceName { get }
+  property System.UInt32 SourceByteLength { get }
+  property System.UInt32 SourceId { get }
+struct StepH.GameEventScript.Api.GameEventScriptStringConstantSegment
+  ctor GameEventScriptStringConstantSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.Byte> data)
+  method System.Int32 ResolveSize(System.UInt16 index)
+  method System.String Resolve(System.UInt16 index)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry> Slices { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.Byte> Data { get }
+struct StepH.GameEventScript.Api.GameEventScriptStringConstantSegment.SliceEntry
+  property System.Int32 Length { get set }
+  property System.Int32 Start { get set }
+sealed class StepH.GameEventScript.Api.GameEventScriptSubscription
+  method System.Boolean Unsubscribe()
+  property System.Boolean IsSubscribed { get }
+enum StepH.GameEventScript.Api.GameEventScriptSymbolKind
+  enum-field Unknown = 0
+  enum-field Type = 1
+  enum-field Predicate = 2
+  enum-field Function = 3
+  enum-field Handler = 4
+  enum-field Message = 5
+  enum-field Variable = 6
+  enum-field GlobalDefinition = 7
+struct StepH.GameEventScript.Api.GameEventScriptUInt16IndexList
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }
+  property System.UInt16 Item { get }
+struct StepH.GameEventScript.Api.GameEventScriptUInt16IndexListSegment
+  ctor GameEventScriptUInt16IndexListSegment(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry> slices, System.Collections.Generic.IReadOnlyList<System.UInt16> data)
+  method StepH.GameEventScript.Api.GameEventScriptUInt16IndexList Resolve(System.UInt16 index)
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<StepH.GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry> Slices { get }
+  property StepH.GameEventScript.Api.GameEventScriptReadOnlyArray<System.UInt16> Data { get }
+struct StepH.GameEventScript.Api.GameEventScriptUInt16IndexListSegment.SliceEntry
+  property System.Int32 Length { get set }
+  property System.Int32 Start { get set }
+sealed class StepH.GameEventScript.Api.GesExtensionCall
+  ctor GesExtensionCall()
+  ctor GesExtensionCall(StepH.GameEventScript.Api.GameEventScriptContext context)
+  method System.Void SetBoolean(System.Boolean value)
+  method System.Void SetFloat(System.Double value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetInteger(System.Int64 value, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method System.Void SetNothing()
+  method System.Void SetPercentage(System.Double ratio)
+  method System.Void SetTag(System.String tag)
+  method System.Void SetText(System.String text)
+  method System.Void SetValue(StepH.GameEventScript.Runtime.Values.GesValue value)
+  property StepH.GameEventScript.Api.GameEventScriptContext Context { get }
+  property StepH.GameEventScript.Api.GameEventScriptRandomGenerator Random { get }
+  property StepH.GameEventScript.Api.GameEventScriptRuntimeLimits RuntimeLimits { get }
+  property StepH.GameEventScript.Runtime.Values.GesValue Result { get }
+  property StepH.GameEventScript.Runtime.Values.GesValueArguments Arguments { get }
+sealed class StepH.GameEventScript.Api.GesExternalTypeConstructorCall
+  ctor GesExternalTypeConstructorCall()
+  ctor GesExternalTypeConstructorCall(StepH.GameEventScript.Runtime.Values.GesValueArguments arguments)
+  method System.Void SetExternalValue(StepH.GameEventScript.Api.IGameEventScriptExternalValue value)
+  method System.Void SetNothing()
+  property StepH.GameEventScript.Runtime.Values.GesValue Result { get }
+  property StepH.GameEventScript.Runtime.Values.GesValueArguments Arguments { get }
+interface StepH.GameEventScript.Api.IGameEventScriptExtensionFunction
+  method System.Void Invoke(StepH.GameEventScript.Api.GesExtensionCall call)
+interface StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionFunction Resolve(StepH.GameEventScript.Api.GameEventScriptExtensionReference reference)
+interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog
+  method StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition Resolve(System.String typeName)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> Types { get }
+interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor
+  method System.Void Invoke(StepH.GameEventScript.Api.GesExternalTypeConstructorCall call)
+  property StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorDefinition Definition { get }
+interface StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry
+  method StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor Resolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference)
+interface StepH.GameEventScript.Api.IGameEventScriptExternalValue
+  method StepH.GameEventScript.Runtime.Values.GesValue? GetField(System.String fieldName)
+  property StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition Definition { get }
+interface StepH.GameEventScript.Api.IGameEventScriptNativeMessageHandler
+  method System.Void Handle(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptContext context)
+interface StepH.GameEventScript.Api.IGameEventScriptPublishSink
+  method System.Boolean Publish(StepH.GameEventScript.Api.GameEventScriptMessage message)
+interface StepH.GameEventScript.Api.IGameEventScriptRuntimeObserver
+  method System.Void DispatchCompleted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
+  method System.Void DispatchStarted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.String dispatchSignatureId)
+  method System.Void MessageEmitted(StepH.GameEventScript.Api.GameEventScriptMessage message, System.Boolean accepted)
+  method System.Void MessagePublished(StepH.GameEventScript.Api.GameEventScriptMessage message, StepH.GameEventScript.Api.GameEventScriptPublishResult result)
+  method System.Void RuntimeError(StepH.GameEventScript.Api.GameEventScriptDiagnostic diagnostic)
+  method System.Void RuntimeLimitReached(System.String limitName, System.String detail, System.Int32 limit)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpContextExtensions
+  method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptPublishResult Publish(StepH.GameEventScript.Api.GameEventScriptContext context, System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+  method static System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptContext context, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments)
+  method static System.Boolean Emit(StepH.GameEventScript.Api.GameEventScriptContext context, System.String message, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+sealed class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder
+  method StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry Build()
+  method StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder Add(System.Type extensionType)
+  method StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder Add<T>()
+  method StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder AddRange(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensions
+  method static StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry CreateRegistry(System.Collections.Generic.IEnumerable<System.Type> extensionTypes)
+  method static StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry CreateRegistry(System.Type[] extensionTypes)
+  method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder()
+  method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExtensionRegistryBuilder CreateBuilder(StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry baseRegistry)
+sealed class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry
+  method StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition Resolve(System.String typeName)
+  method StepH.GameEventScript.Api.IGameEventScriptExternalTypeConstructor Resolve(StepH.GameEventScript.Api.GameEventScriptExternalTypeConstructorReference reference)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Api.GameEventScriptExternalTypeDefinition> Types { get }
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypes
+  method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry CreateRegistry(System.Collections.Generic.IEnumerable<System.Type> types)
+  method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpExternalTypeRegistry CreateRegistry(System.Type[] types)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostExtensions
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptHost host, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptHost host, StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(StepH.GameEventScript.Api.GameEventScriptHost host, System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
+  method static StepH.GameEventScript.Api.GameEventScriptSubscription SubscribeMessageName(StepH.GameEventScript.Api.GameEventScriptHost host, System.String messageName, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Collections.Generic.IReadOnlyCollection<System.String> matchingTags, System.Collections.Generic.IReadOnlyCollection<System.String> withoutTags, System.Int32 priority)
+  method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner RunAutomatically(StepH.GameEventScript.Api.GameEventScriptHost host)
+sealed class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner
+  method StepH.GameEventScript.Api.GameEventScriptInstance Load(StepH.GameEventScript.Api.GameEventScriptProgram program, System.Int32 priority)
+  method StepH.GameEventScript.Api.GameEventScriptSubscription Subscribe(System.String message, System.Collections.Generic.IReadOnlyCollection<System.String> parameterNames, System.Action<StepH.GameEventScript.Api.GameEventScriptMessage, StepH.GameEventScript.Api.GameEventScriptContext> handler, System.Int32 priority)
+  method System.Boolean Detach(StepH.GameEventScript.Api.GameEventScriptInstance instance)
+  method System.Boolean Receive(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method System.Boolean Unsubscribe(StepH.GameEventScript.Api.GameEventScriptSubscription subscription)
+  method System.Void Dispose()
+  method static StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpHostRunner Create(StepH.GameEventScript.Api.GameEventScriptHost host)
+static class StepH.GameEventScript.CSharpBridge.GameEventScriptCSharpMessage
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> arguments, System.Collections.Generic.IEnumerable<System.String> tags)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.Collections.Generic.IEnumerable<System.String> tags, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+  method static StepH.GameEventScript.Api.GameEventScriptMessage Create(System.String name, System.ValueTuple<System.String, StepH.GameEventScript.Runtime.Values.GesValue>[] arguments)
+sealed class StepH.GameEventScript.CSharpBridge.GesConstructAttribute
+  ctor GesConstructAttribute()
+sealed class StepH.GameEventScript.CSharpBridge.GesExtensionAttribute
+  ctor GesExtensionAttribute(System.String name)
+  property System.String Name { get }
+sealed class StepH.GameEventScript.CSharpBridge.GesFieldAttribute
+  ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GesFieldAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GesFieldAttribute(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.CSharpBridge.GesFunctionAttribute
+  ctor GesFunctionAttribute(System.String name)
+  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind returnKind)
+  ctor GesFunctionAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind returnKind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit ReturnUnit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? ReturnKind { get }
+  property System.String Name { get }
+  property System.String ReturnTypeName { get }
+sealed class StepH.GameEventScript.CSharpBridge.GesParamAttribute
+  ctor GesParamAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind)
+  ctor GesParamAttribute(System.String name, StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind kind, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  ctor GesParamAttribute(System.String name, System.String typeName)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit Unit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind? Kind { get }
+  property System.String Name { get }
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.CSharpBridge.GesTypeAttribute
+  ctor GesTypeAttribute(System.String typeName)
+  property System.String TypeName { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceArgument
+  property StepH.GameEventScript.Conformance.ConformanceValue Value { get }
+  property System.String Name { get }
+enum StepH.GameEventScript.Conformance.ConformanceBinary64ComparisonMode
+  enum-field Exact = 0
+  enum-field Ulp = 1
+sealed class StepH.GameEventScript.Conformance.ConformanceCapabilityRequirements
+  property System.Collections.Generic.IReadOnlyList<System.String> Core { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Optional { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceCase
+  property StepH.GameEventScript.Conformance.ConformanceCapabilityRequirements Requires { get }
+  property StepH.GameEventScript.Conformance.ConformanceComparisonOptions Comparison { get }
+  property StepH.GameEventScript.Conformance.ConformanceCompileOptions Compile { get }
+  property StepH.GameEventScript.Conformance.ConformanceExpectation Expectation { get }
+  property StepH.GameEventScript.Conformance.ConformanceExternalTypeApiCase ExternalTypeApi { get }
+  property StepH.GameEventScript.Conformance.ConformanceExternalTypeRegistryMode ExternalTypeRegistry { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessageApiCase MessageApi { get }
+  property StepH.GameEventScript.Conformance.ConformancePerformanceWorkload Performance { get }
+  property StepH.GameEventScript.Conformance.ConformancePublishSinkMode PublishSink { get }
+  property StepH.GameEventScript.Conformance.ConformanceRandomConfiguration Random { get }
+  property StepH.GameEventScript.Conformance.ConformanceRuntimeLimits RuntimeLimits { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange MetadataBlockRange { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange Range { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange? AssemblerBlockRange { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange? AssemblerPayloadRange { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange? ExpectationBlockRange { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange? StepsTableRange { get }
+  property StepH.GameEventScript.Conformance.ConformanceTestKind Kind { get }
+  property StepH.GameEventScript.Conformance.ConformanceTestLevel Level { get }
+  property StepH.GameEventScript.Conformance.ConformanceValueApiCase ValueApi { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceNativeHandler> NativeHandlers { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceSourceInput> Sources { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceStep> Steps { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Categories { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> DeferredPrograms { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
+  property System.String ExpectedAssembler { get }
+  property System.String FullId { get }
+  property System.String Id { get }
+  property System.String SuiteId { get }
+  property System.String Title { get }
+  property System.UInt32 HostCount { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceCaseResult
+  property StepH.GameEventScript.Conformance.ConformanceCaseStatus Status { get }
+  property StepH.GameEventScript.Conformance.ConformancePerformanceResult Performance { get }
+  property StepH.GameEventScript.Conformance.ConformanceTestKind Kind { get }
+  property StepH.GameEventScript.Conformance.ConformanceTestLevel Level { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMismatch> Mismatches { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceResultDiagnostic> Diagnostics { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceRuntimeLimitResult> RuntimeLimits { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Categories { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> MissingCapabilities { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
+  property System.String ActualAssembler { get }
+  property System.String CaseId { get }
+  property System.String Code { get }
+  property System.String Id { get }
+  property System.String SuiteId { get }
+  property System.String TechnicalDetails { get }
+  property System.String Title { get }
+enum StepH.GameEventScript.Conformance.ConformanceCaseStatus
+  enum-field Passed = 0
+  enum-field Failed = 1
+  enum-field Skipped = 2
+  enum-field Error = 3
+sealed class StepH.GameEventScript.Conformance.ConformanceChannelExpectation
+  property StepH.GameEventScript.Conformance.ConformanceObservationExpectation Observations { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMessage> Local { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMessage> Outbound { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceComparisonOptions
+  property StepH.GameEventScript.Conformance.ConformanceBinary64ComparisonMode Binary64Mode { get }
+  property System.UInt64 MaxUlps { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceCompileMetadataExpectation
+  property StepH.GameEventScript.Conformance.ConformanceProgramResourceExpectation ProgramResources { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceHandlerResourceExpectation> HandlerResources { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMessageDefinitionExpectation> MessageDefinitions { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceCompileOptions
+  property System.Boolean BinaryRoundTrip { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> DebugInfo { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceDiagnostic
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange Range { get }
+  property System.String Code { get }
+  property System.String Message { get }
+static class StepH.GameEventScript.Conformance.ConformanceDiagnosticCodes
+  field static System.String InvalidStepsTable
+  field static System.String InvalidTestHeading
+  field static System.String InvalidUtf8
+  field static System.String MissingFrontmatter
+  field static System.String SchemaDuplicateId
+  field static System.String SchemaInvalidCardinality
+  field static System.String SchemaInvalidValue
+  field static System.String SchemaMissingField
+  field static System.String SchemaUnknownField
+  field static System.String SchemaUnknownKind
+  field static System.String SchemaUnknownReference
+  field static System.String SchemaUnsupportedVersion
+  field static System.String UnknownSemanticFence
+  field static System.String UnterminatedFence
+  field static System.String UnterminatedFrontmatter
+  field static System.String YamlDuplicateKey
+  field static System.String YamlInvalidScalar
+  field static System.String YamlLimitExceeded
+  field static System.String YamlSyntax
+  field static System.String YamlUnsupportedFeature
+sealed class StepH.GameEventScript.Conformance.ConformanceDocument
+  property StepH.GameEventScript.Conformance.ConformanceSourceDocument Source { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange FrontmatterRange { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceCase> Cases { get }
+  property System.Int32 FormatVersion { get }
+  property System.String SuiteId { get }
+  property System.String Title { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceExpectation
+  property StepH.GameEventScript.Conformance.ConformanceChannelExpectation Initialization { get }
+  property StepH.GameEventScript.Conformance.ConformanceCompileMetadataExpectation Metadata { get }
+  property StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic Error { get }
+  property StepH.GameEventScript.Conformance.ConformanceExternalTypeApiExpectation ExternalTypeApi { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessageApiExpectation MessageApi { get }
+  property StepH.GameEventScript.Conformance.ConformanceOpcodeExpectation Opcodes { get }
+  property StepH.GameEventScript.Conformance.ConformancePerformanceExpectation Performance { get }
+  property StepH.GameEventScript.Conformance.ConformanceValueApiExpectation ValueApi { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic
+  property System.String Code { get }
+  property System.String HandlerName { get }
+  property System.String Phase { get }
+  property System.String ProgramName { get }
+  property System.String SourceName { get }
+  property System.String Symbol { get }
+  property System.String SymbolKind { get }
+  property System.UInt32? Column { get }
+  property System.UInt32? EndColumn { get }
+  property System.UInt32? EndLine { get }
+  property System.UInt32? Line { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceExternalTypeApiCase
+  property System.Collections.Generic.IReadOnlyList<System.String> TypeNames { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceExternalTypeApiExpectation
+  property System.String Error { get }
+  property System.UInt32? TypeCount { get }
+enum StepH.GameEventScript.Conformance.ConformanceExternalTypeRegistryMode
+  enum-field Environment = 0
+  enum-field Absent = 1
+  enum-field Mismatch = 2
+sealed class StepH.GameEventScript.Conformance.ConformanceHandlerResourceExpectation
+  property System.String Name { get }
+  property System.String SignatureId { get }
+  property System.UInt32? RequiredCallStackDepth { get }
+  property System.UInt32? RequiredRegisterCount { get }
+static class StepH.GameEventScript.Conformance.ConformanceMarkdownParser
+  method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.Byte[] utf8Bytes)
+  method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.Byte[] utf8Bytes, StepH.GameEventScript.Conformance.ConformanceParserLimits limits)
+  method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.String text)
+  method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.String text, StepH.GameEventScript.Conformance.ConformanceParserLimits limits)
+static class StepH.GameEventScript.Conformance.ConformanceMarkdownReportWriter
+  method static System.String ToText(StepH.GameEventScript.Conformance.ConformanceRunReport report)
+sealed class StepH.GameEventScript.Conformance.ConformanceMeasuredMetric
+  ctor ConformanceMeasuredMetric(System.String id, System.String value, System.String unit)
+  property System.String Id { get }
+  property System.String Unit { get }
+  property System.String Value { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceMessage
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceArgument> Arguments { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Tags { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiCase
+  property StepH.GameEventScript.Conformance.ConformanceMessage CompareMessage { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessage Message { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareHandler { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessageSignatureDefinition CompareSignature { get }
+  property System.Boolean ArgumentsWereMapping { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceValue> CreateArguments { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceValueEntry> UnorderedArguments { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
+  property System.String SignatureName { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceMessageApiExpectation
+  property System.Boolean? HandlerEquals { get }
+  property System.Boolean? HandlerHashEquals { get }
+  property System.Boolean? Matches { get }
+  property System.Boolean? MessageEquals { get }
+  property System.Boolean? MessageHashEquals { get }
+  property System.Boolean? SignatureEquals { get }
+  property System.Boolean? SignatureHashEquals { get }
+  property System.String CreatedMessageSignatureId { get }
+  property System.String Error { get }
+  property System.String MessageSignatureId { get }
+  property System.String Name { get }
+  property System.String SignatureId { get }
+  property System.UInt32? ArgumentCount { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceMessageDefinitionExpectation
+  property System.Collections.Generic.IReadOnlyList<System.String> SignatureIds { get }
+  property System.String Name { get }
+  property System.UInt32 Count { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceMessageSignatureDefinition
+  property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceMismatch
+  property StepH.GameEventScript.Conformance.ConformanceResultDiagnostic Diagnostic { get }
+  property System.String Actual { get }
+  property System.String Code { get }
+  property System.String Expected { get }
+  property System.String Path { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceNativeAction
+  property StepH.GameEventScript.Conformance.ConformanceNativeActionKind Kind { get }
+  property System.Boolean? ExpectedResult { get }
+  property System.String Target { get }
+enum StepH.GameEventScript.Conformance.ConformanceNativeActionKind
+  enum-field LoadProgram = 0
+  enum-field DetachProgram = 1
+  enum-field SubscribeHandler = 2
+  enum-field UnsubscribeHandler = 3
+sealed class StepH.GameEventScript.Conformance.ConformanceNativeEmit
+  property System.Boolean ForwardArguments { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceArgument> Arguments { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceNativeHandler
+  property System.Boolean InitiallySubscribed { get }
+  property System.Boolean MessageNameOnly { get }
+  property System.Boolean Throws { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceNativeAction> Actions { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceNativeEmit> Emits { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Parameters { get }
+  property System.Int32 Priority { get }
+  property System.String Id { get }
+  property System.String Message { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceObservationExpectation
+  property System.Boolean TraceSpecified { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic> Diagnostics { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceObserverEventExpectation> Trace { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation> ExcludedRuntimeLimits { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation> IncludedRuntimeLimits { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceObserverEventExpectation
+  property StepH.GameEventScript.Conformance.ConformanceExpectedDiagnostic Diagnostic { get }
+  property StepH.GameEventScript.Conformance.ConformanceMessage Message { get }
+  property StepH.GameEventScript.Conformance.ConformanceObserverEventKind Kind { get }
+  property StepH.GameEventScript.Conformance.ConformancePublishResultExpectation PublishResult { get }
+  property StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation RuntimeLimit { get }
+  property System.Boolean? Accepted { get }
+  property System.String SignatureId { get }
+enum StepH.GameEventScript.Conformance.ConformanceObserverEventKind
+  enum-field Emit = 0
+  enum-field Publish = 1
+  enum-field DispatchStarted = 2
+  enum-field DispatchCompleted = 3
+  enum-field RuntimeLimit = 4
+  enum-field Diagnostic = 5
+sealed class StepH.GameEventScript.Conformance.ConformanceOpcodeExpectation
+  property System.Collections.Generic.IReadOnlyDictionary<System.String, System.UInt64> Counts { get }
+  property System.Collections.Generic.IReadOnlyDictionary<System.String, System.UInt64> MinimumCounts { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Contains { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Excludes { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceParseException
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceDiagnostic> Diagnostics { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceParserLimits
+  ctor ConformanceParserLimits()
+  property StepH.GameEventScript.Conformance.ConformanceParserLimits Default { get }
+  property System.Int32 MaxDocumentBytes { get set }
+  property System.Int32 MaxHostsPerTest { get set }
+  property System.Int32 MaxScalarBytes { get set }
+  property System.Int32 MaxSourceBytesPerTest { get set }
+  property System.Int32 MaxSourcesPerTest { get set }
+  property System.Int32 MaxStepsPerTest { get set }
+  property System.Int32 MaxTests { get set }
+  property System.Int32 MaxYamlDepth { get set }
+  property System.Int32 MaxYamlNodes { get set }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceExpectation
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformancePerformanceProfile> Profiles { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceMeasurement
+  ctor ConformancePerformanceMeasurement(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMeasuredMetric> metrics)
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMeasuredMetric> Metrics { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceMetric
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange ReferenceRange { get }
+  property System.String Id { get }
+  property System.String Maximum { get }
+  property System.String Reference { get }
+  property System.String ToleranceAbsolute { get }
+  property System.String ToleranceRelative { get }
+  property System.String Unit { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceMetricResult
+  property System.Boolean Passed { get }
+  property System.String Allowed { get }
+  property System.String Id { get }
+  property System.String Measured { get }
+  property System.String Reference { get }
+  property System.String Unit { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceProfile
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformancePerformanceMetric> Metrics { get }
+  property System.String Id { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceResult
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformancePerformanceMetricResult> Metrics { get }
+  property System.String ProfileId { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePerformanceWorkload
+  property System.UInt32 CompileWarmupIterations { get }
+  property System.UInt32 Iterations { get }
+  property System.UInt32 WarmupIterations { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceProgramResourceExpectation
+  property System.UInt32? RequiredCallStackDepth { get }
+  property System.UInt32? RequiredRegisterCount { get }
+sealed class StepH.GameEventScript.Conformance.ConformancePublishResultExpectation
+  property System.Boolean AnyAccepted { get }
+  property System.Boolean LocalAccepted { get }
+  property System.Boolean OutboundAccepted { get }
+  property System.Boolean OutboundAttempted { get }
+enum StepH.GameEventScript.Conformance.ConformancePublishSinkMode
+  enum-field Accept = 0
+  enum-field Absent = 1
+  enum-field Reject = 2
+  enum-field Throw = 3
+enum StepH.GameEventScript.Conformance.ConformancePumpMode
+  enum-field Completion = 0
+  enum-field Frames = 1
+  enum-field Enqueue = 2
+  enum-field Frame = 3
+sealed class StepH.GameEventScript.Conformance.ConformanceRandomConfiguration
+  property System.Collections.Generic.IReadOnlyList<System.String> Sequence { get }
+  property System.Int64? Seed { get }
+static class StepH.GameEventScript.Conformance.ConformanceReceivedMarkdownWriter
+  method static System.Byte[] ToArray(StepH.GameEventScript.Conformance.ConformanceDocument document, StepH.GameEventScript.Conformance.ConformanceRunReport report)
+  method static System.String ToText(StepH.GameEventScript.Conformance.ConformanceDocument document, StepH.GameEventScript.Conformance.ConformanceRunReport report)
+sealed class StepH.GameEventScript.Conformance.ConformanceReceivedWriteException
+  property System.String Code { get }
+static class StepH.GameEventScript.Conformance.ConformanceReceivedWriterCodes
+  field static System.String InvalidReport
+  field static System.String MissingCase
+  field static System.String MissingRange
+  field static System.String OverlappingRange
+  field static System.String StaleRange
+sealed class StepH.GameEventScript.Conformance.ConformanceResultDiagnostic
+  property System.String Code { get }
+  property System.String HandlerName { get }
+  property System.String Message { get }
+  property System.String Phase { get }
+  property System.String ProgramName { get }
+  property System.String SourceName { get }
+  property System.String Symbol { get }
+  property System.String SymbolKind { get }
+  property System.UInt32? Column { get }
+  property System.UInt32? EndColumn { get }
+  property System.UInt32? EndLine { get }
+  property System.UInt32? Line { get }
+static class StepH.GameEventScript.Conformance.ConformanceResultJsonWriter
+  method static System.Byte[] ToArray(StepH.GameEventScript.Conformance.ConformanceRunReport report)
+  method static System.String ToText(StepH.GameEventScript.Conformance.ConformanceRunReport report)
+sealed class StepH.GameEventScript.Conformance.ConformanceRunReport
+  property StepH.GameEventScript.Conformance.ConformanceCaseStatus Status { get }
+  property StepH.GameEventScript.Conformance.ConformanceRunSummary Summary { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceCaseResult> Cases { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Capabilities { get }
+  property System.String ImplementationId { get }
+  property System.String ImplementationVersion { get }
+  property System.String PerformanceProfileId { get }
+  property System.String RunnerId { get }
+  property System.String RunnerVersion { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceRunSummary
+  property System.Int32 Error { get }
+  property System.Int32 Failed { get }
+  property System.Int32 Passed { get }
+  property System.Int32 Skipped { get }
+  property System.Int32 Total { get }
+static class StepH.GameEventScript.Conformance.ConformanceRunner
+  method static StepH.GameEventScript.Conformance.ConformanceCaseResult RunCase(StepH.GameEventScript.Conformance.ConformanceDocument document, System.String caseId, StepH.GameEventScript.Conformance.ConformanceRunnerEnvironment environment, StepH.GameEventScript.Conformance.ConformanceRunnerOptions options, StepH.GameEventScript.Conformance.IConformanceResultSink resultSink)
+  method static StepH.GameEventScript.Conformance.ConformanceRunReport RunCorpus(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceDocument> documents, StepH.GameEventScript.Conformance.ConformanceRunnerEnvironment environment, StepH.GameEventScript.Conformance.ConformanceRunnerOptions options, StepH.GameEventScript.Conformance.IConformanceResultSink resultSink)
+  method static StepH.GameEventScript.Conformance.ConformanceRunReport RunDocument(StepH.GameEventScript.Conformance.ConformanceDocument document, StepH.GameEventScript.Conformance.ConformanceRunnerEnvironment environment, StepH.GameEventScript.Conformance.ConformanceRunnerOptions options, StepH.GameEventScript.Conformance.IConformanceResultSink resultSink)
+static class StepH.GameEventScript.Conformance.ConformanceRunnerCodes
+  field static System.String AssertionMismatch
+  field static System.String ExpectedCompileError
+  field static System.String ExpectedLoadError
+  field static System.String InvalidEnvironment
+  field static System.String InvalidModel
+  field static System.String MissingCoreCapability
+  field static System.String MissingOptionalCapability
+  field static System.String MissingPerformanceProfile
+  field static System.String Passed
+  field static System.String PerformanceRegression
+  field static System.String UnhandledException
+sealed class StepH.GameEventScript.Conformance.ConformanceRunnerEnvironment
+  ctor ConformanceRunnerEnvironment(System.String runnerId, System.String runnerVersion, System.String implementationId, System.String implementationVersion, System.Collections.Generic.IReadOnlyCollection<System.String> capabilities, StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog externalTypeCatalog, StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry extensionRegistry, StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry externalTypeRegistry, System.String performanceProfileId, StepH.GameEventScript.Conformance.IConformancePerformanceProvider performanceProvider)
+  property StepH.GameEventScript.Api.IGameEventScriptExtensionRegistry ExtensionRegistry { get }
+  property StepH.GameEventScript.Api.IGameEventScriptExternalTypeCatalog ExternalTypeCatalog { get }
+  property StepH.GameEventScript.Api.IGameEventScriptExternalTypeRegistry ExternalTypeRegistry { get }
+  property StepH.GameEventScript.Conformance.IConformancePerformanceProvider PerformanceProvider { get }
+  property System.Collections.Generic.IReadOnlyList<System.String> Capabilities { get }
+  property System.String ImplementationId { get }
+  property System.String ImplementationVersion { get }
+  property System.String PerformanceProfileId { get }
+  property System.String RunnerId { get }
+  property System.String RunnerVersion { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceRunnerLimits
+  ctor ConformanceRunnerLimits()
+  property StepH.GameEventScript.Conformance.ConformanceRunnerLimits Default { get }
+  property System.Int32 MaxCases { get set }
+  property System.Int32 MaxFramesPerStep { get set }
+sealed class StepH.GameEventScript.Conformance.ConformanceRunnerOptions
+  ctor ConformanceRunnerOptions()
+  property StepH.GameEventScript.Conformance.ConformanceRunnerLimits Limits { get set }
+  property StepH.GameEventScript.Conformance.ConformanceRunnerOptions Default { get }
+  property System.Boolean IncludeActualAssemblerOnSuccess { get set }
+  property System.Boolean IncludeTechnicalDetails { get set }
+sealed class StepH.GameEventScript.Conformance.ConformanceRuntimeLimitExpectation
+  property System.Boolean Any { get }
+  property System.String DetailContains { get }
+  property System.String Name { get }
+  property System.UInt64? Limit { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceRuntimeLimitResult
+  property System.Int32 Limit { get }
+  property System.String Detail { get }
+  property System.String Name { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceRuntimeLimits
+  property System.Collections.Generic.IReadOnlyDictionary<System.String, System.UInt64> Values { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceSourceDocument
+  property System.Boolean HasByteOrderMark { get }
+  property System.Collections.Generic.IReadOnlyList<System.Byte> Utf8Bytes { get }
+  property System.String LineEnding { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceSourceInput
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange BlockRange { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange PayloadRange { get }
+  property System.String Name { get }
+  property System.String ProgramId { get }
+  property System.String Text { get }
+struct StepH.GameEventScript.Conformance.ConformanceSourceRange
+  ctor ConformanceSourceRange(System.Int32 byteOffset, System.Int32 byteLength, System.Int32 line, System.Int32 column, System.Int32 endLine, System.Int32 endColumn)
+  property System.Int32 ByteLength { get }
+  property System.Int32 ByteOffset { get }
+  property System.Int32 Column { get }
+  property System.Int32 EndColumn { get }
+  property System.Int32 EndLine { get }
+  property System.Int32 Line { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceStep
+  property StepH.GameEventScript.Conformance.ConformancePumpMode Pump { get }
+  property StepH.GameEventScript.Conformance.ConformanceSourceRange Range { get }
+  property StepH.GameEventScript.Conformance.ConformanceStepExpectation Expectation { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceNativeAction> Actions { get }
+  property System.String Id { get }
+  property System.String Receive { get }
+  property System.UInt32? Budget { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceStepExpectation
+  property StepH.GameEventScript.Conformance.ConformanceMessage Input { get }
+  property StepH.GameEventScript.Conformance.ConformanceObservationExpectation Observations { get }
+  property System.Boolean Accepted { get }
+  property System.Boolean? Paused { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMessage> Local { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceMessage> Outbound { get }
+enum StepH.GameEventScript.Conformance.ConformanceTestKind
+  enum-field ScriptApi = 0
+  enum-field CompileError = 1
+  enum-field LoadError = 2
+  enum-field MessageApi = 3
+  enum-field CompileMetadata = 4
+  enum-field Bytecode = 5
+  enum-field Performance = 6
+  enum-field BytecodeSnapshot = 7
+  enum-field ValueApi = 8
+  enum-field ExternalTypeApi = 9
+enum StepH.GameEventScript.Conformance.ConformanceTestLevel
+  enum-field Atomic = 0
+  enum-field Scenario = 1
+sealed class StepH.GameEventScript.Conformance.ConformanceValue
+  property StepH.GameEventScript.Conformance.ConformanceMessage Message { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceValue> Items { get }
+  property System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceValueEntry> Entries { get }
+  property System.Collections.Generic.IReadOnlyList<System.Int32> Rolls { get }
+  property System.String From { get }
+  property System.String RangeKind { get }
+  property System.String Step { get }
+  property System.String To { get }
+  property System.String Type { get }
+  property System.String Unit { get }
+  property System.String Value { get }
+  property System.String X { get }
+  property System.String Y { get }
+  property System.String Z { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceValueApiCase
+  property StepH.GameEventScript.Conformance.ConformanceValue EqualTo { get }
+  property StepH.GameEventScript.Conformance.ConformanceValue NotEqualTo { get }
+  property StepH.GameEventScript.Conformance.ConformanceValue Value { get }
+  property System.Boolean MutateSourceAfterCreate { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceValueApiExpectation
+  property StepH.GameEventScript.Conformance.ConformanceValue Normalized { get }
+  property System.Boolean? AsBoolean { get }
+  property System.Boolean? Equal { get }
+  property System.Boolean? EqualHash { get }
+  property System.Boolean? HasUnit { get }
+  property System.Boolean? HasValue { get }
+  property System.Boolean? IsNothing { get }
+  property System.Boolean? IsNumeric { get }
+  property System.Boolean? NotEqual { get }
+  property System.String CustomTypeName { get }
+  property System.UInt32? Length { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceValueEntry
+  property StepH.GameEventScript.Conformance.ConformanceValue Value { get }
+  property System.String Key { get }
+interface StepH.GameEventScript.Conformance.IConformancePerformanceProvider
+  method StepH.GameEventScript.Conformance.ConformancePerformanceMeasurement Measure(StepH.GameEventScript.Conformance.ConformanceCase testCase, System.String profileId)
+interface StepH.GameEventScript.Conformance.IConformanceResultSink
+  method System.Void CaseCompleted(StepH.GameEventScript.Conformance.ConformanceCaseResult result)
+static class StepH.GameEventScript.GameEventScriptManager
+  method static StepH.GameEventScript.Api.GameEventScriptBuilder CreateScriptBuilder()
+  method static StepH.GameEventScript.Api.GameEventScriptHostBuilder CreateHostBuilder()
+  method static StepH.GameEventScript.Api.GameEventScriptProgram Compile(System.String input, StepH.GameEventScript.Api.GameEventScriptCompileOptions options)
+struct StepH.GameEventScript.Runtime.Values.GesValue
+  method StepH.GameEventScript.Runtime.Values.GesValueMap AsMap()
+  method StepH.GameEventScript.Runtime.Values.GesValueSlice AsList()
+  method System.Boolean AsBoolean()
+  method System.Boolean Equals(StepH.GameEventScript.Runtime.Values.GesValue other)
+  method System.Boolean Equals(System.Object obj)
+  method System.Double AsNumber()
+  method System.Int32 GetHashCode()
+  method System.Int32[] AsDice()
+  method System.Int64 AsInteger()
+  method System.String AsText()
+  method System.String ToString()
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesBoolean(System.Boolean boolean)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesDice(System.Int32[] rolls)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesFloat(System.Double number, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesHandler(StepH.GameEventScript.Api.GameEventScriptMessageSignature signature)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesInteger(System.Int64 integer, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesList(StepH.GameEventScript.Runtime.Values.GesValue[] items)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesMap(System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> entries)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesMap(System.String[] keys, StepH.GameEventScript.Runtime.Values.GesValue[] values)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesMessage(StepH.GameEventScript.Api.GameEventScriptMessage message)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesNothing()
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesNumber(System.Double number, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesPercentage(System.Double ratio)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesPoint(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesRange(System.Double from, System.Double to, System.Double step)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesRange(System.Int64 from, System.Int64 to, System.Int64 step)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.Collections.Generic.IReadOnlyDictionary<System.String, StepH.GameEventScript.Runtime.Values.GesValue> fields)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesRecord(System.String typeName, System.String[] keys, StepH.GameEventScript.Runtime.Values.GesValue[] values)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesTag(System.String tag)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesText(System.String text)
+  method static StepH.GameEventScript.Runtime.Values.GesValue GesVector(System.Double x, System.Double y, System.Double z, StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit unit)
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit ValueUnit { get }
+  property StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind ValueKind { get }
+  property StepH.GameEventScript.Api.GameEventScriptFloatRange FloatRange { get }
+  property StepH.GameEventScript.Api.GameEventScriptIntegerRange IntegerRange { get }
+  property StepH.GameEventScript.Api.GameEventScriptMessage Message { get }
+  property StepH.GameEventScript.Api.GameEventScriptMessageSignature Handler { get }
+  property System.Boolean HasUnit { get }
+  property System.Boolean HasValue { get }
+  property System.Boolean IsNothing { get }
+  property System.Boolean IsNumeric { get }
+  property System.Double AsNumeric { get }
+  property System.Double X { get }
+  property System.Double Y { get }
+  property System.Double Z { get }
+  property System.Int32 Length { get }
+  property System.String CustomTypeName { get }
+struct StepH.GameEventScript.Runtime.Values.GesValueArguments
+  ctor GesValueArguments(StepH.GameEventScript.Runtime.Values.GesValue[] values)
+  field static StepH.GameEventScript.Runtime.Values.GesValueArguments Empty
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit UnitAt(System.Int32 index)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind KindAt(System.Int32 index)
+  method StepH.GameEventScript.Runtime.Values.GesValue& ValueAt(System.Int32 index)
+  method System.Boolean GetAsBoolean(System.Int32 index)
+  method System.Boolean HasValueAt(System.Int32 index)
+  method System.Boolean IsNothingAt(System.Int32 index)
+  method System.Boolean IsNumericAt(System.Int32 index)
+  method System.Double GetAsNumber(System.Int32 index)
+  method System.Double GetX(System.Int32 index)
+  method System.Double GetY(System.Int32 index)
+  method System.Double GetZ(System.Int32 index)
+  method System.Int64 GetAsInteger(System.Int32 index)
+  method System.String GetAsText(System.Int32 index)
+  property StepH.GameEventScript.Runtime.Values.GesValue& Item { get }
+  property System.Int32 Length { get }
+sealed class StepH.GameEventScript.Runtime.Values.GesValueMap
+  method StepH.GameEventScript.Runtime.Values.GesValue ValueAt(System.Int32 index)
+  method StepH.GameEventScript.Runtime.Values.GesValue? Get(System.String key)
+  method System.Boolean ContainsKey(System.String key)
+  method System.String KeyAt(System.Int32 index)
+  property System.Int32 Length { get }
+  property System.Int32 StorageLength { get }
+struct StepH.GameEventScript.Runtime.Values.GesValueSlice
+  ctor GesValueSlice(StepH.GameEventScript.Runtime.Values.GesValue[] values)
+  field static StepH.GameEventScript.Runtime.Values.GesValueSlice Empty
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit UnitAt(System.Int32 index)
+  method StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind KindAt(System.Int32 index)
+  method StepH.GameEventScript.Runtime.Values.GesValue& ValueAt(System.Int32 index)
+  method System.Boolean GetAsBoolean(System.Int32 index)
+  method System.Boolean HasValueAt(System.Int32 index)
+  method System.Boolean IsNothingAt(System.Int32 index)
+  method System.Boolean IsNumericAt(System.Int32 index)
+  method System.Double GetAsNumber(System.Int32 index)
+  method System.Double GetX(System.Int32 index)
+  method System.Double GetY(System.Int32 index)
+  method System.Double GetZ(System.Int32 index)
+  method System.Int64 GetAsInteger(System.Int32 index)
+  method System.String GetAsText(System.Int32 index)
+  property StepH.GameEventScript.Runtime.Values.GesValue& Item { get }
+  property System.Int32 Length { get }
+  property System.Int32 Start { get }

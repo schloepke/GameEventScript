@@ -91,26 +91,39 @@ The project has a portable Game Event Script host/VM architecture with a compact
 Verification after this change:
 
 ```text
-1140/1140 non-performance tests passed
+1111/1111 non-performance tests passed
+1/1 zero-allocation hot-path test passed
 5/5 explicit Markdown performance tests passed
 ```
 
 ### Markdown-only Conformance Corpus and C# Adapters
 
 - The former 34-suite, 956-case JSON corpus was deterministically migrated to
-  `StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Migrated` and the JSON
+  `StepH-GameEventScript-Tests/Conformance/Suites` and the JSON
   source fixtures were removed after old/new execution parity passed. The corpus
-  now contains 36 suites and 967 semantic cases after portable Host coverage was
+  now contains 40 suites and 1,009 semantic cases after portable Host and API coverage was
   added.
 - Every migrated case has an explicit stable ID, kind, and atomic/scenario
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
-- The active Markdown adapter exposes 972 independent cases, including five
+- The active Markdown adapter exposes 1,016 independent cases, including seven
   bytecode snapshots, plus a whole-corpus
   identity test. Their results are collected into canonical
   `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
   second corpus execution. Legacy JSON models, codecs, discovery, tests, the
   temporary migrator, and the superseded pilot have been removed.
+- The completed 5.8 native-test audit removed 66 portable or duplicated C#
+  methods. `StepH-GameEventScript/NativeTestRetention.md` classifies all 91
+  remaining native methods; applicable `.gesb` tests are intentionally
+  re-audited under 5.9.
+- The test tree now has exactly two semantic roots: `Conformance` contains
+  Markdown suites, fixtures, reports, and its C# runner/parser adapters directly
+  in the root; `Native` contains the remaining C#-specific tests grouped by
+  purpose.
+- Every normative suite uses the canonical readable layout documented in
+  `ConformanceMarkdownV1.md`: caution callout, suite prose, a thematic break and
+  prose for every test, and named H3 sections for case metadata, source, steps,
+  expectations, and assembler snapshots.
 - Five explicit C# performance tests measure the five Markdown performance
   cases independently. They emit canonical JSON, a Markdown report, and a
   received Markdown approval candidate. Bytecode snapshots likewise emit a
@@ -128,6 +141,15 @@ Verification at the migration boundary:
 956/956 legacy-to-Markdown parity cases passed
 962/962 active Markdown corpus tests passed
 1127/1127 non-performance tests passed
+5/5 Markdown performance reference tests passed
+1/1 zero-allocation hot-path test passed
+```
+
+Verification after the completed 5.8 API/compiler audit and hierarchy cleanup:
+
+```text
+1016/1016 Markdown conformance cases passed
+1119/1119 non-performance test executions passed
 5/5 Markdown performance reference tests passed
 1/1 zero-allocation hot-path test passed
 ```

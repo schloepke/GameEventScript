@@ -101,6 +101,8 @@ public static class ConformanceRunner
                 ConformanceTestKind.CompileError => RunCompileError(testCase, environment),
                 ConformanceTestKind.LoadError => RunLoadError(testCase, environment),
                 ConformanceTestKind.MessageApi => RunMessageApi(testCase),
+                ConformanceTestKind.ValueApi => RunValueApi(testCase),
+                ConformanceTestKind.ExternalTypeApi => RunExternalTypeApi(testCase),
                 ConformanceTestKind.CompileMetadata => RunCompileMetadata(testCase, environment),
                 ConformanceTestKind.Bytecode => RunBytecode(testCase, environment),
                 ConformanceTestKind.BytecodeSnapshot => RunBytecodeSnapshot(testCase, environment, options),
@@ -154,7 +156,13 @@ public static class ConformanceRunner
             .WithRuntimeObserver(collector);
         if (testCase.PublishSink != ConformancePublishSinkMode.Absent) builder.WithPublishSink(collector);
         if (environment.ExtensionRegistry is not null) builder.WithRegistry(environment.ExtensionRegistry);
-        if (environment.ExternalTypeRegistry is not null) builder.WithExternalTypeRegistry(environment.ExternalTypeRegistry);
+        var externalTypeRegistry = testCase.ExternalTypeRegistry switch
+        {
+            ConformanceExternalTypeRegistryMode.Absent => null,
+            ConformanceExternalTypeRegistryMode.Mismatch => MismatchedExternalTypeRegistry.Instance,
+            _ => environment.ExternalTypeRegistry
+        };
+        if (externalTypeRegistry is not null) builder.WithExternalTypeRegistry(externalTypeRegistry);
         var state = new HostScenarioState(builder.Build(), programs, testCase.NativeHandlers, testCase.DeferredPrograms);
         state.Configure();
 
@@ -167,6 +175,13 @@ public static class ConformanceRunner
         {
             var step = testCase.Steps[stepIndex];
             collector.Clear();
+            for (var actionIndex = 0; actionIndex < step.Actions.Count; actionIndex++)
+            {
+                var action = step.Actions[actionIndex];
+                var actionResult = state.Apply(action);
+                if (action.ExpectedResult is { } expectedActionResult && actionResult != expectedActionResult)
+                    AddMismatch(mismatches, pathPrefix + "/steps/" + step.Id + "/actions/" + actionIndex.ToString(CultureInfo.InvariantCulture) + "/result", expectedActionResult ? "true" : "false", actionResult ? "true" : "false");
+            }
             var accepted = state.Host.Receive(ConformanceRuntimeValueCodec.DecodeMessage(step.Expectation.Input));
             var paused = false;
             if (step.Pump == ConformancePumpMode.Completion)
@@ -174,7 +189,7 @@ public static class ConformanceRunner
                 var execution = state.Host.RunToCompletion();
                 paused = execution.State == GameEventScriptExecutionState.Paused;
             }
-            else
+            else if (step.Pump == ConformancePumpMode.Frames)
             {
                 var frames = 0;
                 GameEventScriptExecutionResult execution;
@@ -185,6 +200,11 @@ public static class ConformanceRunner
                     if (execution.State == GameEventScriptExecutionState.Paused) paused = true;
                 }
                 while (execution.State == GameEventScriptExecutionState.Paused);
+            }
+            else if (step.Pump == ConformancePumpMode.Frame)
+            {
+                var execution = state.Host.ExecuteFrame(checked((int)step.Budget!.Value));
+                paused = execution.State == GameEventScriptExecutionState.Paused;
             }
 
             var path = pathPrefix + "/steps/" + step.Id;
@@ -260,7 +280,13 @@ public static class ConformanceRunner
         catch (GameEventScriptCompileException exception) { return UnexpectedDiagnostics(testCase, "compile", exception.Diagnostics); }
         var builder = GameEventScriptHost.CreateBuilder().WithRuntimeLimits(CreateRuntimeLimits(testCase.RuntimeLimits));
         if (environment.ExtensionRegistry is not null) builder.WithRegistry(environment.ExtensionRegistry);
-        if (environment.ExternalTypeRegistry is not null) builder.WithExternalTypeRegistry(environment.ExternalTypeRegistry);
+        var externalTypeRegistry = testCase.ExternalTypeRegistry switch
+        {
+            ConformanceExternalTypeRegistryMode.Absent => null,
+            ConformanceExternalTypeRegistryMode.Mismatch => MismatchedExternalTypeRegistry.Instance,
+            _ => environment.ExternalTypeRegistry
+        };
+        if (externalTypeRegistry is not null) builder.WithExternalTypeRegistry(externalTypeRegistry);
         var host = builder.Build();
         try { host.Load(program); }
         catch (GameEventScriptDynamicLinkException exception)
@@ -296,6 +322,32 @@ public static class ConformanceRunner
             CheckOptional(mismatches, "/message/messageSignatureId", expected.MessageSignatureId, message.SignatureId);
             if (expected.Matches is { } matches && matches != signature.Matches(message)) AddMismatch(mismatches, "/message/matches", matches ? "true" : "false", signature.Matches(message) ? "true" : "false");
             if (expected.ArgumentCount is { } count && count != message.Arguments.Count) AddMismatch(mismatches, "/message/argumentCount", count.ToString(CultureInfo.InvariantCulture), message.Arguments.Count.ToString(CultureInfo.InvariantCulture));
+            if (definition.CompareSignature is { } compareSignature)
+            {
+                var other = GameEventScriptMessageSignature.Create(compareSignature.Name, compareSignature.Parameters);
+                CheckOptional(mismatches, "/message/signatureEquals", expected.SignatureEquals, signature.Equals(other));
+                CheckOptional(mismatches, "/message/signatureHashEquals", expected.SignatureHashEquals, signature.GetHashCode() == other.GetHashCode());
+            }
+            if (definition.CompareMessage is { } compareMessage)
+            {
+                var other = ConformanceRuntimeValueCodec.DecodeMessage(compareMessage);
+                CheckOptional(mismatches, "/message/messageEquals", expected.MessageEquals, message.Equals(other));
+                CheckOptional(mismatches, "/message/messageHashEquals", expected.MessageHashEquals, message.GetHashCode() == other.GetHashCode());
+            }
+            if (definition.CompareHandler is { } compareHandler)
+            {
+                var left = GesValue.GesHandler(signature);
+                var right = GesValue.GesHandler(GameEventScriptMessageSignature.Create(compareHandler.Name, compareHandler.Parameters));
+                CheckOptional(mismatches, "/message/handlerEquals", expected.HandlerEquals, left.Equals(right));
+                CheckOptional(mismatches, "/message/handlerHashEquals", expected.HandlerHashEquals, left.GetHashCode() == right.GetHashCode());
+            }
+            if (definition.CreateArguments.Count > 0 || expected.CreatedMessageSignatureId is not null)
+            {
+                var arguments = new GesValue[definition.CreateArguments.Count];
+                for (var index = 0; index < arguments.Length; index++) arguments[index] = ConformanceRuntimeValueCodec.DecodeValue(definition.CreateArguments[index]);
+                var created = signature.CreateMessage(arguments);
+                CheckOptional(mismatches, "/message/createdMessageSignatureId", expected.CreatedMessageSignatureId, created?.SignatureId ?? "<null>");
+            }
             return mismatches.Count == 0 ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed) : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches);
         }
         catch (ArgumentException exception)
@@ -304,6 +356,72 @@ public static class ConformanceRunner
             return string.Equals(code, expected.Error, StringComparison.Ordinal)
                 ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed)
                 : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, code) });
+        }
+    }
+
+    private static ConformanceCaseResult RunValueApi(ConformanceCase testCase)
+    {
+        var definition = testCase.ValueApi!;
+        var expected = testCase.Expectation.ValueApi!;
+        var value = definition.MutateSourceAfterCreate
+            ? ConformanceRuntimeValueCodec.DecodeValueAndMutateSource(definition.Value)
+            : ConformanceRuntimeValueCodec.DecodeValue(definition.Value);
+        var normalized = ConformanceRuntimeValueCodec.DecodeValue(expected.Normalized);
+        var mismatches = new List<ConformanceMismatch>();
+        CheckOptional(mismatches, "/value/isNumeric", expected.IsNumeric, value.IsNumeric);
+        CheckOptional(mismatches, "/value/hasValue", expected.HasValue, value.HasValue);
+        CheckOptional(mismatches, "/value/isNothing", expected.IsNothing, value.IsNothing);
+        CheckOptional(mismatches, "/value/hasUnit", expected.HasUnit, value.HasUnit);
+        CheckOptional(mismatches, "/value/asBoolean", expected.AsBoolean, value.AsBoolean());
+        if (expected.Length is { } length && length != value.Length)
+            AddMismatch(mismatches, "/value/length", length.ToString(CultureInfo.InvariantCulture), value.Length.ToString(CultureInfo.InvariantCulture));
+        if (expected.CustomTypeName is not null && !string.Equals(expected.CustomTypeName, value.CustomTypeName, StringComparison.Ordinal))
+            AddMismatch(mismatches, "/value/customTypeName", expected.CustomTypeName, value.CustomTypeName);
+        if (!ConformanceRuntimeValueCodec.ValuesEqual(in normalized, in value, testCase.Comparison))
+            AddMismatch(mismatches, "/value/normalized", "expected portable value", "different portable value");
+        if (expected.Normalized.Type == ":range" && expected.Normalized.RangeKind is { } rangeKind)
+        {
+            var actualRangeKind = value.IntegerRange is not null ? "integer" : value.FloatRange is not null ? "float" : "none";
+            if (!string.Equals(rangeKind, actualRangeKind, StringComparison.Ordinal))
+                AddMismatch(mismatches, "/value/normalized/rangeKind", rangeKind, actualRangeKind);
+        }
+        if (definition.EqualTo is { } equalTo)
+        {
+            var other = ConformanceRuntimeValueCodec.DecodeValue(equalTo);
+            CheckOptional(mismatches, "/value/equal", expected.Equal, value.Equals(other));
+            CheckOptional(mismatches, "/value/equalHash", expected.EqualHash, value.GetHashCode() == other.GetHashCode());
+        }
+        if (definition.NotEqualTo is { } notEqualTo)
+        {
+            var other = ConformanceRuntimeValueCodec.DecodeValue(notEqualTo);
+            CheckOptional(mismatches, "/value/notEqual", expected.NotEqual, !value.Equals(other));
+        }
+        return mismatches.Count == 0
+            ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed)
+            : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches);
+    }
+
+    private static ConformanceCaseResult RunExternalTypeApi(ConformanceCase testCase)
+    {
+        var expected = testCase.Expectation.ExternalTypeApi!;
+        try
+        {
+            var definitions = new GameEventScriptExternalTypeDefinition[testCase.ExternalTypeApi!.TypeNames.Count];
+            for (var index = 0; index < definitions.Length; index++)
+                definitions[index] = new GameEventScriptExternalTypeDefinition(testCase.ExternalTypeApi.TypeNames[index], Array.Empty<GameEventScriptExternalTypeFieldDefinition>(), Array.Empty<GameEventScriptExternalTypeConstructorDefinition>());
+            var catalog = new GameEventScriptExternalTypeCatalog(definitions);
+            if (expected.Error is not null)
+                return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/externalType/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, null) });
+            if (expected.TypeCount is { } count && count != catalog.Types.Count)
+                return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/externalType/typeCount", ConformanceRunnerCodes.AssertionMismatch, count.ToString(CultureInfo.InvariantCulture), catalog.Types.Count.ToString(CultureInfo.InvariantCulture)) });
+            return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed);
+        }
+        catch (ArgumentException)
+        {
+            const string code = "duplicateTypeName";
+            return string.Equals(expected.Error, code, StringComparison.Ordinal)
+                ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed)
+                : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/externalType/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, code) });
         }
     }
 
@@ -475,38 +593,41 @@ public static class ConformanceRunner
             for (var index = 0; index < _definitions.Count; index++) if (_definitions[index].InitiallySubscribed) Subscribe(_definitions[index].Id);
         }
 
-        internal void Apply(ConformanceNativeAction action)
+        internal bool Apply(ConformanceNativeAction action)
         {
             switch (action.Kind)
             {
-                case ConformanceNativeActionKind.LoadProgram: Load(action.Target); break;
+                case ConformanceNativeActionKind.LoadProgram: return Load(action.Target);
                 case ConformanceNativeActionKind.DetachProgram:
-                    if (_instances.TryGetValue(action.Target, out var instance)) { instance.Detach(); _instances.Remove(action.Target); }
-                    break;
-                case ConformanceNativeActionKind.SubscribeHandler: Subscribe(action.Target); break;
+                    return _instances.TryGetValue(action.Target, out var instance) && instance.Detach();
+                case ConformanceNativeActionKind.SubscribeHandler: return Subscribe(action.Target);
                 case ConformanceNativeActionKind.UnsubscribeHandler:
-                    if (_subscriptions.TryGetValue(action.Target, out var subscription)) { subscription.Unsubscribe(); _subscriptions.Remove(action.Target); }
-                    break;
+                    return _subscriptions.TryGetValue(action.Target, out var subscription) && subscription.Unsubscribe();
+                default: return false;
             }
         }
 
-        private void Load(string id)
+        private bool Load(string id)
         {
-            if (_instances.ContainsKey(id)) return;
+            if (_instances.TryGetValue(id, out var existing) && existing.IsAttached) return true;
             for (var index = 0; index < _programs.Count; index++)
-                if (string.Equals(_programs[index].Id, id, StringComparison.Ordinal)) { _instances.Add(id, Host.Load(_programs[index].Program)); return; }
+                if (string.Equals(_programs[index].Id, id, StringComparison.Ordinal)) { _instances[id] = Host.Load(_programs[index].Program); return true; }
+            return false;
         }
 
-        private void Subscribe(string id)
+        private bool Subscribe(string id)
         {
-            if (_subscriptions.ContainsKey(id)) return;
+            if (_subscriptions.TryGetValue(id, out var existing) && existing.IsSubscribed) return true;
             for (var index = 0; index < _definitions.Count; index++)
             {
                 var definition = _definitions[index];
                 if (!string.Equals(definition.Id, id, StringComparison.Ordinal)) continue;
-                _subscriptions.Add(id, Host.Subscribe(definition.Message, definition.Parameters, _handlers[id], definition.Priority));
-                return;
+                _subscriptions[id] = definition.MessageNameOnly
+                    ? Host.SubscribeMessageName(definition.Message, _handlers[id], priority: definition.Priority)
+                    : Host.Subscribe(definition.Message, definition.Parameters, _handlers[id], definition.Priority);
+                return true;
             }
+            return false;
         }
     }
 
@@ -579,6 +700,21 @@ public static class ConformanceRunner
         internal static ObserverEvent Dispatch(ConformanceObserverEventKind kind, GameEventScriptMessage message, string signatureId) => new(kind, message, signatureId, false, default, null, null);
         internal static ObserverEvent ForRuntimeLimit(RuntimeLimitEvent value) => new(ConformanceObserverEventKind.RuntimeLimit, null, null, false, default, value, null);
         internal static ObserverEvent ForDiagnostic(ConformanceResultDiagnostic value) => new(ConformanceObserverEventKind.Diagnostic, null, null, false, default, null, value);
+    }
+
+    private sealed class MismatchedExternalTypeRegistry : IGameEventScriptExternalTypeRegistry
+    {
+        internal static MismatchedExternalTypeRegistry Instance { get; } = new();
+        private static readonly IGameEventScriptExternalTypeConstructor Constructor = new MismatchedExternalTypeConstructor();
+        public IGameEventScriptExternalTypeConstructor? Resolve(GameEventScriptExternalTypeConstructorReference reference) => Constructor;
+    }
+
+    private sealed class MismatchedExternalTypeConstructor : IGameEventScriptExternalTypeConstructor
+    {
+        public GameEventScriptExternalTypeConstructorDefinition Definition { get; } =
+            new("mismatch", [new GameEventScriptExternalTypeParameterDefinition("value", GameEventScriptBytecodeTypeKind.Float)]);
+
+        public void Invoke(GesExternalTypeConstructorCall call) => call.SetNothing();
     }
 
     private sealed class RuntimeLimitEvent
@@ -865,6 +1001,7 @@ public static class ConformanceRunner
     private static bool OptionalEquals<T>(T? expected, T? actual) where T : class => expected is null || Equals(expected, actual);
     private static bool OptionalEquals(uint? expected, uint? actual) => expected is null || expected == actual;
     private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, string? expected, string actual) { if (expected is not null && !string.Equals(expected, actual, StringComparison.Ordinal)) AddMismatch(mismatches, path, expected, actual); }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, bool? expected, bool actual) { if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value ? "true" : "false", actual ? "true" : "false"); }
     private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, uint? expected, ushort actual) { if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture)); }
     private static void AddMismatch(List<ConformanceMismatch> mismatches, string path, string? expected, string? actual) => mismatches.Add(new ConformanceMismatch(path, ConformanceRunnerCodes.AssertionMismatch, expected, actual));
     private static bool StringListsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right) { if (left.Count != right.Count) return false; for (var index = 0; index < left.Count; index++) if (!string.Equals(left[index], right[index], StringComparison.Ordinal)) return false; return true; }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Text;
+using StepH.GameEventScript.Api;
 
 namespace StepH.GameEventScript.Conformance;
 
@@ -10,7 +11,7 @@ internal static class ConformanceSchemaBinder
 {
     private static readonly string[] KnownCapabilities =
     {
-        "compiler", "program-binary", "host", "vm", "message-api", "external-types", "native-handlers", "publish-sink", "observer",
+        "compiler", "program-binary", "host", "vm", "message-api", "value-api", "external-types", "native-handlers", "publish-sink", "observer",
         "performance", "bytecode-snapshot"
     };
 
@@ -36,7 +37,7 @@ internal static class ConformanceSchemaBinder
             var yaml = ResolveYamlBlocks(testSyntax, limits);
             if (yaml.Case is null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Every test requires exactly one yaml block with 'gesBlock: case'.", text.Lines[testSyntax.StartLineIndex].Range());
             var caseNode = yaml.Case;
-            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "hostCount", "deferredPrograms", "nativeHandlers", "messageApi", "performance");
+            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "externalTypeRegistry", "hostCount", "deferredPrograms", "nativeHandlers", "stepActions", "messageApi", "valueApi", "externalTypeApi", "performance");
             var id = RequiredId(caseNode, "id");
             if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate case ID '{id}'.", Property(caseNode, "id")!.Value.Range);
             var defaults = ParseDefaults(caseNode, suiteDefaults);
@@ -47,22 +48,26 @@ internal static class ConformanceSchemaBinder
             var nativeHandlers = BindNativeHandlers(Optional(caseNode, "nativeHandlers"));
             var random = BindRandom(Optional(caseNode, "random"));
             var publishSink = BindPublishSink(OptionalString(caseNode, "publishSink"), Optional(caseNode, "publishSink")?.Range ?? caseNode.Range);
+            var externalTypeRegistry = BindExternalTypeRegistry(OptionalString(caseNode, "externalTypeRegistry"), Optional(caseNode, "externalTypeRegistry")?.Range ?? caseNode.Range);
             var hostCount = OptionalUInt32(caseNode, "hostCount") ?? 1;
             if (hostCount == 0 || limits.MaxHostsPerTest <= 0 || hostCount > (uint)limits.MaxHostsPerTest) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount must be positive and within MaxHostsPerTest.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
             var deferredPrograms = OptionalStringList(caseNode, "deferredPrograms", ids: true) ?? new List<string>();
             if (hostCount > 1 && defaults.Kind != ConformanceTestKind.ScriptApi) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount greater than one is supported only by scriptApi.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
             if (deferredPrograms.Count > 0 && defaults.Kind != ConformanceTestKind.ScriptApi) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "deferredPrograms is supported only by scriptApi.", Optional(caseNode, "deferredPrograms")?.Range ?? caseNode.Range);
             var messageApi = BindMessageApi(Optional(caseNode, "messageApi"));
+            var valueApi = BindValueApi(Optional(caseNode, "valueApi"));
+            var externalTypeApi = BindExternalTypeApi(Optional(caseNode, "externalTypeApi"));
             var workload = BindPerformanceWorkload(Optional(caseNode, "performance"));
             var expectations = BindExpectation(defaults.Kind.Value, expectationNode);
-            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, nativeHandlers.Count, messageApi, workload);
+            ValidateCardinality(defaults.Kind.Value, testSyntax, expectationNode, sources.Count, nativeHandlers.Count, messageApi, valueApi, externalTypeApi, workload);
             if (defaults.Kind == ConformanceTestKind.ScriptApi && sources.Count == 0 && defaults.Compile.BinaryRoundTrip)
                 throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A native-only scriptApi case cannot request a program binary roundtrip.", caseNode.Range);
-            ValidateHostReferences(sources, deferredPrograms, nativeHandlers, caseNode.Range);
+            var stepActions = BindStepActions(Optional(caseNode, "stepActions"), testSyntax.Steps);
+            ValidateHostReferences(sources, deferredPrograms, nativeHandlers, stepActions, caseNode.Range);
             if (messageApi?.ArgumentsWereMapping == true &&
                 !string.Equals(expectations.MessageApi?.Error, "invalidArgumentsShape", StringComparison.Ordinal))
                 throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A messageApi argument mapping is valid only with expected error 'invalidArgumentsShape'.", caseNode.Range);
-            var steps = BindSteps(testSyntax.Steps, expectationNode);
+            var steps = BindSteps(testSyntax.Steps, expectationNode, stepActions);
             var core = new List<string>(defaults.Requires.Core);
             var optional = new List<string>(defaults.Requires.Optional);
             AddKindCapabilities(defaults.Kind.Value, core, optional);
@@ -79,7 +84,7 @@ internal static class ConformanceSchemaBinder
             cases.Add(new ConformanceCase(
                 id, suiteId + "/" + id, testSyntax.Title, defaults.Kind.Value, defaults.Level.Value,
                 defaults.Categories, defaults.Tags, new ConformanceCapabilityRequirements(core, optional), defaults.Compile,
-                defaults.RuntimeLimits, defaults.Comparison, publishSink, hostCount, deferredPrograms, random, sources, nativeHandlers, steps, expectations, messageApi, workload,
+                defaults.RuntimeLimits, defaults.Comparison, publishSink, externalTypeRegistry, hostCount, deferredPrograms, random, sources, nativeHandlers, steps, expectations, messageApi, valueApi, externalTypeApi, workload,
                 testSyntax.AssemblerBlock?.Payload, testSyntax.CaseBlock!.BlockRange, testSyntax.ExpectBlock?.BlockRange, testSyntax.StepsTableRange,
                 testSyntax.AssemblerBlock?.BlockRange, testSyntax.AssemblerBlock?.PayloadRange, range));
         }
@@ -169,12 +174,14 @@ internal static class ConformanceSchemaBinder
         for (var handlerIndex = 0; handlerIndex < node.Items.Count; handlerIndex++)
         {
             var item = node.Items[handlerIndex];
-            Closed(item, "id", "message", "parameters", "priority", "initiallySubscribed", "throw", "actions", "emit");
+            Closed(item, "id", "message", "parameters", "messageName", "priority", "initiallySubscribed", "throw", "actions", "emit");
             var id = OptionalString(item, "id") ?? "native-" + (handlerIndex + 1).ToString("D4", CultureInfo.InvariantCulture);
             RequireId(id, Optional(item, "id")?.Range ?? item.Range);
             if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, "Duplicate native handler ID '" + id + "'.", Optional(item, "id")?.Range ?? item.Range);
             var message = RequiredString(item, "message");
             var parameters = OptionalStringList(item, "parameters") ?? new List<string>();
+            var messageNameOnly = OptionalBoolean(item, "messageName") ?? false;
+            if (messageNameOnly && parameters.Count != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A message-name native handler cannot declare parameters.", item.Range);
             var priority = OptionalInt32(item, "priority") ?? 0;
             var initiallySubscribed = OptionalBoolean(item, "initiallySubscribed") ?? true;
             var throws = OptionalBoolean(item, "throw") ?? false;
@@ -193,7 +200,7 @@ internal static class ConformanceSchemaBinder
                     emits.Add(new ConformanceNativeEmit(RequiredString(emit, "name"), forward == true, argsNode is null ? Array.Empty<ConformanceArgument>() : BindArguments(argsNode)));
                 }
             }
-            result.Add(new ConformanceNativeHandler(id, message, parameters, priority, initiallySubscribed, throws, actions, emits));
+            result.Add(new ConformanceNativeHandler(id, message, parameters, messageNameOnly, priority, initiallySubscribed, throws, actions, emits));
         }
         return result;
     }
@@ -205,9 +212,10 @@ internal static class ConformanceSchemaBinder
         RequireKind(node, YamlNodeKind.Sequence, "nativeHandlers.actions must be a sequence.");
         foreach (var item in node.Items)
         {
-            Closed(item, "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler");
-            if (item.Properties.Count != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A native handler action requires exactly one operation.", item.Range);
-            var operation = item.Properties[0];
+            Closed(item, "loadProgram", "detachProgram", "subscribeHandler", "unsubscribeHandler", "expectResult");
+            var operations = item.Properties.Where(property => property.Name != "expectResult").ToArray();
+            if (operations.Length != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "A native handler action requires exactly one operation.", item.Range);
+            var operation = operations[0];
             var kind = operation.Name switch
             {
                 "loadProgram" => ConformanceNativeActionKind.LoadProgram,
@@ -217,12 +225,26 @@ internal static class ConformanceSchemaBinder
             };
             var target = String(operation.Value);
             RequireId(target, operation.Value.Range);
-            result.Add(new ConformanceNativeAction(kind, target));
+            result.Add(new ConformanceNativeAction(kind, target, OptionalBoolean(item, "expectResult")));
         }
         return result;
     }
 
-    private static void ValidateHostReferences(IReadOnlyList<ConformanceSourceInput> sources, IReadOnlyList<string> deferredPrograms, IReadOnlyList<ConformanceNativeHandler> nativeHandlers, ConformanceSourceRange range)
+    private static IReadOnlyDictionary<string, IReadOnlyList<ConformanceNativeAction>> BindStepActions(YamlNode? node, IReadOnlyList<MarkdownStepSyntax> steps)
+    {
+        var result = new Dictionary<string, IReadOnlyList<ConformanceNativeAction>>(StringComparer.Ordinal);
+        if (node is null) return result;
+        RequireKind(node, YamlNodeKind.Mapping, "stepActions must be a mapping keyed by Step ID.");
+        var known = new HashSet<string>(steps.Select(step => step.Id), StringComparer.Ordinal);
+        foreach (var property in node.Properties)
+        {
+            if (!known.Contains(property.Name)) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownReference, "Unknown Step ID '" + property.Name + "'.", property.NameRange);
+            result.Add(property.Name, BindNativeActions(property.Value));
+        }
+        return result;
+    }
+
+    private static void ValidateHostReferences(IReadOnlyList<ConformanceSourceInput> sources, IReadOnlyList<string> deferredPrograms, IReadOnlyList<ConformanceNativeHandler> nativeHandlers, IReadOnlyDictionary<string, IReadOnlyList<ConformanceNativeAction>> stepActions, ConformanceSourceRange range)
     {
         var programs = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < sources.Count; index++) programs.Add(sources[index].ProgramId);
@@ -236,16 +258,21 @@ internal static class ConformanceSchemaBinder
         var handlers = new HashSet<string>(nativeHandlers.Select(value => value.Id), StringComparer.Ordinal);
         for (var handlerIndex = 0; handlerIndex < nativeHandlers.Count; handlerIndex++)
         for (var actionIndex = 0; actionIndex < nativeHandlers[handlerIndex].Actions.Count; actionIndex++)
+            ValidateHostAction(nativeHandlers[handlerIndex].Actions[actionIndex], programs, deferred, handlers, range);
+        foreach (var actions in stepActions.Values)
+        for (var actionIndex = 0; actionIndex < actions.Count; actionIndex++)
+            ValidateHostAction(actions[actionIndex], programs, deferred, handlers, range);
+    }
+
+    private static void ValidateHostAction(ConformanceNativeAction action, HashSet<string> programs, HashSet<string> deferred, HashSet<string> handlers, ConformanceSourceRange range)
+    {
+        var valid = action.Kind switch
         {
-            var action = nativeHandlers[handlerIndex].Actions[actionIndex];
-            var valid = action.Kind switch
-            {
-                ConformanceNativeActionKind.LoadProgram => deferred.Contains(action.Target),
-                ConformanceNativeActionKind.DetachProgram => programs.Contains(action.Target),
-                _ => handlers.Contains(action.Target)
-            };
-            if (!valid) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownReference, "Unknown or invalid host-action target '" + action.Target + "'.", range);
-        }
+            ConformanceNativeActionKind.LoadProgram => deferred.Contains(action.Target),
+            ConformanceNativeActionKind.DetachProgram => programs.Contains(action.Target),
+            _ => handlers.Contains(action.Target)
+        };
+        if (!valid) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownReference, "Unknown or invalid host-action target '" + action.Target + "'.", range);
     }
 
     private static ConformanceRandomConfiguration? BindRandom(YamlNode? node)
@@ -265,9 +292,8 @@ internal static class ConformanceSchemaBinder
     private static ConformanceMessageApiCase? BindMessageApi(YamlNode? node)
     {
         if (node is null) return null;
-        Closed(node, "signature", "message");
-        var signature = Required(node, "signature");
-        Closed(signature, "name", "parameters");
+        Closed(node, "signature", "message", "compareSignature", "compareMessage", "compareHandler", "createArguments");
+        var signature = BindSignature(Required(node, "signature"));
         var messageNode = Required(node, "message");
         Closed(messageNode, "name", "tags", "args");
         var name = RequiredString(messageNode, "name");
@@ -279,13 +305,54 @@ internal static class ConformanceSchemaBinder
             foreach (var property in args.Properties)
                 unordered.Add(new ConformanceValueEntry(property.Name, BindValue(property.Value)));
             return new ConformanceMessageApiCase(
-                RequiredString(signature, "name"), OptionalStringList(signature, "parameters") ?? new List<string>(),
-                new ConformanceMessage(name, tags, Array.Empty<ConformanceArgument>()), true, unordered);
+                signature.Name, signature.Parameters,
+                new ConformanceMessage(name, tags, Array.Empty<ConformanceArgument>()), true, unordered,
+                BindOptionalSignature(Optional(node, "compareSignature")), BindOptionalMessage(Optional(node, "compareMessage")),
+                BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")));
         }
         var message = new ConformanceMessage(name, tags, args is null ? Array.Empty<ConformanceArgument>() : BindArguments(args));
         return new ConformanceMessageApiCase(
-            RequiredString(signature, "name"), OptionalStringList(signature, "parameters") ?? new List<string>(),
-            message, false, Array.Empty<ConformanceValueEntry>());
+            signature.Name, signature.Parameters,
+            message, false, Array.Empty<ConformanceValueEntry>(),
+            BindOptionalSignature(Optional(node, "compareSignature")), BindOptionalMessage(Optional(node, "compareMessage")),
+            BindOptionalSignature(Optional(node, "compareHandler")), BindValues(Optional(node, "createArguments")));
+    }
+
+    private static ConformanceMessageSignatureDefinition BindSignature(YamlNode node)
+    {
+        Closed(node, "name", "parameters");
+        return new ConformanceMessageSignatureDefinition(RequiredString(node, "name"), OptionalStringList(node, "parameters") ?? new List<string>());
+    }
+
+    private static ConformanceMessageSignatureDefinition? BindOptionalSignature(YamlNode? node) => node is null ? null : BindSignature(node);
+
+    private static ConformanceMessage? BindOptionalMessage(YamlNode? node) => node is null ? null : BindMessage(node);
+
+    private static IReadOnlyList<ConformanceValue> BindValues(YamlNode? node)
+    {
+        var result = new List<ConformanceValue>();
+        if (node is null) return result;
+        RequireKind(node, YamlNodeKind.Sequence, "createArguments must be a sequence of portable values.");
+        foreach (var item in node.Items) result.Add(BindValue(item));
+        return result;
+    }
+
+    private static ConformanceValueApiCase? BindValueApi(YamlNode? node)
+    {
+        if (node is null) return null;
+        Closed(node, "value", "equalTo", "notEqualTo", "mutateSourceAfterCreate");
+        return new ConformanceValueApiCase(
+            BindValue(Required(node, "value")),
+            Optional(node, "equalTo") is { } equal ? BindValue(equal) : null,
+            Optional(node, "notEqualTo") is { } notEqual ? BindValue(notEqual) : null,
+            OptionalBoolean(node, "mutateSourceAfterCreate") ?? false);
+    }
+
+    private static ConformanceExternalTypeApiCase? BindExternalTypeApi(YamlNode? node)
+    {
+        if (node is null) return null;
+        Closed(node, "typeNames");
+        return new ConformanceExternalTypeApiCase(StringList(Required(node, "typeNames"), ids: false));
     }
 
     private static ConformancePerformanceWorkload? BindPerformanceWorkload(YamlNode? node)
@@ -297,7 +364,7 @@ internal static class ConformanceSchemaBinder
         return new ConformancePerformanceWorkload(iterations, OptionalUInt32(node, "warmupIterations") ?? 0, OptionalUInt32(node, "compileWarmupIterations") ?? 0);
     }
 
-    private static List<ConformanceStep> BindSteps(IReadOnlyList<MarkdownStepSyntax> syntaxSteps, YamlNode? expectation)
+    private static List<ConformanceStep> BindSteps(IReadOnlyList<MarkdownStepSyntax> syntaxSteps, YamlNode? expectation, IReadOnlyDictionary<string, IReadOnlyList<ConformanceNativeAction>> stepActions)
     {
         var expectationMap = expectation is null ? null : Optional(expectation, "steps");
         if (expectationMap is not null) RequireKind(expectationMap, YamlNodeKind.Mapping, "expect.steps must be a mapping keyed by Step ID.");
@@ -318,17 +385,19 @@ internal static class ConformanceSchemaBinder
             {
                 "completion" => ConformancePumpMode.Completion,
                 "frames" => ConformancePumpMode.Frames,
-                _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A step pump is completion or frames.", step.Range)
+                "enqueue" => ConformancePumpMode.Enqueue,
+                "frame" => ConformancePumpMode.Frame,
+                _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A step pump is completion, frames, enqueue or frame.", step.Range)
             };
             uint? budget = null;
-            if (mode == ConformancePumpMode.Completion && step.Budget.Length != 0) throw Schema(ConformanceDiagnosticCodes.InvalidStepsTable, "A completion step has an empty budget.", step.Range);
-            if (mode == ConformancePumpMode.Frames)
+            if ((mode is ConformancePumpMode.Completion or ConformancePumpMode.Enqueue) && step.Budget.Length != 0) throw Schema(ConformanceDiagnosticCodes.InvalidStepsTable, "A completion or enqueue step has an empty budget.", step.Range);
+            if (mode is ConformancePumpMode.Frames or ConformancePumpMode.Frame)
             {
                 if (!uint.TryParse(step.Budget, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) || parsed == 0) throw Schema(ConformanceDiagnosticCodes.InvalidStepsTable, "A frames step requires a positive UInt32 budget.", step.Range);
                 budget = parsed;
             }
             var expected = expectationMap is null ? null : Property(expectationMap, step.Id)?.Value;
-            result.Add(new ConformanceStep(step.Id, step.Receive, mode, budget, BindStepExpectation(step.Receive, expected), step.Range));
+            result.Add(new ConformanceStep(step.Id, step.Receive, mode, budget, stepActions.TryGetValue(step.Id, out var actions) ? actions : Array.Empty<ConformanceNativeAction>(), BindStepExpectation(step.Receive, expected), step.Range));
         }
         return result;
     }
@@ -355,13 +424,15 @@ internal static class ConformanceSchemaBinder
     private static ConformanceExpectation BindExpectation(ConformanceTestKind kind, YamlNode? node)
     {
         var emptyChannel = new ConformanceChannelExpectation(Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), EmptyObservations());
-        if (node is null) return new ConformanceExpectation(emptyChannel, null, null, null, null, null);
+        if (node is null) return new ConformanceExpectation(emptyChannel, null, null, null, null, null, null, null);
         var allowed = kind switch
         {
             ConformanceTestKind.ScriptApi => new[] { "gesBlock", "steps", "initialization" },
             ConformanceTestKind.Performance => new[] { "gesBlock", "steps", "initialization", "performance" },
             ConformanceTestKind.CompileError or ConformanceTestKind.LoadError => new[] { "gesBlock", "error" },
             ConformanceTestKind.MessageApi => new[] { "gesBlock", "message" },
+            ConformanceTestKind.ValueApi => new[] { "gesBlock", "value" },
+            ConformanceTestKind.ExternalTypeApi => new[] { "gesBlock", "externalType" },
             ConformanceTestKind.CompileMetadata => new[] { "gesBlock", "metadata" },
             ConformanceTestKind.Bytecode => new[] { "gesBlock", "opcodes" },
             _ => new[] { "gesBlock" }
@@ -373,13 +444,17 @@ internal static class ConformanceSchemaBinder
         var error = errorNode is null ? null : BindDiagnostic(errorNode);
         var messageNode = Optional(node, "message");
         var messageApi = messageNode is null ? null : BindMessageApiExpectation(messageNode);
+        var valueNode = Optional(node, "value");
+        var valueApi = valueNode is null ? null : BindValueApiExpectation(valueNode);
+        var externalTypeNode = Optional(node, "externalType");
+        var externalTypeApi = externalTypeNode is null ? null : BindExternalTypeApiExpectation(externalTypeNode);
         var metadataNode = Optional(node, "metadata");
         var metadata = metadataNode is null ? null : BindCompileMetadata(metadataNode);
         var opcodeNode = Optional(node, "opcodes");
         var opcodes = opcodeNode is null ? null : BindOpcodes(opcodeNode);
         var performanceNode = Optional(node, "performance");
         var performance = performanceNode is null ? null : BindPerformanceExpectation(performanceNode);
-        return new ConformanceExpectation(initialization, error, messageApi, metadata, opcodes, performance);
+        return new ConformanceExpectation(initialization, error, messageApi, valueApi, externalTypeApi, metadata, opcodes, performance);
     }
 
     private static ConformanceChannelExpectation BindChannel(YamlNode node)
@@ -495,13 +570,37 @@ internal static class ConformanceSchemaBinder
 
     private static ConformanceMessageApiExpectation BindMessageApiExpectation(YamlNode node)
     {
-        Closed(node, "name", "signatureId", "messageSignatureId", "matches", "argumentCount", "error");
+        Closed(node, "name", "signatureId", "messageSignatureId", "matches", "argumentCount", "signatureEquals", "signatureHashEquals", "messageEquals", "messageHashEquals", "handlerEquals", "handlerHashEquals", "createdMessageSignatureId", "error");
         if (node.Properties.Count == 0) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "At least one message expectation field is required.", node.Range);
         var error = OptionalString(node, "error");
         if (error is not null && node.Properties.Count != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A messageApi error expectation cannot contain success fields.", node.Range);
         return new ConformanceMessageApiExpectation(
             OptionalString(node, "name"), OptionalString(node, "signatureId"), OptionalString(node, "messageSignatureId"),
-            OptionalBoolean(node, "matches"), OptionalUInt32(node, "argumentCount"), error);
+            OptionalBoolean(node, "matches"), OptionalUInt32(node, "argumentCount"),
+            OptionalBoolean(node, "signatureEquals"), OptionalBoolean(node, "signatureHashEquals"),
+            OptionalBoolean(node, "messageEquals"), OptionalBoolean(node, "messageHashEquals"),
+            OptionalBoolean(node, "handlerEquals"), OptionalBoolean(node, "handlerHashEquals"),
+            OptionalString(node, "createdMessageSignatureId"), error);
+    }
+
+    private static ConformanceValueApiExpectation BindValueApiExpectation(YamlNode node)
+    {
+        Closed(node, "normalized", "isNumeric", "hasValue", "isNothing", "hasUnit", "asBoolean", "length", "customTypeName", "equal", "equalHash", "notEqual");
+        return new ConformanceValueApiExpectation(
+            BindValue(Required(node, "normalized")),
+            OptionalBoolean(node, "isNumeric"), OptionalBoolean(node, "hasValue"), OptionalBoolean(node, "isNothing"),
+            OptionalBoolean(node, "hasUnit"), OptionalBoolean(node, "asBoolean"), OptionalUInt32(node, "length"),
+            OptionalString(node, "customTypeName"), OptionalBoolean(node, "equal"), OptionalBoolean(node, "equalHash"),
+            OptionalBoolean(node, "notEqual"));
+    }
+
+    private static ConformanceExternalTypeApiExpectation BindExternalTypeApiExpectation(YamlNode node)
+    {
+        Closed(node, "typeCount", "error");
+        if (node.Properties.Count == 0) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "At least one externalType expectation field is required.", node.Range);
+        var error = OptionalString(node, "error");
+        if (error is not null && node.Properties.Count != 1) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "An externalTypeApi error expectation cannot contain success fields.", node.Range);
+        return new ConformanceExternalTypeApiExpectation(OptionalUInt32(node, "typeCount"), error);
     }
 
     private static ConformanceOpcodeExpectation BindOpcodes(YamlNode node)
@@ -621,7 +720,8 @@ internal static class ConformanceSchemaBinder
         {
             Closed(item, "name", "value");
             var name = RequiredString(item, "name");
-            if (!names.Add(name)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate argument name '{name}'.", Property(item, "name")!.Value.Range);
+            if (name != GameEventScriptMessageSignature.UnlabeledParameterName && !names.Add(name))
+                throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate argument name '{name}'.", Property(item, "name")!.Value.Range);
             result.Add(new ConformanceArgument(name, BindValue(Required(item, "value"))));
         }
         return result;
@@ -640,13 +740,13 @@ internal static class ConformanceSchemaBinder
             ":list" => new[] { "type", "items" },
             ":map" => new[] { "type", "entries" },
             ":dice" => new[] { "type", "rolls" },
-            ":range" => new[] { "type", "from", "to", "step" },
+            ":range" => new[] { "type", "from", "to", "step", "rangeKind" },
             ":message" => new[] { "type", "message" },
             _ => new[] { "type", "entries" }
         };
         Closed(node, allowed);
         var scalars = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (var name in new[] { "value", "unit", "x", "y", "z", "from", "to", "step" })
+        foreach (var name in new[] { "value", "unit", "x", "y", "z", "from", "to", "step", "rangeKind" })
         {
             var value = Optional(node, name);
             if (value is not null) scalars.Add(name, ScalarText(value));
@@ -659,12 +759,10 @@ internal static class ConformanceSchemaBinder
         if (entriesNode is not null)
         {
             RequireKind(entriesNode, YamlNodeKind.Sequence, "value.entries must be a sequence.");
-            var keys = new HashSet<string>(StringComparer.Ordinal);
             foreach (var entry in entriesNode.Items)
             {
                 Closed(entry, "key", "value");
                 var key = RequiredString(entry, "key");
-                if (!keys.Add(key)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate value entry key '{key}'.", Property(entry, "key")!.Value.Range);
                 entries.Add(new ConformanceValueEntry(key, BindValue(Required(entry, "value"))));
             }
         }
@@ -711,19 +809,28 @@ internal static class ConformanceSchemaBinder
         if (type is ":float" or ":percentage") RequireFiniteOrSpecialBinary64(RequiredString(node, "value"), Required(node, "value").Range);
         foreach (var name in new[] { "x", "y", "z", "from", "to", "step" }) if (Optional(node, name) is { } numeric) RequireFiniteOrSpecialBinary64(String(numeric), numeric.Range);
         if (type == ":dice") RequireKind(Required(node, "rolls"), YamlNodeKind.Sequence, "dice.rolls must be a sequence.");
+        if (type == ":range" && OptionalString(node, "rangeKind") is { } rangeKind && rangeKind is not "integer" and not "float")
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "rangeKind must be integer or float.", Property(node, "rangeKind")!.Value.Range);
+        if (type == ":range" && string.Equals(OptionalString(node, "rangeKind"), "integer", StringComparison.Ordinal))
+        {
+            _ = ParseInt64(Required(node, "from"));
+            _ = ParseInt64(Required(node, "to"));
+            _ = ParseInt64(Required(node, "step"));
+        }
     }
 
-    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, int nativeHandlerCount, ConformanceMessageApiCase? messageApi, ConformancePerformanceWorkload? workload)
+    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, int nativeHandlerCount, ConformanceMessageApiCase? messageApi, ConformanceValueApiCase? valueApi, ConformanceExternalTypeApiCase? externalTypeApi, ConformancePerformanceWorkload? workload)
     {
-        if (kind == ConformanceTestKind.MessageApi && sourceCount != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "messageApi tests do not accept GES source.", syntax.Sources[0].BlockRange);
-        if (kind != ConformanceTestKind.MessageApi && sourceCount == 0 && !(kind == ConformanceTestKind.ScriptApi && nativeHandlerCount > 0))
+        var apiOnly = kind is ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi;
+        if (apiOnly && sourceCount != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "API object tests do not accept GES source.", syntax.Sources[0].BlockRange);
+        if (!apiOnly && sourceCount == 0 && !(kind == ConformanceTestKind.ScriptApi && nativeHandlerCount > 0))
             throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires GES source.", syntax.CaseBlock!.BlockRange);
         if (kind == ConformanceTestKind.BytecodeSnapshot)
         {
             if (syntax.AssemblerBlock is null || expectation is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "bytecodeSnapshot requires one gesa block and no expectation block.", syntax.CaseBlock!.BlockRange);
         }
         else if (syntax.AssemblerBlock is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only bytecodeSnapshot accepts a gesa block.", syntax.AssemblerBlock.BlockRange);
-        if (kind is ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance && expectation is null)
+        if (kind is ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi or ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance && expectation is null)
             throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires a yaml block with 'gesBlock: expect'.", syntax.CaseBlock!.BlockRange);
         if (expectation is not null)
         {
@@ -731,6 +838,8 @@ internal static class ConformanceSchemaBinder
             {
                 ConformanceTestKind.CompileError or ConformanceTestKind.LoadError => "error",
                 ConformanceTestKind.MessageApi => "message",
+                ConformanceTestKind.ValueApi => "value",
+                ConformanceTestKind.ExternalTypeApi => "externalType",
                 ConformanceTestKind.CompileMetadata => "metadata",
                 ConformanceTestKind.Bytecode => "opcodes",
                 ConformanceTestKind.Performance => "performance",
@@ -741,6 +850,10 @@ internal static class ConformanceSchemaBinder
         }
         if (kind == ConformanceTestKind.MessageApi && messageApi is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "messageApi case metadata is required.", syntax.CaseBlock!.BlockRange);
         if (kind != ConformanceTestKind.MessageApi && messageApi is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "messageApi metadata is only valid for messageApi tests.", syntax.CaseBlock!.BlockRange);
+        if (kind == ConformanceTestKind.ValueApi && valueApi is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "valueApi case metadata is required.", syntax.CaseBlock!.BlockRange);
+        if (kind != ConformanceTestKind.ValueApi && valueApi is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "valueApi metadata is only valid for valueApi tests.", syntax.CaseBlock!.BlockRange);
+        if (kind == ConformanceTestKind.ExternalTypeApi && externalTypeApi is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "externalTypeApi case metadata is required.", syntax.CaseBlock!.BlockRange);
+        if (kind != ConformanceTestKind.ExternalTypeApi && externalTypeApi is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "externalTypeApi metadata is only valid for externalTypeApi tests.", syntax.CaseBlock!.BlockRange);
         if (kind == ConformanceTestKind.Performance && workload is null) throw Schema(ConformanceDiagnosticCodes.SchemaMissingField, "performance workload metadata is required.", syntax.CaseBlock!.BlockRange);
         if (kind != ConformanceTestKind.Performance && workload is not null) throw Schema(ConformanceDiagnosticCodes.SchemaUnknownField, "performance workload metadata is only valid for performance tests.", syntax.CaseBlock!.BlockRange);
         if (kind is ConformanceTestKind.ScriptApi or ConformanceTestKind.Performance)
@@ -760,6 +873,8 @@ internal static class ConformanceSchemaBinder
             case ConformanceTestKind.CompileError: Core("compiler"); break;
             case ConformanceTestKind.LoadError: Core("compiler", "host", "vm"); break;
             case ConformanceTestKind.MessageApi: Core("message-api"); break;
+            case ConformanceTestKind.ValueApi: Core("value-api"); break;
+            case ConformanceTestKind.ExternalTypeApi: Core("external-types"); break;
             case ConformanceTestKind.CompileMetadata:
             case ConformanceTestKind.Bytecode: Core("compiler"); break;
             case ConformanceTestKind.Performance: Core("compiler", "host", "vm", "observer", "publish-sink"); AddUnique(optional, "performance"); break;
@@ -923,6 +1038,7 @@ internal static class ConformanceSchemaBinder
             "scriptApi" => ConformanceTestKind.ScriptApi, "compileError" => ConformanceTestKind.CompileError, "loadError" => ConformanceTestKind.LoadError,
             "messageApi" => ConformanceTestKind.MessageApi, "compileMetadata" => ConformanceTestKind.CompileMetadata, "bytecode" => ConformanceTestKind.Bytecode,
             "performance" => ConformanceTestKind.Performance, "bytecodeSnapshot" => ConformanceTestKind.BytecodeSnapshot,
+            "valueApi" => ConformanceTestKind.ValueApi, "externalTypeApi" => ConformanceTestKind.ExternalTypeApi,
             _ => throw Schema(ConformanceDiagnosticCodes.SchemaUnknownKind, $"Unknown test kind '{value}'.", Property(node, name)!.Value.Range)
         };
     }
@@ -1000,6 +1116,14 @@ internal static class ConformanceSchemaBinder
         "reject" => ConformancePublishSinkMode.Reject,
         "throw" => ConformancePublishSinkMode.Throw,
         _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "publishSink must be accept, absent, reject, or throw.", range)
+    };
+
+    private static ConformanceExternalTypeRegistryMode BindExternalTypeRegistry(string? value, ConformanceSourceRange range) => value switch
+    {
+        null or "environment" => ConformanceExternalTypeRegistryMode.Environment,
+        "absent" => ConformanceExternalTypeRegistryMode.Absent,
+        "mismatch" => ConformanceExternalTypeRegistryMode.Mismatch,
+        _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "externalTypeRegistry must be environment, absent or mismatch.", range)
     };
 
     private static ConformanceObservationExpectation EmptyObservations() => new(Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceExpectedDiagnostic>(), false, Array.Empty<ConformanceObserverEventExpectation>());

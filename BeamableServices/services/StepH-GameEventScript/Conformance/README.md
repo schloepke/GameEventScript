@@ -29,3 +29,10 @@ Semantic test metadata uses ordinary `yaml` fences so standard Markdown tooling
 can highlight it. The required root field `gesBlock` classifies each such block
 as `case` or `expect`; custom trailing fence info strings are intentionally not
 accepted.
+
+The C# test project contains the first vertical migration suite at
+`Conformance/SpecsMarkdown/Pilot/representative.md`. It exercises every V1 test
+kind against this parser and runner while its seven pre-existing kinds remain
+paired with their temporary JSON sources for migration parity. New conformance
+cases are authored as Markdown from this point onward; JSON remains only as an
+input to the deterministic bulk migration.

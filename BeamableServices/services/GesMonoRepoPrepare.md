@@ -551,7 +551,34 @@ Abnahme: sechs fokussierte Writer-Tests decken kanonisches JSON,
 Markdown-Escaping und -Inhalte, Performance-/Failure-Ausgabe, bytegenaue
 Performanceupdates mit BOM/CRLF, GESA-Updates sowie stale Reports ab.
 
-### 5.5 Repräsentative vertikale Markdown-Migration durchführen
+### 5.5 Repräsentative vertikale Markdown-Migration durchführen - DONE
+
+Der vertikale Pilot liegt als echte Markdown-Suite unter
+`StepH-GameEventScript-Tests/Conformance/SpecsMarkdown/Pilot/representative.md`.
+Er übernimmt aus dem bisherigen JSON-Bestand je einen `scriptApi`-,
+`compileError`-, `loadError`-, `messageApi`-, `compileMetadata`-, `bytecode`-
+und `performance`-Fall sowie den bisherigen ersten Performance-Dump als
+eigenständigen `bytecodeSnapshot`-Fall. Frontmatter-Vererbung, lokale
+Overrides, Binary-Roundtrip, benannte Sourceinputs, Steps, Diagnosen,
+Ressourcenmetadaten, Opcodebedingungen, Performanceprofil und exaktes GESA
+werden dadurch gemeinsam abgedeckt.
+
+Jeder H2-Fall wird einzeln vom portablen Parser und Runner ausgeführt. Ein
+C#-Paritätstest lädt zusätzlich den zugehörigen bisherigen JSON-Fall, vergleicht
+das normalisierte Modell und führt auch den alten Testpfad aus. Der
+Performancepilot führt die fachliche Workload real aus und speist die neue
+Messschnittstelle deterministisch mit den bestehenden C#-Referenzwerten; echte
+Messung und Approval bleiben Aufgabe des expliziten Performance-Adapters. Ein
+zusätzlicher Dokumentlauf prüft Gesamtstatus, JSON-/Markdown-Report und einen
+byteidentischen Received-Write bei unveränderten Expectations.
+
+Der Pilot bestätigte drei bereits normative, für den Migrator wichtige Details:
+H2-Titel sind case-sensitiv, ein terminales Source-Newline wird durch eine
+zusätzliche Leerzeile im Fence repräsentiert und portable `symbolKind`-Werte
+verwenden lower camel case statt der bisherigen C#-Enum-Schreibweise. Es war
+keine Erweiterung des Formats, Parsers oder Laufzeitmodells erforderlich. Neue
+Conformance-Fälle werden ab diesem Schnitt als Markdown angelegt; JSON ist nur
+noch temporäre Quelle für Schritt 5.6.
 
 - Vor der Massenmigration mindestens einen vorhandenen Fall jeder heutigen
   Testart sowie einen `bytecodeSnapshot` nach Markdown übertragen.

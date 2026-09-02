@@ -72,6 +72,27 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Representative Conformance Markdown Migration
+
+- Added one executable Markdown pilot for every portable conformance kind:
+  `scriptApi`, `compileError`, `loadError`, `messageApi`, `compileMetadata`,
+  `bytecode`, `performance`, and `bytecodeSnapshot`.
+- Each H2 case is independently discovered and run. Seven cases are paired
+  with their existing JSON source for normalized-model and legacy-execution
+  parity; the snapshot is paired with the existing performance dump.
+- The complete document also produces JSON/Markdown reports and an unchanged,
+  byte-identical received file when references already match.
+- New conformance cases should now be Markdown. Existing JSON is retained only
+  until the deterministic bulk migration in step 5.6.
+
+Verification after this change:
+
+```text
+9/9 representative Markdown pilot tests passed
+1122/1122 non-performance tests passed
+1/1 zero-allocation hot-path test passed
+```
+
 ### Portable Conformance Result and Approval Writers
 
 - `ConformanceResultJsonWriter` emits the canonical UTF-8/LF/no-BOM machine

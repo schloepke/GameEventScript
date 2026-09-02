@@ -20,8 +20,10 @@ synchronous case, document, and corpus execution. Its explicit environment
 declares implementation identity, capabilities, portable registries, and an
 optional performance profile/provider. Structured immutable results preserve
 passed/failed/skipped/error, mismatches, diagnostics, runtime-limit events,
-snapshot output, and performance measurements. JSON, Markdown-report, and
-received-output writers remain the separate next package step.
+snapshot output, and performance measurements. `ConformanceResultJsonWriter`
+creates the canonical machine result, `ConformanceMarkdownReportWriter` creates
+the informative aggregate report, and `ConformanceReceivedMarkdownWriter`
+creates a byte-preserving approval candidate without filesystem access.
 
 Semantic test metadata uses ordinary `yaml` fences so standard Markdown tooling
 can highlight it. The required root field `gesBlock` classifies each such block

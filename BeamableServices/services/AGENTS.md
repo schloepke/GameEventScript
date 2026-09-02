@@ -72,6 +72,27 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Portable Conformance Result and Approval Writers
+
+- `ConformanceResultJsonWriter` emits the canonical UTF-8/LF/no-BOM machine
+  report with stable property order and portable result values.
+- `ConformanceMarkdownReportWriter` emits the informative aggregate summary,
+  capability and case tables, performance metrics, and failure/error details.
+- `ConformanceReceivedMarkdownWriter` produces fileless approval candidates by
+  replacing only measured performance references and actual GESA payload
+  ranges. It validates report/source identity and stale ranges and preserves all
+  unrelated source bytes, including BOM and original line endings.
+- Filesystem and test-framework adapters remain responsible for choosing and
+  writing result, report, and `.received.md` paths.
+
+Verification after the writer implementation:
+
+```text
+1113/1113 non-performance tests passed
+6/6 conformance writer tests passed
+1/1 zero-allocation hot-path test passed
+```
+
 ### Portable Conformance V1 Contracts
 
 - `ConformanceMarkdownV1.md` normatively defines the strict UTF-8 Markdown
@@ -109,7 +130,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
   `performance` after correctness execution.
 - Immutable results preserve pass/fail/skip/error, stable codes, mismatches,
   diagnostics, runtime-limit events, assembler output, and performance bounds.
-  Canonical JSON, Markdown report, and received writers remain step 5.4.
+  Canonical JSON, Markdown report, and received writers consume these results.
 - MSTest-specific discovery/display/assertion code is confined to the test
   adapter; the runner contains no test-framework assertions.
 

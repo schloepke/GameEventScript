@@ -498,7 +498,24 @@ API-Snapshot-Erwartung enthält die Runner-Grenze.
   als nichtnormative Metadaten behandeln und Benchmarks von funktionaler
   Conformance trennen.
 
-### 5.4 Reports, Performance-Baselines und Snapshot-Updates implementieren
+### 5.4 Reports, Performance-Baselines und Snapshot-Updates implementieren - DONE
+
+Die portable, dateisystemfreie Writer-Schicht ist umgesetzt. Der
+`ConformanceResultJsonWriter` erzeugt kanonisches UTF-8-JSON ohne BOM, mit LF,
+stabiler Property-Reihenfolge und allen strukturierten Case-, Diagnose-,
+Runtime-Limit- und Performanceergebnissen. Der
+`ConformanceMarkdownReportWriter` erzeugt daraus einen lesbaren Gesamtbericht
+mit Summary, Capabilities, Case-Tabelle, Performanceübersicht und Details zu
+Failures/Errors.
+
+Der `ConformanceReceivedMarkdownWriter` verwendet ausschließlich die beim
+Parsen erfassten UTF-8-SourceRanges. Er ersetzt gemessene Performance-
+`reference`-Token und tatsächliche GESA-Payloads, prüft Reportidentität,
+Profile, Metriken und den alten Range-Inhalt gegen stale Inputs und kopiert alle
+übrigen Bytes einschließlich BOM und Line Endings unverändert. Er liefert nur
+Text beziehungsweise Bytes und überschreibt niemals eine Suite. Stabile
+`conformance.received.*`-Fehler decken inkompatible Reports, fehlende/stale
+Ranges und Überlappungen ab.
 
 - Drei klar getrennte Artefakte vorsehen:
   - `ConformanceResults.json` als normatives maschinenlesbares Ergebnis,
@@ -529,6 +546,10 @@ API-Snapshot-Erwartung enthält die Runner-Grenze.
   byteinhaltlich unverändert.
 - Niemals die Quell-Suite automatisch überschreiben. Eine `.received.md` wird
   nur als explizit zu prüfender Diff-/Copy-Vorschlag erzeugt.
+
+Abnahme: sechs fokussierte Writer-Tests decken kanonisches JSON,
+Markdown-Escaping und -Inhalte, Performance-/Failure-Ausgabe, bytegenaue
+Performanceupdates mit BOM/CRLF, GESA-Updates sowie stale Reports ab.
 
 ### 5.5 Repräsentative vertikale Markdown-Migration durchführen
 

@@ -335,6 +335,8 @@ is:
       "missingCapabilities": [],
       "mismatches": [],
       "diagnostics": [],
+      "runtimeLimits": [],
+      "actualAssembler": null,
       "performance": null
     }
   ]
@@ -347,6 +349,16 @@ Capabilities are sorted by Unicode-scalar ordinal order; cases retain execution
 order; tags and event sequences retain semantic order. Int64, UInt64, and
 Binary64 domain values use canonical strings so a JSON implementation cannot
 round them through its default number type. Summary counts are JSON integers.
+
+Every case object contains `runtimeLimits`, `actualAssembler`, and
+`performance` at the shown positions. Runtime-limit entries contain `name`,
+`detail`, and integer `limit`. `actualAssembler` is either the normalized GESA
+text or `null`. Performance is either `null` or an object containing `profile`
+and a `metrics` object keyed by metric ID; every metric contains, in order,
+`measured`, `reference`, `allowed`, `unit`, and `passed`. Optional mismatch and
+diagnostic fields are omitted when absent. Optional nonnormative
+`technicalDetails` is the final case property when explicitly requested from
+the runner.
 
 The normative result contains no timestamp, hostname, username, absolute path,
 wall-clock duration, process ID, random build ID, or stack trace. A tool may
@@ -388,6 +400,15 @@ Overlapping, missing, stale, or ambiguous ranges are an error. The received
 writer returns bytes/text to its caller and never overwrites a source file. A
 filesystem or testframework adapter may save `<Suite>.received.md` as an
 explicit approval candidate.
+
+The portable writer updates every performance measurement and actual assembler
+present in the selected report results for the source suite. A report may be a
+whole-corpus report, but matching full/local IDs, title, kind, level, performance
+profile, metric set, old reference, and unit must agree with the parsed source.
+It reports stable `conformance.received.*` errors for incompatible reports,
+missing ranges, stale range contents, or overlaps. A mixed-line-ending source
+has no unambiguous document style; inserted multiline GESA then uses `LF` while
+all existing bytes remain untouched.
 
 ## Adapter responsibilities
 

@@ -1100,6 +1100,8 @@ static class StepH.GameEventScript.Conformance.ConformanceMarkdownParser
   method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.Byte[] utf8Bytes, StepH.GameEventScript.Conformance.ConformanceParserLimits limits)
   method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.String text)
   method static StepH.GameEventScript.Conformance.ConformanceDocument Parse(System.String text, StepH.GameEventScript.Conformance.ConformanceParserLimits limits)
+static class StepH.GameEventScript.Conformance.ConformanceMarkdownReportWriter
+  method static System.String ToText(StepH.GameEventScript.Conformance.ConformanceRunReport report)
 sealed class StepH.GameEventScript.Conformance.ConformanceMeasuredMetric
   ctor ConformanceMeasuredMetric(System.String id, System.String value, System.String unit)
   property System.String Id { get }
@@ -1201,6 +1203,17 @@ enum StepH.GameEventScript.Conformance.ConformancePumpMode
 sealed class StepH.GameEventScript.Conformance.ConformanceRandomConfiguration
   property System.Collections.Generic.IReadOnlyList<System.String> Sequence { get }
   property System.Int64? Seed { get }
+static class StepH.GameEventScript.Conformance.ConformanceReceivedMarkdownWriter
+  method static System.Byte[] ToArray(StepH.GameEventScript.Conformance.ConformanceDocument document, StepH.GameEventScript.Conformance.ConformanceRunReport report)
+  method static System.String ToText(StepH.GameEventScript.Conformance.ConformanceDocument document, StepH.GameEventScript.Conformance.ConformanceRunReport report)
+sealed class StepH.GameEventScript.Conformance.ConformanceReceivedWriteException
+  property System.String Code { get }
+static class StepH.GameEventScript.Conformance.ConformanceReceivedWriterCodes
+  field static System.String InvalidReport
+  field static System.String MissingCase
+  field static System.String MissingRange
+  field static System.String OverlappingRange
+  field static System.String StaleRange
 sealed class StepH.GameEventScript.Conformance.ConformanceResultDiagnostic
   property System.String Code { get }
   property System.String HandlerName { get }
@@ -1214,6 +1227,9 @@ sealed class StepH.GameEventScript.Conformance.ConformanceResultDiagnostic
   property System.UInt32? EndColumn { get }
   property System.UInt32? EndLine { get }
   property System.UInt32? Line { get }
+static class StepH.GameEventScript.Conformance.ConformanceResultJsonWriter
+  method static System.Byte[] ToArray(StepH.GameEventScript.Conformance.ConformanceRunReport report)
+  method static System.String ToText(StepH.GameEventScript.Conformance.ConformanceRunReport report)
 sealed class StepH.GameEventScript.Conformance.ConformanceRunReport
   property StepH.GameEventScript.Conformance.ConformanceCaseStatus Status { get }
   property StepH.GameEventScript.Conformance.ConformanceRunSummary Summary { get }

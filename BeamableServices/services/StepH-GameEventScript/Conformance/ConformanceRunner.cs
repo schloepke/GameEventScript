@@ -11,12 +11,7 @@ namespace StepH.GameEventScript.Conformance;
 
 public static class ConformanceRunner
 {
-    public static ConformanceCaseResult RunCase(
-        ConformanceDocument document,
-        string caseId,
-        ConformanceRunnerEnvironment environment,
-        ConformanceRunnerOptions? options = null,
-        IConformanceResultSink? resultSink = null)
+    public static ConformanceCaseResult RunCase(ConformanceDocument document, string caseId, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions? options = null, IConformanceResultSink? resultSink = null)
     {
         _ = document ?? throw new ArgumentNullException(nameof(document));
         _ = caseId ?? throw new ArgumentNullException(nameof(caseId));
@@ -32,21 +27,13 @@ public static class ConformanceRunner
         throw new ArgumentException($"Unknown conformance case '{caseId}'.", nameof(caseId));
     }
 
-    public static ConformanceRunReport RunDocument(
-        ConformanceDocument document,
-        ConformanceRunnerEnvironment environment,
-        ConformanceRunnerOptions? options = null,
-        IConformanceResultSink? resultSink = null)
+    public static ConformanceRunReport RunDocument(ConformanceDocument document, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions? options = null, IConformanceResultSink? resultSink = null)
     {
         _ = document ?? throw new ArgumentNullException(nameof(document));
         return RunCorpus(new[] { document }, environment, options, resultSink);
     }
 
-    public static ConformanceRunReport RunCorpus(
-        IReadOnlyList<ConformanceDocument> documents,
-        ConformanceRunnerEnvironment environment,
-        ConformanceRunnerOptions? options = null,
-        IConformanceResultSink? resultSink = null)
+    public static ConformanceRunReport RunCorpus(IReadOnlyList<ConformanceDocument> documents, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions? options = null, IConformanceResultSink? resultSink = null)
     {
         _ = documents ?? throw new ArgumentNullException(nameof(documents));
         _ = environment ?? throw new ArgumentNullException(nameof(environment));
@@ -148,7 +135,14 @@ public static class ConformanceRunner
         return MeasurePerformance(testCase, environment);
     }
 
-    private static RuntimeCollector RunRuntimeHost(ConformanceCase testCase, ConformanceRunnerEnvironment environment, ConformanceRunnerOptions options, IReadOnlyList<CompiledProgram> programs, string pathPrefix, List<ConformanceMismatch> mismatches, out string? technical)
+    private static RuntimeCollector RunRuntimeHost(
+        ConformanceCase testCase,
+        ConformanceRunnerEnvironment environment,
+        ConformanceRunnerOptions options,
+        IReadOnlyList<CompiledProgram> programs,
+        string pathPrefix,
+        List<ConformanceMismatch> mismatches,
+        out string? technical)
     {
         technical = null;
         var collector = new RuntimeCollector(testCase.PublishSink);
@@ -270,7 +264,9 @@ public static class ConformanceRunner
         {
             for (var index = 0; index < exception.Diagnostics.Count; index++)
                 if (DiagnosticMatches(testCase.Expectation.Error!, exception.Diagnostics[index])) return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, diagnostics: ConvertDiagnostics(exception.Diagnostics));
-            return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { DiagnosticMismatch("/error", testCase.Expectation.Error!, exception.Diagnostics) }, diagnostics: ConvertDiagnostics(exception.Diagnostics));
+            return Result(
+                testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { DiagnosticMismatch("/error", testCase.Expectation.Error!, exception.Diagnostics) },
+                diagnostics: ConvertDiagnostics(exception.Diagnostics));
         }
         return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.ExpectedCompileError, mismatches: new[] { new ConformanceMismatch("/error", ConformanceRunnerCodes.ExpectedCompileError, testCase.Expectation.Error!.Code, null) });
     }
@@ -296,7 +292,9 @@ public static class ConformanceRunner
             var diagnostic = exception.Diagnostic;
             return DiagnosticMatches(testCase.Expectation.Error!, diagnostic)
                 ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed, diagnostics: ConvertDiagnostics(new[] { diagnostic }))
-                : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { DiagnosticMismatch("/error", testCase.Expectation.Error!, new[] { diagnostic }) }, diagnostics: ConvertDiagnostics(new[] { diagnostic }));
+                : Result(
+                    testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { DiagnosticMismatch("/error", testCase.Expectation.Error!, new[] { diagnostic }) },
+                    diagnostics: ConvertDiagnostics(new[] { diagnostic }));
         }
         return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.ExpectedLoadError, mismatches: new[] { new ConformanceMismatch("/error", ConformanceRunnerCodes.ExpectedLoadError, testCase.Expectation.Error!.Code, null) });
     }
@@ -413,7 +411,10 @@ public static class ConformanceRunner
             }
             var signature = GameEventScriptMessageSignature.Create(definition.SignatureName, definition.Parameters);
             var message = ConformanceRuntimeValueCodec.DecodeMessage(definition.Message);
-            if (expected.Error is not null) return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, null) });
+            if (expected.Error is not null)
+                return Result(
+                    testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch,
+                    mismatches: new[] { new ConformanceMismatch("/message/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, null) });
             var mismatches = new List<ConformanceMismatch>();
             CheckOptional(mismatches, "/message/name", expected.Name, message.Name);
             CheckOptional(mismatches, "/message/signatureId", expected.SignatureId, signature.SignatureId);
@@ -511,7 +512,13 @@ public static class ConformanceRunner
             if (expected.Error is not null)
                 return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/externalType/error", ConformanceRunnerCodes.AssertionMismatch, expected.Error, null) });
             if (expected.TypeCount is { } count && count != catalog.Types.Count)
-                return Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: new[] { new ConformanceMismatch("/externalType/typeCount", ConformanceRunnerCodes.AssertionMismatch, count.ToString(CultureInfo.InvariantCulture), catalog.Types.Count.ToString(CultureInfo.InvariantCulture)) });
+                return Result(
+                    testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch,
+                    mismatches: new[]
+                    {
+                        new ConformanceMismatch(
+                            "/externalType/typeCount", ConformanceRunnerCodes.AssertionMismatch, count.ToString(CultureInfo.InvariantCulture), catalog.Types.Count.ToString(CultureInfo.InvariantCulture))
+                    });
             return Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed);
         }
         catch (ArgumentException)
@@ -544,7 +551,9 @@ public static class ConformanceRunner
                 for (var parameterIndex = 0; parameterIndex < parameters.Length; parameterIndex++) parameters[parameterIndex] = program.StringConstants.Resolve(bind.ArgumentNames[parameterIndex]);
                 signatures.Add(GameEventScriptMessageSignature.CreateSignatureId(name, parameters));
             }
-            if ((uint)signatures.Count != definition.Count) AddMismatch(mismatches, "/metadata/messageDefinitions/" + definition.Name + "/count", definition.Count.ToString(CultureInfo.InvariantCulture), signatures.Count.ToString(CultureInfo.InvariantCulture));
+            if ((uint)signatures.Count != definition.Count)
+                AddMismatch(
+                    mismatches, "/metadata/messageDefinitions/" + definition.Name + "/count", definition.Count.ToString(CultureInfo.InvariantCulture), signatures.Count.ToString(CultureInfo.InvariantCulture));
             if (!StringListsEqual(definition.SignatureIds, signatures)) AddMismatch(mismatches, "/metadata/messageDefinitions/" + definition.Name + "/signatureIds", Join(definition.SignatureIds), Join(signatures));
         }
         if (expected.ProgramResources is { } resources)
@@ -570,9 +579,15 @@ public static class ConformanceRunner
         var expected = testCase.Expectation.Opcodes!;
         var mismatches = new List<ConformanceMismatch>();
         for (var index = 0; index < expected.Contains.Count; index++) if (!counts.ContainsKey(expected.Contains[index])) AddMismatch(mismatches, "/opcodes/contains/" + expected.Contains[index], "> 0", "0");
-        for (var index = 0; index < expected.Excludes.Count; index++) if (counts.TryGetValue(expected.Excludes[index], out var count)) AddMismatch(mismatches, "/opcodes/excludes/" + expected.Excludes[index], "0", count.ToString(CultureInfo.InvariantCulture));
-        foreach (var pair in expected.Counts) if (!counts.TryGetValue(pair.Key, out var actual) || actual != pair.Value) AddMismatch(mismatches, "/opcodes/counts/" + pair.Key, pair.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture));
-        foreach (var pair in expected.MinimumCounts) if (!counts.TryGetValue(pair.Key, out var actual) || actual < pair.Value) AddMismatch(mismatches, "/opcodes/minimumCounts/" + pair.Key, ">= " + pair.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture));
+        for (var index = 0; index < expected.Excludes.Count; index++)
+            if (counts.TryGetValue(expected.Excludes[index], out var count))
+                AddMismatch(mismatches, "/opcodes/excludes/" + expected.Excludes[index], "0", count.ToString(CultureInfo.InvariantCulture));
+        foreach (var pair in expected.Counts)
+            if (!counts.TryGetValue(pair.Key, out var actual) || actual != pair.Value)
+                AddMismatch(mismatches, "/opcodes/counts/" + pair.Key, pair.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture));
+        foreach (var pair in expected.MinimumCounts)
+            if (!counts.TryGetValue(pair.Key, out var actual) || actual < pair.Value)
+                AddMismatch(mismatches, "/opcodes/minimumCounts/" + pair.Key, ">= " + pair.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture));
         return mismatches.Count == 0 ? Result(testCase, ConformanceCaseStatus.Passed, ConformanceRunnerCodes.Passed) : Result(testCase, ConformanceCaseStatus.Failed, ConformanceRunnerCodes.AssertionMismatch, mismatches: mismatches);
     }
 
@@ -805,7 +820,14 @@ public static class ConformanceRunner
 
     private sealed class ObserverEvent
     {
-        private ObserverEvent(ConformanceObserverEventKind kind, GameEventScriptMessage? message, string? signatureId, bool accepted, GameEventScriptPublishResult publishResult, RuntimeLimitEvent? runtimeLimit, ConformanceResultDiagnostic? diagnostic)
+        private ObserverEvent(
+            ConformanceObserverEventKind kind,
+            GameEventScriptMessage? message,
+            string? signatureId,
+            bool accepted,
+            GameEventScriptPublishResult publishResult,
+            RuntimeLimitEvent? runtimeLimit,
+            ConformanceResultDiagnostic? diagnostic)
         { Kind = kind; Message = message; SignatureId = signatureId; Accepted = accepted; PublishResult = publishResult; RuntimeLimit = runtimeLimit; Diagnostic = diagnostic; }
         internal ConformanceObserverEventKind Kind { get; }
         internal GameEventScriptMessage? Message { get; }
@@ -862,7 +884,8 @@ public static class ConformanceRunner
     {
         if (expected.Count != actual.Count) { AddMismatch(mismatches, path + "/length", expected.Count.ToString(CultureInfo.InvariantCulture), actual.Count.ToString(CultureInfo.InvariantCulture)); return; }
         for (var index = 0; index < expected.Count; index++)
-            if (!ConformanceRuntimeValueCodec.MessagesEqual(expected[index], actual[index], comparison)) AddMismatch(mismatches, path + "/" + index.ToString(CultureInfo.InvariantCulture), expected[index].Name, ConformanceRuntimeValueCodec.Describe(actual[index]));
+            if (!ConformanceRuntimeValueCodec.MessagesEqual(expected[index], actual[index], comparison))
+                AddMismatch(mismatches, path + "/" + index.ToString(CultureInfo.InvariantCulture), expected[index].Name, ConformanceRuntimeValueCodec.Describe(actual[index]));
     }
 
     private static void CompareObservations(string path, ConformanceObservationExpectation expected, RuntimeCollector actual, ConformanceComparisonOptions comparison, List<ConformanceMismatch> mismatches)
@@ -882,13 +905,16 @@ public static class ConformanceRunner
         }
         for (var index = 0; index < expected.ExcludedRuntimeLimits.Count; index++)
             for (var actualIndex = 0; actualIndex < actual.Limits.Count; actualIndex++)
-                if (LimitMatches(expected.ExcludedRuntimeLimits[index], actual.Limits[actualIndex])) AddMismatch(mismatches, path + "/runtimeLimits/excluded/" + index.ToString(CultureInfo.InvariantCulture), "no matching observation", actual.Limits[actualIndex].Name);
+                if (LimitMatches(expected.ExcludedRuntimeLimits[index], actual.Limits[actualIndex]))
+                    AddMismatch(
+                        mismatches, path + "/runtimeLimits/excluded/" + index.ToString(CultureInfo.InvariantCulture), "no matching observation", actual.Limits[actualIndex].Name);
         if (expected.Diagnostics.Count != actual.Diagnostics.Count)
             AddMismatch(mismatches, path + "/diagnostics/length", expected.Diagnostics.Count.ToString(CultureInfo.InvariantCulture), actual.Diagnostics.Count.ToString(CultureInfo.InvariantCulture));
         var diagnosticCount = Math.Min(expected.Diagnostics.Count, actual.Diagnostics.Count);
         for (var index = 0; index < diagnosticCount; index++)
         {
-            if (!DiagnosticMatches(expected.Diagnostics[index], actual.Diagnostics[index])) AddMismatch(mismatches, path + "/diagnostics/" + index.ToString(CultureInfo.InvariantCulture), expected.Diagnostics[index].Code, actual.Diagnostics[index].Code);
+            if (!DiagnosticMatches(expected.Diagnostics[index], actual.Diagnostics[index]))
+                AddMismatch(mismatches, path + "/diagnostics/" + index.ToString(CultureInfo.InvariantCulture), expected.Diagnostics[index].Code, actual.Diagnostics[index].Code);
         }
         if (expected.TraceSpecified) CompareTrace(path + "/trace", expected.Trace, actual.Trace, comparison, mismatches);
     }
@@ -991,7 +1017,8 @@ public static class ConformanceRunner
     private static bool LocationMatches(ConformanceExpectedDiagnostic expected, GameEventScriptSourceLocation? actual)
         => actual is null
             ? expected.SourceName is null && expected.Line is null && expected.Column is null && expected.EndLine is null && expected.EndColumn is null
-            : OptionalEquals(expected.SourceName, actual.SourceName) && OptionalEquals(expected.Line, ToUInt(actual.Line)) && OptionalEquals(expected.Column, ToUInt(actual.Column)) && OptionalEquals(expected.EndLine, ToUInt(actual.EndLine)) && OptionalEquals(expected.EndColumn, ToUInt(actual.EndColumn));
+            : OptionalEquals(expected.SourceName, actual.SourceName) && OptionalEquals(expected.Line, ToUInt(actual.Line)) && OptionalEquals(expected.Column, ToUInt(actual.Column)) &&
+              OptionalEquals(expected.EndLine, ToUInt(actual.EndLine)) && OptionalEquals(expected.EndColumn, ToUInt(actual.EndColumn));
 
     private static ConformanceMismatch DiagnosticMismatch(string path, ConformanceExpectedDiagnostic expected, IReadOnlyList<GameEventScriptDiagnostic> actual)
         => new(path, ConformanceRunnerCodes.AssertionMismatch, expected.Phase + ":" + expected.Code, actual.Count == 0 ? null : Phase(actual[0].Phase) + ":" + actual[0].Code, actual.Count == 0 ? null : ConvertDiagnostic(actual[0]));
@@ -1079,13 +1106,34 @@ public static class ConformanceRunner
     private static ConformanceRunReport CreateReport(ConformanceRunnerEnvironment environment, IReadOnlyList<ConformanceCaseResult> results)
     {
         var passed = 0; var failed = 0; var skipped = 0; var error = 0;
-        for (var index = 0; index < results.Count; index++) switch (results[index].Status) { case ConformanceCaseStatus.Passed: passed++; break; case ConformanceCaseStatus.Failed: failed++; break; case ConformanceCaseStatus.Skipped: skipped++; break; case ConformanceCaseStatus.Error: error++; break; }
+        for (var index = 0; index < results.Count; index++)
+        {
+            switch (results[index].Status)
+            {
+                case ConformanceCaseStatus.Passed: passed++; break;
+                case ConformanceCaseStatus.Failed: failed++; break;
+                case ConformanceCaseStatus.Skipped: skipped++; break;
+                case ConformanceCaseStatus.Error: error++; break;
+            }
+        }
         var status = error > 0 ? ConformanceCaseStatus.Error : failed > 0 ? ConformanceCaseStatus.Failed : passed > 0 ? ConformanceCaseStatus.Passed : ConformanceCaseStatus.Skipped;
         return new ConformanceRunReport(environment, status, new ConformanceRunSummary(results.Count, passed, failed, skipped, error), results);
     }
 
-    private static ConformanceCaseResult Result(ConformanceCase testCase, ConformanceCaseStatus status, string code, IReadOnlyList<string>? missing = null, IReadOnlyList<ConformanceMismatch>? mismatches = null, IReadOnlyList<ConformanceResultDiagnostic>? diagnostics = null, IReadOnlyList<ConformanceRuntimeLimitResult>? runtimeLimits = null, string? actualAssembler = null, ConformancePerformanceResult? performance = null, string? technical = null)
-        => new(testCase, status, code, missing ?? Array.Empty<string>(), mismatches ?? Array.Empty<ConformanceMismatch>(), diagnostics ?? Array.Empty<ConformanceResultDiagnostic>(), runtimeLimits ?? Array.Empty<ConformanceRuntimeLimitResult>(), actualAssembler, performance, technical);
+    private static ConformanceCaseResult Result(
+        ConformanceCase testCase,
+        ConformanceCaseStatus status,
+        string code,
+        IReadOnlyList<string>? missing = null,
+        IReadOnlyList<ConformanceMismatch>? mismatches = null,
+        IReadOnlyList<ConformanceResultDiagnostic>? diagnostics = null,
+        IReadOnlyList<ConformanceRuntimeLimitResult>? runtimeLimits = null,
+        string? actualAssembler = null,
+        ConformancePerformanceResult? performance = null,
+        string? technical = null)
+        => new(
+            testCase, status, code, missing ?? Array.Empty<string>(), mismatches ?? Array.Empty<ConformanceMismatch>(), diagnostics ?? Array.Empty<ConformanceResultDiagnostic>(),
+            runtimeLimits ?? Array.Empty<ConformanceRuntimeLimitResult>(), actualAssembler, performance, technical);
 
     private static List<string> Missing(IReadOnlyList<string> required, IReadOnlyList<string> capabilities)
     {
@@ -1111,26 +1159,70 @@ public static class ConformanceRunner
     private static ConformanceResultDiagnostic ConvertDiagnostic(GameEventScriptDiagnostic diagnostic)
     {
         var location = diagnostic.SourceLocation;
-        return new ConformanceResultDiagnostic(Phase(diagnostic.Phase), diagnostic.Code, diagnostic.Message, diagnostic.Symbol, SymbolKind(diagnostic.SymbolKind), location?.SourceName, ToUInt(location?.Line), ToUInt(location?.Column), ToUInt(location?.EndLine), ToUInt(location?.EndColumn), diagnostic.ProgramName, diagnostic.HandlerName);
+        return new ConformanceResultDiagnostic(
+            Phase(diagnostic.Phase), diagnostic.Code, diagnostic.Message, diagnostic.Symbol, SymbolKind(diagnostic.SymbolKind), location?.SourceName, ToUInt(location?.Line), ToUInt(location?.Column), ToUInt(location?.EndLine),
+            ToUInt(location?.EndColumn), diagnostic.ProgramName, diagnostic.HandlerName);
     }
 
-    private static string Phase(GameEventScriptDiagnosticPhase phase) => phase switch { GameEventScriptDiagnosticPhase.Parse => "parse", GameEventScriptDiagnosticPhase.Validate => "validate", GameEventScriptDiagnosticPhase.Compile => "compile", GameEventScriptDiagnosticPhase.Decode => "decode", GameEventScriptDiagnosticPhase.Link => "link", _ => "runtime" };
+    private static string Phase(GameEventScriptDiagnosticPhase phase) => phase switch
+    {
+        GameEventScriptDiagnosticPhase.Parse => "parse",
+        GameEventScriptDiagnosticPhase.Validate => "validate",
+        GameEventScriptDiagnosticPhase.Compile => "compile",
+        GameEventScriptDiagnosticPhase.Decode => "decode",
+        GameEventScriptDiagnosticPhase.Link => "link",
+        _ => "runtime"
+    };
     private static string? SymbolKind(GameEventScriptSymbolKind value) => value == GameEventScriptSymbolKind.Unknown ? null : char.ToLowerInvariant(value.ToString()[0]) + value.ToString().Substring(1);
     private static uint? ToUInt(int? value) => value is null || value < 0 ? null : checked((uint)value.Value);
     private static bool OptionalEquals<T>(T? expected, T? actual) where T : class => expected is null || Equals(expected, actual);
     private static bool OptionalEquals(uint? expected, uint? actual) => expected is null || expected == actual;
-    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, string? expected, string actual) { if (expected is not null && !string.Equals(expected, actual, StringComparison.Ordinal)) AddMismatch(mismatches, path, expected, actual); }
-    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, bool? expected, bool actual) { if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value ? "true" : "false", actual ? "true" : "false"); }
-    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, uint? expected, ushort actual) { if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture)); }
-    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, long? expected, long? actual) { if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture)); }
-    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, ushort? expected, ushort? actual) { if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture)); }
-    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, int? expected, int? actual) { if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture)); }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, string? expected, string actual)
+    {
+        if (expected is not null && !string.Equals(expected, actual, StringComparison.Ordinal)) AddMismatch(mismatches, path, expected, actual);
+    }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, bool? expected, bool actual)
+    {
+        if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value ? "true" : "false", actual ? "true" : "false");
+    }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, uint? expected, ushort actual)
+    {
+        if (expected is not null && expected.Value != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual.ToString(CultureInfo.InvariantCulture));
+    }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, long? expected, long? actual)
+    {
+        if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture));
+    }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, ushort? expected, ushort? actual)
+    {
+        if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture));
+    }
+    private static void CheckOptional(List<ConformanceMismatch> mismatches, string path, int? expected, int? actual)
+    {
+        if (expected is not null && expected != actual) AddMismatch(mismatches, path, expected.Value.ToString(CultureInfo.InvariantCulture), actual?.ToString(CultureInfo.InvariantCulture));
+    }
     private static void AddMismatch(List<ConformanceMismatch> mismatches, string path, string? expected, string? actual) => mismatches.Add(new ConformanceMismatch(path, ConformanceRunnerCodes.AssertionMismatch, expected, actual));
-    private static bool StringListsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right) { if (left.Count != right.Count) return false; for (var index = 0; index < left.Count; index++) if (!string.Equals(left[index], right[index], StringComparison.Ordinal)) return false; return true; }
+    private static bool StringListsEqual(IReadOnlyList<string> left, IReadOnlyList<string> right)
+    {
+        if (left.Count != right.Count) return false;
+        for (var index = 0; index < left.Count; index++) if (!string.Equals(left[index], right[index], StringComparison.Ordinal)) return false;
+        return true;
+    }
     private static string Join(IReadOnlyList<string> values) => "[" + string.Join(",", values) + "]";
-    private static string MessageErrorCode(string message) => message.Contains("more than once", StringComparison.Ordinal) ? "duplicateArgumentName" : message.Contains("argument", StringComparison.OrdinalIgnoreCase) ? "invalidArgument" : "invalidMessage";
+    private static string MessageErrorCode(string message)
+        => message.Contains("more than once", StringComparison.Ordinal)
+            ? "duplicateArgumentName"
+            : message.Contains("argument", StringComparison.OrdinalIgnoreCase) ? "invalidArgument" : "invalidMessage";
     private static string NormalizeLf(string value) => value.Replace("\r\n", "\n").Replace('\r', '\n');
-    private static int FirstUtf8Difference(string left, string right) { var leftBytes = System.Text.Encoding.UTF8.GetBytes(left); var rightBytes = System.Text.Encoding.UTF8.GetBytes(right); var count = Math.Min(leftBytes.Length, rightBytes.Length); var index = 0; while (index < count && leftBytes[index] == rightBytes[index]) index++; return index; }
+    private static int FirstUtf8Difference(string left, string right)
+    {
+        var leftBytes = System.Text.Encoding.UTF8.GetBytes(left);
+        var rightBytes = System.Text.Encoding.UTF8.GetBytes(right);
+        var count = Math.Min(leftBytes.Length, rightBytes.Length);
+        var index = 0;
+        while (index < count && leftBytes[index] == rightBytes[index]) index++;
+        return index;
+    }
     private static byte[] CopyBytes(IReadOnlyList<byte> source) { var result = new byte[source.Count]; for (var index = 0; index < result.Length; index++) result[index] = source[index]; return result; }
     private static string Sha256(byte[] bytes)
     {

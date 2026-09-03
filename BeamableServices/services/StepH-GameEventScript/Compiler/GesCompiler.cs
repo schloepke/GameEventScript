@@ -1002,14 +1002,7 @@ internal static class GesCompiler
                    _ => false
                });
 
-        private void EmitInlineIteratorPipeline(
-            GesRegisterRef destination,
-            GesRegisterRef source,
-            IReadOnlyList<CollectionSelectorNode> selectors,
-            int prefixCount,
-            CollectionSelectorNode terminal,
-            LoweringContext context,
-            ExpressionState state)
+        private void EmitInlineIteratorPipeline(GesRegisterRef destination, GesRegisterRef source, IReadOnlyList<CollectionSelectorNode> selectors, int prefixCount, CollectionSelectorNode terminal, LoweringContext context, ExpressionState state)
         {
             if (CanEmitFirstValueAggregatePipeline(terminal, prefixCount))
             {
@@ -1184,13 +1177,7 @@ internal static class GesCompiler
             _builder.MarkLabel(doneLabel);
         }
 
-        private void EmitInlinePipelineSourceGuard(
-            GesRegisterRef source,
-            CollectionSelectorNode terminal,
-            int prefixCount,
-            GesLabelRef invalidIteratorLabel,
-            LoweringContext context,
-            ExpressionState state)
+        private void EmitInlinePipelineSourceGuard(GesRegisterRef source, CollectionSelectorNode terminal, int prefixCount, GesLabelRef invalidIteratorLabel, LoweringContext context, ExpressionState state)
         {
             if (prefixCount != 0)
             {
@@ -1209,12 +1196,7 @@ internal static class GesCompiler
             }
         }
 
-        private void EmitSourceTypeGuard(
-            GesRegisterRef source,
-            GesLabelRef invalidIteratorLabel,
-            LoweringContext context,
-            ExpressionState state,
-            params GameEventScriptBytecodeTypeKind[] allowedKinds)
+        private void EmitSourceTypeGuard(GesRegisterRef source, GesLabelRef invalidIteratorLabel, LoweringContext context, ExpressionState state, params GameEventScriptBytecodeTypeKind[] allowedKinds)
         {
             var validLabel = _builder.AddLabel("pipeline_source_valid");
             var check = state.AllocateTemporary(_builder, context);
@@ -1306,11 +1288,7 @@ internal static class GesCompiler
             _builder.MarkLabel(doneLabel);
         }
 
-        private GesRegisterRef EmitInlineAggregateValue(
-            CollectionSelectorNode terminal,
-            GesRegisterRef current,
-            LoweringContext context,
-            ExpressionState state)
+        private GesRegisterRef EmitInlineAggregateValue(CollectionSelectorNode terminal, GesRegisterRef current, LoweringContext context, ExpressionState state)
         {
             return terminal switch
             {
@@ -1324,12 +1302,7 @@ internal static class GesCompiler
             };
         }
 
-        private GesRegisterRef EmitInlinePipelineStep(
-            CollectionSelectorNode selector,
-            GesRegisterRef current,
-            GesLabelRef nextLabel,
-            LoweringContext context,
-            ExpressionState state)
+        private GesRegisterRef EmitInlinePipelineStep(CollectionSelectorNode selector, GesRegisterRef current, GesLabelRef nextLabel, LoweringContext context, ExpressionState state)
         {
             switch (selector)
             {
@@ -1542,11 +1515,7 @@ internal static class GesCompiler
             _builder.LoadTrue(hasWinner);
         }
 
-        private void EmitInlineAccumulateSum(
-            GesRegisterRef sum,
-            GesRegisterRef hasSum,
-            GesRegisterRef value,
-            GesLabelRef nextLabel)
+        private void EmitInlineAccumulateSum(GesRegisterRef sum, GesRegisterRef hasSum, GesRegisterRef value, GesLabelRef nextLabel)
         {
             var addLabel = _builder.AddLabel("pipeline_sum_add");
             _builder.JumpIfTrue(hasSum, addLabel);
@@ -1557,12 +1526,7 @@ internal static class GesCompiler
             _builder.Add(sum, sum, value);
         }
 
-        private GesRegisterRef EmitSelectorExpressionForRead(
-            string identifier,
-            GesRegisterRef current,
-            ExpressionNode expression,
-            LoweringContext context,
-            ExpressionState state)
+        private GesRegisterRef EmitSelectorExpressionForRead(string identifier, GesRegisterRef current, ExpressionNode expression, LoweringContext context, ExpressionState state)
         {
             var selectorContext = context.CreateChild();
             selectorContext.DeclareExisting(identifier, current);
@@ -1613,13 +1577,7 @@ internal static class GesCompiler
             return helper.EntryLabel;
         }
 
-        private GesLabelRef EmitSelectorHelperExpression(
-            string name,
-            string identifier,
-            ExpressionNode expression,
-            LoweringContext parentContext,
-            ExpressionState parentState,
-            GesRegisterRef itemBinding)
+        private GesLabelRef EmitSelectorHelperExpression(string name, string identifier, ExpressionNode expression, LoweringContext parentContext, ExpressionState parentState, GesRegisterRef itemBinding)
         {
             using var sourceRange = _builder.SourceRange(expression.SourceRange);
             using var helper = _builder.BeginHelper($"{name}_{_helperIndex++}");

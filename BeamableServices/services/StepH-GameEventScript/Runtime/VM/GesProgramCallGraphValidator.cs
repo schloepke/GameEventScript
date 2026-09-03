@@ -118,13 +118,7 @@ internal static class GesProgramCallGraphValidator
         calls.Add(targetIndex);
     }
 
-    private static void RejectCycle(
-        int routineIndex,
-        IReadOnlyList<List<int>> calls,
-        byte[] states,
-        List<int> path,
-        ushort[] entries,
-        IReadOnlyDictionary<ushort, string> entryNames)
+    private static void RejectCycle(int routineIndex, IReadOnlyList<List<int>> calls, byte[] states, List<int> path, ushort[] entries, IReadOnlyDictionary<ushort, string> entryNames)
     {
         if (states[routineIndex] == 2) return;
         if (states[routineIndex] == 1)
@@ -155,10 +149,7 @@ internal static class GesProgramCallGraphValidator
         states[routineIndex] = 2;
     }
 
-    private static string ResolveName(
-        int routineIndex,
-        IReadOnlyList<ushort> entries,
-        IReadOnlyDictionary<ushort, string> entryNames)
+    private static string ResolveName(int routineIndex, IReadOnlyList<ushort> entries, IReadOnlyDictionary<ushort, string> entryNames)
     {
         var entry = entries[routineIndex];
         return entryNames.TryGetValue(entry, out var name) ? name : "@" + entry;

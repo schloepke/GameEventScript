@@ -1,9 +1,9 @@
 using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -633,9 +633,7 @@ internal static class GesVmRegisterNavigationMath
         return double.IsNaN(number) ? null : (number, value.Unit);
     }
 
-    private static (double A, double B, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit2(
-        in GesValue a,
-        in GesValue b)
+    private static (double A, double B, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit2(in GesValue a, in GesValue b)
     {
         var aValue = ReadNumeric(in a);
         var bValue = ReadNumeric(in b);
@@ -649,10 +647,7 @@ internal static class GesVmRegisterNavigationMath
         return (av.Number, bv.Number, av.Unit);
     }
 
-    private static (double A, double B, double C, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit3(
-        in GesValue a,
-        in GesValue b,
-        in GesValue c)
+    private static (double A, double B, double C, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit3(in GesValue a, in GesValue b, in GesValue c)
     {
         var aValue = ReadNumeric(in a);
         var bValue = ReadNumeric(in b);
@@ -669,11 +664,7 @@ internal static class GesVmRegisterNavigationMath
         return (av.Number, bv.Number, cv.Number, av.Unit);
     }
 
-    private static (double A, double B, double C, double D, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit4(
-        in GesValue a,
-        in GesValue b,
-        in GesValue c,
-        in GesValue d)
+    private static (double A, double B, double C, double D, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit4(in GesValue a, in GesValue b, in GesValue c, in GesValue d)
     {
         var aValue = ReadNumeric(in a);
         var bValue = ReadNumeric(in b);
@@ -693,13 +684,7 @@ internal static class GesVmRegisterNavigationMath
         return (av.Number, bv.Number, cv.Number, dv.Number, av.Unit);
     }
 
-    private static (double A, double B, double C, double D, double E, double F, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit6(
-        in GesValue a,
-        in GesValue b,
-        in GesValue c,
-        in GesValue d,
-        in GesValue e,
-        in GesValue f)
+    private static (double A, double B, double C, double D, double E, double F, GameEventScriptBytecodeInstructionUnit Unit)? ReadSameUnit6(in GesValue a, in GesValue b, in GesValue c, in GesValue d, in GesValue e, in GesValue f)
     {
         var aValue = ReadNumeric(in a);
         var bValue = ReadNumeric(in b);
@@ -725,9 +710,7 @@ internal static class GesVmRegisterNavigationMath
         return (av.Number, bv.Number, cv.Number, dv.Number, ev.Number, fv.Number, av.Unit);
     }
 
-    private static (double Lx, double Ly, double Lz, double Rx, double Ry, double Rz)? ReadPair3D(
-        in GesValue left,
-        in GesValue right)
+    private static (double Lx, double Ly, double Lz, double Rx, double Ry, double Rz)? ReadPair3D(in GesValue left, in GesValue right)
     {
         if (left.Unit != right.Unit ||
             left.Kind is not (Vector or Point) ||

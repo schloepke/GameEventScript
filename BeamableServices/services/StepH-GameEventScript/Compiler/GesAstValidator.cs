@@ -235,10 +235,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateInitializationHandler(
-        ParsedScript parsedScript,
-        EventHandlerNode handler,
-        GesValidationErrors errors)
+    private static void ValidateInitializationHandler(ParsedScript parsedScript, EventHandlerNode handler, GesValidationErrors errors)
     {
         if (handler.DispatchKind != EventHandlerDispatchKind.ExactSignature ||
             handler.ParameterList.Count != 0)
@@ -265,10 +262,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateUndeliverableHandler(
-        ParsedScript parsedScript,
-        EventHandlerNode handler,
-        GesValidationErrors errors)
+    private static void ValidateUndeliverableHandler(ParsedScript parsedScript, EventHandlerNode handler, GesValidationErrors errors)
     {
         if (handler.DispatchKind != EventHandlerDispatchKind.MessageName)
         {
@@ -296,10 +290,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateMessageNameHandler(
-        ParsedScript parsedScript,
-        EventHandlerNode handler,
-        GesValidationErrors errors)
+    private static void ValidateMessageNameHandler(ParsedScript parsedScript, EventHandlerNode handler, GesValidationErrors errors)
     {
         if (handler.DispatchKind != EventHandlerDispatchKind.MessageName)
         {
@@ -698,11 +689,7 @@ internal static class GesAstValidator
             _ => StaticExpressionInfo.Unknown
         };
 
-    private static StaticExpressionInfo ClassifyCall(
-        CallExpressionNode call,
-        IReadOnlyDictionary<string, GesCallableDefinition> callables,
-        IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
-        ISet<string> visitedCallables)
+    private static StaticExpressionInfo ClassifyCall(CallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, ISet<string> visitedCallables)
     {
         if (!callables.TryGetValue(call.Name, out var callable))
         {
@@ -1337,13 +1324,7 @@ internal static class GesAstValidator
         ValidateCallLabels(parsedScriptContext, callable.Kind, call.Name, callable.SignatureLabels, call.ArgumentList.Arguments, errors);
     }
 
-    private static void ValidateCallLabels(
-        ParsedScript parsedScriptContext,
-        GameEventScriptCallableKind kind,
-        string name,
-        IReadOnlyList<string> expectedLabels,
-        IReadOnlyList<ArgumentNode> arguments,
-        GesValidationErrors errors)
+    private static void ValidateCallLabels(ParsedScript parsedScriptContext, GameEventScriptCallableKind kind, string name, IReadOnlyList<string> expectedLabels, IReadOnlyList<ArgumentNode> arguments, GesValidationErrors errors)
     {
         var count = Math.Min(expectedLabels.Count, arguments.Count);
         for (var index = 0; index < count; index++)
@@ -1537,10 +1518,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateBuiltinTypeConstructor(
-        ParsedScript parsedScriptContext,
-        TypeConstructorExpressionNode constructor,
-        GesValidationErrors errors)
+    private static void ValidateBuiltinTypeConstructor(ParsedScript parsedScriptContext, TypeConstructorExpressionNode constructor, GesValidationErrors errors)
     {
         switch (constructor.TypeName)
         {
@@ -1562,11 +1540,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateVectorConstructor(
-        ParsedScript parsedScriptContext,
-        TypeConstructorExpressionNode constructor,
-        IReadOnlyList<string> labels,
-        GesValidationErrors errors)
+    private static void ValidateVectorConstructor(ParsedScript parsedScriptContext, TypeConstructorExpressionNode constructor, IReadOnlyList<string> labels, GesValidationErrors errors)
     {
         if (constructor.Arguments.Count == 1 && constructor.Arguments[0].Label is null)
         {
@@ -1606,11 +1580,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateLabeledVectorConstructor(
-        ParsedScript parsedScriptContext,
-        TypeConstructorExpressionNode constructor,
-        IReadOnlyList<string> labels,
-        GesValidationErrors errors)
+    private static void ValidateLabeledVectorConstructor(ParsedScript parsedScriptContext, TypeConstructorExpressionNode constructor, IReadOnlyList<string> labels, GesValidationErrors errors)
     {
         var previousIndex = -1;
         for (var argumentIndex = 0; argumentIndex < constructor.Arguments.Count; argumentIndex++)
@@ -1660,11 +1630,7 @@ internal static class GesAstValidator
             "list" or "range" or "message" or "handler" or "map" or "dice" ||
             GameEventScriptBytecodeInstructionUnits.ParseQuantityTypeName(typeName) is not null;
 
-    private static void ValidateRemovedType(
-        ParsedScript parsedScriptContext,
-        string typeName,
-        ScriptNode sourceNode,
-        GesValidationErrors errors)
+    private static void ValidateRemovedType(ParsedScript parsedScriptContext, string typeName, ScriptNode sourceNode, GesValidationErrors errors)
     {
         if (string.Equals(typeName, "optional", StringComparison.Ordinal))
         {
@@ -1714,11 +1680,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void AddTypeConstructorError(
-        ParsedScript parsedScriptContext,
-        string typeName,
-        string message,
-        GesValidationErrors errors)
+    private static void AddTypeConstructorError(ParsedScript parsedScriptContext, string typeName, string message, GesValidationErrors errors)
         => errors.Add(
             parsedScriptContext,
             message,
@@ -1726,13 +1688,7 @@ internal static class GesAstValidator
             GameEventScriptSymbolKind.Type,
             GameEventScriptDiagnosticCodes.ValidateInvalidTypeConstructor);
 
-    private static void ValidateCallArity(
-        ParsedScript parsedScriptContext,
-        GameEventScriptCallableKind kind,
-        string name,
-        int expectedCount,
-        int actualCount,
-        GesValidationErrors errors)
+    private static void ValidateCallArity(ParsedScript parsedScriptContext, GameEventScriptCallableKind kind, string name, int expectedCount, int actualCount, GesValidationErrors errors)
     {
         if (expectedCount != actualCount)
         {
@@ -1745,11 +1701,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateDuplicateNamedArguments(
-        ParsedScript parsedScriptContext,
-        string symbolName,
-        IReadOnlyList<ArgumentNode> arguments,
-        GesValidationErrors errors)
+    private static void ValidateDuplicateNamedArguments(ParsedScript parsedScriptContext, string symbolName, IReadOnlyList<ArgumentNode> arguments, GesValidationErrors errors)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var reported = new HashSet<string>(StringComparer.Ordinal);
@@ -1771,10 +1723,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateDuplicateHandlerLiteralParameters(
-        ParsedScript parsedScriptContext,
-        HandlerLiteralExpressionNode handlerLiteral,
-        GesValidationErrors errors)
+    private static void ValidateDuplicateHandlerLiteralParameters(ParsedScript parsedScriptContext, HandlerLiteralExpressionNode handlerLiteral, GesValidationErrors errors)
     {
         var seen = new HashSet<string>(StringComparer.Ordinal);
         var reported = new HashSet<string>(StringComparer.Ordinal);
@@ -1825,13 +1774,7 @@ internal static class GesAstValidator
         }
     }
 
-    private static void ValidateIdentifierCase(
-        ParsedScript parsedScriptContext,
-        string name,
-        string symbol,
-        GameEventScriptSymbolKind symbolKind,
-        string message,
-        GesValidationErrors errors)
+    private static void ValidateIdentifierCase(ParsedScript parsedScriptContext, string name, string symbol, GameEventScriptSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
         if (IsIdentifierCase(name))
         {
@@ -1846,13 +1789,7 @@ internal static class GesAstValidator
             GameEventScriptDiagnosticCodes.ValidateInvalidIdentifierCase);
     }
 
-    private static void ValidateMessageCase(
-        ParsedScript parsedScriptContext,
-        string name,
-        string symbol,
-        GameEventScriptSymbolKind symbolKind,
-        string message,
-        GesValidationErrors errors)
+    private static void ValidateMessageCase(ParsedScript parsedScriptContext, string name, string symbol, GameEventScriptSymbolKind symbolKind, string message, GesValidationErrors errors)
     {
         if (IsMessageCase(name))
         {

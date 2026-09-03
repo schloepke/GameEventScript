@@ -99,7 +99,8 @@ internal static class ConformanceRuntimeValueCodec
                 if (rolls.Length > 0) rolls[0] = int.MinValue;
                 return result;
             }
-            case var type when type.Length > 1 && type is not ":nothing" and not ":text" and not ":tag" and not ":boolean" and not ":integer" and not ":float" and not ":percentage" and not ":vector" and not ":point" and not ":range" and not ":message":
+            case var type when type.Length > 1 &&
+                                   type is not ":nothing" and not ":text" and not ":tag" and not ":boolean" and not ":integer" and not ":float" and not ":percentage" and not ":vector" and not ":point" and not ":range" and not ":message":
             {
                 var keys = new string[value.Entries.Count];
                 var values = new GesValue[value.Entries.Count];

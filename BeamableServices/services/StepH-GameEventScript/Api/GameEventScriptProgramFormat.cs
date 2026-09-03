@@ -75,13 +75,7 @@ public enum GameEventScriptProgramFormatErrorCode
 
 public sealed class GameEventScriptProgramFormatException : Exception
 {
-    public GameEventScriptProgramFormatException(
-        GameEventScriptProgramFormatErrorCode errorCode,
-        string message,
-        long? byteOffset = null,
-        ushort? sectionType = null,
-        int? entryIndex = null,
-        Exception? innerException = null)
+    public GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode errorCode, string message, long? byteOffset = null, ushort? sectionType = null, int? entryIndex = null, Exception? innerException = null)
         : base(message, innerException)
     {
         ErrorCode = errorCode;

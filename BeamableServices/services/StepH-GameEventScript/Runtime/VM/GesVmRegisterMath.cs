@@ -2,10 +2,10 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
-using static StepH.GameEventScript.Runtime.VM.GesVmUnitCalculation;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using static StepH.GameEventScript.Runtime.VM.GesVmUnitCalculation;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -512,11 +512,13 @@ internal static class GesVmRegisterMath
                 vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesValueVectorPoint vectorInt && ProductUnit(in a, in b) is { } vectorIntegerUnit) vmState.SetVector(dst, vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, vectorIntegerUnit);
+                if (a.ObjectValue is GesValueVectorPoint vectorInt && ProductUnit(in a, in b) is { } vectorIntegerUnit)
+                    vmState.SetVector(dst, vectorInt.X * b.IntegerValue, vectorInt.Y * b.IntegerValue, vectorInt.Z * b.IntegerValue, vectorIntegerUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Float:
-                if (a.ObjectValue is GesValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && ProductUnit(in a, in b) is { } vectorFloatUnit) vmState.SetVector(dst, vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, vectorFloatUnit);
+                if (a.ObjectValue is GesValueVectorPoint vectorFloat && double.IsFinite(b.FloatValue) && ProductUnit(in a, in b) is { } vectorFloatUnit)
+                    vmState.SetVector(dst, vectorFloat.X * b.FloatValue, vectorFloat.Y * b.FloatValue, vectorFloat.Z * b.FloatValue, vectorFloatUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Vector when b.Kind is Percentage:
@@ -540,7 +542,8 @@ internal static class GesVmRegisterMath
                 return;
             case Integer or Float when b.Kind is Vector:
                 var scalar = a.AsNumeric;
-                if (b.ObjectValue is GesValueVectorPoint rightVector && double.IsFinite(scalar) && ProductUnit(in a, in b) is { } rightVectorUnit) vmState.SetVector(dst, scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, rightVectorUnit);
+                if (b.ObjectValue is GesValueVectorPoint rightVector && double.IsFinite(scalar) && ProductUnit(in a, in b) is { } rightVectorUnit)
+                    vmState.SetVector(dst, scalar * rightVector.X, scalar * rightVector.Y, scalar * rightVector.Z, rightVectorUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             case Integer or Float when b.Kind is Point:
@@ -586,7 +589,8 @@ internal static class GesVmRegisterMath
         {
             case Vector:
             {
-                if (b.ObjectValue is GesValueVectorPoint vector && double.IsFinite(fallbackLeft) && ProductUnit(in a, in b) is { } vectorUnit) vmState.SetVector(dst, fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
+                if (b.ObjectValue is GesValueVectorPoint vector && double.IsFinite(fallbackLeft) && ProductUnit(in a, in b) is { } vectorUnit)
+                    vmState.SetVector(dst, fallbackLeft * vector.X, fallbackLeft * vector.Y, fallbackLeft * vector.Z, vectorUnit);
                 else vmState.SetFloat(dst, double.NaN);
                 return;
             }
@@ -645,7 +649,8 @@ internal static class GesVmRegisterMath
                 else dst.SetFloat(double.NaN);
                 return dst;
             case Vector when b.Kind is Integer:
-                if (a.ObjectValue is GesValueVectorPoint vectorInt && b.IntegerValue != 0 && QuotientUnit(in a, in b) is { } vectorIntegerUnit) dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, vectorIntegerUnit);
+                if (a.ObjectValue is GesValueVectorPoint vectorInt && b.IntegerValue != 0 && QuotientUnit(in a, in b) is { } vectorIntegerUnit)
+                    dst.SetVector(vectorInt.X / b.IntegerValue, vectorInt.Y / b.IntegerValue, vectorInt.Z / b.IntegerValue, vectorIntegerUnit);
                 else dst.SetFloat(double.NaN);
                 return dst;
             case Vector when b.Kind is Float:

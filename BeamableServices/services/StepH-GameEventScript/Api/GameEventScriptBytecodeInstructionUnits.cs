@@ -58,5 +58,5 @@ public static class GameEventScriptBytecodeInstructionUnits
             "s" or "second" => GameEventScriptBytecodeInstructionUnit.UnitSecond,
             _ => null
         };
-    
+
 }

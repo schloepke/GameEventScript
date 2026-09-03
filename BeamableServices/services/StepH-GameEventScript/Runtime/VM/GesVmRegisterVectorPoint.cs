@@ -1,7 +1,7 @@
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -80,8 +80,9 @@ internal static class GesVmRegisterVectorPoint
         }
         else if (unitY.HasValue)
         {
-            if(unitX != unitY || (unitZ.HasValue && unitX != unitZ)) unit = null;
-        } else if (unitZ.HasValue && unitX != unitZ)
+            if (unitX != unitY || (unitZ.HasValue && unitX != unitZ)) unit = null;
+        }
+        else if (unitZ.HasValue && unitX != unitZ)
         {
             unit = null;
         }
@@ -167,8 +168,9 @@ internal static class GesVmRegisterVectorPoint
         }
         else if (unitY.HasValue)
         {
-            if(unitX != unitY || (unitZ.HasValue && unitX != unitZ)) unit = null;
-        } else if (unitZ.HasValue && unitX != unitZ)
+            if (unitX != unitY || (unitZ.HasValue && unitX != unitZ)) unit = null;
+        }
+        else if (unitZ.HasValue && unitX != unitZ)
         {
             unit = null;
         }
@@ -181,5 +183,5 @@ internal static class GesVmRegisterVectorPoint
             vmState.SetPoint(destinationRegister, x, y, z, unit.Value);
         }
     }
-    
+
 }

@@ -148,9 +148,7 @@ public sealed class ConformanceMarkdownCorpusTests
         }
     }
 
-    private static ConformanceCaseResult ResultForCorpusReport(
-        ConformanceDocument document,
-        ConformanceCaseResult result)
+    private static ConformanceCaseResult ResultForCorpusReport(ConformanceDocument document, ConformanceCaseResult result)
     {
         if (result.Kind != ConformanceTestKind.Performance) return result;
         var testCase = document.Cases.Single(value => string.Equals(value.Id, result.CaseId, StringComparison.Ordinal));

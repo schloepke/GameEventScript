@@ -264,11 +264,7 @@ internal sealed partial class GesBinaryBuilder
         return builder.Build();
     }
 
-    private ushort[] ResolveBinds(
-        BinaryMaterializer builder,
-        Func<string, ushort> resolveText,
-        IReadOnlyDictionary<int, ushort> labelAddresses,
-        ProgramResourceAnalysis resourceAnalysis)
+    private ushort[] ResolveBinds(BinaryMaterializer builder, Func<string, ushort> resolveText, IReadOnlyDictionary<int, ushort> labelAddresses, ProgramResourceAnalysis resourceAnalysis)
     {
         var nextIds = new Dictionary<GameEventScriptBinaryBindKind, ushort>();
         var result = new ushort[_binds.Count];
@@ -351,10 +347,7 @@ internal sealed partial class GesBinaryBuilder
             return this;
         }
 
-        public BinaryMaterializer WithDebugSegments(
-            GameEventScriptDebugSymbolsSegment? debugSymbols,
-            GameEventScriptSourceMapSegment? sourceMap,
-            GameEventScriptSourceArchiveSegment? sourceArchive)
+        public BinaryMaterializer WithDebugSegments(GameEventScriptDebugSymbolsSegment? debugSymbols, GameEventScriptSourceMapSegment? sourceMap, GameEventScriptSourceArchiveSegment? sourceArchive)
         {
             _debugSymbols = debugSymbols;
             _sourceMap = sourceMap;
@@ -428,119 +421,119 @@ internal sealed partial class GesBinaryBuilder
                 ? FormattableString.Invariant($"AnonymousModule_{ComputeBinaryHash():X8}")
                 : _moduleName;
 
-    private uint ComputeBinaryHash()
-    {
-        var hash = new BinaryHashBuilder(2166136261u);
-
-        hash.MixUShort(_version);
-        hash.MixULong(_programVersion);
-        hash.MixUShort(_requiredRegisterCount);
-        hash.MixUShort(_requiredCallStackDepth);
-
-        for (var index = 0; index < _textConstants.Count; index++)
+        private uint ComputeBinaryHash()
         {
-            hash.MixString(_textConstants[index]);
-        }
+            var hash = new BinaryHashBuilder(2166136261u);
 
-        for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
-        {
-            var slice = _uint16Slices[sliceIndex];
-            hash.MixInt(slice.Length);
-            for (var index = 0; index < slice.Length; index++)
+            hash.MixUShort(_version);
+            hash.MixULong(_programVersion);
+            hash.MixUShort(_requiredRegisterCount);
+            hash.MixUShort(_requiredCallStackDepth);
+
+            for (var index = 0; index < _textConstants.Count; index++)
             {
-                hash.MixUShort(slice[index]);
-            }
-        }
-
-        for (var index = 0; index < _binds.Count; index++)
-        {
-            var bind = _binds[index];
-            hash.MixUInt((uint)bind.Kind);
-            hash.MixUShort(bind.Name);
-            hash.MixInt(bind.ArgumentNames.Count);
-            for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
-            {
-                hash.MixUShort(bind.ArgumentNames[argumentIndex]);
+                hash.MixString(_textConstants[index]);
             }
 
-            hash.MixUShort(bind.EntryAddress);
-            hash.MixUShort(bind.Id);
-            hash.MixUShort(bind.RequiredRegisterCount);
-            hash.MixUShort(bind.RequiredCallStackDepth);
-            hash.MixInt(bind.RequiredTags.Count);
-            for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
+            for (var sliceIndex = 0; sliceIndex < _uint16Slices.Count; sliceIndex++)
             {
-                hash.MixUShort(bind.RequiredTags[tagIndex]);
+                var slice = _uint16Slices[sliceIndex];
+                hash.MixInt(slice.Length);
+                for (var index = 0; index < slice.Length; index++)
+                {
+                    hash.MixUShort(slice[index]);
+                }
             }
 
-            hash.MixInt(bind.ExcludedTags.Count);
-            for (var tagIndex = 0; tagIndex < bind.ExcludedTags.Count; tagIndex++)
+            for (var index = 0; index < _binds.Count; index++)
             {
-                hash.MixUShort(bind.ExcludedTags[tagIndex]);
+                var bind = _binds[index];
+                hash.MixUInt((uint)bind.Kind);
+                hash.MixUShort(bind.Name);
+                hash.MixInt(bind.ArgumentNames.Count);
+                for (var argumentIndex = 0; argumentIndex < bind.ArgumentNames.Count; argumentIndex++)
+                {
+                    hash.MixUShort(bind.ArgumentNames[argumentIndex]);
+                }
+
+                hash.MixUShort(bind.EntryAddress);
+                hash.MixUShort(bind.Id);
+                hash.MixUShort(bind.RequiredRegisterCount);
+                hash.MixUShort(bind.RequiredCallStackDepth);
+                hash.MixInt(bind.RequiredTags.Count);
+                for (var tagIndex = 0; tagIndex < bind.RequiredTags.Count; tagIndex++)
+                {
+                    hash.MixUShort(bind.RequiredTags[tagIndex]);
+                }
+
+                hash.MixInt(bind.ExcludedTags.Count);
+                for (var tagIndex = 0; tagIndex < bind.ExcludedTags.Count; tagIndex++)
+                {
+                    hash.MixUShort(bind.ExcludedTags[tagIndex]);
+                }
+            }
+
+            for (var index = 0; index < _instructions.Count; index++)
+            {
+                var instruction = _instructions[index];
+                hash.MixByte((byte)instruction.OpCode);
+                hash.MixByte(instruction.UnitAndFlags);
+                hash.MixUShort(instruction.DestinationRegister);
+                hash.MixUShort((ushort)instruction.ImmediateX);
+                hash.MixUShort((ushort)instruction.ImmediateY);
+                hash.MixULong(instruction.Payload);
+            }
+
+            return hash.Value;
+        }
+
+        private struct BinaryHashBuilder
+        {
+            private uint _hash;
+
+            internal BinaryHashBuilder(uint hash)
+            {
+                _hash = hash;
+            }
+
+            internal readonly uint Value => _hash;
+
+            internal void MixString(string value)
+            {
+                MixInt(value.Length);
+                for (var index = 0; index < value.Length; index++)
+                {
+                    MixUShort(value[index]);
+                }
+            }
+
+            internal void MixInt(int value)
+                => MixUInt(unchecked((uint)value));
+
+            internal void MixUShort(ushort value)
+            {
+                MixByte((byte)value);
+                MixByte((byte)(value >> 8));
+            }
+
+            internal void MixUInt(uint value)
+            {
+                MixUShort((ushort)value);
+                MixUShort((ushort)(value >> 16));
+            }
+
+            internal void MixULong(ulong value)
+            {
+                MixUInt((uint)value);
+                MixUInt((uint)(value >> 32));
+            }
+
+            internal void MixByte(byte value)
+            {
+                _hash ^= value;
+                _hash *= 16777619u;
             }
         }
-
-        for (var index = 0; index < _instructions.Count; index++)
-        {
-            var instruction = _instructions[index];
-            hash.MixByte((byte)instruction.OpCode);
-            hash.MixByte(instruction.UnitAndFlags);
-            hash.MixUShort(instruction.DestinationRegister);
-            hash.MixUShort((ushort)instruction.ImmediateX);
-            hash.MixUShort((ushort)instruction.ImmediateY);
-            hash.MixULong(instruction.Payload);
-        }
-
-        return hash.Value;
-    }
-
-    private struct BinaryHashBuilder
-    {
-        private uint _hash;
-
-        internal BinaryHashBuilder(uint hash)
-        {
-            _hash = hash;
-        }
-
-        internal readonly uint Value => _hash;
-
-        internal void MixString(string value)
-        {
-            MixInt(value.Length);
-            for (var index = 0; index < value.Length; index++)
-            {
-                MixUShort(value[index]);
-            }
-        }
-
-        internal void MixInt(int value)
-            => MixUInt(unchecked((uint)value));
-
-        internal void MixUShort(ushort value)
-        {
-            MixByte((byte)value);
-            MixByte((byte)(value >> 8));
-        }
-
-        internal void MixUInt(uint value)
-        {
-            MixUShort((ushort)value);
-            MixUShort((ushort)(value >> 16));
-        }
-
-        internal void MixULong(ulong value)
-        {
-            MixUInt((uint)value);
-            MixUInt((uint)(value >> 32));
-        }
-
-        internal void MixByte(byte value)
-        {
-            _hash ^= value;
-            _hash *= 16777619u;
-        }
-    }
 
         private static GameEventScriptStringConstantSegment BuildTextTable(IReadOnlyList<string> values)
         {
@@ -738,11 +731,7 @@ internal sealed partial class GesBinaryBuilder
         return instruction;
     }
 
-    private static GameEventScriptBytecodeInstruction ApplyDestination(
-        GameEventScriptBytecodeInstruction instruction,
-        GesOperand operand,
-        IReadOnlyDictionary<int, ushort> registerMap,
-        IReadOnlyList<ushort> bindIds)
+    private static GameEventScriptBytecodeInstruction ApplyDestination(GameEventScriptBytecodeInstruction instruction, GesOperand operand, IReadOnlyDictionary<int, ushort> registerMap, IReadOnlyList<ushort> bindIds)
     {
         if (operand.Kind == GesOperandKind.None) return instruction;
         switch (operand.Kind)
@@ -1249,9 +1238,7 @@ internal sealed partial class GesBinaryBuilder
         return routineCompare != 0 ? routineCompare : CompareRegisterInterval(left, right);
     }
 
-    private sealed record RegisterAllocationResult(
-        IReadOnlyDictionary<int, ushort> RegisterMap,
-        IReadOnlyList<short> RoutineLocalCounts);
+    private sealed record RegisterAllocationResult(IReadOnlyDictionary<int, ushort> RegisterMap, IReadOnlyList<short> RoutineLocalCounts);
 
     private readonly record struct RegisterSymbol(int Id, string? Name, bool IsTemporary, int RoutineId, bool IsDebugVisible);
 
@@ -1260,15 +1247,7 @@ internal sealed partial class GesBinaryBuilder
         public string DisplayName => Name ?? $"L_{Id}";
     }
 
-    private sealed record BindPlan(
-        int Index,
-        GameEventScriptBinaryBindKind Kind,
-        string Name,
-        IReadOnlyList<string> ArgumentNames,
-        GesLabelRef? EntryLabel,
-        ushort? Id,
-        IReadOnlyList<string> RequiredTags,
-        IReadOnlyList<string> ExcludedTags);
+    private sealed record BindPlan(int Index, GameEventScriptBinaryBindKind Kind, string Name, IReadOnlyList<string> ArgumentNames, GesLabelRef? EntryLabel, ushort? Id, IReadOnlyList<string> RequiredTags, IReadOnlyList<string> ExcludedTags);
 
     private struct RegisterInterval(int registerId, int start, int end)
     {

@@ -37,7 +37,9 @@ internal static class ConformanceSchemaBinder
             var yaml = ResolveYamlBlocks(testSyntax, limits);
             if (yaml.Case is null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Every test requires exactly one yaml block with 'gesBlock: case'.", text.Lines[testSyntax.StartLineIndex].Range());
             var caseNode = yaml.Case;
-            Closed(caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "externalTypeRegistry", "hostCount", "deferredPrograms", "nativeHandlers", "stepActions", "messageApi", "valueApi", "externalTypeApi", "binaryFixture", "performance");
+            Closed(
+                caseNode, "gesBlock", "id", "kind", "level", "categories", "tags", "requires", "compile", "runtimeLimits", "comparison", "sources", "random", "publishSink", "externalTypeRegistry", "hostCount", "deferredPrograms", "nativeHandlers",
+                "stepActions", "messageApi", "valueApi", "externalTypeApi", "binaryFixture", "performance");
             var id = RequiredId(caseNode, "id");
             if (!ids.Add(id)) throw Schema(ConformanceDiagnosticCodes.SchemaDuplicateId, $"Duplicate case ID '{id}'.", Property(caseNode, "id")!.Value.Range);
             var defaults = ParseDefaults(caseNode, suiteDefaults);
@@ -50,10 +52,13 @@ internal static class ConformanceSchemaBinder
             var publishSink = BindPublishSink(OptionalString(caseNode, "publishSink"), Optional(caseNode, "publishSink")?.Range ?? caseNode.Range);
             var externalTypeRegistry = BindExternalTypeRegistry(OptionalString(caseNode, "externalTypeRegistry"), Optional(caseNode, "externalTypeRegistry")?.Range ?? caseNode.Range);
             var hostCount = OptionalUInt32(caseNode, "hostCount") ?? 1;
-            if (hostCount == 0 || limits.MaxHostsPerTest <= 0 || hostCount > (uint)limits.MaxHostsPerTest) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount must be positive and within MaxHostsPerTest.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
+            if (hostCount == 0 || limits.MaxHostsPerTest <= 0 || hostCount > (uint)limits.MaxHostsPerTest)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount must be positive and within MaxHostsPerTest.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
             var deferredPrograms = OptionalStringList(caseNode, "deferredPrograms", ids: true) ?? new List<string>();
-            if (hostCount > 1 && defaults.Kind != ConformanceTestKind.ScriptApi) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount greater than one is supported only by scriptApi.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
-            if (deferredPrograms.Count > 0 && defaults.Kind != ConformanceTestKind.ScriptApi) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "deferredPrograms is supported only by scriptApi.", Optional(caseNode, "deferredPrograms")?.Range ?? caseNode.Range);
+            if (hostCount > 1 && defaults.Kind != ConformanceTestKind.ScriptApi)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "hostCount greater than one is supported only by scriptApi.", Optional(caseNode, "hostCount")?.Range ?? caseNode.Range);
+            if (deferredPrograms.Count > 0 && defaults.Kind != ConformanceTestKind.ScriptApi)
+                throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "deferredPrograms is supported only by scriptApi.", Optional(caseNode, "deferredPrograms")?.Range ?? caseNode.Range);
             var messageApi = BindMessageApi(Optional(caseNode, "messageApi"));
             var valueApi = BindValueApi(Optional(caseNode, "valueApi"));
             var externalTypeApi = BindExternalTypeApi(Optional(caseNode, "externalTypeApi"));
@@ -255,7 +260,12 @@ internal static class ConformanceSchemaBinder
         return result;
     }
 
-    private static void ValidateHostReferences(IReadOnlyList<ConformanceSourceInput> sources, IReadOnlyList<string> deferredPrograms, IReadOnlyList<ConformanceNativeHandler> nativeHandlers, IReadOnlyDictionary<string, IReadOnlyList<ConformanceNativeAction>> stepActions, ConformanceSourceRange range)
+    private static void ValidateHostReferences(
+        IReadOnlyList<ConformanceSourceInput> sources,
+        IReadOnlyList<string> deferredPrograms,
+        IReadOnlyList<ConformanceNativeHandler> nativeHandlers,
+        IReadOnlyDictionary<string, IReadOnlyList<ConformanceNativeAction>> stepActions,
+        ConformanceSourceRange range)
     {
         var programs = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < sources.Count; index++) programs.Add(sources[index].ProgramId);
@@ -268,11 +278,11 @@ internal static class ConformanceSchemaBinder
         }
         var handlers = new HashSet<string>(nativeHandlers.Select(value => value.Id), StringComparer.Ordinal);
         for (var handlerIndex = 0; handlerIndex < nativeHandlers.Count; handlerIndex++)
-        for (var actionIndex = 0; actionIndex < nativeHandlers[handlerIndex].Actions.Count; actionIndex++)
-            ValidateHostAction(nativeHandlers[handlerIndex].Actions[actionIndex], programs, deferred, handlers, range);
+            for (var actionIndex = 0; actionIndex < nativeHandlers[handlerIndex].Actions.Count; actionIndex++)
+                ValidateHostAction(nativeHandlers[handlerIndex].Actions[actionIndex], programs, deferred, handlers, range);
         foreach (var actions in stepActions.Values)
-        for (var actionIndex = 0; actionIndex < actions.Count; actionIndex++)
-            ValidateHostAction(actions[actionIndex], programs, deferred, handlers, range);
+            for (var actionIndex = 0; actionIndex < actions.Count; actionIndex++)
+                ValidateHostAction(actions[actionIndex], programs, deferred, handlers, range);
     }
 
     private static void ValidateHostAction(ConformanceNativeAction action, HashSet<string> programs, HashSet<string> deferred, HashSet<string> handlers, ConformanceSourceRange range)
@@ -443,7 +453,8 @@ internal static class ConformanceSchemaBinder
             if ((mode is ConformancePumpMode.Completion or ConformancePumpMode.Enqueue) && step.Budget.Length != 0) throw Schema(ConformanceDiagnosticCodes.InvalidStepsTable, "A completion or enqueue step has an empty budget.", step.Range);
             if (mode is ConformancePumpMode.Frames or ConformancePumpMode.Frame)
             {
-                if (!uint.TryParse(step.Budget, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) || parsed == 0) throw Schema(ConformanceDiagnosticCodes.InvalidStepsTable, "A frames step requires a positive UInt32 budget.", step.Range);
+                if (!uint.TryParse(step.Budget, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed) || parsed == 0)
+                    throw Schema(ConformanceDiagnosticCodes.InvalidStepsTable, "A frames step requires a positive UInt32 budget.", step.Range);
                 budget = parsed;
             }
             var expected = expectationMap is null ? null : Property(expectationMap, step.Id)?.Value;
@@ -454,7 +465,9 @@ internal static class ConformanceSchemaBinder
 
     private static ConformanceStepExpectation BindStepExpectation(string receive, YamlNode? node)
     {
-        if (node is null) return new ConformanceStepExpectation(new ConformanceMessage(receive, Array.Empty<string>(), Array.Empty<ConformanceArgument>()), true, Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), null, EmptyObservations());
+        if (node is null)
+            return new ConformanceStepExpectation(
+                new ConformanceMessage(receive, Array.Empty<string>(), Array.Empty<ConformanceArgument>()), true, Array.Empty<ConformanceMessage>(), Array.Empty<ConformanceMessage>(), null, EmptyObservations());
         Closed(node, "input", "accepted", "local", "outbound", "paused", "runtimeLimits", "diagnostics", "trace");
         var inputNode = Optional(node, "input");
         var tags = new List<string>();
@@ -907,7 +920,17 @@ internal static class ConformanceSchemaBinder
         }
     }
 
-    private static void ValidateCardinality(ConformanceTestKind kind, MarkdownCaseSyntax syntax, YamlNode? expectation, int sourceCount, int nativeHandlerCount, ConformanceMessageApiCase? messageApi, ConformanceValueApiCase? valueApi, ConformanceExternalTypeApiCase? externalTypeApi, ConformanceBinaryFixture? binaryFixture, ConformancePerformanceWorkload? workload)
+    private static void ValidateCardinality(
+        ConformanceTestKind kind,
+        MarkdownCaseSyntax syntax,
+        YamlNode? expectation,
+        int sourceCount,
+        int nativeHandlerCount,
+        ConformanceMessageApiCase? messageApi,
+        ConformanceValueApiCase? valueApi,
+        ConformanceExternalTypeApiCase? externalTypeApi,
+        ConformanceBinaryFixture? binaryFixture,
+        ConformancePerformanceWorkload? workload)
     {
         var apiOnly = kind is ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi;
         if (apiOnly && sourceCount != 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "API object tests do not accept GES source.", syntax.Sources[0].BlockRange);
@@ -918,7 +941,9 @@ internal static class ConformanceSchemaBinder
             if (syntax.AssemblerBlock is null || expectation is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "bytecodeSnapshot requires one gesa block and no expectation block.", syntax.CaseBlock!.BlockRange);
         }
         else if (syntax.AssemblerBlock is not null) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "Only bytecodeSnapshot accepts a gesa block.", syntax.AssemblerBlock.BlockRange);
-        if (kind is ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi or ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance or ConformanceTestKind.ProgramBinary && expectation is null)
+        if (kind is (ConformanceTestKind.CompileError or ConformanceTestKind.LoadError or ConformanceTestKind.MessageApi or ConformanceTestKind.ValueApi or ConformanceTestKind.ExternalTypeApi or
+                     ConformanceTestKind.CompileMetadata or ConformanceTestKind.Bytecode or ConformanceTestKind.Performance or ConformanceTestKind.ProgramBinary) &&
+            expectation is null)
             throw Schema(ConformanceDiagnosticCodes.SchemaInvalidCardinality, "This test kind requires a yaml block with 'gesBlock: expect'.", syntax.CaseBlock!.BlockRange);
         if (expectation is not null)
         {
@@ -1113,11 +1138,17 @@ internal static class ConformanceSchemaBinder
         if (!long.TryParse(value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var parsed)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "The value is outside Int64.", node.Range);
         return parsed;
     }
-    private static int ParseInt32(YamlNode node) { var value = ParseInt64(node); if (value < int.MinValue || value > int.MaxValue) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "The value is outside Int32.", node.Range); return (int)value; }
+    private static int ParseInt32(YamlNode node)
+    {
+        var value = ParseInt64(node);
+        if (value < int.MinValue || value > int.MaxValue) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "The value is outside Int32.", node.Range);
+        return (int)value;
+    }
     private static uint ParseUInt32(YamlNode node) { var value = ParseUInt64(node); if (value > uint.MaxValue) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "The value is outside UInt32.", node.Range); return (uint)value; }
     private static ulong ParseUInt64(YamlNode node)
     {
-        if (node.Kind != YamlNodeKind.Integer || node.Scalar![0] == '-' || !ulong.TryParse(node.Scalar, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A UInt64 is required.", node.Range);
+        if (node.Kind != YamlNodeKind.Integer || node.Scalar![0] == '-' || !ulong.TryParse(node.Scalar, NumberStyles.None, CultureInfo.InvariantCulture, out var parsed))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A UInt64 is required.", node.Range);
         return parsed;
     }
 
@@ -1136,10 +1167,17 @@ internal static class ConformanceSchemaBinder
         if (value is null) return null;
         return value switch
         {
-            "scriptApi" => ConformanceTestKind.ScriptApi, "compileError" => ConformanceTestKind.CompileError, "loadError" => ConformanceTestKind.LoadError,
-            "messageApi" => ConformanceTestKind.MessageApi, "compileMetadata" => ConformanceTestKind.CompileMetadata, "bytecode" => ConformanceTestKind.Bytecode,
-            "performance" => ConformanceTestKind.Performance, "bytecodeSnapshot" => ConformanceTestKind.BytecodeSnapshot,
-            "valueApi" => ConformanceTestKind.ValueApi, "externalTypeApi" => ConformanceTestKind.ExternalTypeApi, "programBinary" => ConformanceTestKind.ProgramBinary,
+            "scriptApi" => ConformanceTestKind.ScriptApi,
+            "compileError" => ConformanceTestKind.CompileError,
+            "loadError" => ConformanceTestKind.LoadError,
+            "messageApi" => ConformanceTestKind.MessageApi,
+            "compileMetadata" => ConformanceTestKind.CompileMetadata,
+            "bytecode" => ConformanceTestKind.Bytecode,
+            "performance" => ConformanceTestKind.Performance,
+            "bytecodeSnapshot" => ConformanceTestKind.BytecodeSnapshot,
+            "valueApi" => ConformanceTestKind.ValueApi,
+            "externalTypeApi" => ConformanceTestKind.ExternalTypeApi,
+            "programBinary" => ConformanceTestKind.ProgramBinary,
             _ => throw Schema(ConformanceDiagnosticCodes.SchemaUnknownKind, $"Unknown test kind '{value}'.", Property(node, name)!.Value.Range)
         };
     }
@@ -1148,7 +1186,12 @@ internal static class ConformanceSchemaBinder
     {
         var value = OptionalString(node, name);
         if (value is null) return null;
-        return value switch { "atomic" => ConformanceTestLevel.Atomic, "scenario" => ConformanceTestLevel.Scenario, _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, $"Unknown test level '{value}'.", Property(node, name)!.Value.Range) };
+        return value switch
+        {
+            "atomic" => ConformanceTestLevel.Atomic,
+            "scenario" => ConformanceTestLevel.Scenario,
+            _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, $"Unknown test level '{value}'.", Property(node, name)!.Value.Range)
+        };
     }
 
     private static List<string> Merge(IReadOnlyList<string>? parent, IReadOnlyList<string>? current)
@@ -1178,11 +1221,16 @@ internal static class ConformanceSchemaBinder
     private static string FiniteNonNegative(YamlNode node)
     {
         var text = ScalarText(node);
-        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || double.IsNaN(value) || double.IsInfinity(value) || value < 0) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A finite non-negative Binary64 value is required.", node.Range);
+        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || double.IsNaN(value) || double.IsInfinity(value) || value < 0)
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A finite non-negative Binary64 value is required.", node.Range);
         return text;
     }
     private static string? OptionalFiniteNonNegative(YamlNode node, string name) => Optional(node, name) is { } value ? FiniteNonNegative(value) : null;
-    private static void RequireFiniteBinary64(string text, ConformanceSourceRange range) { if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || double.IsNaN(value) || double.IsInfinity(value)) throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A finite Binary64 value is required.", range); }
+    private static void RequireFiniteBinary64(string text, ConformanceSourceRange range)
+    {
+        if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) || double.IsNaN(value) || double.IsInfinity(value))
+            throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "A finite Binary64 value is required.", range);
+    }
     private static void RequireCanonicalFiniteBinary64(string text, ConformanceSourceRange range)
     {
         RequireFiniteBinary64(text, range);
@@ -1227,12 +1275,22 @@ internal static class ConformanceSchemaBinder
         _ => throw Schema(ConformanceDiagnosticCodes.SchemaInvalidValue, "externalTypeRegistry must be environment, absent or mismatch.", range)
     };
 
-    private static ConformanceObservationExpectation EmptyObservations() => new(Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceExpectedDiagnostic>(), false, Array.Empty<ConformanceObserverEventExpectation>());
+    private static ConformanceObservationExpectation EmptyObservations()
+        => new(
+            Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceRuntimeLimitExpectation>(), Array.Empty<ConformanceExpectedDiagnostic>(), false, Array.Empty<ConformanceObserverEventExpectation>());
     private static ConformanceFailure Schema(string code, string message, ConformanceSourceRange range) => new(code, message, range);
 
     private sealed class Defaults
     {
-        internal Defaults(ConformanceTestKind? kind, ConformanceTestLevel? level, List<string> categories, List<string> tags, ConformanceCapabilityRequirements requires, ConformanceCompileOptions compile, ConformanceRuntimeLimits runtimeLimits, ConformanceComparisonOptions comparison)
+        internal Defaults(
+            ConformanceTestKind? kind,
+            ConformanceTestLevel? level,
+            List<string> categories,
+            List<string> tags,
+            ConformanceCapabilityRequirements requires,
+            ConformanceCompileOptions compile,
+            ConformanceRuntimeLimits runtimeLimits,
+            ConformanceComparisonOptions comparison)
         { Kind = kind; Level = level; Categories = categories; Tags = tags; Requires = requires; Compile = compile; RuntimeLimits = runtimeLimits; Comparison = comparison; }
         internal ConformanceTestKind? Kind { get; }
         internal ConformanceTestLevel? Level { get; }

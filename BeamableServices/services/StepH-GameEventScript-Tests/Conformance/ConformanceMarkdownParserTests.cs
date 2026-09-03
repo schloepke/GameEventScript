@@ -1,6 +1,6 @@
-using System.Text;
 using System.Reflection;
 using System.Security.Cryptography;
+using System.Text;
 using StepH.GameEventScript.Conformance;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -150,7 +150,9 @@ steps:
     [TestMethod]
     public void PreservesUtf8ByteRangesBomAndCrLogicalLines()
     {
-        var markdown = "---\rformatVersion: 1\rsuiteId: unicode.test\rkind: bytecodeSnapshot\rlevel: atomic\r---\r## Test: Ünicode\r```yaml\rgesBlock: case\rid: emoji\r```\r```ges\ron Start() { emit Done(text: \"😀\") }\r```\r```gesa\r.segment code\r```\r";
+        var markdown = "---\rformatVersion: 1\rsuiteId: unicode.test\rkind: bytecodeSnapshot\rlevel: atomic\r---\r" +
+                       "## Test: Ünicode\r```yaml\rgesBlock: case\rid: emoji\r```\r```ges\ron Start() { emit Done(text: \"😀\") }\r```\r" +
+                       "```gesa\r.segment code\r```\r";
         var body = Encoding.UTF8.GetBytes(markdown);
         var bytes = new byte[body.Length + 3];
         bytes[0] = 0xef; bytes[1] = 0xbb; bytes[2] = 0xbf;
@@ -170,7 +172,9 @@ steps:
     [TestMethod]
     public void PreservesEmbeddedByteOrderMarkScalarInsideGesSource()
     {
-        var markdown = "---\nformatVersion: 1\nsuiteId: unicode.bom\nkind: bytecode\nlevel: atomic\n---\n## Test: Embedded BOM\n```yaml\ngesBlock: case\nid: source\n```\n```ges\n\ufeffon Start {}\n```\n```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```\n";
+        var markdown = "---\nformatVersion: 1\nsuiteId: unicode.bom\nkind: bytecode\nlevel: atomic\n---\n" +
+                       "## Test: Embedded BOM\n```yaml\ngesBlock: case\nid: source\n```\n```ges\n\ufeffon Start {}\n```\n" +
+                       "```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```\n";
 
         var document = ConformanceMarkdownParser.Parse(markdown);
 
@@ -180,7 +184,10 @@ steps:
     [TestMethod]
     public void ParsesExplicitMessageArgumentMappingNegativeCase()
     {
-        const string markdown = "---\nformatVersion: 1\nsuiteId: message.invalid-shape\nkind: messageApi\nlevel: atomic\n---\n## Test: Mapping\n```yaml\ngesBlock: case\nid: mapping\nmessageApi:\n  signature: { name: Score, parameters: [score] }\n  message:\n    name: Score\n    args:\n      score: { type: \":integer\", value: \"1\" }\n```\n```yaml\ngesBlock: expect\nmessage: { error: invalidArgumentsShape }\n```\n";
+        const string markdown = "---\nformatVersion: 1\nsuiteId: message.invalid-shape\nkind: messageApi\nlevel: atomic\n---\n" +
+                                "## Test: Mapping\n```yaml\ngesBlock: case\nid: mapping\nmessageApi:\n  signature: { name: Score, parameters: [score] }\n" +
+                                "  message:\n    name: Score\n    args:\n      score: { type: \":integer\", value: \"1\" }\n```\n" +
+                                "```yaml\ngesBlock: expect\nmessage: { error: invalidArgumentsShape }\n```\n";
 
         var test = ConformanceMarkdownParser.Parse(markdown).Cases[0];
 
@@ -192,7 +199,10 @@ steps:
     [TestMethod]
     public void ParsesExplicitRuntimeLimitWildcard()
     {
-        const string markdown = "---\nformatVersion: 1\nsuiteId: limits.wildcard\nkind: scriptApi\nlevel: atomic\n---\n## Test: No limits\n```yaml\ngesBlock: case\nid: none\n```\n```ges\non Start {}\n```\n### Steps\n| step | receive | pump | budget |\n| --- | --- | --- | --- |\n| run | Start | completion | |\n```yaml\ngesBlock: expect\nsteps:\n  run:\n    runtimeLimits:\n      exclude:\n        - any: true\n```\n";
+        const string markdown = "---\nformatVersion: 1\nsuiteId: limits.wildcard\nkind: scriptApi\nlevel: atomic\n---\n" +
+                                "## Test: No limits\n```yaml\ngesBlock: case\nid: none\n```\n```ges\non Start {}\n```\n" +
+                                "### Steps\n| step | receive | pump | budget |\n| --- | --- | --- | --- |\n| run | Start | completion | |\n" +
+                                "```yaml\ngesBlock: expect\nsteps:\n  run:\n    runtimeLimits:\n      exclude:\n        - any: true\n```\n";
 
         var wildcard = ConformanceMarkdownParser.Parse(markdown).Cases[0].Steps[0].Expectation.Observations.ExcludedRuntimeLimits[0];
 
@@ -494,12 +504,14 @@ binary:
     [TestMethod]
     [DataRow("not frontmatter", ConformanceDiagnosticCodes.MissingFrontmatter)]
     [DataRow("---\nformatVersion: 1", ConformanceDiagnosticCodes.UnterminatedFrontmatter)]
-    [DataRow("---\nformatVersion: 2\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```yaml\ngesBlock: case\nid: a\n```\n```ges\non A() {}\n```\n```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```", ConformanceDiagnosticCodes.SchemaUnsupportedVersion)]
+    [DataRow("---\nformatVersion: 2\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```yaml\ngesBlock: case\nid: a\n```\n" +
+             "```ges\non A() {}\n```\n```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```", ConformanceDiagnosticCodes.SchemaUnsupportedVersion)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test:A", ConformanceDiagnosticCodes.InvalidTestHeading)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```ges-source\nx", ConformanceDiagnosticCodes.UnterminatedFence)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```yaml\ngesBlock: case\nid: a\nid: b\n```", ConformanceDiagnosticCodes.YamlDuplicateKey)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\nunknown: true\n---\n## Test: A\n```yaml\ngesBlock: case\nid: a\n```", ConformanceDiagnosticCodes.SchemaUnknownField)]
-    [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: scriptApi\nlevel: atomic\n---\n## Test: A\n```yaml\ngesBlock: case\nid: a\n```\n```ges\non A() {}\n```\n### Steps\n| wrong | table |\n| --- | --- |", ConformanceDiagnosticCodes.InvalidStepsTable)]
+    [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: scriptApi\nlevel: atomic\n---\n## Test: A\n```yaml\ngesBlock: case\nid: a\n```\n" +
+             "```ges\non A() {}\n```\n### Steps\n| wrong | table |\n| --- | --- |", ConformanceDiagnosticCodes.InvalidStepsTable)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```yaml\nid: a\n```", ConformanceDiagnosticCodes.SchemaMissingField)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```yaml\ngesBlock: result\nid: a\n```", ConformanceDiagnosticCodes.SchemaInvalidValue)]
     [DataRow("---\nformatVersion: 1\nsuiteId: sample\nkind: bytecode\nlevel: atomic\n---\n## Test: A\n```yaml ges-case\nid: a\n```", ConformanceDiagnosticCodes.UnknownSemanticFence)]
@@ -546,7 +558,8 @@ code
     [TestMethod]
     public void TreatsYamlOutsideTestsAsDocumentation()
     {
-        const string markdown = "---\nformatVersion: 1\nsuiteId: prose.yaml\nkind: bytecodeSnapshot\nlevel: atomic\n---\n```yaml\nordinary: documentation\n```\n## Test: One\n```yaml\ngesBlock: case\nid: one\n```\n```ges\non A() {}\n```\n```gesa\ncode\n```\n";
+        const string markdown = "---\nformatVersion: 1\nsuiteId: prose.yaml\nkind: bytecodeSnapshot\nlevel: atomic\n---\n```yaml\nordinary: documentation\n```\n" +
+                                "## Test: One\n```yaml\ngesBlock: case\nid: one\n```\n```ges\non A() {}\n```\n```gesa\ncode\n```\n";
 
         var document = ConformanceMarkdownParser.Parse(markdown);
 
@@ -587,7 +600,9 @@ code
     [TestMethod]
     public void AcceptsLiteralAstralScalarsInDoubleQuotedYamlStrings()
     {
-        const string markdown = "---\nformatVersion: 1\nsuiteId: astral.scalar\nkind: valueApi\nlevel: atomic\n---\n## Test: One\n```yaml\ngesBlock: case\nid: one\nvalueApi:\n  value: { type: \":text\", value: \"𐀀\" }\n```\n```yaml\ngesBlock: expect\nvalue:\n  normalized: { type: \":text\", value: \"𐀀\" }\n```\n";
+        const string markdown = "---\nformatVersion: 1\nsuiteId: astral.scalar\nkind: valueApi\nlevel: atomic\n---\n" +
+                                "## Test: One\n```yaml\ngesBlock: case\nid: one\nvalueApi:\n  value: { type: \":text\", value: \"𐀀\" }\n```\n" +
+                                "```yaml\ngesBlock: expect\nvalue:\n  normalized: { type: \":text\", value: \"𐀀\" }\n```\n";
 
         var document = ConformanceMarkdownParser.Parse(markdown);
 
@@ -633,12 +648,5 @@ code
         return result;
     }
 
-    private sealed record ParserFixture(
-        string Id,
-        string Outcome,
-        string RelativePath,
-        string Sha256,
-        string ExpectedSuiteId,
-        string ExpectedCaseId,
-        string ExpectedDiagnosticCode);
+    private sealed record ParserFixture(string Id, string Outcome, string RelativePath, string Sha256, string ExpectedSuiteId, string ExpectedCaseId, string ExpectedDiagnosticCode);
 }

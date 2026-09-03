@@ -229,11 +229,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
         return new GameEventScriptCSharpExternalFieldBinding(definition, reader);
     }
 
-    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(
-        Type clrType,
-        string typeName,
-        ISet<string> fieldNames,
-        GameEventScriptCSharpExternalTypeRegistry registry)
+    private static IReadOnlyList<ReflectionExternalTypeConstructor> BuildConstructors(Type clrType, string typeName, ISet<string> fieldNames, GameEventScriptCSharpExternalTypeRegistry registry)
     {
         var constructors = new List<ReflectionExternalTypeConstructor>();
         foreach (var constructor in clrType.GetConstructors(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
@@ -277,12 +273,7 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
         return constructors;
     }
 
-    private static ReflectionExternalTypeConstructor BuildConstructorBinding(
-        string typeName,
-        ISet<string> fieldNames,
-        MethodBase method,
-        Func<object?[], object?> invoke,
-        GameEventScriptCSharpExternalTypeRegistry registry)
+    private static ReflectionExternalTypeConstructor BuildConstructorBinding(string typeName, ISet<string> fieldNames, MethodBase method, Func<object?[], object?> invoke, GameEventScriptCSharpExternalTypeRegistry registry)
     {
         var parameters = method.GetParameters()
             .Select(parameter => BuildParameterDefinition(method, fieldNames, parameter))
@@ -353,22 +344,15 @@ public sealed class GameEventScriptCSharpExternalTypeRegistry : IGameEventScript
     }
 }
 
-internal sealed record GameEventScriptCSharpExternalFieldBinding(
-    GameEventScriptExternalTypeFieldDefinition Definition,
-    Func<object, object?> Reader);
+internal sealed record GameEventScriptCSharpExternalFieldBinding(GameEventScriptExternalTypeFieldDefinition Definition, Func<object, object?> Reader);
 
-internal sealed class GameEventScriptCSharpExternalTypeBinding(
-    GameEventScriptExternalTypeDefinition definition,
-    IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> fields)
+internal sealed class GameEventScriptCSharpExternalTypeBinding(GameEventScriptExternalTypeDefinition definition, IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> fields)
 {
     internal GameEventScriptExternalTypeDefinition Definition { get; } = definition;
     internal IReadOnlyDictionary<string, GameEventScriptCSharpExternalFieldBinding> Fields { get; } = fields;
 }
 
-internal sealed class GameEventScriptCSharpExternalValue(
-    object instance,
-    GameEventScriptCSharpExternalTypeBinding binding,
-    GameEventScriptCSharpExternalTypeRegistry registry) : IGameEventScriptExternalValue
+internal sealed class GameEventScriptCSharpExternalValue(object instance, GameEventScriptCSharpExternalTypeBinding binding, GameEventScriptCSharpExternalTypeRegistry registry) : IGameEventScriptExternalValue
 {
     internal object Instance { get; } = instance;
 

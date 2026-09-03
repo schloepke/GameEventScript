@@ -3,10 +3,10 @@
 using System;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
+using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeOpCode;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Runtime.VM.GesVmState.StateValue;
-using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -59,7 +59,7 @@ internal static class GameEventScriptVirtualMachine
                     case JumpIfNothing:
                         if (vmState.IsRegisterNothing(instruction.ConditionRegister)) vmState.JumpAddress(instruction.TargetAddress);
                         break;
-                    
+
                     case Call:
                         vmState.CallAddress(instruction.TargetAddress, instruction.DestinationRegister, instruction.HasInstructionFlag(GameEventScriptInstructionFlag.NormalizeResultAsPredicate));
                         break;

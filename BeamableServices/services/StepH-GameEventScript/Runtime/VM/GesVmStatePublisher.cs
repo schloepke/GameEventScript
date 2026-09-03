@@ -1,7 +1,7 @@
 using System;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -39,7 +39,13 @@ internal static class GesVmStatePublisher
             return false;
         }
     }
-    internal static bool GesVmPublishMessageWithTags(this GesVmState vmState, ushort outboundMessageSignatureIndex, GameEventScriptUInt16IndexList argumentRegisters, GameEventScriptUInt16IndexList tagRegisters, bool publish, GameEventScriptContext context)
+    internal static bool GesVmPublishMessageWithTags(
+        this GesVmState vmState,
+        ushort outboundMessageSignatureIndex,
+        GameEventScriptUInt16IndexList argumentRegisters,
+        GameEventScriptUInt16IndexList tagRegisters,
+        bool publish,
+        GameEventScriptContext context)
     {
         if (outboundMessageSignatureIndex >= vmState.OutboundMessageSignatures.Length) return false;
         var signature = vmState.OutboundMessageSignatures[outboundMessageSignatureIndex];

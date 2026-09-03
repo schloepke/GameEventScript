@@ -1,8 +1,8 @@
 using System;
 using StepH.GameEventScript.Api;
+using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodePatternKind;
 using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -371,7 +371,7 @@ internal static class GesVmRegisterPatterns
         value.SetList(list);
         return value;
     }
-   
+
     private static bool IsFullHouseDice(int[] dice)
     {
         if (dice.Length != 5) return false;

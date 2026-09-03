@@ -7,10 +7,7 @@ public interface IGameEventScriptPublishSink
     bool Publish(GameEventScriptMessage message);
 }
 
-public readonly struct GameEventScriptPublishResult(
-    bool localAccepted,
-    bool outboundAttempted,
-    bool outboundAccepted)
+public readonly struct GameEventScriptPublishResult(bool localAccepted, bool outboundAttempted, bool outboundAccepted)
 {
     public bool LocalAccepted { get; } = localAccepted;
     public bool OutboundAttempted { get; } = outboundAttempted;

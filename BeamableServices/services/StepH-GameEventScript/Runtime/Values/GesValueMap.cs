@@ -23,10 +23,10 @@ public sealed class GesValueMap
             GameEventScriptText.RequireValidUnicode(_keys[index], nameof(keys));
         Array.Sort(_keys, _values, GameEventScriptText.ScalarComparer);
     }
-    
+
     public int Length => _keys.Length;
     public int StorageLength => _keys.Length;
-    
+
     internal GesValue[] KeyList => _keyList ??= CreateListOfKeys();
     internal GesValue[] ValueList => _valueList ??= CreateListOfValues();
     internal GesValue[] EntryList => _entries ??= CreateListOfEntries();

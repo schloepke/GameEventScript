@@ -138,10 +138,7 @@ public sealed class GesExternalTypeConstructorCall
 
 public sealed class GameEventScriptExternalTypeDefinition
 {
-    public GameEventScriptExternalTypeDefinition(
-        string name,
-        IEnumerable<GameEventScriptExternalTypeFieldDefinition> fields,
-        IEnumerable<GameEventScriptExternalTypeConstructorDefinition> constructors)
+    public GameEventScriptExternalTypeDefinition(string name, IEnumerable<GameEventScriptExternalTypeFieldDefinition> fields, IEnumerable<GameEventScriptExternalTypeConstructorDefinition> constructors)
     {
         Name = GameEventScriptExternalTypeNames.NormalizeTypeName(name);
         var copiedFields = CopyFields(fields ?? throw new ArgumentNullException(nameof(fields)));

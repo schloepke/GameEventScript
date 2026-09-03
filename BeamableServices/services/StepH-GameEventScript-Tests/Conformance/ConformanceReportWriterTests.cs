@@ -213,12 +213,18 @@ public sealed class ConformanceReportWriterTests
     private static ConformanceDocument ParseBytecode(string suiteId, string caseId, string title, string? optionalCapability = null)
     {
         var optional = optionalCapability is null ? "" : "requires:\n  optional: [" + optionalCapability + "]\n";
-        return ConformanceMarkdownParser.Parse("---\nformatVersion: 1\nsuiteId: " + suiteId + "\nkind: bytecode\nlevel: atomic\n" + optional + "---\n## Test: " + title + "\n```yaml\ngesBlock: case\nid: " + caseId + "\n```\n```ges\non Start() {}\n```\n```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```\n");
+        return ConformanceMarkdownParser.Parse("---\nformatVersion: 1\nsuiteId: " + suiteId + "\nkind: bytecode\nlevel: atomic\n" + optional +
+                                                   "---\n## Test: " + title + "\n```yaml\ngesBlock: case\nid: " + caseId + "\n```\n```ges\non Start() {}\n```\n" +
+                                                   "```yaml\ngesBlock: expect\nopcodes: { contains: [ReturnVoid] }\n```\n");
     }
 
     private static ConformanceDocument ParsePerformance(string lineEnding, bool includeBom, string reference)
     {
-        var source = "---\nformatVersion: 1\nsuiteId: performance\nkind: performance\nlevel: atomic\n---\n## Test: Case\n```yaml\ngesBlock: case\nid: case\nperformance: { iterations: 1 }\n```\n```ges\non Start() { emit Done() }\n```\n### Steps\n| step | receive | pump | budget |\n| --- | --- | --- | --- |\n| run | Start | completion | |\n```yaml\ngesBlock: expect\nsteps:\n  run:\n    local:\n      - name: Done\nperformance:\n  profiles:\n    test-profile:\n      metrics:\n        run.elapsed:\n          reference: " + reference + "\n          maximum: 2\n          unit: ms\n```\n";
+        var source = "---\nformatVersion: 1\nsuiteId: performance\nkind: performance\nlevel: atomic\n---\n## Test: Case\n```yaml\n" +
+                     "gesBlock: case\nid: case\nperformance: { iterations: 1 }\n```\n```ges\non Start() { emit Done() }\n```\n### Steps\n" +
+                     "| step | receive | pump | budget |\n| --- | --- | --- | --- |\n| run | Start | completion | |\n```yaml\ngesBlock: expect\n" +
+                     "steps:\n  run:\n    local:\n      - name: Done\nperformance:\n  profiles:\n    test-profile:\n      metrics:\n        run.elapsed:\n" +
+                     "          reference: " + reference + "\n          maximum: 2\n          unit: ms\n```\n";
         var bytes = Encoding.UTF8.GetBytes(source.Replace("\n", lineEnding));
         if (!includeBom) return ConformanceMarkdownParser.Parse(bytes);
         var withBom = new byte[bytes.Length + 3];

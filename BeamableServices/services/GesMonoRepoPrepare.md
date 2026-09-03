@@ -726,14 +726,26 @@ EditorConfig wurde von dotnet format für eine isolierte Produktionsdatei fehler
 Ausgangsbestand für 6.2: 76 Produktions- und 10 Testzeilen sind länger als 250 Zeichen.
 ```
 
-### 6.2 Sourcecode mechanisch reformattieren
+### 6.2 Sourcecode mechanisch reformattieren - DONE
 
-- Alle handgeschriebenen `.cs`-Dateien in `StepH-GameEventScript` und `StepH-GameEventScript-Tests` nach dem Vertrag aus 6.1 formatieren.
-- Unnötig fragmentierte Deklarationen und Aufrufe wieder zusammenziehen, sofern sie in 250 Zeichen passen.
-- Zeilen über 250 Zeichen kontrolliert und semantisch sinnvoll umbrechen; Strings, Kommentare und komplexe Expressions nicht durch semantische Änderungen verkürzen.
-- Generierte Ausgaben, Golden Files, Markdown-Snapshots und Binärfixtures nicht als C#-Source formatieren.
-- Diesen Schritt als rein mechanische Änderung behandeln und getrennt von API- oder Laufzeitänderungen abnehmen.
-- API-Snapshot, vollständige Nicht-Performance-Suite sowie Performance-/Allokationsreferenzen anschließend prüfen.
+Erledigt:
+
+- Alle handgeschriebenen `.cs`-Dateien in `StepH-GameEventScript` und `StepH-GameEventScript-Tests` wurden mit Roslyn nach dem Vertrag aus 6.1 formatiert; dazu gehört auch die kanonische `using`-Reihenfolge.
+- Unnötig fragmentierte Deklarationen wurden wieder zusammengezogen, wenn die vollständige Deklaration einschließlich Einrückung innerhalb von 250 Zeichen bleibt.
+- Die zuvor vorhandenen 76 Produktions- und 10 Testzeilen über 250 Zeichen wurden kontrolliert und ohne fachliche Änderung umgebrochen. Eingebettete Markdown-Testdaten behalten dabei ihren exakten Laufzeitinhalt.
+- Generierte Ausgaben, Golden Files, Markdown-/GESA-Snapshots und Binärfixtures wurden nicht als C#-Source formatiert.
+- Beide Projekte bestehen `dotnet format --verify-no-changes`; keine handgeschriebene C#-Zeile überschreitet 250 Zeichen.
+- API-Snapshot, vollständige Markdown-Conformance und alle übrigen Nicht-Performance-Tests sowie Performance-/Allokationsreferenzen sind unverändert erfolgreich.
+
+Abnahme:
+
+```text
+1128/1128 non-performance test executions passed
+6/6 performance/allocation tests passed
+0 C# source lines exceed 250 characters
+```
+
+Die bereits bekannten XML-Dokumentationswarnungen für `GesValueMap` bleiben unverändert und gehören nicht zu diesem mechanischen Formatierungsschritt.
 
 ### 6.3 Normative Dokumentationsstruktur anlegen
 

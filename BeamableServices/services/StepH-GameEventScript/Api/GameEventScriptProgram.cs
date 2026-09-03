@@ -1,8 +1,8 @@
 #pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 using System;
-using System.Collections.Generic;
 using System.Collections;
+using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -226,7 +226,7 @@ public readonly struct GameEventScriptUInt16IndexListSegment
 
 public readonly struct GameEventScriptBindingSegment
 {
-    
+
     public readonly struct GameEventScriptBinaryBindEntry(
         GameEventScriptBinaryBindKind kind,
         ushort name,
@@ -297,12 +297,7 @@ public enum GameEventScriptDebugSymbolKind : byte
     Local = 2
 }
 
-public readonly record struct GameEventScriptDebugSymbol(
-    GameEventScriptDebugSymbolKind Kind,
-    ushort RegisterId,
-    string Name,
-    uint CodeStart,
-    uint CodeLength);
+public readonly record struct GameEventScriptDebugSymbol(GameEventScriptDebugSymbolKind Kind, ushort RegisterId, string Name, uint CodeStart, uint CodeLength);
 
 public sealed class GameEventScriptDebugSymbolsSegment
 {
@@ -330,12 +325,7 @@ public sealed class GameEventScriptSourceMapSource
     public GameEventScriptReadOnlyArray<uint> LineStartByteOffsets { get; }
 }
 
-public readonly record struct GameEventScriptSourceMapEntry(
-    uint CodeStart,
-    uint CodeLength,
-    uint SourceId,
-    uint SourceStartByteOffset,
-    uint SourceByteLength);
+public readonly record struct GameEventScriptSourceMapEntry(uint CodeStart, uint CodeLength, uint SourceId, uint SourceStartByteOffset, uint SourceByteLength);
 
 public sealed class GameEventScriptSourceMapSegment
 {
@@ -452,7 +442,7 @@ public enum GameEventScriptBytecodeTypeKind : byte
 
     Handler = 0x10,
     Message = 0x11,
-    
+
     List = 0x20,
     Dice = 0x21,
     Map = 0x22,
@@ -464,7 +454,7 @@ public enum GameEventScriptBytecodeTypeKind : byte
 
     Iterator = 0x30,
     Series = 0x31,
-    
+
     Custom = 0xFF,
 }
 

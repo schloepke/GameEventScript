@@ -9,11 +9,7 @@ public sealed class GameEventScriptInstance
     private readonly GameEventScriptHost _host;
     private readonly long _registrationId;
 
-    internal GameEventScriptInstance(
-        GameEventScriptHost host,
-        long registrationId,
-        GameEventScriptProgram program,
-        GesLinkedProgram linkedProgram)
+    internal GameEventScriptInstance(GameEventScriptHost host, long registrationId, GameEventScriptProgram program, GesLinkedProgram linkedProgram)
     {
         _host = host;
         _registrationId = registrationId;

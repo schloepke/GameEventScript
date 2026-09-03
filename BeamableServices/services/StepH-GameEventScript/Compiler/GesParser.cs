@@ -1576,10 +1576,7 @@ internal sealed class GesParser
         return operand;
     }
 
-    private ExpressionNode? CreateRootPowerExpression(
-        double? rootExponent,
-        ExpressionNode operand,
-        GesToken startToken)
+    private ExpressionNode? CreateRootPowerExpression(double? rootExponent, ExpressionNode operand, GesToken startToken)
     {
         if (!rootExponent.HasValue)
         {

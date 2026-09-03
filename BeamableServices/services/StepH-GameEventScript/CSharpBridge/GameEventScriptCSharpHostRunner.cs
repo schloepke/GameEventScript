@@ -7,8 +7,7 @@ using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
-internal sealed class GameEventScriptCSharpNativeMessageHandler(
-    Action<GameEventScriptMessage, GameEventScriptContext> handler) : IGameEventScriptNativeMessageHandler
+internal sealed class GameEventScriptCSharpNativeMessageHandler(Action<GameEventScriptMessage, GameEventScriptContext> handler) : IGameEventScriptNativeMessageHandler
 {
     private readonly Action<GameEventScriptMessage, GameEventScriptContext> _handler =
         handler ?? throw new ArgumentNullException(nameof(handler));
@@ -59,11 +58,7 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
         }
     }
 
-    public GameEventScriptSubscription Subscribe(
-        string message,
-        IReadOnlyCollection<string> parameterNames,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
-        int priority = 0)
+    public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = 0)
     {
         lock (_gate)
         {
@@ -128,23 +123,14 @@ public sealed class GameEventScriptCSharpHostRunner : IDisposable
 
 public static class GameEventScriptCSharpHostExtensions
 {
-    public static GameEventScriptSubscription Subscribe(
-        this GameEventScriptHost host,
-        string message,
-        IReadOnlyCollection<string> parameterNames,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
-        int priority = 0)
+    public static GameEventScriptSubscription Subscribe(this GameEventScriptHost host, string message, IReadOnlyCollection<string> parameterNames, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = 0)
         => RequireHost(host).Subscribe(
             message,
             parameterNames,
             new GameEventScriptCSharpNativeMessageHandler(handler),
             priority);
 
-    public static GameEventScriptSubscription Subscribe(
-        this GameEventScriptHost host,
-        GameEventScriptMessageSignature signature,
-        Action<GameEventScriptMessage, GameEventScriptContext> handler,
-        int priority = 0)
+    public static GameEventScriptSubscription Subscribe(this GameEventScriptHost host, GameEventScriptMessageSignature signature, Action<GameEventScriptMessage, GameEventScriptContext> handler, int priority = 0)
         => RequireHost(host).Subscribe(
             signature,
             new GameEventScriptCSharpNativeMessageHandler(handler),
@@ -191,21 +177,13 @@ public static class GameEventScriptCSharpHostExtensions
 /// </summary>
 public static class GameEventScriptCSharpMessage
 {
-    public static GameEventScriptMessage Create(
-        string name,
-        params (string name, GesValue value)[] arguments)
+    public static GameEventScriptMessage Create(string name, params (string name, GesValue value)[] arguments)
         => GameEventScriptMessage.Create(name, ToOrdered(arguments));
 
-    public static GameEventScriptMessage Create(
-        string name,
-        IEnumerable<string>? tags,
-        params (string name, GesValue value)[] arguments)
+    public static GameEventScriptMessage Create(string name, IEnumerable<string>? tags, params (string name, GesValue value)[] arguments)
         => GameEventScriptMessage.Create(name, ToOrdered(arguments), tags);
 
-    public static GameEventScriptMessage Create(
-        GameEventScriptMessageSignature signature,
-        IReadOnlyDictionary<string, GesValue> arguments,
-        IEnumerable<string>? tags = null)
+    public static GameEventScriptMessage Create(GameEventScriptMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments, IEnumerable<string>? tags = null)
     {
         _ = signature ?? throw new ArgumentNullException(nameof(signature));
         _ = arguments ?? throw new ArgumentNullException(nameof(arguments));
@@ -249,28 +227,16 @@ public static class GameEventScriptCSharpMessage
 
 public static class GameEventScriptCSharpContextExtensions
 {
-    public static bool Emit(
-        this GameEventScriptContext context,
-        string message,
-        params (string name, GesValue value)[] arguments)
+    public static bool Emit(this GameEventScriptContext context, string message, params (string name, GesValue value)[] arguments)
         => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(message, arguments));
 
-    public static bool Emit(
-        this GameEventScriptContext context,
-        GameEventScriptMessageSignature signature,
-        IReadOnlyDictionary<string, GesValue> arguments)
+    public static bool Emit(this GameEventScriptContext context, GameEventScriptMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments)
         => RequireContext(context).Emit(GameEventScriptCSharpMessage.Create(signature, arguments));
 
-    public static GameEventScriptPublishResult Publish(
-        this GameEventScriptContext context,
-        string message,
-        params (string name, GesValue value)[] arguments)
+    public static GameEventScriptPublishResult Publish(this GameEventScriptContext context, string message, params (string name, GesValue value)[] arguments)
         => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(message, arguments));
 
-    public static GameEventScriptPublishResult Publish(
-        this GameEventScriptContext context,
-        GameEventScriptMessageSignature signature,
-        IReadOnlyDictionary<string, GesValue> arguments)
+    public static GameEventScriptPublishResult Publish(this GameEventScriptContext context, GameEventScriptMessageSignature signature, IReadOnlyDictionary<string, GesValue> arguments)
         => RequireContext(context).Publish(GameEventScriptCSharpMessage.Create(signature, arguments));
 
     private static GameEventScriptContext RequireContext(GameEventScriptContext? context)

@@ -72,12 +72,7 @@ internal static class GameEventScriptConformanceExternalTypes
         }
     }
 
-    private sealed class AimValue(
-        GesValue bearing,
-        GesValue range,
-        GesValue steps,
-        GesValue direction,
-        GesValue checksum) : IGameEventScriptExternalValue
+    private sealed class AimValue(GesValue bearing, GesValue range, GesValue steps, GesValue direction, GesValue checksum) : IGameEventScriptExternalValue
     {
         public GameEventScriptExternalTypeDefinition Definition { get; } = AimDefinition;
 

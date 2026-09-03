@@ -14,12 +14,7 @@ public sealed class GameEventScriptContext
     private readonly GameEventScriptHost _host;
     private readonly IGameEventScriptRuntimeObserver? _runtimeObserver;
 
-    internal GameEventScriptContext(
-        GameEventScriptHost host,
-        GameEventScriptRandomGenerator random,
-        GameEventScriptRuntimeLimits runtimeLimits,
-        IGameEventScriptExtensionRegistry extensionRegistry,
-        IGameEventScriptRuntimeObserver? runtimeObserver)
+    internal GameEventScriptContext(GameEventScriptHost host, GameEventScriptRandomGenerator random, GameEventScriptRuntimeLimits runtimeLimits, IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptRuntimeObserver? runtimeObserver)
     {
         _host = host ?? throw new ArgumentNullException(nameof(host));
         Random = random ?? throw new ArgumentNullException(nameof(random));

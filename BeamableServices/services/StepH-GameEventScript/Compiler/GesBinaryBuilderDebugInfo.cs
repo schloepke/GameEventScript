@@ -94,7 +94,8 @@ internal sealed partial class GesBinaryBuilder
                 if (mappings.Count > 0)
                 {
                     var previous = mappings[^1];
-                    if (previous.CodeStart + previous.CodeLength == mapping.CodeStart && previous.SourceId == mapping.SourceId && previous.SourceStartByteOffset == mapping.SourceStartByteOffset && previous.SourceByteLength == mapping.SourceByteLength)
+                    if (previous.CodeStart + previous.CodeLength == mapping.CodeStart && previous.SourceId == mapping.SourceId && previous.SourceStartByteOffset == mapping.SourceStartByteOffset &&
+                        previous.SourceByteLength == mapping.SourceByteLength)
                     {
                         mappings[^1] = previous with { CodeLength = previous.CodeLength + 1 };
                     }

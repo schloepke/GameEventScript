@@ -69,11 +69,7 @@ public static class GameEventScriptProgramReader
         return program;
     }
 
-    private static List<SectionDescriptor> ScanSections(
-        ReadOnlySpan<byte> bytes,
-        GameEventScriptProgramReadLimits limits,
-        GameEventScriptProgramRetention retention,
-        out GameEventScriptOpaqueSection[] opaque)
+    private static List<SectionDescriptor> ScanSections(ReadOnlySpan<byte> bytes, GameEventScriptProgramReadLimits limits, GameEventScriptProgramRetention retention, out GameEventScriptOpaqueSection[] opaque)
     {
         var sections = new List<SectionDescriptor>();
         var opaqueList = new List<GameEventScriptOpaqueSection>();
@@ -323,7 +319,8 @@ public static class GameEventScriptProgramReader
     }
 
     private static bool IsRequiredRuntime(ushort type)
-        => type is (ushort)GameEventScriptSectionType.ProgramMetadata or (ushort)GameEventScriptSectionType.StringConstants or (ushort)GameEventScriptSectionType.UInt16IndexLists or (ushort)GameEventScriptSectionType.Bindings or (ushort)GameEventScriptSectionType.Code;
+        => type is (ushort)GameEventScriptSectionType.ProgramMetadata or (ushort)GameEventScriptSectionType.StringConstants or (ushort)GameEventScriptSectionType.UInt16IndexLists or
+            (ushort)GameEventScriptSectionType.Bindings or (ushort)GameEventScriptSectionType.Code;
 
     private static bool IsKnown(ushort type)
         => IsRequiredRuntime(type) || type is (ushort)GameEventScriptSectionType.DebugSymbols or (ushort)GameEventScriptSectionType.SourceMap or (ushort)GameEventScriptSectionType.SourceArchive or (ushort)GameEventScriptSectionType.BuildMetadata;

@@ -131,11 +131,11 @@ public static class ConformanceMarkdownReportWriter
     {
         var result = new List<string>();
         for (var caseIndex = 0; caseIndex < report.Cases.Count; caseIndex++)
-        for (var missingIndex = 0; missingIndex < report.Cases[caseIndex].MissingCapabilities.Count; missingIndex++)
-        {
-            var value = report.Cases[caseIndex].MissingCapabilities[missingIndex];
-            if (!result.Contains(value)) result.Add(value);
-        }
+            for (var missingIndex = 0; missingIndex < report.Cases[caseIndex].MissingCapabilities.Count; missingIndex++)
+            {
+                var value = report.Cases[caseIndex].MissingCapabilities[missingIndex];
+                if (!result.Contains(value)) result.Add(value);
+            }
         result.Sort(StringComparer.Ordinal);
         return result;
     }

@@ -101,13 +101,7 @@ public sealed class ConformanceSourceDocument
 
 public sealed class ConformanceDocument
 {
-    internal ConformanceDocument(
-        int formatVersion,
-        string suiteId,
-        string title,
-        IReadOnlyList<ConformanceCase> cases,
-        ConformanceSourceDocument source,
-        ConformanceSourceRange frontmatterRange)
+    internal ConformanceDocument(int formatVersion, string suiteId, string title, IReadOnlyList<ConformanceCase> cases, ConformanceSourceDocument source, ConformanceSourceRange frontmatterRange)
     {
         FormatVersion = formatVersion;
         SuiteId = suiteId;
@@ -340,7 +334,16 @@ public sealed class ConformanceSourceInput
 
 public sealed class ConformanceNativeHandler
 {
-    internal ConformanceNativeHandler(string id, string message, IReadOnlyList<string> parameters, bool messageNameOnly, int priority, bool initiallySubscribed, bool throws, IReadOnlyList<ConformanceNativeAction> actions, IReadOnlyList<ConformanceNativeEmit> emits)
+    internal ConformanceNativeHandler(
+        string id,
+        string message,
+        IReadOnlyList<string> parameters,
+        bool messageNameOnly,
+        int priority,
+        bool initiallySubscribed,
+        bool throws,
+        IReadOnlyList<ConformanceNativeAction> actions,
+        IReadOnlyList<ConformanceNativeEmit> emits)
     {
         Id = id;
         Message = message;
@@ -436,7 +439,12 @@ public sealed class ConformanceStepExpectation
 
 public sealed class ConformanceObservationExpectation
 {
-    internal ConformanceObservationExpectation(IReadOnlyList<ConformanceRuntimeLimitExpectation> included, IReadOnlyList<ConformanceRuntimeLimitExpectation> excluded, IReadOnlyList<ConformanceExpectedDiagnostic> diagnostics, bool traceSpecified, IReadOnlyList<ConformanceObserverEventExpectation> trace)
+    internal ConformanceObservationExpectation(
+        IReadOnlyList<ConformanceRuntimeLimitExpectation> included,
+        IReadOnlyList<ConformanceRuntimeLimitExpectation> excluded,
+        IReadOnlyList<ConformanceExpectedDiagnostic> diagnostics,
+        bool traceSpecified,
+        IReadOnlyList<ConformanceObserverEventExpectation> trace)
     {
         IncludedRuntimeLimits = ConformanceDocument.Copy(included);
         ExcludedRuntimeLimits = ConformanceDocument.Copy(excluded);
@@ -822,18 +830,7 @@ public sealed class ConformanceValueApiCase
 
 public sealed class ConformanceValueApiExpectation
 {
-    internal ConformanceValueApiExpectation(
-        ConformanceValue normalized,
-        bool? isNumeric,
-        bool? hasValue,
-        bool? isNothing,
-        bool? hasUnit,
-        bool? asBoolean,
-        uint? length,
-        string? customTypeName,
-        bool? equal,
-        bool? equalHash,
-        bool? notEqual)
+    internal ConformanceValueApiExpectation(ConformanceValue normalized, bool? isNumeric, bool? hasValue, bool? isNothing, bool? hasUnit, bool? asBoolean, uint? length, string? customTypeName, bool? equal, bool? equalHash, bool? notEqual)
     {
         Normalized = normalized;
         IsNumeric = isNumeric;
@@ -883,7 +880,10 @@ public sealed class ConformanceExternalTypeApiExpectation
 
 public sealed class ConformanceCompileMetadataExpectation
 {
-    internal ConformanceCompileMetadataExpectation(IReadOnlyList<ConformanceMessageDefinitionExpectation> messageDefinitions, ConformanceProgramResourceExpectation? programResources, IReadOnlyList<ConformanceHandlerResourceExpectation> handlerResources)
+    internal ConformanceCompileMetadataExpectation(
+        IReadOnlyList<ConformanceMessageDefinitionExpectation> messageDefinitions,
+        ConformanceProgramResourceExpectation? programResources,
+        IReadOnlyList<ConformanceHandlerResourceExpectation> handlerResources)
     {
         MessageDefinitions = ConformanceDocument.Copy(messageDefinitions);
         ProgramResources = programResources;

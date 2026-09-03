@@ -42,12 +42,7 @@ internal sealed class GesSyntaxTreeModule
 
 internal sealed record GesSourceDocument(uint SourceId, string SourceName, string Text);
 
-internal sealed class GesCallableDefinition(
-    string name,
-    IReadOnlyList<ParameterNode> parameterList,
-    ExpressionNode expression,
-    GameEventScriptCallableKind kind,
-    GameEventScriptSourceLocation? sourceRange = null)
+internal sealed class GesCallableDefinition(string name, IReadOnlyList<ParameterNode> parameterList, ExpressionNode expression, GameEventScriptCallableKind kind, GameEventScriptSourceLocation? sourceRange = null)
 {
     public string Name { get; } = name ?? throw new ArgumentNullException(nameof(name));
 

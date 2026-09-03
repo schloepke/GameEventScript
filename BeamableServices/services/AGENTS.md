@@ -73,6 +73,25 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Repository-wide C# Formatting Baseline
+
+- All handwritten C# in `StepH-GameEventScript` and
+  `StepH-GameEventScript-Tests` has been normalized with Roslyn under the scoped
+  `.editorconfig`, including canonical `using` order.
+- Declarations that fit the 250-character contract were compacted; all remaining
+  long declarations, expressions, and embedded test strings were wrapped without
+  changing behavior or string contents.
+- Generated output, Markdown/GESA snapshots, golden files, and binary fixtures
+  remain outside the C# formatting pass. No handwritten C# line now exceeds 250
+  characters, and both projects pass `dotnet format --verify-no-changes`.
+
+Verification after this change:
+
+```text
+1128/1128 non-performance test executions passed
+6/6 performance/allocation tests passed
+```
+
 ### Cross-Language Conformance Acceptance Preparation
 
 - `CrossLanguageConformanceV1.md` defines an exact authored-corpus SHA-256,

@@ -52,7 +52,8 @@ public static class GameEventScriptProgramValidator
             try { _ = segment.Data.DecodeUtf8(StrictUtf8, slice.Start, slice.Length); }
             catch (DecoderFallbackException exception)
             {
-                throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidUtf8, "StringConstantSegment contains invalid UTF-8.", sectionType: (ushort)GameEventScriptSectionType.StringConstants, entryIndex: index, innerException: exception);
+                throw new GameEventScriptProgramFormatException(
+                    GameEventScriptProgramFormatErrorCode.InvalidUtf8, "StringConstantSegment contains invalid UTF-8.", sectionType: (ushort)GameEventScriptSectionType.StringConstants, entryIndex: index, innerException: exception);
             }
         }
     }
@@ -157,7 +158,8 @@ public static class GameEventScriptProgramValidator
                 var stringIndex = operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName ? instruction.SecondaryStringIndex : instruction.StringIndex;
                 if (stringIndex >= program.StringConstants.Slices.Count) Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Instruction references a missing string.", (ushort)GameEventScriptSectionType.Code, instructionIndex);
                 if (operand == GameEventScriptOpcodePrinter.OperandPart.Tag && !IsPortableIdentifier(program.StringConstants, stringIndex)) InvalidOperand("Tag constants must use the portable lowercase ASCII name grammar.", instructionIndex);
-                if (operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex)) InvalidOperand("Custom type names must use the portable lowercase ASCII type-name grammar.", instructionIndex);
+                if (operand == GameEventScriptOpcodePrinter.OperandPart.CustomTypeName && !IsPortableTypeName(program.StringConstants, stringIndex))
+                    InvalidOperand("Custom type names must use the portable lowercase ASCII type-name grammar.", instructionIndex);
                 continue;
             }
             if (IsListOperand(operand))
@@ -170,7 +172,8 @@ public static class GameEventScriptProgramValidator
             if (operand == GameEventScriptOpcodePrinter.OperandPart.TypeKind && !Enum.IsDefined(typeof(GameEventScriptBytecodeTypeKind), instruction.TypeKind)) InvalidOperand("Instruction contains an unknown type kind.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.PatternKind && !Enum.IsDefined(typeof(GameEventScriptBytecodePatternKind), instruction.AU)) InvalidOperand("Instruction contains an unknown pattern kind.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.SeriesKind && !Enum.IsDefined(typeof(GameEventScriptBytecodeSeriesKind), instruction.TypeOperand)) InvalidOperand("Instruction contains an unknown series kind.", instructionIndex);
-            if (operand == GameEventScriptOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, instruction.MessageDestination)) InvalidOperand("Instruction references a missing outbound-message binding.", instructionIndex);
+            if (operand == GameEventScriptOpcodePrinter.OperandPart.OutboundMessage && !HasBind(indexedBindingIds, OutboundMessage, instruction.MessageDestination))
+                InvalidOperand("Instruction references a missing outbound-message binding.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.RecordReference && !HasBind(indexedBindingIds, Record, instruction.BindId)) InvalidOperand("Instruction references a missing record binding.", instructionIndex);
             if (operand == GameEventScriptOpcodePrinter.OperandPart.ExternalReference)
             {
@@ -188,8 +191,11 @@ public static class GameEventScriptProgramValidator
         => part switch
         {
             GameEventScriptOpcodePrinter.OperandPart.TargetRegister or GameEventScriptOpcodePrinter.OperandPart.OutboundMessage => instruction.DestinationRegister,
-            GameEventScriptOpcodePrinter.OperandPart.RightRegister or GameEventScriptOpcodePrinter.OperandPart.ObjectRegister or GameEventScriptOpcodePrinter.OperandPart.ItemRegister or GameEventScriptOpcodePrinter.OperandPart.KeyRegister or GameEventScriptOpcodePrinter.OperandPart.IndexRegister or GameEventScriptOpcodePrinter.OperandPart.DefaultRegister or GameEventScriptOpcodePrinter.OperandPart.NeedleRegister or GameEventScriptOpcodePrinter.OperandPart.ToRegister => instruction.YRegister,
-            GameEventScriptOpcodePrinter.OperandPart.ValueRegister or GameEventScriptOpcodePrinter.OperandPart.AuxItemBindingRegister or GameEventScriptOpcodePrinter.OperandPart.StepRegister or GameEventScriptOpcodePrinter.OperandPart.MaximumRegister or GameEventScriptOpcodePrinter.OperandPart.AuxARegister => instruction.AU,
+            GameEventScriptOpcodePrinter.OperandPart.RightRegister or GameEventScriptOpcodePrinter.OperandPart.ObjectRegister or GameEventScriptOpcodePrinter.OperandPart.ItemRegister or
+                GameEventScriptOpcodePrinter.OperandPart.KeyRegister or GameEventScriptOpcodePrinter.OperandPart.IndexRegister or GameEventScriptOpcodePrinter.OperandPart.DefaultRegister or
+                GameEventScriptOpcodePrinter.OperandPart.NeedleRegister or GameEventScriptOpcodePrinter.OperandPart.ToRegister => instruction.YRegister,
+            GameEventScriptOpcodePrinter.OperandPart.ValueRegister or GameEventScriptOpcodePrinter.OperandPart.AuxItemBindingRegister or GameEventScriptOpcodePrinter.OperandPart.StepRegister or
+                GameEventScriptOpcodePrinter.OperandPart.MaximumRegister or GameEventScriptOpcodePrinter.OperandPart.AuxARegister => instruction.AU,
             GameEventScriptOpcodePrinter.OperandPart.ItemBindingRegister => operandIndex >= 3 ? instruction.AU : instruction.YRegister,
             GameEventScriptOpcodePrinter.OperandPart.WeightRegister => instruction.OpCode == GameEventScriptBytecodeOpCode.TakeWeighted ? instruction.AU : instruction.YRegister,
             GameEventScriptOpcodePrinter.OperandPart.MinimumRegister => instruction.YRegister,
@@ -211,7 +217,8 @@ public static class GameEventScriptProgramValidator
         };
 
     private static bool IsStringOperand(GameEventScriptOpcodePrinter.OperandPart part)
-        => part is >= GameEventScriptOpcodePrinter.OperandPart.String and <= GameEventScriptOpcodePrinter.OperandPart.TypeName && part is not GameEventScriptOpcodePrinter.OperandPart.TypeKind and not GameEventScriptOpcodePrinter.OperandPart.PatternKind and not GameEventScriptOpcodePrinter.OperandPart.SeriesKind;
+        => part is >= GameEventScriptOpcodePrinter.OperandPart.String and <= GameEventScriptOpcodePrinter.OperandPart.TypeName &&
+           part is not GameEventScriptOpcodePrinter.OperandPart.TypeKind and not GameEventScriptOpcodePrinter.OperandPart.PatternKind and not GameEventScriptOpcodePrinter.OperandPart.SeriesKind;
 
     private static bool IsListOperand(GameEventScriptOpcodePrinter.OperandPart part)
         => part is >= GameEventScriptOpcodePrinter.OperandPart.MessageShapeList and <= GameEventScriptOpcodePrinter.OperandPart.TagRegisterList;
@@ -233,7 +240,8 @@ public static class GameEventScriptProgramValidator
         var validateUniqueArgumentNames = role is GameEventScriptOpcodePrinter.OperandPart.MessageShapeList or GameEventScriptOpcodePrinter.OperandPart.ArgumentNameList;
         for (var index = 0; index < list.Length; index++)
         {
-            if (textIndexes && list[index] >= program.StringConstants.Slices.Count) Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Instruction list references a missing string.", (ushort)GameEventScriptSectionType.Code, instructionIndex);
+            if (textIndexes && list[index] >= program.StringConstants.Slices.Count)
+                Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "Instruction list references a missing string.", (ushort)GameEventScriptSectionType.Code, instructionIndex);
             if (!textIndexes && list[index] >= program.RequiredRegisterCount) InvalidOperand("Instruction list references a register outside RequiredRegisterCount.", instructionIndex);
             if (!textIndexes) continue;
             if (role == GameEventScriptOpcodePrinter.OperandPart.MessageShapeList && index == 0)
@@ -408,7 +416,8 @@ public static class GameEventScriptProgramValidator
         for (var index = 0; index < map.Sources.Count; index++)
         {
             var source = map.Sources[index];
-            if (source.SourceId != (uint)index || !ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0 || source.Sha256.Count != 32 || source.LineStartByteOffsets.Count == 0 || source.LineStartByteOffsets[0] != 0)
+            if (source.SourceId != (uint)index || !ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0 ||
+                source.Sha256.Count != 32 || source.LineStartByteOffsets.Count == 0 || source.LineStartByteOffsets[0] != 0)
                 Throw(GameEventScriptProgramFormatErrorCode.InvalidSourceMap, "SourceMap source metadata is invalid.", (ushort)GameEventScriptSectionType.SourceMap, index);
             uint previous = 0;
             for (var line = 0; line < source.LineStartByteOffsets.Count; line++)
@@ -439,7 +448,9 @@ public static class GameEventScriptProgramValidator
         for (var index = 0; index < archive.Sources.Count; index++)
         {
             var source = archive.Sources[index];
-            if (!ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0) Throw(GameEventScriptProgramFormatErrorCode.InvalidSourceArchive, "SourceArchive SourceIds must be unique and names valid non-empty Unicode.", (ushort)GameEventScriptSectionType.SourceArchive, index);
+            if (!ids.Add(source.SourceId) || source.SourceName is null || source.SourceName.Length == 0 || GameEventScriptText.GetInvalidUtf16Offset(source.SourceName) >= 0)
+                Throw(
+                    GameEventScriptProgramFormatErrorCode.InvalidSourceArchive, "SourceArchive SourceIds must be unique and names valid non-empty Unicode.", (ushort)GameEventScriptSectionType.SourceArchive, index);
             try
             {
                 var text = source.DecodeText(StrictUtf8);
@@ -448,7 +459,8 @@ public static class GameEventScriptProgramValidator
             }
             catch (DecoderFallbackException exception)
             {
-                throw new GameEventScriptProgramFormatException(GameEventScriptProgramFormatErrorCode.InvalidUtf8, "SourceArchive contains invalid UTF-8.", sectionType: (ushort)GameEventScriptSectionType.SourceArchive, entryIndex: index, innerException: exception);
+                throw new GameEventScriptProgramFormatException(
+                    GameEventScriptProgramFormatErrorCode.InvalidUtf8, "SourceArchive contains invalid UTF-8.", sectionType: (ushort)GameEventScriptSectionType.SourceArchive, entryIndex: index, innerException: exception);
             }
         }
     }

@@ -4,9 +4,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Api;
 
@@ -38,10 +38,7 @@ public sealed class GameEventScriptMessageArguments : IReadOnlyCollection<GameEv
     private readonly GesValue[] _values;
     private readonly IReadOnlyList<string> _signatureLabels;
 
-    private GameEventScriptMessageArguments(
-        string[] names,
-        GesValue[] values,
-        IReadOnlyList<string> signatureLabels)
+    private GameEventScriptMessageArguments(string[] names, GesValue[] values, IReadOnlyList<string> signatureLabels)
     {
         _names = names;
         _values = values;

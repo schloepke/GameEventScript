@@ -27,9 +27,7 @@ internal static class ConformanceCSharpTestEnvironment
     internal static ConformanceRunnerEnvironment Measured()
         => Create(ConformanceCSharpPerformanceProvider.Instance);
 
-    internal static ConformanceRunReport Report(
-        ConformanceRunnerEnvironment environment,
-        IReadOnlyList<ConformanceCaseResult> results)
+    internal static ConformanceRunReport Report(ConformanceRunnerEnvironment environment, IReadOnlyList<ConformanceCaseResult> results)
     {
         var passed = results.Count(result => result.Status == ConformanceCaseStatus.Passed);
         var failed = results.Count(result => result.Status == ConformanceCaseStatus.Failed);
@@ -74,16 +72,16 @@ internal static class ConformanceCSharpTestEnvironment
         var fixtureRoot = Path.Combine(GetConformanceDirectory(), "Fixtures");
         var paths = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var document in Documents)
-        foreach (var testCase in document.Cases)
-        {
-            var fixture = testCase.BinaryFixture;
-            if (fixture is null) continue;
-            var path = Path.GetFullPath(Path.Combine(fixtureRoot, fixture.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
-            if (!path.StartsWith(Path.GetFullPath(fixtureRoot) + Path.DirectorySeparatorChar, StringComparison.Ordinal))
-                throw new InvalidOperationException("Conformance resource escaped the fixture root.");
-            if (!paths.TryAdd(fixture.ResourceId, path))
-                throw new InvalidOperationException("Duplicate conformance resource ID '" + fixture.ResourceId + "'.");
-        }
+            foreach (var testCase in document.Cases)
+            {
+                var fixture = testCase.BinaryFixture;
+                if (fixture is null) continue;
+                var path = Path.GetFullPath(Path.Combine(fixtureRoot, fixture.RelativePath.Replace('/', Path.DirectorySeparatorChar)));
+                if (!path.StartsWith(Path.GetFullPath(fixtureRoot) + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Conformance resource escaped the fixture root.");
+                if (!paths.TryAdd(fixture.ResourceId, path))
+                    throw new InvalidOperationException("Duplicate conformance resource ID '" + fixture.ResourceId + "'.");
+            }
         return new FileResourceResolver(paths);
     }
 
@@ -131,10 +129,7 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
 {
     internal static ConformanceTestExtensionRegistry Instance { get; } = new();
 
-    private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((call, args) =>
-        call.SetValue(args.Length == 1
-            ? GesValue.GesFloat(Math.Floor(args.GetAsNumber(0)), args.UnitAt(0))
-            : GesValue.GesNothing()));
+    private static readonly IGameEventScriptExtensionFunction MathFloor = new DelegateExtensionFunction((call, args) => call.SetValue(args.Length == 1 ? GesValue.GesFloat(Math.Floor(args.GetAsNumber(0)), args.UnitAt(0)) : GesValue.GesNothing()));
 
     private static readonly IGameEventScriptExtensionFunction MathMax = new DelegateExtensionFunction((call, args) =>
     {
@@ -181,15 +176,10 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
             call.SetNothing();
     });
 
-    private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((call, args) =>
-    {
-        if (args.Length == 1) call.SetValue(args[0]);
-        else call.SetNothing();
-    });
+    private static readonly IGameEventScriptExtensionFunction TestEcho = new DelegateExtensionFunction((call, args) => { if (args.Length == 1) call.SetValue(args[0]); else call.SetNothing(); });
 
     private static readonly IGameEventScriptExtensionFunction TestTruth = new DelegateExtensionFunction((call, _) => call.SetBoolean(true));
-    private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) =>
-        throw new InvalidOperationException("Configured conformance extension failure."));
+    private static readonly IGameEventScriptExtensionFunction TestFail = new DelegateExtensionFunction((_, _) => throw new InvalidOperationException("Configured conformance extension failure."));
 
     private ConformanceTestExtensionRegistry()
     {
@@ -212,12 +202,7 @@ internal sealed class ConformanceTestExtensionRegistry : IGameEventScriptExtensi
         return null;
     }
 
-    private static bool Matches(
-        GameEventScriptExtensionReference reference,
-        string extension,
-        string function,
-        int argumentCount,
-        bool requireUnlabeled)
+    private static bool Matches(GameEventScriptExtensionReference reference, string extension, string function, int argumentCount, bool requireUnlabeled)
         => string.Equals(reference.ExtensionName, extension, StringComparison.Ordinal) &&
            string.Equals(reference.FunctionName, function, StringComparison.Ordinal) &&
            reference.ArgumentLabels.Count == argumentCount &&

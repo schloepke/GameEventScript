@@ -1,7 +1,7 @@
 using System;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -27,7 +27,9 @@ internal static class GesVmRegisterCompare
             case Text or Tag when b.Kind is Text or Tag:
                 return a.Kind == b.Kind && string.Equals(a.TextValue, b.TextValue, StringComparison.Ordinal);
             case Vector or Point when b.Kind is Vector or Point && a.ObjectValue is GesValueVectorPoint av && b.ObjectValue is GesValueVectorPoint bv:
-                return a.Unit == b.Unit && a.Kind == b.Kind && GameEventScriptNumber.EqualsWithinUlps(av.X, bv.X, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Y, bv.Y, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Z, bv.Z, GameEventScriptNumber.RuntimeEqualityUlps);
+                return a.Unit == b.Unit && a.Kind == b.Kind &&
+                       GameEventScriptNumber.EqualsWithinUlps(av.X, bv.X, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(av.Y, bv.Y, GameEventScriptNumber.RuntimeEqualityUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(av.Z, bv.Z, GameEventScriptNumber.RuntimeEqualityUlps);
             case Dice when b.Kind is Dice && a.ObjectValue is int[] al && b.ObjectValue is int[] bl:
                 return Sum(al) == Sum(bl);
             case Dice when b.Kind == Integer && a.ObjectValue is int[] al:
@@ -52,7 +54,9 @@ internal static class GesVmRegisterCompare
             case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeInteger ar && b.ObjectValue is GesValueRangeInteger br:
                 return ar.From == br.From && ar.To == br.To && ar.Step == br.Step;
             case GameEventScriptBytecodeTypeKind.Range when b.Kind is GameEventScriptBytecodeTypeKind.Range && a.ObjectValue is GesValueRangeFloat ar && b.ObjectValue is GesValueRangeFloat br:
-                return GameEventScriptNumber.EqualsWithinUlps(ar.From, br.From, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(ar.To, br.To, GameEventScriptNumber.RuntimeEqualityUlps) && GameEventScriptNumber.EqualsWithinUlps(ar.Step, br.Step, GameEventScriptNumber.RuntimeEqualityUlps);
+                return GameEventScriptNumber.EqualsWithinUlps(ar.From, br.From, GameEventScriptNumber.RuntimeEqualityUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(ar.To, br.To, GameEventScriptNumber.RuntimeEqualityUlps) &&
+                       GameEventScriptNumber.EqualsWithinUlps(ar.Step, br.Step, GameEventScriptNumber.RuntimeEqualityUlps);
             case Series when b.Kind is Series && a.ObjectValue is GesSeries aseries && b.ObjectValue is GesSeries bseries:
                 return aseries.SignatureId == bseries.SignatureId && aseries.Offset == bseries.Offset;
             case Map when b.Kind is Map && a.ObjectValue is GesValueMap am && b.ObjectValue is GesValueMap bm:
@@ -60,31 +64,31 @@ internal static class GesVmRegisterCompare
             case Custom when b.Kind is Custom && a.ObjectValue is GesCustomObject ac && b.ObjectValue is GesCustomObject bc:
                 return string.Equals(ac.TypeName, bc.TypeName, StringComparison.Ordinal) && EqualMaps(ac.Map, bc.Map);
             default:
-                if(a.IsNumeric && b.IsNumeric) return GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
+                if (a.IsNumeric && b.IsNumeric) return GameEventScriptNumber.EqualsWithinUlps(a.AsNumeric, b.AsNumeric, GameEventScriptNumber.RuntimeEqualityUlps);
                 return false;
         }
     }
 
     private static bool EqualMaps(GesValueMap am, GesValueMap bm)
     {
-                if (am.Length != bm.Length) return false;
-                var aKeys = am.KeyList;
-                var bKeys = bm.KeyList;
-                for (var i = 0; i < aKeys.Length; i++)
-                {
-                    if (aKeys[i].Equ(in bKeys[i])) continue;
-                    return false;
-                }
+        if (am.Length != bm.Length) return false;
+        var aKeys = am.KeyList;
+        var bKeys = bm.KeyList;
+        for (var i = 0; i < aKeys.Length; i++)
+        {
+            if (aKeys[i].Equ(in bKeys[i])) continue;
+            return false;
+        }
 
-                var aValues = am.ValueList;
-                var bValues = bm.ValueList;
-                for (var i = 0; i < aValues.Length; i++)
-                {
-                    if (aValues[i].EqualsValue(in bValues[i])) continue;
-                    return false;
-                }
+        var aValues = am.ValueList;
+        var bValues = bm.ValueList;
+        for (var i = 0; i < aValues.Length; i++)
+        {
+            if (aValues[i].EqualsValue(in bValues[i])) continue;
+            return false;
+        }
 
-                return true;
+        return true;
     }
     private static long Sum(int[] arr)
     {

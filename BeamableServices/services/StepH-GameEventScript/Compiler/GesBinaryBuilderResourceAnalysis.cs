@@ -13,9 +13,7 @@ internal sealed partial class GesBinaryBuilder
             message,
             symbol));
 
-    private ProgramResourceAnalysis AnalyzeProgramResources(
-        IReadOnlyList<PlanItem> items,
-        RegisterAllocationResult registerAllocation)
+    private ProgramResourceAnalysis AnalyzeProgramResources(IReadOnlyList<PlanItem> items, RegisterAllocationResult registerAllocation)
     {
         if (_routines.Count == 0)
         {
@@ -124,11 +122,7 @@ internal sealed partial class GesBinaryBuilder
             ToResourceUShort(requiredCallStackDepth, "program call-stack requirement"));
     }
 
-    private void AddCallByEntryLabel(
-        List<int> calls,
-        GesOperand operand,
-        int[] routineByEntryLabel,
-        string callerName)
+    private void AddCallByEntryLabel(List<int> calls, GesOperand operand, int[] routineByEntryLabel, string callerName)
     {
         if (operand.Kind != GesOperandKind.Label ||
             operand.LabelRef.Id < 0 ||
@@ -142,11 +136,7 @@ internal sealed partial class GesBinaryBuilder
         AddUniqueCall(calls, routineByEntryLabel[operand.LabelRef.Id]);
     }
 
-    private void AddRecordConstructorCall(
-        List<int> calls,
-        GesOperand operand,
-        int[] routineByEntryLabel,
-        string callerName)
+    private void AddRecordConstructorCall(List<int> calls, GesOperand operand, int[] routineByEntryLabel, string callerName)
     {
         if (operand.Kind != GesOperandKind.Bind ||
             operand.BindRef.Id < 0 ||
@@ -171,11 +161,7 @@ internal sealed partial class GesBinaryBuilder
         calls.Add(calleeRoutineId);
     }
 
-    private void RejectCyclicCalls(
-        int routineId,
-        IReadOnlyList<List<int>> calls,
-        byte[] visitStates,
-        List<int> path)
+    private void RejectCyclicCalls(int routineId, IReadOnlyList<List<int>> calls, byte[] visitStates, List<int> path)
     {
         if (visitStates[routineId] == 2) return;
         if (visitStates[routineId] == 1)
@@ -205,13 +191,7 @@ internal sealed partial class GesBinaryBuilder
         visitStates[routineId] = 2;
     }
 
-    private RoutineResourceRequirement CalculateRoutineRequirement(
-        int routineId,
-        IReadOnlyList<List<int>> calls,
-        int[] maximumStageCounts,
-        RegisterAllocationResult registerAllocation,
-        bool[] calculated,
-        RoutineResourceRequirement[] requirements)
+    private RoutineResourceRequirement CalculateRoutineRequirement(int routineId, IReadOnlyList<List<int>> calls, int[] maximumStageCounts, RegisterAllocationResult registerAllocation, bool[] calculated, RoutineResourceRequirement[] requirements)
     {
         if (calculated[routineId]) return requirements[routineId];
 
@@ -267,13 +247,7 @@ internal sealed partial class GesBinaryBuilder
             GameEventScriptBytecodeOpCode.ReturnVoid or
             GameEventScriptBytecodeOpCode.ReturnValue;
 
-    private sealed record ProgramResourceAnalysis(
-        IReadOnlyList<RoutineResourceRequirement> RoutineRequirements,
-        IReadOnlyList<RoutineResourceRequirement> BindRequirements,
-        ushort RequiredRegisterCount,
-        ushort RequiredCallStackDepth);
+    private sealed record ProgramResourceAnalysis(IReadOnlyList<RoutineResourceRequirement> RoutineRequirements, IReadOnlyList<RoutineResourceRequirement> BindRequirements, ushort RequiredRegisterCount, ushort RequiredCallStackDepth);
 
-    private readonly record struct RoutineResourceRequirement(
-        ushort RequiredRegisterCount,
-        ushort RequiredCallStackDepth);
+    private readonly record struct RoutineResourceRequirement(ushort RequiredRegisterCount, ushort RequiredCallStackDepth);
 }

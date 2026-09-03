@@ -124,17 +124,10 @@ public sealed class GameEventScriptHost
             message,
             ProgramName: program.ModuleName));
 
-    public GameEventScriptSubscription Subscribe(
-        string message,
-        IReadOnlyCollection<string> parameterNames,
-        IGameEventScriptNativeMessageHandler handler,
-        int priority = NormalPriority)
+    public GameEventScriptSubscription Subscribe(string message, IReadOnlyCollection<string> parameterNames, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(GameEventScriptMessageSignature.Create(message, parameterNames), handler, null, null, priority);
 
-    public GameEventScriptSubscription Subscribe(
-        GameEventScriptMessageSignature signature,
-        IGameEventScriptNativeMessageHandler handler,
-        int priority = NormalPriority)
+    public GameEventScriptSubscription Subscribe(GameEventScriptMessageSignature signature, IGameEventScriptNativeMessageHandler handler, int priority = NormalPriority)
         => Subscribe(signature, handler, null, null, priority);
 
     public GameEventScriptSubscription Subscribe(

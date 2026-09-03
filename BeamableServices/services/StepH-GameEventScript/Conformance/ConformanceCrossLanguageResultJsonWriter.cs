@@ -134,10 +134,7 @@ public static class ConformanceCrossLanguageResultJsonWriter
         writer.EndArray();
     }
 
-    private static ConformanceDocument[] ValidateAndOrderDocuments(
-        IReadOnlyList<ConformanceDocument> documents,
-        out int formatVersion,
-        out int caseCount)
+    private static ConformanceDocument[] ValidateAndOrderDocuments(IReadOnlyList<ConformanceDocument> documents, out int formatVersion, out int caseCount)
     {
         _ = documents ?? throw new ArgumentNullException(nameof(documents));
         if (documents.Count == 0) throw new ArgumentException("A cross-language corpus must contain at least one document.", nameof(documents));

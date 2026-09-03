@@ -1,6 +1,6 @@
+using System.Security.Cryptography;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Conformance;
-using System.Security.Cryptography;
 
 namespace StepH_GameEventScript_Tests.Conformance;
 

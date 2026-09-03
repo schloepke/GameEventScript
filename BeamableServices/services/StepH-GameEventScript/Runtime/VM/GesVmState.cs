@@ -1,11 +1,11 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using StepH.GameEventScript.Api;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
+using StepH.GameEventScript.Runtime.Values;
 using static StepH.GameEventScript.Api.GameEventScriptBindingSegment;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using static StepH.GameEventScript.Runtime.Values.GesValue.GesValueFlags;
 using static StepH.GameEventScript.Runtime.VM.GesVmState.StateValue;
-using StepH.GameEventScript.Runtime.Values;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -67,7 +67,7 @@ internal class GesVmState
 
     internal ushort CodeSegmentSize => ActiveProgram!.CodeSegmentSize;
     internal readonly int MaxRegisterCount;
-    
+
     internal GameEventScriptMessage? ProcessingMessage { get; private set; }
     internal GesVmState(ushort registerSize, ushort stackSize)
     {
@@ -166,7 +166,7 @@ internal class GesVmState
     internal void CreateDistinctBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetDistinctBuilder(new GesVmDistinctBuilder());
     internal void CreateGroupBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetGroupBuilder(new GesVmGroupBuilder(this));
     internal void CreateOrderBuilder(ushort index) => RegisterValues[index + RegisterFrameStart].SetOrderBuilder(new GesVmOrderBuilder());
-    
+
     internal bool PushRandom(GameEventScriptRandomGenerator randomGenerator)
     {
         if (RandomGeneratorsPointer >= RandomGenerators.Length)
@@ -425,5 +425,5 @@ internal class GesVmState
             RegisterValues[index].SetNothing();
         }
     }
- 
+
 }

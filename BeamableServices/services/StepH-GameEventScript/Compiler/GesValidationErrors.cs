@@ -10,13 +10,7 @@ internal sealed class GesValidationErrors
 
     public int Count => _errors.Count;
 
-    public void Add(
-        ParsedScript? module,
-        string message,
-        string symbol,
-        GameEventScriptSymbolKind symbolKind,
-        string code,
-        ScriptNode? sourceNode = null)
+    public void Add(ParsedScript? module, string message, string symbol, GameEventScriptSymbolKind symbolKind, string code, ScriptNode? sourceNode = null)
     {
         var moduleName = string.IsNullOrWhiteSpace(module?.ModuleName) ? "UnknownModule" : module.ModuleName;
         var sourceName = string.IsNullOrWhiteSpace(module?.SourceName) ? "UnknownSource" : module.SourceName;

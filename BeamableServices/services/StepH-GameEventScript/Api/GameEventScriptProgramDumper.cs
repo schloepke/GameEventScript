@@ -265,13 +265,7 @@ public static class GameEventScriptProgramDumper
         AppendRegionEnd(builder, "Code");
     }
 
-    private static void AppendSourceComment(
-        StringBuilder builder,
-        GameEventScriptProgram program,
-        uint codeAddress,
-        ref uint? previousSourceId,
-        ref int previousSourceLine,
-        ref bool previousWasCompilerGenerated)
+    private static void AppendSourceComment(StringBuilder builder, GameEventScriptProgram program, uint codeAddress, ref uint? previousSourceId, ref int previousSourceLine, ref bool previousWasCompilerGenerated)
     {
         var current = FindSourceMapping(program.SourceMap, codeAddress);
         if (!current.HasValue)
@@ -368,12 +362,7 @@ public static class GameEventScriptProgramDumper
         return end < 0 ? normalized[start..] : normalized.Substring(start, end - start);
     }
 
-    private static string FormatOperand(
-        DisassemblyContext context,
-        GameEventScriptBytecodeInstruction instruction,
-        GameEventScriptOpcodePrinter.OperandPart part,
-        int operandIndex,
-        int codeAddress)
+    private static string FormatOperand(DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part, int operandIndex, int codeAddress)
     {
         string RegisterAtAddress(ushort registerId) => context.Register(registerId, codeAddress);
 
@@ -481,11 +470,7 @@ public static class GameEventScriptProgramDumper
         }
     }
 
-    private static void AppendInstructionComment(
-        StringBuilder builder,
-        DisassemblyContext context,
-        GameEventScriptBytecodeInstruction instruction,
-        IReadOnlyList<GameEventScriptOpcodePrinter.OperandPart> operands)
+    private static void AppendInstructionComment(StringBuilder builder, DisassemblyContext context, GameEventScriptBytecodeInstruction instruction, IReadOnlyList<GameEventScriptOpcodePrinter.OperandPart> operands)
     {
         var comments = new List<string>();
         foreach (var operand in operands)
@@ -1005,11 +990,7 @@ public static class GameEventScriptProgramDumper
             return labels;
         }
 
-        private static string BuildBindLabel(
-            GameEventScriptProgram binary,
-            GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry,
-            int index,
-            HashSet<string> used)
+        private static string BuildBindLabel(GameEventScriptProgram binary, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry, int index, HashSet<string> used)
         {
             var prefix = BindPrefix(entry.Kind);
             var name = entry.Name < binary.StringConstants.Slices.Length
@@ -1063,11 +1044,7 @@ public static class GameEventScriptProgramDumper
             }
         }
 
-        private static void BuildCodeLabels(
-            GameEventScriptProgram binary,
-            SortedSet<int> codeLabels,
-            Dictionary<int, string> codeLabelNames,
-            Dictionary<int, string> codeLabelComments)
+        private static void BuildCodeLabels(GameEventScriptProgram binary, SortedSet<int> codeLabels, Dictionary<int, string> codeLabelNames, Dictionary<int, string> codeLabelComments)
         {
             if (binary.Code.Instructions.Length > 0)
             {
@@ -1124,18 +1101,15 @@ public static class GameEventScriptProgramDumper
             }
         }
 
-        private static void AddNamedCodeLabel(
-            Dictionary<int, string> labels,
-            Dictionary<int, string> comments,
-            GameEventScriptProgram binary,
-            GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
+        private static void AddNamedCodeLabel(Dictionary<int, string> labels, Dictionary<int, string> comments, GameEventScriptProgram binary, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry entry)
         {
             if (entry.EntryAddress == NoAddress || entry.EntryAddress >= binary.Code.Instructions.Length)
             {
                 return;
             }
 
-            if (entry.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler or GameEventScriptBinaryBindKind.Function or GameEventScriptBinaryBindKind.Predicate or GameEventScriptBinaryBindKind.Record))
+            if (entry.Kind is not (GameEventScriptBinaryBindKind.MessageHandler or GameEventScriptBinaryBindKind.MessageNameHandler or GameEventScriptBinaryBindKind.Function or
+                GameEventScriptBinaryBindKind.Predicate or GameEventScriptBinaryBindKind.Record))
             {
                 return;
             }
@@ -1322,9 +1296,7 @@ public static class GameEventScriptProgramDumper
         private static ListRole PreferListRole(ListRole current, ListRole candidate)
             => current == ListRole.Raw ? candidate : current;
 
-        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(
-            GameEventScriptBytecodeInstruction instruction,
-            GameEventScriptOpcodePrinter.OperandPart part)
+        private static (ushort Index, string Prefix, ListRole Role)? GetListIndex(GameEventScriptBytecodeInstruction instruction, GameEventScriptOpcodePrinter.OperandPart part)
         {
             switch (part)
             {

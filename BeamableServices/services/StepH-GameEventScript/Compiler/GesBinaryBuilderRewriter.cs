@@ -384,11 +384,7 @@ internal sealed partial class GesBinaryBuilder
         }
     }
 
-    internal readonly record struct InstructionCursor(
-        int Index,
-        InstructionPlan Current,
-        InstructionPlan? PreviousInstruction,
-        InstructionPlan? NextInstruction);
+    internal readonly record struct InstructionCursor(int Index, InstructionPlan Current, InstructionPlan? PreviousInstruction, InstructionPlan? NextInstruction);
 
     private static void CountRegisterReads(RewriteContext context, int[] readCounts)
     {
@@ -523,13 +519,7 @@ internal sealed partial class GesBinaryBuilder
             return changed;
         }
 
-        private static InstructionPlan? FoldUnary(
-            RewriteContext context,
-            int index,
-            InstructionPlan instruction,
-            int[] readCounts,
-            int[] writeCounts,
-            int[] writeIndexes)
+        private static InstructionPlan? FoldUnary(RewriteContext context, int index, InstructionPlan instruction, int[] readCounts, int[] writeCounts, int[] writeIndexes)
         {
             if (instruction.X.Kind != GesOperandKind.Register)
             {
@@ -554,13 +544,7 @@ internal sealed partial class GesBinaryBuilder
             }
         }
 
-        private static InstructionPlan? FoldBinary(
-            RewriteContext context,
-            int index,
-            InstructionPlan instruction,
-            int[] readCounts,
-            int[] writeCounts,
-            int[] writeIndexes)
+        private static InstructionPlan? FoldBinary(RewriteContext context, int index, InstructionPlan instruction, int[] readCounts, int[] writeCounts, int[] writeIndexes)
         {
             if (instruction.X.Kind != GesOperandKind.Register ||
                 instruction.Y.Kind != GesOperandKind.Register)
@@ -636,13 +620,7 @@ internal sealed partial class GesBinaryBuilder
             return null;
         }
 
-        private static ConstantValue ReadLocalConstant(
-            RewriteContext context,
-            int consumerIndex,
-            GesRegisterRef register,
-            int[] readCounts,
-            int[] writeCounts,
-            int[] writeIndexes)
+        private static ConstantValue ReadLocalConstant(RewriteContext context, int consumerIndex, GesRegisterRef register, int[] readCounts, int[] writeCounts, int[] writeIndexes)
         {
             if (!context.IsTemporary(register) ||
                 readCounts[register.Id] != 1 ||

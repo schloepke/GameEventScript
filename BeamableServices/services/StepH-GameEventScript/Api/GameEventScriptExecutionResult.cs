@@ -10,13 +10,7 @@ public enum GameEventScriptExecutionState
     RuntimeError
 }
 
-public readonly struct GameEventScriptExecutionResult(
-    GameEventScriptExecutionState state,
-    int executedOpcodes,
-    int processedMessages,
-    int emittedMessages,
-    int publishedMessages,
-    GameEventScriptDiagnostic? diagnostic = null)
+public readonly struct GameEventScriptExecutionResult(GameEventScriptExecutionState state, int executedOpcodes, int processedMessages, int emittedMessages, int publishedMessages, GameEventScriptDiagnostic? diagnostic = null)
 {
     public GameEventScriptExecutionState State { get; } = state;
     public int ExecutedOpcodes { get; } = executedOpcodes;

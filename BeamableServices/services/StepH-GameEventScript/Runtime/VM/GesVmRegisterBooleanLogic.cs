@@ -1,5 +1,5 @@
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Runtime.VM;
 

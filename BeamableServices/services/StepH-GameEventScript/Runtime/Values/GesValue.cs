@@ -638,7 +638,7 @@ public struct GesValue : IEquatable<GesValue>
         IntegerValue = 0;
         ObjectValue = value;
     }
-    
+
     internal void SetListBuilder(object listBuilder)
     {
         Kind = ListBuilder;
@@ -859,7 +859,7 @@ public struct GesValue : IEquatable<GesValue>
 
         return hash.ToHashCode();
     }
-    
+
     internal IGesIterator? CreateIterator()
     {
         switch (Kind)
@@ -885,7 +885,7 @@ public struct GesValue : IEquatable<GesValue>
                 return null;
         }
     }
-    
+
     internal readonly string ToText => Kind switch
     {
         Nothing => string.Empty,

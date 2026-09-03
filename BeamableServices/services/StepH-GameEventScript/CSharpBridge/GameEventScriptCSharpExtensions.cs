@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using StepH.GameEventScript.Api;
-using StepH.GameEventScript.Runtime.VM;
 using StepH.GameEventScript.Runtime;
 using StepH.GameEventScript.Runtime.Values;
+using StepH.GameEventScript.Runtime.VM;
 
 namespace StepH.GameEventScript.CSharpBridge;
 
@@ -98,9 +98,7 @@ public sealed class GameEventScriptCSharpExtensionRegistryBuilder
     }
 }
 
-internal sealed class GameEventScriptOverlayExtensionRegistry(
-    IGameEventScriptExtensionRegistry localRegistry,
-    IGameEventScriptExtensionRegistry baseRegistry) : IGameEventScriptExtensionRegistry
+internal sealed class GameEventScriptOverlayExtensionRegistry(IGameEventScriptExtensionRegistry localRegistry, IGameEventScriptExtensionRegistry baseRegistry) : IGameEventScriptExtensionRegistry
 {
     public IGameEventScriptExtensionFunction? Resolve(GameEventScriptExtensionReference reference)
         => localRegistry.Resolve(reference) ?? baseRegistry.Resolve(reference);
@@ -149,11 +147,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         }
     }
 
-    private static IGameEventScriptExtensionFunction CreateFunction(
-        string extensionName,
-        GesFunctionAttribute attribute,
-        MethodInfo method,
-        out string signatureId)
+    private static IGameEventScriptExtensionFunction CreateFunction(string extensionName, GesFunctionAttribute attribute, MethodInfo method, out string signatureId)
     {
         if (!method.IsStatic)
         {
@@ -236,11 +230,7 @@ internal sealed class GameEventScriptCSharpExtensionRegistry : IGameEventScriptE
         return Activator.CreateInstance(typeof(ExternalObjectArgumentReader<>).MakeGenericType(parameterType))!;
     }
 
-    private static void RequireParameterKind(
-        MethodInfo method,
-        ExtensionParameterDefinition definition,
-        GameEventScriptBytecodeTypeKind kind,
-        bool allowUnitTypes)
+    private static void RequireParameterKind(MethodInfo method, ExtensionParameterDefinition definition, GameEventScriptBytecodeTypeKind kind, bool allowUnitTypes)
     {
         if (definition.Kind is null)
         {

@@ -14,11 +14,7 @@ internal static class GameEventScriptExternalTypeValueConverter
     internal static GesValue CoerceToDeclaredType(in GesValue value, GameEventScriptExternalTypeFieldDefinition definition)
         => CoerceToDeclaredType(in value, definition.Kind, definition.Unit, definition.TypeName);
 
-    private static GesValue CoerceToDeclaredType(
-        in GesValue value,
-        GameEventScriptBytecodeTypeKind? kind,
-        GameEventScriptBytecodeInstructionUnit? unit,
-        string typeName)
+    private static GesValue CoerceToDeclaredType(in GesValue value, GameEventScriptBytecodeTypeKind? kind, GameEventScriptBytecodeInstructionUnit? unit, string typeName)
     {
         if (kind == GameEventScriptBytecodeTypeKind.Vector &&
             unit is not null &&

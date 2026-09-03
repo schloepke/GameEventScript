@@ -23,14 +23,7 @@ internal sealed class GesLinkedProgram
         internal string SignatureId { get; }
     }
 
-    internal readonly struct Handler(
-        GameEventScriptMessageSignature signature,
-        string[] requiredTags,
-        string[] excludedTags,
-        bool matchArguments,
-        ushort entryAddress,
-        ushort requiredRegisterCount,
-        ushort requiredCallStackDepth)
+    internal readonly struct Handler(GameEventScriptMessageSignature signature, string[] requiredTags, string[] excludedTags, bool matchArguments, ushort entryAddress, ushort requiredRegisterCount, ushort requiredCallStackDepth)
     {
         internal GameEventScriptMessageSignature Signature { get; } = signature;
         internal string[] RequiredTags { get; } = requiredTags;
@@ -41,10 +34,7 @@ internal sealed class GesLinkedProgram
         internal ushort RequiredCallStackDepth { get; } = requiredCallStackDepth;
     }
 
-    internal GesLinkedProgram(
-        GameEventScriptProgram program,
-        IGameEventScriptExtensionRegistry extensionRegistry,
-        IGameEventScriptExternalTypeRegistry typeRegistry)
+    internal GesLinkedProgram(GameEventScriptProgram program, IGameEventScriptExtensionRegistry extensionRegistry, IGameEventScriptExternalTypeRegistry typeRegistry)
     {
         Program = program ?? throw new ArgumentNullException(nameof(program));
         GesProgramCallGraphValidator.Validate(program);

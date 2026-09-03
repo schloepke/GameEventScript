@@ -2,9 +2,9 @@ using System;
 using System.Globalization;
 using StepH.GameEventScript.Api;
 using StepH.GameEventScript.Runtime;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
-using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
 using StepH.GameEventScript.Runtime.Values;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeInstructionUnit;
+using static StepH.GameEventScript.Api.GameEventScriptBytecodeTypeKind;
 
 namespace StepH.GameEventScript.Runtime.VM;
 
@@ -128,7 +128,7 @@ internal static class GesVmRegisterTypeCastCheck
                 return dst;
             default:
                 if (xValue.Kind == type) return xValue;
-                else dst.SetNothing(); 
+                else dst.SetNothing();
                 return dst;
         }
     }

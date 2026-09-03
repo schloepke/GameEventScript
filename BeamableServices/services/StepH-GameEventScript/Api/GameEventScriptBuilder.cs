@@ -320,7 +320,8 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var predicateDefinition in module.PredicateDefinitions)
             {
-                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition)) errors.Add(module, $"Predicate '{predicateDefinition.Name}' is defined more than once", predicateDefinition.Name, Predicate, ValidateDuplicatePredicate, predicateDefinition);
+                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition))
+                    errors.Add(module, $"Predicate '{predicateDefinition.Name}' is defined more than once", predicateDefinition.Name, Predicate, ValidateDuplicatePredicate, predicateDefinition);
             }
         }
 

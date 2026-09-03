@@ -49,11 +49,5 @@ public sealed class GameEventScriptHostBuilder
         return this;
     }
 
-    public GameEventScriptHost Build() => new(
-        _random ?? GameEventScriptRandomGenerator.Create(),
-        _observer,
-        _extensionRegistry,
-        _externalTypeRegistry,
-        _limits,
-        _publishSink);
+    public GameEventScriptHost Build() => new(_random ?? GameEventScriptRandomGenerator.Create(), _observer, _extensionRegistry, _externalTypeRegistry, _limits, _publishSink);
 }

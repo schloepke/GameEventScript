@@ -809,11 +809,7 @@ internal static class GesAstOptimizer
             GameEventScriptBytecodeTypeKind.Map or
             GameEventScriptBytecodeTypeKind.Dice;
 
-    private static GesValue? FoldAdd(
-        GesValue left,
-        GesValue right,
-        double leftNumber,
-        double rightNumber)
+    private static GesValue? FoldAdd(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
         if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
@@ -844,11 +840,7 @@ internal static class GesAstOptimizer
         return null;
     }
 
-    private static GesValue? FoldSubtract(
-        GesValue left,
-        GesValue right,
-        double leftNumber,
-        double rightNumber)
+    private static GesValue? FoldSubtract(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
         if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             right.Kind == GameEventScriptBytecodeTypeKind.Integer &&
@@ -879,11 +871,7 @@ internal static class GesAstOptimizer
         return null;
     }
 
-    private static GesValue? FoldMultiply(
-        GesValue left,
-        GesValue right,
-        double leftNumber,
-        double rightNumber)
+    private static GesValue? FoldMultiply(GesValue left, GesValue right, double leftNumber, double rightNumber)
     {
         if (left.Kind == GameEventScriptBytecodeTypeKind.Integer &&
             right.Kind == GameEventScriptBytecodeTypeKind.Integer)
@@ -977,9 +965,7 @@ internal static class GesAstOptimizer
         return GesValue.GesFloat(number, unit);
     }
 
-    private static GameEventScriptBytecodeInstructionUnit? ProductUnit(
-        GameEventScriptBytecodeInstructionUnit left,
-        GameEventScriptBytecodeInstructionUnit right)
+    private static GameEventScriptBytecodeInstructionUnit? ProductUnit(GameEventScriptBytecodeInstructionUnit left, GameEventScriptBytecodeInstructionUnit right)
     {
         if (left.IsNumericUnit() && right.IsNumericUnit())
         {

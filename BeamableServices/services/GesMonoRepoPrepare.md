@@ -747,9 +747,11 @@ Abnahme:
 
 Die bereits bekannten XML-Dokumentationswarnungen für `GesValueMap` bleiben unverändert und gehören nicht zu diesem mechanischen Formatierungsschritt.
 
-### 6.3 Normative Dokumentationsstruktur anlegen
+### 6.3 Normative Dokumentationsstruktur anlegen - DONE
 
-Unter `StepH-GameEventScript/Documentation` eine eindeutige Struktur anlegen:
+Erledigt:
+
+- Unter `StepH-GameEventScript/Documentation` wurde die eindeutige Zielstruktur angelegt:
 
 ```text
 Documentation/
@@ -773,13 +775,24 @@ Documentation/
       Environment.md
       CrossLanguageAcceptance.md
   Guide/
+    README.md
 ```
 
-- `Documentation/README.md` ist der zentrale Einstieg und ordnet jeden Vertragsbereich genau einem normativen Dokument zu.
-- Normative Dokumente dürfen Regeln anderer Bereiche nur verlinken, nicht in leicht abweichender Form duplizieren.
-- Lernmaterial liegt getrennt unter `Guide` und ist nicht normativ.
-- Arbeitsdokumente, Testinventare, Backlogs, Handoffs und Memory-Dateien bleiben außerhalb der normativen Struktur.
-- Physische Dateinamen und Verzeichnisse bereits so wählen, dass sie ohne konzeptionelle Umbenennung in das Monorepo übernommen werden können.
+- `Documentation/README.md` ist der zentrale Einstieg und ordnet jeden Vertragsbereich genau einem verantwortlichen Dokument zu; sämtliche aufgeführten Dokumente sind von dort erreichbar.
+- Jedes Zieldokument besitzt bereits eine eindeutige Scope- und Abgrenzungsbeschreibung mit Links auf die jeweils zuständigen Nachbardokumente.
+- Die neuen Spezifikationsdateien sind bis zur inhaltlichen Überführung ausdrücklich als `Structural draft` markiert und erheben noch keinen unvollständigen normativen Anspruch.
+- `Guide/README.md` definiert Lernmaterial ausdrücklich als nicht normativ und verweist für exaktes Verhalten auf den Spezifikationsindex.
+- Arbeitsdokumente, Testinventare, Backlogs, Handoffs, Editor-Dokumente und `GameEventScript.Memory.md` bleiben außerhalb der normativen Struktur.
+- Sämtliche bisherigen technischen Quelldokumente bleiben bis 6.4 beziehungsweise 6.5 unverändert an ihrem bisherigen Ort; dieser Schritt hat keine Inhalte vorzeitig verschoben oder entfernt.
+- Dateinamen, Verzeichnisse und relative Verlinkung sind bereits ohne konzeptionelle Umbenennung in das Monorepo übernehmbar.
+
+Abnahme:
+
+```text
+17 documentation entry/specification/guide files created
+All internal Documentation links resolve
+All pre-existing source documents remain available for 6.4/6.5
+```
 
 ### 6.4 Bestehende technische Spezifikationen überführen
 
@@ -849,13 +862,37 @@ Für die Conformance-API zusätzlich festhalten:
 
 Jede Sprache erhält anschließend eine idiomatische Abbildung. Die APIs müssen konzeptionell und semantisch gleich sein, nicht zeichengetreu dieselben Typ- oder Methodennamen verwenden.
 
-### 6.7 Gesamtkonsistenz und Vollständigkeit prüfen
+### 6.7 Öffentliche XML-API-Dokumentation vervollständigen
+
+- Sämtliche öffentlich sichtbaren C#-Typen und Member in Core, Compiler, Runtime, API, `CSharpBridge` und Conformance vollständig mit XML-Dokumentation versehen beziehungsweise vorhandene Dokumentation an den aktuellen Vertrag anpassen.
+- `summary`, Parameter, Rückgabewerte, Typparameter, relevante Exceptions, Nullability, Ownership, Lebensdauer, Seiteneffekte, Threading/Reentrancy und Hot-Path-Eigenschaften dort dokumentieren, wo sie für die korrekte Verwendung relevant sind.
+- XML-Dokumentation mit `Specification/PublicApi.md` abgleichen. Die normative Spezifikation definiert den sprachneutralen Vertrag; XML-Kommentare erklären dessen konkrete C#-Abbildung und dürfen ihm nicht widersprechen.
+- Veraltete Begriffe wie Module, Session, isolierte Runs oder eine modulgebundene VM vollständig aus aktiven API-Kommentaren entfernen.
+- Alle `#pragma`-Direktiven aus handgeschriebenem C# entfernen. Warnungen werden durch korrekten Code beziehungsweise vollständige Dokumentation behoben und nicht lokal unterdrückt.
+- Projektweite oder dateilokale Unterdrückungen für fehlende öffentliche XML-Dokumentation nicht als Ersatz einführen. Unvermeidbare Warnungsunterdrückungen in erzeugtem Fremdcode müssen über dessen Generator oder klar abgegrenzte Buildkonfiguration behandelt werden, nicht über handgeschriebene `#pragma`-Blöcke.
+- Die erzeugten XML-Dokumentationsdateien müssen ohne ungültige Verweise oder XML-Strukturfehler gebaut werden; insbesondere die derzeit bekannten `GesValueMap`-Warnungen müssen entfallen.
+- Einen mechanischen Test ergänzen, der die öffentliche API gegen fehlende XML-Dokumentation und verbleibende `#pragma`-Direktiven in handgeschriebenen Quellen absichert.
+
+### 6.8 Apache-2.0-Lizenz und Copyright-Header einführen
+
+- Für den GES-Bestand die unveränderte offizielle Apache-License-2.0 als `LICENSE` aufnehmen, den Ablageort beim Umzug zum Monorepo-Root übernehmen und sämtliche Paketmetadaten auf `Apache-2.0` setzen.
+- Vor der mechanischen Header-Ergänzung den exakten Rechteinhaber und eine reproduzierbare Jahreskonvention festlegen; keine erfundenen Platzhalter oder bei jedem Build wechselnden Jahreswerte verwenden.
+- Für geeignete handgeschriebene Source-, Test-, Tooling-, Spezifikations- und Editor-Dateien einen kurzen, zum jeweiligen Kommentarformat passenden Copyright- und SPDX-Header mit `SPDX-License-Identifier: Apache-2.0` festlegen und konsistent ergänzen.
+- Dateien ohne Kommentarformat, Binärfixtures, Golden Bytes, generierte Reports und empfangene Approval-Kandidaten nicht durch Header verändern. Generierte Textdateien erhalten einen Header nur über ihre Generatoren und nur dann, wenn ihr Format beziehungsweise ihre Parser das ausdrücklich erlauben.
+- Bestehende Drittanbieterdateien und übernommene Inhalte inventarisieren. Deren Copyright- und Lizenzhinweise unverändert erhalten und erforderliche Attributionen in einer `NOTICE`- beziehungsweise Third-Party-Notices-Datei sammeln; sie dürfen nicht pauschal als eigener Apache-2.0-Code umdeklariert werden.
+- README, Paketbeschreibung und veröffentlichte Artefakte müssen die Lizenz eindeutig ausweisen. Eine `NOTICE`-Datei nur anlegen, wenn eigene Hinweise oder Drittanbieterpflichten sie tatsächlich erfordern.
+- Einen mechanischen Lizenzcheck ergänzen, der die vereinbarte Dateimenge, zulässige Ausnahmen, den exakten Lizenztext und die Paketmetadaten prüft.
+- Nach der Header-Ergänzung Golden-/Fixture-Hashes und deterministische Buildausgaben nur dort aktualisieren, wo lizenzierte Eingabedateien fachlich Bestandteil des Hashes sind; Binärformat und Conformance-Inhalte dürfen nicht unbeabsichtigt verändert werden.
+
+### 6.9 Gesamtkonsistenz und Vollständigkeit prüfen
 
 - Von `Documentation/README.md` aus müssen alle normativen Dokumente erreichbar sein; interne Links und Zuständigkeitsverweise werden vollständig validiert.
 - Jeder öffentliche API-Typ und jede öffentliche Operation aus dem freigegebenen API-Snapshot muss genau einer Stelle in `PublicApi.md` zugeordnet sein.
 - Jeder Opcode und jede zulässige Operandenform muss in `Bytecode.md` erscheinen; numerische Tabellen werden gegen die aktuelle Implementierung geprüft, bis Punkt 7 die maschinenlesbare Quelle übernimmt.
 - Sprachsyntax und Grammatik werden gegen Parser-, Compiler- und Conformance-Fälle geprüft.
 - `.gesb`-Golden-Fixtures, GESA-Snapshots, Diagnostics und portable Semantikfälle werden gegen ihre jeweils zuständige Spezifikation geprüft.
+- Öffentliche C#-API und XML-Dokumentation werden vollständig gegen `PublicApi.md` geprüft; der Build enthält keine Dokumentationswarnungen und handgeschriebene C#-Quellen keine `#pragma`-Direktiven.
+- Lizenztext, Paketmetadaten, Copyright-/SPDX-Header, definierte Ausnahmen und gegebenenfalls Drittanbieterhinweise werden als ein zusammenhängender Lizenzvertrag geprüft.
 - Widersprüche werden durch Korrektur der zuständigen normativen Quelle beseitigt, nicht durch zusätzliche Ausnahmen oder duplizierte Erklärungen.
 - Nach erfolgreicher Überführung verbleiben außerhalb von `Documentation` nur ausdrücklich nichtnormative Arbeits-, Test-, Editor-, Memory- und Handoff-Dokumente.
 - Abschließend API-Snapshot, vollständige Nicht-Performance-Suite, Markdown-Conformance, Cross-Language-Referenz sowie Performance-/Allokationstests ausführen.

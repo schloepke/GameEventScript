@@ -70,8 +70,33 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - `StepH-GameEventScript/PortableDeterminismSemantics.md` is normative for the
   seeded PRNG, script/structural equality, stable ordering, iteration/ranges,
   and equal-priority host dispatch.
+- `StepH-GameEventScript/Documentation/README.md` is the canonical documentation
+  entry point. Its specification files currently define ownership boundaries as
+  structural drafts; existing root documents that define normative contracts
+  remain authoritative until their content is migrated and the target documents
+  are explicitly marked normative.
 
 ## Recent Completed Work
+
+### Normative Documentation Structure
+
+- Added the complete monorepo-ready `Documentation/Specification` hierarchy for
+  language, API, host runtime, Program, bytecode, `.gesb`, `.gesa`, diagnostics,
+  portable semantics, and conformance contracts.
+- The central documentation index assigns every contract area to exactly one
+  owner and links every target document. Each target currently states only its
+  scope and boundaries and is marked as a structural draft.
+- Non-normative learning material has a separate `Guide` root. Work plans,
+  history, editor material, test inventories, and existing normative source
+  documents remain outside the new tree until their dedicated migration steps.
+
+Verification after this change:
+
+```text
+17/17 documentation files present
+All internal Documentation links resolve
+All pre-existing source documents remain available for migration
+```
 
 ### Repository-wide C# Formatting Baseline
 

@@ -219,10 +219,13 @@ on Log(_ text) {
 }
 ```
 
-`on Ready` and `on Ready()` both declare the empty exact signature. A parameter
-written `name` has signature label `name` and local name `name`. A parameter
-written `_ localName` has signature label `_` and local name `localName`.
-Parameter local names must be unique within the handler.
+`on Ready` and `on Ready()` both declare the empty exact signature. The empty
+parentheses describe only the absence of message arguments; they place no
+restriction on message tags. Without a `matching` or `without` clause, an exact
+handler accepts every tag set, including an empty set. A parameter written
+`name` has signature label `name` and local name `name`. A parameter written
+`_ localName` has signature label `_` and local name `localName`. Parameter
+local names must be unique within the handler.
 
 Parameters can declare a type. The runtime casts the incoming value before the
 handler body runs. Failed casts produce `nothing`; they do not prevent dispatch:
@@ -285,14 +288,42 @@ on Radio as incoming matching #open, #enemy without #encrypted {
 }
 ```
 
-`matching` requires all listed tags. `without` rejects messages containing any
-listed tag. The clauses may appear in either order and may be repeated; all
-`matching` tags are combined into one required set and all `without` tags into
-one excluded set. Repeating a tag has the same meaning as listing it once. The
-message still contains all original tags. `initialization` is the exception and
-cannot use tag filters. Exact-signature and message-name handlers are both
-eligible for the same message; dispatch ordering and undeliverable selection are
-defined by [Host runtime](HostRuntime.md).
+`matching` requires the message to contain every listed tag. It is a subset
+test, not an exact-set comparison: additional message tags remain allowed.
+`without` rejects the message when it contains any listed tag. With neither
+clause, all tag sets are accepted.
+
+For example, this handler accepts both messages below:
+
+```ges
+on Something() matching #a {
+  emit Matched
+}
+
+emit Something() with #a
+emit Something() with #a, #b
+```
+
+The corresponding rules are:
+
+| Handler filter | Message tags | Eligible |
+| --- | --- | --- |
+| none | none, `#a`, or any other set | yes |
+| `matching #a` | `#a` | yes |
+| `matching #a` | `#a, #b` | yes |
+| `matching #a` | `#b` or none | no |
+| `without #silent` | `#a` or none | yes |
+| `without #silent` | `#a, #silent` | no |
+| `matching #a without #silent` | `#a, #b` | yes |
+| `matching #a without #silent` | `#a, #silent` | no |
+
+The clauses may appear in either order and may be repeated; all `matching` tags
+are combined into one required set and all `without` tags into one excluded
+set. Repeating a tag has the same meaning as listing it once. Filtering never
+removes tags: the delivered message retains its complete original tag list.
+`initialization` is the exception and cannot use tag filters. Exact-signature
+and message-name handlers are both eligible for the same message; dispatch
+ordering and undeliverable selection are defined by [Host runtime](HostRuntime.md).
 
 ## Statements
 

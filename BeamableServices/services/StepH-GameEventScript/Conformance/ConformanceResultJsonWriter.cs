@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Text;
 
 namespace StepH.GameEventScript.Conformance;
@@ -14,7 +13,7 @@ public static class ConformanceResultJsonWriter
     public static string ToText(ConformanceRunReport report)
     {
         _ = report ?? throw new ArgumentNullException(nameof(report));
-        var writer = new CanonicalJsonWriter();
+        var writer = new ConformanceCanonicalJsonWriter();
         writer.BeginObject();
         writer.Number("schemaVersion", 1);
         writer.Name("runner");
@@ -50,7 +49,7 @@ public static class ConformanceResultJsonWriter
 
     public static byte[] ToArray(ConformanceRunReport report) => Utf8.GetBytes(ToText(report));
 
-    private static void WriteCase(CanonicalJsonWriter writer, ConformanceCaseResult result)
+    private static void WriteCase(ConformanceCanonicalJsonWriter writer, ConformanceCaseResult result)
     {
         writer.BeginObject();
         writer.String("id", result.Id);
@@ -95,7 +94,7 @@ public static class ConformanceResultJsonWriter
         writer.EndObject();
     }
 
-    private static void WriteMismatch(CanonicalJsonWriter writer, ConformanceMismatch mismatch)
+    private static void WriteMismatch(ConformanceCanonicalJsonWriter writer, ConformanceMismatch mismatch)
     {
         writer.BeginObject();
         writer.String("path", mismatch.Path);
@@ -110,10 +109,10 @@ public static class ConformanceResultJsonWriter
         writer.EndObject();
     }
 
-    private static void WriteDiagnostic(CanonicalJsonWriter writer, ConformanceResultDiagnostic diagnostic)
+    private static void WriteDiagnostic(ConformanceCanonicalJsonWriter writer, ConformanceResultDiagnostic diagnostic)
         => WriteDiagnosticValue(writer, diagnostic);
 
-    private static void WriteDiagnosticValue(CanonicalJsonWriter writer, ConformanceResultDiagnostic diagnostic)
+    private static void WriteDiagnosticValue(ConformanceCanonicalJsonWriter writer, ConformanceResultDiagnostic diagnostic)
     {
         writer.BeginObject();
         writer.String("phase", diagnostic.Phase);
@@ -131,7 +130,7 @@ public static class ConformanceResultJsonWriter
         writer.EndObject();
     }
 
-    private static void WritePerformance(CanonicalJsonWriter writer, ConformancePerformanceResult performance)
+    private static void WritePerformance(ConformanceCanonicalJsonWriter writer, ConformancePerformanceResult performance)
     {
         writer.Name("performance");
         writer.BeginObject();
@@ -154,19 +153,19 @@ public static class ConformanceResultJsonWriter
         writer.EndObject();
     }
 
-    private static void WriteStrings(CanonicalJsonWriter writer, IReadOnlyList<string> values)
+    private static void WriteStrings(ConformanceCanonicalJsonWriter writer, IReadOnlyList<string> values)
     {
         writer.BeginArray();
         for (var index = 0; index < values.Count; index++) writer.StringValue(values[index]);
         writer.EndArray();
     }
 
-    private static void Optional(CanonicalJsonWriter writer, string name, string? value)
+    private static void Optional(ConformanceCanonicalJsonWriter writer, string name, string? value)
     {
         if (value is not null) writer.String(name, value);
     }
 
-    private static void Optional(CanonicalJsonWriter writer, string name, uint? value)
+    private static void Optional(ConformanceCanonicalJsonWriter writer, string name, uint? value)
     {
         if (value is not null) writer.Number(name, value.Value);
     }
@@ -197,70 +196,4 @@ public static class ConformanceResultJsonWriter
 
     internal static string Name(ConformanceTestLevel value) => value == ConformanceTestLevel.Atomic ? "atomic" : "scenario";
 
-    private sealed class CanonicalJsonWriter
-    {
-        private readonly StringBuilder _text = new();
-        private readonly List<bool> _first = new();
-        private int _depth;
-        private bool _afterName;
-
-        internal void BeginObject() { BeforeValue(); _text.Append('{'); Open(); }
-        internal void EndObject() { Close(); _text.Append('}'); }
-        internal void BeginArray() { BeforeValue(); _text.Append('['); Open(); }
-        internal void EndArray() { Close(); _text.Append(']'); }
-        internal void Name(string name) { Next(); AppendString(name); _text.Append(": "); _afterName = true; }
-        internal void String(string name, string value) { Name(name); StringValueRaw(value); _afterName = false; }
-        internal void Number(string name, int value) { Name(name); _text.Append(value.ToString(CultureInfo.InvariantCulture)); _afterName = false; }
-        internal void Number(string name, uint value) { Name(name); _text.Append(value.ToString(CultureInfo.InvariantCulture)); _afterName = false; }
-        internal void Boolean(string name, bool value) { Name(name); _text.Append(value ? "true" : "false"); _afterName = false; }
-        internal void Null(string name) { Name(name); _text.Append("null"); _afterName = false; }
-        internal void StringValue(string value) { BeforeValue(); StringValueRaw(value); }
-        internal string Complete() => _text.Append('\n').ToString();
-
-        private void Open() { _depth++; _first.Add(true); }
-        private void Close()
-        {
-            var hadValues = !_first[^1];
-            _first.RemoveAt(_first.Count - 1);
-            _depth--;
-            if (hadValues) NewLine();
-        }
-        private void BeforeValue()
-        {
-            if (_afterName) { _afterName = false; return; }
-            if (_first.Count == 0) return;
-            Next();
-        }
-        private void Next()
-        {
-            if (_first[^1]) _first[^1] = false;
-            else _text.Append(',');
-            NewLine();
-        }
-        private void NewLine() { _text.Append('\n'); _text.Append(' ', _depth * 2); }
-        private void StringValueRaw(string value) => AppendString(value);
-        private void AppendString(string value)
-        {
-            _text.Append('"');
-            for (var index = 0; index < value.Length; index++)
-            {
-                var c = value[index];
-                switch (c)
-                {
-                    case '"': _text.Append("\\\""); break;
-                    case '\\': _text.Append("\\\\"); break;
-                    case '\b': _text.Append("\\b"); break;
-                    case '\f': _text.Append("\\f"); break;
-                    case '\n': _text.Append("\\n"); break;
-                    case '\r': _text.Append("\\r"); break;
-                    case '\t': _text.Append("\\t"); break;
-                    default:
-                        if (c < 0x20) _text.Append("\\u").Append(((int)c).ToString("x4", CultureInfo.InvariantCulture));
-                        else _text.Append(c);
-                        break;
-                }
-            }
-            _text.Append('"');
-        }
-    }
 }

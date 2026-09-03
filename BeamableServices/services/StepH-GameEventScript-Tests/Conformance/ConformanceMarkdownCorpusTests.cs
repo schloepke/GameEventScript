@@ -112,6 +112,18 @@ public sealed class ConformanceMarkdownCorpusTests
             Directory.CreateDirectory(root);
             File.WriteAllBytes(Path.Combine(root, "ConformanceResults.json"), ConformanceResultJsonWriter.ToArray(report));
             File.WriteAllText(Path.Combine(root, "ConformanceReport.md"), ConformanceMarkdownReportWriter.ToText(report));
+
+            var crossLanguage = ConformanceCrossLanguageResultJsonWriter.ToText(documents, report);
+            File.WriteAllText(Path.Combine(root, "CSharpReferenceResults.received.json"), crossLanguage);
+            var referencePath = Path.Combine(
+                ConformanceCSharpTestEnvironment.GetConformanceDirectory(),
+                "CrossLanguage",
+                "CSharpReferenceResults.json");
+            Assert.IsTrue(File.Exists(referencePath), "The checked-in C# cross-language reference is missing.");
+            Assert.AreEqual(
+                File.ReadAllText(referencePath),
+                crossLanguage,
+                "The C# cross-language reference differs. Review Received/CSharpReferenceResults.received.json before approval.");
         }
     }
 

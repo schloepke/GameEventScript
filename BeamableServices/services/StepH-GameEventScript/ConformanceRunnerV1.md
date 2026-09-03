@@ -413,6 +413,23 @@ write such data to a separate nonnormative envelope.
 Result JSON is an execution/exchange format. It is not an alternative test
 authoring format and the runner does not read it as a suite.
 
+## Cross-language result projection
+
+The full result intentionally contains implementation identity, diagnostics,
+assembler text, and profile-local performance data. Cross-language comparison
+therefore uses the additional compact artifact produced by
+`ConformanceCrossLanguageResultJsonWriter`.
+
+The writer consumes the complete parsed corpus plus a complete run report. It
+computes the exact corpus fingerprint, sorts cases by full stable ID, and emits
+only case identity, kind, level, Core/optional requirements, status, and stable
+code. It rejects partial, duplicate, additional, or metadata-inconsistent
+reports. It never reruns a case.
+
+The exact fingerprint algorithm, compact JSON schema, C# reference artifact,
+parser bootstrap process, capability policy, and acceptance comparison are
+normatively defined in `CrossLanguageConformanceV1.md`.
+
 ## Human-readable Markdown report
 
 `ConformanceReport.md` is generated solely from the structured report. It
@@ -468,7 +485,11 @@ artifacts. It must:
 - preserve the runner's stable full ID in display/output metadata;
 - use the same runner path for individual and aggregate execution;
 - avoid replacing skipped/error distinctions with framework-specific guesses;
-- never modify the authored suite without a separate explicit approval action.
+- never modify the authored suite without a separate explicit approval action;
+- emit a compact cross-language result for a complete corpus run and retain the
+  full result as the diagnostic source;
+- compare ports by full stable case ID and corpus fingerprint, never by native
+  testframework names or discovery order.
 
 Framework assertions, reflection-based discovery, environment-variable lookup,
 and filesystem paths belong to adapters, not to the portable parser, normalized

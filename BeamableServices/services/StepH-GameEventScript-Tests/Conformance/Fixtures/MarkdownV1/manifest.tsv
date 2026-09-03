@@ -1,0 +1,5 @@
+formatVersion	fixtureId	outcome	relativePath	sha256	expectedSuiteId	expectedCaseId	expectedDiagnosticCode
+1	valid.message-api	valid	Valid/message-api.md	BDF7A990FA3B3BCF5FF3E358BE752141E85239CED2CA0FF4D2F7A4059418F0CC	bootstrap.message-api	signature-mismatch	-
+1	valid.minimal-bytecode-snapshot	valid	Valid/minimal-bytecode-snapshot.md	B8D8A6BFAD47D6BEE5AD47B6634207E0755D2EE33749610BE3A3BAE20DF9C618	bootstrap.snapshot	minimal	-
+1	invalid.duplicate-yaml-key	invalid	Invalid/duplicate-yaml-key.md	F58B928E7B6ECD20A9FE7ED8D00E1B0B009E8E06CD786D99645A76B9F12FC908	-	-	conformance.yaml.duplicateKey
+1	invalid.unknown-step	invalid	Invalid/unknown-step.md	A9061EE79A979A5AF5F36A53D0457E9C9F5C89ACCEB9A65F19827EEFDF1FA6CD	-	-	conformance.schema.unknownReference

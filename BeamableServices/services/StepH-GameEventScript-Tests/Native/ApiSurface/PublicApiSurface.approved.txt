@@ -1072,6 +1072,15 @@ sealed class StepH.GameEventScript.Conformance.ConformanceCompileMetadataExpecta
 sealed class StepH.GameEventScript.Conformance.ConformanceCompileOptions
   property System.Boolean BinaryRoundTrip { get }
   property System.Collections.Generic.IReadOnlyList<System.String> DebugInfo { get }
+sealed class StepH.GameEventScript.Conformance.ConformanceCorpusIdentity
+  property System.Int32 CaseCount { get }
+  property System.Int32 DocumentCount { get }
+  property System.Int32 MarkdownFormatVersion { get }
+  property System.String Sha256 { get }
+static class StepH.GameEventScript.Conformance.ConformanceCrossLanguageResultJsonWriter
+  method static StepH.GameEventScript.Conformance.ConformanceCorpusIdentity Identify(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceDocument> documents)
+  method static System.Byte[] ToArray(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceDocument> documents, StepH.GameEventScript.Conformance.ConformanceRunReport report)
+  method static System.String ToText(System.Collections.Generic.IReadOnlyList<StepH.GameEventScript.Conformance.ConformanceDocument> documents, StepH.GameEventScript.Conformance.ConformanceRunReport report)
 sealed class StepH.GameEventScript.Conformance.ConformanceDiagnostic
   property StepH.GameEventScript.Conformance.ConformanceSourceRange Range { get }
   property System.String Code { get }

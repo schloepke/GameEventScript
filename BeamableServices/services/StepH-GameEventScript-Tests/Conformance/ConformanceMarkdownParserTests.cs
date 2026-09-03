@@ -1,4 +1,6 @@
 using System.Text;
+using System.Reflection;
+using System.Security.Cryptography;
 using StepH.GameEventScript.Conformance;
 
 namespace StepH_GameEventScript_Tests.Conformance;
@@ -6,25 +8,49 @@ namespace StepH_GameEventScript_Tests.Conformance;
 [TestClass]
 public sealed class ConformanceMarkdownParserTests
 {
+    public static IEnumerable<object[]> ValidSharedFixtures()
+        => ReadFixtureManifest()
+            .Where(fixture => fixture.Outcome == "valid")
+            .Select(fixture => new object[] { fixture.Id, fixture.RelativePath, fixture.Sha256, fixture.ExpectedSuiteId, fixture.ExpectedCaseId });
+
+    public static IEnumerable<object[]> InvalidSharedFixtures()
+        => ReadFixtureManifest()
+            .Where(fixture => fixture.Outcome == "invalid")
+            .Select(fixture => new object[] { fixture.Id, fixture.RelativePath, fixture.Sha256, fixture.ExpectedDiagnosticCode });
+
+    public static string SharedFixtureDisplayName(MethodInfo method, object[] data) => method.Name + " (" + data[0] + ")";
+
     [TestMethod]
-    [DataRow("Valid/minimal-bytecode-snapshot.md", "bootstrap.snapshot/minimal")]
-    [DataRow("Valid/message-api.md", "bootstrap.message-api/signature-mismatch")]
-    public void ParsesGoldenBootstrapFixture(string relativePath, string fullCaseId)
+    [DynamicData(nameof(ValidSharedFixtures), DynamicDataDisplayName = nameof(SharedFixtureDisplayName))]
+    public void ParsesSharedGoldenBootstrapFixture(string fixtureId, string relativePath, string sha256, string expectedSuiteId, string expectedCaseId)
     {
-        var document = ConformanceMarkdownParser.Parse(File.ReadAllBytes(FindFixture(relativePath)));
+        var bytes = ReadVerifiedFixture(fixtureId, relativePath, sha256);
+        var document = ConformanceMarkdownParser.Parse(bytes);
 
         Assert.HasCount(1, document.Cases);
-        Assert.AreEqual(fullCaseId, document.Cases[0].FullId);
+        Assert.AreEqual(expectedSuiteId, document.SuiteId);
+        Assert.AreEqual(expectedCaseId, document.Cases[0].Id);
     }
 
     [TestMethod]
-    [DataRow("Invalid/duplicate-yaml-key.md", ConformanceDiagnosticCodes.YamlDuplicateKey)]
-    [DataRow("Invalid/unknown-step.md", ConformanceDiagnosticCodes.SchemaUnknownReference)]
-    public void RejectsInvalidBootstrapFixture(string relativePath, string diagnosticCode)
+    [DynamicData(nameof(InvalidSharedFixtures), DynamicDataDisplayName = nameof(SharedFixtureDisplayName))]
+    public void RejectsSharedInvalidBootstrapFixture(string fixtureId, string relativePath, string sha256, string diagnosticCode)
     {
-        var exception = Assert.ThrowsExactly<ConformanceParseException>(() => ConformanceMarkdownParser.Parse(File.ReadAllBytes(FindFixture(relativePath))));
+        var bytes = ReadVerifiedFixture(fixtureId, relativePath, sha256);
+        var exception = Assert.ThrowsExactly<ConformanceParseException>(() => ConformanceMarkdownParser.Parse(bytes));
 
         Assert.AreEqual(diagnosticCode, exception.Diagnostics[0].Code);
+    }
+
+    [TestMethod]
+    public void SharedFixtureManifestHasStableUniqueIdentity()
+    {
+        var fixtures = ReadFixtureManifest();
+
+        Assert.HasCount(4, fixtures);
+        Assert.AreEqual(fixtures.Count, fixtures.Select(fixture => fixture.Id).Distinct(StringComparer.Ordinal).Count());
+        Assert.AreEqual(fixtures.Count, fixtures.Select(fixture => fixture.RelativePath).Distinct(StringComparer.Ordinal).Count());
+        foreach (var fixture in fixtures) _ = ReadVerifiedFixture(fixture.Id, fixture.RelativePath, fixture.Sha256);
     }
 
     [TestMethod]
@@ -581,4 +607,38 @@ code
         }
         throw new FileNotFoundException("Could not find conformance parser fixture.", relativePath);
     }
+
+    private static byte[] ReadVerifiedFixture(string fixtureId, string relativePath, string expectedSha256)
+    {
+        var bytes = File.ReadAllBytes(FindFixture(relativePath));
+        Assert.AreEqual(expectedSha256, Convert.ToHexString(SHA256.HashData(bytes)), "Fixture bytes differ for " + fixtureId + ".");
+        return bytes;
+    }
+
+    private static IReadOnlyList<ParserFixture> ReadFixtureManifest()
+    {
+        var lines = File.ReadAllLines(FindFixture("manifest.tsv"));
+        Assert.IsGreaterThan(1, lines.Length);
+        Assert.AreEqual("formatVersion\tfixtureId\toutcome\trelativePath\tsha256\texpectedSuiteId\texpectedCaseId\texpectedDiagnosticCode", lines[0]);
+        var result = new List<ParserFixture>(lines.Length - 1);
+        for (var index = 1; index < lines.Length; index++)
+        {
+            var fields = lines[index].Split('\t');
+            Assert.HasCount(8, fields, "Invalid parser fixture manifest row " + (index + 1) + ".");
+            Assert.AreEqual("1", fields[0]);
+            Assert.IsTrue(fields[2] is "valid" or "invalid");
+            Assert.AreEqual(64, fields[4].Length);
+            result.Add(new ParserFixture(fields[1], fields[2], fields[3], fields[4], fields[5], fields[6], fields[7]));
+        }
+        return result;
+    }
+
+    private sealed record ParserFixture(
+        string Id,
+        string Outcome,
+        string RelativePath,
+        string Sha256,
+        string ExpectedSuiteId,
+        string ExpectedCaseId,
+        string ExpectedDiagnosticCode);
 }

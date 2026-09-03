@@ -82,9 +82,12 @@ public enum ConformanceNativeActionKind
 
 public sealed class ConformanceSourceDocument
 {
+    private readonly byte[] _utf8Bytes;
+
     internal ConformanceSourceDocument(byte[] utf8Bytes, bool hasByteOrderMark, string lineEnding)
     {
-        Utf8Bytes = Array.AsReadOnly(utf8Bytes);
+        _utf8Bytes = utf8Bytes;
+        Utf8Bytes = Array.AsReadOnly(_utf8Bytes);
         HasByteOrderMark = hasByteOrderMark;
         LineEnding = lineEnding;
     }
@@ -92,6 +95,8 @@ public sealed class ConformanceSourceDocument
     public IReadOnlyList<byte> Utf8Bytes { get; }
     public bool HasByteOrderMark { get; }
     public string LineEnding { get; }
+
+    internal ReadOnlySpan<byte> Utf8Span => _utf8Bytes;
 }
 
 public sealed class ConformanceDocument

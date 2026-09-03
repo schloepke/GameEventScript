@@ -79,6 +79,53 @@ public sealed class ConformanceReportWriterTests
     }
 
     [TestMethod]
+    public void WritesOrderIndependentCrossLanguageResultKeyedByStableCaseId()
+    {
+        var first = ParseBytecode("suite.z", "last", "Last");
+        var second = ParseBytecode("suite.a", "first", "First");
+        var environment = Environment(["compiler"]);
+        var forwardDocuments = new[] { first, second };
+        var reverseDocuments = new[] { second, first };
+
+        var forward = ConformanceCrossLanguageResultJsonWriter.ToText(
+            forwardDocuments,
+            ConformanceRunner.RunCorpus(forwardDocuments, environment));
+        var reverse = ConformanceCrossLanguageResultJsonWriter.ToText(
+            reverseDocuments,
+            ConformanceRunner.RunCorpus(reverseDocuments, environment));
+
+        Assert.AreEqual(forward, reverse);
+        using var json = JsonDocument.Parse(forward);
+        var root = json.RootElement;
+        Assert.AreEqual(1, root.GetProperty("schemaVersion").GetInt32());
+        var corpus = root.GetProperty("corpus");
+        Assert.AreEqual(1, corpus.GetProperty("markdownFormatVersion").GetInt32());
+        Assert.AreEqual(2, corpus.GetProperty("documentCount").GetInt32());
+        Assert.AreEqual(2, corpus.GetProperty("caseCount").GetInt32());
+        Assert.AreEqual(64, corpus.GetProperty("sha256").GetString()!.Length);
+        var cases = root.GetProperty("cases");
+        Assert.AreEqual("suite.a/first", cases[0].GetProperty("id").GetString());
+        Assert.AreEqual("suite.z/last", cases[1].GetProperty("id").GetString());
+        CollectionAssert.AreEqual(new[] { "compiler" }, cases[0].GetProperty("requires").GetProperty("core").EnumerateArray().Select(value => value.GetString()).ToArray());
+        Assert.AreEqual("passed", cases[0].GetProperty("status").GetString());
+        Assert.AreEqual("conformance.passed", cases[0].GetProperty("code").GetString());
+        Assert.IsFalse(forward.Contains("runner", StringComparison.Ordinal));
+        Assert.IsFalse(forward.Contains("implementation", StringComparison.Ordinal));
+        Assert.IsFalse(forward.Contains("actualAssembler", StringComparison.Ordinal));
+    }
+
+    [TestMethod]
+    public void CrossLanguageWriterRejectsPartialOrMismatchedReports()
+    {
+        var first = ParseBytecode("suite.a", "first", "First");
+        var second = ParseBytecode("suite.b", "second", "Second");
+        var partial = ConformanceRunner.RunDocument(first, Environment(["compiler"]));
+
+        _ = Assert.ThrowsExactly<ArgumentException>(() =>
+            ConformanceCrossLanguageResultJsonWriter.ToText(new[] { first, second }, partial));
+    }
+
+    [TestMethod]
     public void WritesReadableMarkdownSummaryCapabilitiesAndEscapedCaseCells()
     {
         var document = ParseBytecode("suite", "case", "A | title", optionalCapability: "bytecode-snapshot");

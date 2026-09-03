@@ -72,6 +72,25 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Cross-Language Conformance Acceptance Preparation
+
+- `CrossLanguageConformanceV1.md` defines an exact authored-corpus SHA-256,
+  stable-ID comparison, optional-capability skips, and complete-port acceptance.
+- `ConformanceCrossLanguageResultJsonWriter` emits a framework- and
+  implementation-neutral compact result without rerunning the corpus.
+- The checked-in C# reference is verified from the already collected individual
+  case results. Shared Markdown/YAML parser fixtures now have a hash-protected
+  language-neutral manifest, and the capability matrix distinguishes C# proof,
+  Unity DLL reuse, and not-yet-accepted Swift/Kotlin/C++ ports.
+
+Verification after this change:
+
+```text
+1029/1029 Markdown conformance cases passed
+1128/1128 non-performance test executions passed
+6/6 performance/allocation tests passed on confirmation run
+```
+
 ### Portable `.gesb` Fixture Manifest and Resolver
 
 - `program.binary-format` is the executable manifest for 13 immutable `.gesb`

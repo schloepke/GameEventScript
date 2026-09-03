@@ -454,10 +454,11 @@ sowie Performanceprofil und Measurement-Provider. Core- und optionale
 Capabilities führen normgerecht zu `error` beziehungsweise `skipped`.
 Corpus-Duplikate und Runnerlimits werden vor der ersten Ausführung geprüft.
 
-Alle acht Testarten werden ausgeführt: Script-API einschließlich Initialisierung,
+Alle elf Testarten werden ausgeführt: Script-API einschließlich Initialisierung,
 Frames, nativen Handlern und Local/Outbound-Beobachtung; Compile- und
-Loadfehler; Message-API; Compile-Metadaten; Opcode-Constraints;
-Bytecode-Snapshots sowie Performance nach vorheriger Korrektheitsprüfung.
+Loadfehler; Message-, Value- und External-Type-API; Compile-Metadaten;
+Opcode-Constraints; Bytecode-Snapshots; portable Program-Binaries sowie
+Performance nach vorheriger Korrektheitsprüfung.
 Binary64-Vergleich unterstützt exakte Bits und ULP, Performancegrenzen verwenden
 den kleinsten angegebenen Bound. Ergebnisobjekte enthalten Status, stabile
 Codes, Mismatches, Diagnostics, Runtime-Limits, Snapshottext und Messwerte.
@@ -670,22 +671,36 @@ Abnahme:
 6/6 Performance-/Allokationstests im Bestätigungslauf bestanden
 ```
 
-### 5.10 Cross-Language-Abnahme vorbereiten
+### 5.10 Cross-Language-Abnahme vorbereiten - DONE
 
-- C# erzeugt zunächst die Referenzergebnisse des gemeinsamen Markdown-Corpus.
-- Jeder Port implementiert denselben Parser-, Dokumentmodell-, Runner- und
-  Ergebnisvertrag und führt denselben Corpus aus.
-- Gemeinsame Valid-/Invalid-Fixtures prüfen zusätzlich die identische
-  Markdown-/YAML-Interpretation aller Parser.
-- Eine Capability-Matrix zeigt implementierte optionale Bereiche und verbietet
-  das Überspringen von Required-Core-Fällen.
-- Ergebnisse werden über stabile Case-IDs statt Testframework-Namen verglichen.
-- Performance-Workloads und deren Korrektheitsanteil gehören zum gemeinsamen
-  Corpus; Performanceprofile und Baselines dürfen sprach- beziehungsweise
-  plattformspezifisch sein.
-- Bytecode-Snapshots bleiben für identische Compilerinputs und Optionen
-  sprachübergreifend vergleichbar; Unterschiede in ausdrücklich
-  sprachspezifischer BuildMetadata werden separat behandelt.
+Erledigt:
+
+- `CrossLanguageConformanceV1.md` definiert den bytegenauen Corpus-Fingerprint,
+  die Cross-Language-Vergleichsregeln und die vollständige Capability-Policy.
+- `ConformanceCrossLanguageResultJsonWriter` erzeugt aus einem vollständigen
+  Corpus-Report eine kleine kanonische Projektion. Sie enthält ausschließlich
+  Corpus-Identität, stabile Case-ID, Kind, Level, Core-/Optional-Anforderungen,
+  Status und stabilen Code und ist unabhängig von Framework und Discovery Order.
+- C# erzeugt ohne zweiten Corpus-Lauf einen Received-Kandidaten und vergleicht
+  ihn bytegenau mit `CrossLanguage/CSharpReferenceResults.json`.
+- Die gemeinsamen Valid-/Invalid-Parser-Fixtures besitzen ein simples
+  `manifest.tsv` mit exakten SHA-256-Werten und erwarteter normalisierter
+  Identität beziehungsweise stabilem ersten Fehlercode.
+- `CapabilityMatrix.md` trennt Core von optionalen Fähigkeiten. Fehlender Core
+  bleibt ein nicht akzeptierter Error; nur ehrlich fehlende optionale
+  Capabilities dürfen die genau betroffenen Fälle überspringen.
+- Performance-Korrektheit und Bytecode-Snapshots bleiben Teil des gemeinsamen
+  Corpus. Sprach-/plattformabhängige Messwerte und BuildMetadata sind nicht Teil
+  der kompakten semantischen Projektion.
+
+Abnahme:
+
+```text
+Corpus-Fingerprint BB8FFCBBD98EBF330D6ADBBBFFA7DACFEF885CD9B40DAB44231D329DCE98B856
+1029/1029 Markdown-Conformance-Fälle bestanden
+1128/1128 Nicht-Performance-Testausführungen bestanden
+6/6 Performance-/Allokationstests im Bestätigungslauf bestanden
+```
 
 ## 6. Öffentliche sprachneutrale API spezifizieren
 
@@ -714,6 +729,7 @@ Benötigt wird ein normatives API-Dokument für:
 - CaseResult, RunSummary und RunReport
 - maschinenlesbarer ResultWriter und menschenlesbarer MarkdownReportWriter
 - ReceivedWriter für Performance-Baselines und Bytecode-Snapshots
+- CorpusIdentity und kompakter CrossLanguageResultWriter
 
 Die Conformance-Oberfläche gehört zunächst zum Namespace
 `StepH.GameEventScript.Conformance` im bestehenden Core-Projekt. Ihre API muss

@@ -6,6 +6,9 @@ The test project has two semantic roots:
   generated reports. Its root also contains the C# conformance runner, parser,
   report and test-framework adapters, so IDE test trees expose them directly as
   `Conformance` rather than as native implementation tests.
+  `Conformance/CrossLanguage` contains the compact accepted C# reference and
+  the live language/capability matrix. Shared parser bootstrap inputs are
+  integrity-protected by `Conformance/Fixtures/MarkdownV1/manifest.tsv`.
 - `Native` contains the remaining C#-specific tests, grouped by purpose:
   `Api`, `ApiSurface`, `BinaryFormat`, `Compiler`, `Core`, `CSharpBridge`, and
   `Runtime`.

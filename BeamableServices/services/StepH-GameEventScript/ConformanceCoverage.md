@@ -51,6 +51,11 @@ The complete portable `.gesb` fixture manifest is
 opaque optional data, stable structural errors, stable semantic validation
 errors, bounded resource resolution, rewrite identity, and runtime execution.
 
+Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
+and the compact C# reference result are defined in
+`CrossLanguageConformanceV1.md`. The comparison is keyed exclusively by the
+stable IDs in this coverage index and the executable corpus.
+
 ## Intentionally language-specific coverage
 
 The following tests remain implementation tests even when the underlying

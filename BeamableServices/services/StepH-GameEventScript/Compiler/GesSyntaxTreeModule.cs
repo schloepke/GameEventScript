@@ -52,9 +52,56 @@ internal sealed class GesCallableDefinition(string name, IReadOnlyList<Parameter
 
     public IReadOnlyList<string> SignatureLabels { get; } = GesSyntaxTreeNodeLists.ToSignatureLabels(parameterList);
 
+    public string SignatureId { get; } = GesCallableSignatures.Create(name, parameterList);
+
     public ExpressionNode Expression { get; } = expression ?? throw new ArgumentNullException(nameof(expression));
 
     public GameEventScriptCallableKind Kind { get; } = kind;
 
     public GameEventScriptSourceLocation? SourceRange { get; } = sourceRange;
+}
+
+internal static class GesCallableSignatures
+{
+    public static string Create(string name, IReadOnlyList<ParameterNode> parameters)
+    {
+        var labels = new string[parameters.Count];
+        for (var index = 0; index < labels.Length; index++) labels[index] = parameters[index].SignatureLabel;
+        return Create(name, labels);
+    }
+
+    public static string Create(string name, IReadOnlyList<ArgumentNode> arguments)
+    {
+        var labels = new string[arguments.Count];
+        for (var index = 0; index < labels.Length; index++) labels[index] = arguments[index].Name;
+        return Create(name, labels);
+    }
+
+    public static string Create(string name, IReadOnlyList<string> labels)
+        => name + "(" + string.Join(",", labels) + ")";
+
+    public static bool HasName(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
+    {
+        foreach (var callable in callables.Values)
+            if (string.Equals(callable.Name, name, StringComparison.Ordinal)) return true;
+        return false;
+    }
+
+    public static GesCallableDefinition? Resolve(IReadOnlyDictionary<string, GesCallableDefinition> callables, CallExpressionNode call)
+    {
+        callables.TryGetValue(Create(call.Name, call.ArgumentList.Arguments), out var result);
+        return result;
+    }
+
+    public static GesCallableDefinition? ResolveSingleParameterPredicate(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
+    {
+        GesCallableDefinition? result = null;
+        foreach (var callable in callables.Values)
+        {
+            if (callable.Kind != GameEventScriptCallableKind.PredicateCall || callable.Parameters.Count != 1 || !string.Equals(callable.Name, name, StringComparison.Ordinal)) continue;
+            if (result is not null) return null;
+            result = callable;
+        }
+        return result;
+    }
 }

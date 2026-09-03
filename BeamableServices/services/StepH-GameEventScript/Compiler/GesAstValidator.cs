@@ -233,6 +233,8 @@ internal static class GesAstValidator
                 ValidateStatementReferences(parsedScript, statement, callables, typeDefinitions, errors, handlerScope);
             }
         }
+
+        GesShadowingValidator.Validate(parsedScript, errors);
     }
 
     private static void ValidateInitializationHandler(ParsedScript parsedScript, EventHandlerNode handler, GesValidationErrors errors)
@@ -691,7 +693,8 @@ internal static class GesAstValidator
 
     private static StaticExpressionInfo ClassifyCall(CallExpressionNode call, IReadOnlyDictionary<string, GesCallableDefinition> callables, IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions, ISet<string> visitedCallables)
     {
-        if (!callables.TryGetValue(call.Name, out var callable))
+        var callable = GesCallableSignatures.Resolve(callables, call);
+        if (callable is null)
         {
             return StaticExpressionInfo.Unknown;
         }
@@ -701,7 +704,7 @@ internal static class GesAstValidator
             return StaticExpressionInfo.Boolean;
         }
 
-        var callableKey = $"{callable.Kind}:{callable.Name}";
+        var callableKey = $"{callable.Kind}:{callable.SignatureId}";
         if (!visitedCallables.Add(callableKey))
         {
             return StaticExpressionInfo.Unknown;
@@ -945,9 +948,7 @@ internal static class GesAstValidator
                         GameEventScriptSymbolKind.Predicate,
                         $"Predicate test target '{predicateCall.PredicateName}' must use identifier casing (start lowercase)",
                         errors);
-                    if (!callables.TryGetValue(predicateCall.PredicateName, out var callableDefinition) ||
-                        callableDefinition.Kind != GameEventScriptCallableKind.PredicateCall ||
-                        callableDefinition.Parameters.Count != 1)
+                    if (GesCallableSignatures.ResolveSingleParameterPredicate(callables, predicateCall.PredicateName) is null)
                     {
                         errors.Add(
                             parsedScriptContext,
@@ -1305,9 +1306,20 @@ internal static class GesAstValidator
         IReadOnlyDictionary<string, TypeDefinitionNode> typeDefinitions,
         GesValidationErrors errors)
     {
-        if (!callables.TryGetValue(call.Name, out var callable))
+        var callable = GesCallableSignatures.Resolve(callables, call);
+        if (callable is null)
         {
-            if (AllArgumentsUnlabeled(call.ArgumentList.Arguments))
+            if (GesCallableSignatures.HasName(callables, call.Name))
+            {
+                var callableKind = FindCallableKind(callables, call.Name);
+                errors.Add(
+                    parsedScriptContext,
+                    $"No overload of '{call.Name}' matches signature '{GesCallableSignatures.Create(call.Name, call.ArgumentList.Arguments)}'",
+                    call.Name,
+                    callableKind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptSymbolKind.Predicate : GameEventScriptSymbolKind.Function,
+                    callableKind == GameEventScriptCallableKind.PredicateCall ? GameEventScriptDiagnosticCodes.ValidateWrongPredicateArity : GameEventScriptDiagnosticCodes.ValidateWrongFunctionArity);
+            }
+            else if (AllArgumentsUnlabeled(call.ArgumentList.Arguments))
             {
                 errors.Add(
                     parsedScriptContext,
@@ -1322,6 +1334,13 @@ internal static class GesAstValidator
 
         ValidateCallArity(parsedScriptContext, callable.Kind, call.Name, callable.Parameters.Count, call.Arguments.Count, errors);
         ValidateCallLabels(parsedScriptContext, callable.Kind, call.Name, callable.SignatureLabels, call.ArgumentList.Arguments, errors);
+    }
+
+    private static GameEventScriptCallableKind FindCallableKind(IReadOnlyDictionary<string, GesCallableDefinition> callables, string name)
+    {
+        foreach (var callable in callables.Values)
+            if (string.Equals(callable.Name, name, StringComparison.Ordinal)) return callable.Kind;
+        return GameEventScriptCallableKind.FunctionCall;
     }
 
     private static void ValidateCallLabels(ParsedScript parsedScriptContext, GameEventScriptCallableKind kind, string name, IReadOnlyList<string> expectedLabels, IReadOnlyList<ArgumentNode> arguments, GesValidationErrors errors)

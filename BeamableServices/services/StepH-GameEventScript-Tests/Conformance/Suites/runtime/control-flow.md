@@ -887,9 +887,9 @@ steps:
 
 ---
 
-## Test: nested block scopes may shadow outer variables
+## Test: sibling branch scopes may reuse local names
 
-This runtime case exercises “nested block scopes may shadow outer variables” and verifies the declared messages, values, and execution result.
+This runtime case verifies that the mutually exclusive child scopes of an `if` and its `else` branch may independently declare the same local name without either declaration shadowing the other.
 
 ### Case description
 
@@ -903,21 +903,22 @@ comparison:
     mode: ulp
     maxUlps: 4096
 sources:
-  - name: "nested block scopes may shadow outer variables.ges"
+  - name: "sibling branch scopes may reuse local names.ges"
     program: main
 ```
 
 ### Source code under test
 
 ```ges
-module NestedShadowing
-on Start {
-  let x be 10
-  if true {
-    let x be 20
-    emit Done(value: x)
+module SiblingBranchScopes
+on Start(flag) {
+  if flag {
+    let result be 20
+    emit Done(value: result)
+  } else {
+    let result be 10
+    emit Done(value: result)
   }
-  emit Done(value: x)
 }
 ```
 
@@ -934,7 +935,11 @@ gesBlock: expect
 steps:
   step-0001:
     input:
-      args: []
+      args:
+        - name: "flag"
+          value:
+            type: ":boolean"
+            value: true
     local:
       - name: "Done"
         args:
@@ -942,12 +947,6 @@ steps:
             value:
               type: ":integer"
               value: "20"
-      - name: "Done"
-        args:
-          - name: "value"
-            value:
-              type: ":integer"
-              value: "10"
 ```
 
 ---

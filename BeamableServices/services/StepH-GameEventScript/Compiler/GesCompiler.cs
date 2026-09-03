@@ -104,7 +104,7 @@ internal static class GesCompiler
                 while (enumerator.MoveNext()) result[offset++] = enumerator.Current.Value;
             }
 
-            Array.Sort(result, static (left, right) => string.Compare(left.Name, right.Name, StringComparison.Ordinal));
+            Array.Sort(result, static (left, right) => string.Compare(left.SignatureId, right.SignatureId, StringComparison.Ordinal));
             return result;
         }
 
@@ -330,7 +330,7 @@ internal static class GesCompiler
                     ? _builder.BeginPredicate(callable.Name, callable.SignatureLabels)
                     : _builder.BeginFunction(callable.Name, callable.SignatureLabels);
 
-                _callableEntries[callable.Name] = routine.EntryLabel;
+                _callableEntries[callable.SignatureId] = routine.EntryLabel;
                 var context = LoweringContext.ForRoutine(routine);
                 for (var index = 0; index < callable.Parameters.Count; index++)
                 {
@@ -535,7 +535,7 @@ internal static class GesCompiler
                 case PredicateCallExpressionNode predicate:
                     EmitPredicateCallInto(predicate, destination, context, state);
                     return true;
-                case CallExpressionNode call when module.Callables.ContainsKey(call.Name):
+                case CallExpressionNode call when GesCallableSignatures.HasName(module.Callables, call.Name):
                     EmitCallInto(call, destination, context, state);
                     return true;
                 case CallExpressionNode call:
@@ -1991,7 +1991,8 @@ internal static class GesCompiler
 
         private void EmitCallInto(CallExpressionNode call, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            if (!module.Callables.TryGetValue(call.Name, out var callable) || !_callableEntries.TryGetValue(call.Name, out var entry))
+            var callable = GesCallableSignatures.Resolve(module.Callables, call);
+            if (callable is null || !_callableEntries.TryGetValue(callable.SignatureId, out var entry))
             {
                 throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve callable '{call.Name}'.", call.Name);
             }
@@ -2023,9 +2024,8 @@ internal static class GesCompiler
 
         private void EmitPredicateCallInto(PredicateCallExpressionNode predicate, GesRegisterRef destination, LoweringContext context, ExpressionState state)
         {
-            if (!module.Callables.TryGetValue(predicate.PredicateName, out var callable) ||
-                callable.Kind != GameEventScriptCallableKind.PredicateCall ||
-                !_callableEntries.TryGetValue(predicate.PredicateName, out var entry))
+            var callable = GesCallableSignatures.ResolveSingleParameterPredicate(module.Callables, predicate.PredicateName);
+            if (callable is null || !_callableEntries.TryGetValue(callable.SignatureId, out var entry))
             {
                 throw CompileFailure(GameEventScriptDiagnosticCodes.CompileUnresolvedSymbol, $"GameEventScript binary compiler could not resolve predicate '{predicate.PredicateName}'.", predicate.PredicateName);
             }

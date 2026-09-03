@@ -33,6 +33,7 @@ public static class GameEventScriptDiagnosticCodes
     public const string ValidateDuplicateDefinitionParameter = "validate.duplicateDefinitionParameter";
     public const string ValidateDuplicatePublishArgument = "validate.duplicatePublishArgument";
     public const string ValidateDuplicateVariable = "validate.duplicateVariable";
+    public const string ValidateShadowedVariable = "validate.shadowedVariable";
     public const string ValidateInvalidIdentifierCase = "validate.invalidIdentifierCase";
     public const string ValidateInvalidMessageCase = "validate.invalidMessageCase";
     public const string ValidateInvalidTypeConstructor = "validate.invalidTypeConstructor";

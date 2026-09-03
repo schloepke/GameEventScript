@@ -134,9 +134,13 @@ public sealed class GameEventScriptBuilder
         var callables = BuildCallableDefinitionMap(predicateDefinitions, functionDefinitions);
         var handlers = BuildHandlerMap(modules);
 
-        foreach (var conflictName in predicateDefinitions.Keys)
+        var predicateNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var definition in predicateDefinitions.Values) predicateNames.Add(definition.Name);
+        var reportedConflictNames = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var definition in functionDefinitions.Values)
         {
-            if (!functionDefinitions.ContainsKey(conflictName))
+            var conflictName = definition.Name;
+            if (!predicateNames.Contains(conflictName) || !reportedConflictNames.Add(conflictName))
             {
                 continue;
             }
@@ -320,8 +324,9 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var predicateDefinition in module.PredicateDefinitions)
             {
-                if (!map.TryAdd(predicateDefinition.Name, predicateDefinition))
-                    errors.Add(module, $"Predicate '{predicateDefinition.Name}' is defined more than once", predicateDefinition.Name, Predicate, ValidateDuplicatePredicate, predicateDefinition);
+                var signatureId = GesCallableSignatures.Create(predicateDefinition.Name, predicateDefinition.ParameterList);
+                if (!map.TryAdd(signatureId, predicateDefinition))
+                    errors.Add(module, $"Predicate signature '{signatureId}' is defined more than once", predicateDefinition.Name, Predicate, ValidateDuplicatePredicate, predicateDefinition);
             }
         }
 
@@ -335,7 +340,8 @@ public sealed class GameEventScriptBuilder
         {
             foreach (var functionDefinition in module.FunctionDefinitions)
             {
-                if (!map.TryAdd(functionDefinition.Name, functionDefinition)) errors.Add(module, $"Function '{functionDefinition.Name}' is defined more than once", functionDefinition.Name, Function, ValidateDuplicateFunction, functionDefinition);
+                var signatureId = GesCallableSignatures.Create(functionDefinition.Name, functionDefinition.ParameterList);
+                if (!map.TryAdd(signatureId, functionDefinition)) errors.Add(module, $"Function signature '{signatureId}' is defined more than once", functionDefinition.Name, Function, ValidateDuplicateFunction, functionDefinition);
             }
         }
 
@@ -348,12 +354,12 @@ public sealed class GameEventScriptBuilder
 
         foreach (var pair in predicateDefinitions)
         {
-            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList, pair.Value.Expression, PredicateCall, pair.Value.SourceRange);
+            map[pair.Key] = new GesCallableDefinition(pair.Value.Name, pair.Value.ParameterList, pair.Value.Expression, PredicateCall, pair.Value.SourceRange);
         }
 
         foreach (var pair in functionDefinitions)
         {
-            map[pair.Key] = new GesCallableDefinition(pair.Key, pair.Value.ParameterList, pair.Value.Expression, FunctionCall, pair.Value.SourceRange);
+            map.TryAdd(pair.Key, new GesCallableDefinition(pair.Value.Name, pair.Value.ParameterList, pair.Value.Expression, FunctionCall, pair.Value.SourceRange));
         }
 
         return map;

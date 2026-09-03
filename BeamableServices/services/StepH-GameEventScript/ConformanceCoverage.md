@@ -21,6 +21,9 @@ here. Add or update this matrix in the same change as new portable behavior.
 | Random known-answer vectors, non-consuming bounds and nested streams | `runtime.atomic.random/case-0002` through `runtime.atomic.random/case-0007` |
 | Compiler handler/program resource metadata | `compile.binary-compiler/case-0001`, `api.messages/case-0007` |
 | Direct recursive call rejection | `compile.build-errors/case-0001` |
+| Callable overload identity by ordered labels, without type dispatch | `runtime.predicates-functions/case-0010`, `compile.build-errors/case-0049` |
+| Predicate/function name separation and ambiguous predicate shorthand | `compile.build-errors/case-0021`, `compile.build-errors/case-0050` |
+| No lexical shadowing, with sibling branch-name reuse | `compile.build-errors/case-0051` through `compile.build-errors/case-0053`, `runtime.control-flow/case-0013` |
 | Indirect cyclic call graph rejection at the untrusted `.gesb` boundary | `program.binary-format/invalid-indirect-call-cycle` |
 | Native-only Host | `runtime.host-lifecycle/native-only` |
 | Same immutable Program in independent Hosts | `runtime.host-lifecycle/shared-program-multiple-hosts` |

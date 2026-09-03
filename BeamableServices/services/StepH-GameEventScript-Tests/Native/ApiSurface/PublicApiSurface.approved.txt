@@ -437,6 +437,7 @@ static class StepH.GameEventScript.Api.GameEventScriptDiagnosticCodes
   field static System.String ValidateInvalidTypeConstructor
   field static System.String ValidateMissingCallable
   field static System.String ValidatePredicateFunctionConflict
+  field static System.String ValidateShadowedVariable
   field static System.String ValidateWrongFunctionArity
   field static System.String ValidateWrongPredicateArity
   method static System.String Decode(StepH.GameEventScript.Api.GameEventScriptProgramFormatErrorCode code)

@@ -828,6 +828,7 @@ Erledigt:
 - Detailverträge für Unicode, Zahlen, deterministische Reihenfolge und PRNG bleiben ausschließlich in den zuständigen Semantikdokumenten; Host-, Program-, Bytecode- und Binary-Verantwortlichkeiten sind klar abgegrenzt und verlinkt.
 - Die korrigierte normative Grammatik steht direkt im Sprachdokument. Sie verwendet die von JetBrains Grammar-Kit verstandene erweiterte BNF-Ausdruckssyntax für korrektes IntelliJ-Highlighting, ohne Parsergenerierung oder PEG-Konfliktregeln zum Sprachvertrag zu machen. Sie beschreibt denselben Umfang wie die Prosa, einschließlich Intrinsics, Selectorformen und kontextabhängiger Message-/Handler-Literale.
 - Die bereits lexikalisch erzwungene portable Typnamensyntax besitzt nun eine explizite Markdown-Conformance-Abdeckung für die Abgrenzung gegenüber Identifiern mit numerischem Suffix.
+- Funktionen und Predicates werden über Name plus geordnete externe Labels aufgelöst; Typangaben und lokale Parameternamen erzeugen keine Overloads, und beide Callable-Arten dürfen keinen Namen teilen. Lexikalisches Shadowing sichtbarer Vorfahren ist für lokale, Loop-, Generator- und Selector-Bindings verboten, während `if`-/`else`-Geschwisterscopes denselben neuen Namen verwenden dürfen.
 - Das frühere `GameEventScript.md` und die separate, abweichende `GameEventScript.bnf` wurden nach der Überführung entfernt. Lernmaterial bleibt ausdrücklich Aufgabe des getrennten `Guide`-Bereichs.
 
 Abnahme:
@@ -836,8 +837,8 @@ Abnahme:
 All Documentation links resolve
 All Markdown code fences are balanced
 Record type-name grammar has executable Markdown conformance coverage
-1031/1031 Markdown conformance cases passed
-1130/1130 non-performance test executions passed
+1037/1037 Markdown conformance cases passed
+1138/1138 non-performance test executions passed
 ```
 
 ### 6.6 Öffentliche portable API spezifizieren

@@ -34,7 +34,8 @@ Parse uses `parse.syntax`. Validation uses the following semantic codes:
   `validate.wrongPredicateArity`, `validate.wrongFunctionArity`;
 - `validate.duplicateHandlerParameter`,
   `validate.duplicateDefinitionParameter`,
-  `validate.duplicatePublishArgument`, `validate.duplicateVariable`;
+  `validate.duplicatePublishArgument`, `validate.duplicateVariable`,
+  `validate.shadowedVariable`;
 - `validate.invalidIdentifierCase`, `validate.invalidMessageCase`,
   `validate.invalidTypeConstructor`.
 

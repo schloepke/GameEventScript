@@ -97,32 +97,32 @@ performance:
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 21.578
-          maximum: 21.578
+          reference: 22.281
+          maximum: 22.281
           unit: KiB
         binary-build.elapsed:
           reference: 0.4375
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
-          reference: 46.758
-          maximum: 46.758
+          reference: 46.969
+          maximum: 46.969
           unit: KiB
         program-load.elapsed:
           reference: 0.2801
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 13.25
-          maximum: 13.25
+          reference: 13.461
+          maximum: 13.461
           unit: KiB
         compile.elapsed:
           reference: 1.0583
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 81.586
-          maximum: 81.586
+          reference: 82.711
+          maximum: 82.711
           unit: KiB
         run.elapsed:
           reference: 2.6689
@@ -389,32 +389,32 @@ performance:
           toleranceAbsolute: 1
           unit: ms
         ast-build.allocated:
-          reference: 14.07
-          maximum: 14.07
+          reference: 14.594
+          maximum: 14.594
           unit: KiB
         binary-build.elapsed:
           reference: 0.2945
           toleranceAbsolute: 1
           unit: ms
         binary-build.allocated:
-          reference: 46.484
-          maximum: 46.484
+          reference: 46.695
+          maximum: 46.695
           unit: KiB
         program-load.elapsed:
           reference: 0.0746
           toleranceAbsolute: 1
           unit: ms
         program-load.allocated:
-          reference: 13.047
-          maximum: 13.047
+          reference: 13.258
+          maximum: 13.258
           unit: KiB
         compile.elapsed:
           reference: 0.4978
           toleranceAbsolute: 1
           unit: ms
         compile.allocated:
-          reference: 73.602
-          maximum: 73.602
+          reference: 74.547
+          maximum: 74.547
           unit: KiB
         run.elapsed:
           reference: 51.0479
@@ -669,7 +669,7 @@ performance:
           unit: ms
         ast-build.allocated:
           reference: 17.703
-          maximum: 17.703
+          maximum: 18.031
           unit: KiB
         binary-build.elapsed:
           reference: 0.3411
@@ -677,7 +677,7 @@ performance:
           unit: ms
         binary-build.allocated:
           reference: 46.336
-          maximum: 46.336
+          maximum: 46.547
           unit: KiB
         program-load.elapsed:
           reference: 0.1289
@@ -685,7 +685,7 @@ performance:
           unit: ms
         program-load.allocated:
           reference: 15.141
-          maximum: 15.141
+          maximum: 15.352
           unit: KiB
         compile.elapsed:
           reference: 0.5814
@@ -693,7 +693,7 @@ performance:
           unit: ms
         compile.allocated:
           reference: 79.18
-          maximum: 79.18
+          maximum: 79.93
           unit: KiB
         run.elapsed:
           reference: 2.8563
@@ -966,7 +966,7 @@ performance:
           unit: ms
         ast-build.allocated:
           reference: 29.695
-          maximum: 29.695
+          maximum: 30.977
           unit: KiB
         binary-build.elapsed:
           reference: 0.5369
@@ -974,7 +974,7 @@ performance:
           unit: ms
         binary-build.allocated:
           reference: 105.406
-          maximum: 105.406
+          maximum: 105.617
           unit: KiB
         program-load.elapsed:
           reference: 0.1581
@@ -982,7 +982,7 @@ performance:
           unit: ms
         program-load.allocated:
           reference: 18.32
-          maximum: 18.32
+          maximum: 18.531
           unit: KiB
         compile.elapsed:
           reference: 0.8679
@@ -990,7 +990,7 @@ performance:
           unit: ms
         compile.allocated:
           reference: 153.422
-          maximum: 153.422
+          maximum: 155.125
           unit: KiB
         run.elapsed:
           reference: 19.525
@@ -1436,7 +1436,7 @@ performance:
           unit: ms
         ast-build.allocated:
           reference: 75.766
-          maximum: 75.766
+          maximum: 81.945
           unit: KiB
         binary-build.elapsed:
           reference: 1.0498
@@ -1444,7 +1444,7 @@ performance:
           unit: ms
         binary-build.allocated:
           reference: 252.648
-          maximum: 252.648
+          maximum: 253.445
           unit: KiB
         program-load.elapsed:
           reference: 0.188
@@ -1452,7 +1452,7 @@ performance:
           unit: ms
         program-load.allocated:
           reference: 32.227
-          maximum: 32.227
+          maximum: 32.867
           unit: KiB
         compile.elapsed:
           reference: 1.6077
@@ -1460,7 +1460,7 @@ performance:
           unit: ms
         compile.allocated:
           reference: 360.641
-          maximum: 360.641
+          maximum: 368.258
           unit: KiB
         run.elapsed:
           reference: 777.5183

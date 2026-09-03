@@ -75,6 +75,10 @@ public static class GameEventScriptProgramValidator
         var maxRegisters = 0;
         var maxDepth = 0;
         var bindingIds = new HashSet<ulong>();
+        var functionSignatures = new HashSet<string>(StringComparer.Ordinal);
+        var predicateSignatures = new HashSet<string>(StringComparer.Ordinal);
+        var functionNames = new HashSet<string>(StringComparer.Ordinal);
+        var predicateNames = new HashSet<string>(StringComparer.Ordinal);
         for (var index = 0; index < program.Bindings.Entries.Count; index++)
         {
             var bind = program.Bindings.Entries[index];
@@ -86,6 +90,16 @@ public static class GameEventScriptProgramValidator
             ValidateTextIndexes(bind.RequiredTags, program.StringConstants.Slices.Count, index);
             ValidateTextIndexes(bind.ExcludedTags, program.StringConstants.Slices.Count, index);
             ValidateBindingText(program, bind, index);
+            if (bind.Kind is Function or Predicate)
+            {
+                var name = program.StringConstants.Resolve(bind.Name);
+                var signature = BuildCallableSignature(program, bind, name);
+                var signatures = bind.Kind == Function ? functionSignatures : predicateSignatures;
+                var names = bind.Kind == Function ? functionNames : predicateNames;
+                if (!signatures.Add(signature))
+                    Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"Callable signature '{signature}' is duplicated.", (ushort)GameEventScriptSectionType.Bindings, index);
+                names.Add(name);
+            }
             var bindingId = bind.Kind is MessageHandler or MessageNameHandler
                 ? (1UL << 63) | ((ulong)(byte)bind.Kind << 32) | ((ulong)bind.Name << 16) | bind.Id
                 : ((ulong)(byte)bind.Kind << 16) | bind.Id;
@@ -107,6 +121,9 @@ public static class GameEventScriptProgramValidator
                 maxDepth = Math.Max(maxDepth, bind.RequiredCallStackDepth);
             }
         }
+        foreach (var name in functionNames)
+            if (predicateNames.Contains(name))
+                Throw(GameEventScriptProgramFormatErrorCode.InvalidProgram, $"Name '{name}' is declared as both a predicate and a function.", (ushort)GameEventScriptSectionType.Bindings);
         if (program.RequiredRegisterCount != maxRegisters || program.RequiredCallStackDepth != maxDepth)
             Throw(GameEventScriptProgramFormatErrorCode.InvalidResourceMetadata, "Program resource requirements must equal the maxima declared by executable bindings.", (ushort)GameEventScriptSectionType.ProgramMetadata);
 
@@ -115,6 +132,17 @@ public static class GameEventScriptProgramValidator
             if (string.Equals(program.StringConstants.Resolve(checked((ushort)index)), program.ModuleName, StringComparison.Ordinal)) { moduleFound = true; break; }
         if (!moduleFound) Throw(GameEventScriptProgramFormatErrorCode.InvalidStringIndex, "ModuleName is not present in StringConstantSegment.", (ushort)GameEventScriptSectionType.ProgramMetadata);
         return bindingIds;
+    }
+
+    private static string BuildCallableSignature(GameEventScriptProgram program, GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry bind, string name)
+    {
+        var builder = new StringBuilder(name).Append('(');
+        for (var index = 0; index < bind.ArgumentNames.Count; index++)
+        {
+            if (index != 0) builder.Append(',');
+            builder.Append(program.StringConstants.Resolve(bind.ArgumentNames[index]));
+        }
+        return builder.Append(')').ToString();
     }
 
     private static void ValidateCode(GameEventScriptProgram program, HashSet<ulong> indexedBindingIds)

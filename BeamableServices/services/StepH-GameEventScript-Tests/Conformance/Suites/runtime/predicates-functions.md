@@ -810,3 +810,67 @@ steps:
               type: ":integer"
               value: "5"
 ```
+
+---
+
+## Test: callable overloads resolve by ordered argument labels
+
+This runtime case verifies that functions with the same name and arity remain distinct when their ordered external argument labels differ, and that each call selects the matching signature without type-based dispatch.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0010
+kind: scriptApi
+level: atomic
+comparison:
+  binary64:
+    mode: ulp
+    maxUlps: 4096
+sources:
+  - name: "callable overloads resolve by ordered argument labels.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+module CallableSignatureOverloads
+
+function takeDamage(unit, enemy) be unit + enemy
+function takeDamage(unit, collision) be unit * collision
+
+on Start {
+  let fromEnemy be takeDamage(unit: 5, enemy: 3)
+  let fromCollision be takeDamage(unit: 5, collision: 3)
+  emit Done(fromEnemy: fromEnemy, fromCollision: fromCollision)
+}
+```
+
+### Steps
+
+| step | receive | pump | budget |
+| --- | --- | --- | --- |
+| step-0001 | Start | completion |  |
+
+### Expectation
+
+```yaml
+gesBlock: expect
+steps:
+  step-0001:
+    input:
+      args: []
+    local:
+      - name: "Done"
+        args:
+          - name: "fromEnemy"
+            value:
+              type: ":integer"
+              value: "8"
+          - name: "fromCollision"
+            value:
+              type: ":integer"
+              value: "15"
+```

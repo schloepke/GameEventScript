@@ -76,6 +76,31 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Callable Signature Overloads and No-Shadowing Scopes
+
+- Script functions and predicates resolve by callable name plus ordered external
+  argument labels. Arity is therefore part of the signature, while declared
+  types and local parameter names are not; there is no type-based overload
+  resolution.
+- Function and predicate declarations may not share a base name, even when
+  their signatures differ. The compiler, lowering tables, and untrusted
+  `.gesb` validation enforce the same identity rules.
+- `value is predicateName` resolves only a unique unary predicate overload;
+  multiple unary signatures require explicit calls and make the shorthand a
+  validation error.
+- Lexical bindings may not shadow visible ancestor bindings. This includes
+  locals, loop variables, generated-collection variables, and selector
+  variables. Sibling scopes such as the two branches of an `if` may reuse a new
+  name independently.
+
+Verification after this change:
+
+```text
+1037/1037 Markdown conformance cases passed
+1138/1138 non-performance test executions passed
+1/1 zero-allocation hot-path test passed
+```
+
 ### Normative Language Specification
 
 - `Documentation/Specification/Language.md` now owns the complete current GES

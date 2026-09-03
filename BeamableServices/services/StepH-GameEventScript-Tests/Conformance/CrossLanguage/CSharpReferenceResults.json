@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "9BD22ED09D22A33688A4126048D0A712E2F263B7AE46889078B873207325A240",
+    "sha256": "A5EF74602E16762B2A47ABD3AB71F25E31D8B98533CDA10B23594EB3A29FD503",
     "documentCount": 74,
-    "caseCount": 1031
+    "caseCount": 1037
   },
   "cases": [
     {
@@ -1500,6 +1500,71 @@
       "id": "compile.build-errors/case-0048",
       "kind": "compileError",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/case-0049",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/case-0050",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/case-0051",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/case-0052",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.build-errors/case-0053",
+      "kind": "compileError",
+      "level": "atomic",
       "requires": {
         "core": [
           "compiler"
@@ -15810,6 +15875,23 @@
       "id": "runtime.predicates-functions/case-0009",
       "kind": "scriptApi",
       "level": "scenario",
+      "requires": {
+        "core": [
+          "compiler",
+          "host",
+          "observer",
+          "publish-sink",
+          "vm"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "runtime.predicates-functions/case-0010",
+      "kind": "scriptApi",
+      "level": "atomic",
       "requires": {
         "core": [
           "compiler",

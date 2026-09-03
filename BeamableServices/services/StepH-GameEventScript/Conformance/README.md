@@ -32,7 +32,7 @@ accepted.
 
 The complete portable corpus lives under
 `StepH-GameEventScript-Tests/Conformance/Suites`. Its 74 suites
-contain 1,022 semantic cases and seven independent bytecode snapshots. Every case
+contain 1,030 semantic cases and seven independent bytecode snapshots. Every case
 has an explicit stable ID, kind, and level and is exposed independently through
 the C# test adapter. Markdown is the sole normative authoring format for
 conformance cases.

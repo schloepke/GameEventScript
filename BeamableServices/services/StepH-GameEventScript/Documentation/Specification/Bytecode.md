@@ -197,8 +197,9 @@ Predicates:
   type hints.
 - Callable signatures still use names, labels, and positions, not types.
 - There is no overload resolution by type.
-- Different semantic meanings should use different message/predicate/function
-  names instead of type overloads.
+- Functions or predicates of one kind may overload a name only through distinct
+  ordered external-label signatures. Function and predicate names may never
+  overlap, even when their signatures differ.
 - A parameter type hint means "coerce this bound value as the entry starts".
 - Coercion is lenient and uses the same conversion predicates as
   `value as :type`.

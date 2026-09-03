@@ -113,6 +113,29 @@ public sealed class GameEventScriptProgramFormatTests
     }
 
     [TestMethod]
+    public void ProgramValidatorEnforcesPortableCallableIdentity()
+    {
+        var program = GameEventScriptManager.CreateScriptBuilder()
+            .AddScript("function resolve(unit, enemy) be unit + enemy\nfunction resolve(unit, collision) be unit * collision\non Start { emit Done(a: resolve(unit: 2, enemy: 3), b: resolve(unit: 2, collision: 3)) }")
+            .Compile();
+        var entries = program.Bindings.Entries.ToArray();
+        var functionIndexes = entries.Select((entry, index) => (entry, index)).Where(item => item.entry.Kind == GameEventScriptBinaryBindKind.Function).Select(item => item.index).ToArray();
+        Assert.HasCount(2, functionIndexes);
+
+        var first = entries[functionIndexes[0]];
+        var second = entries[functionIndexes[1]];
+        entries[functionIndexes[1]] = CopyBinding(second, argumentNames: first.ArgumentNames);
+        var duplicateSignature = CopyWithBindings(program, entries);
+        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidProgram,
+            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramValidator.Validate(duplicateSignature)).ErrorCode);
+
+        entries[functionIndexes[1]] = CopyBinding(second, kind: GameEventScriptBinaryBindKind.Predicate);
+        var overlappingKinds = CopyWithBindings(program, entries);
+        Assert.AreEqual(GameEventScriptProgramFormatErrorCode.InvalidProgram,
+            Assert.ThrowsExactly<GameEventScriptProgramFormatException>(() => GameEventScriptProgramValidator.Validate(overlappingKinds)).ErrorCode);
+    }
+
+    [TestMethod]
     public void ReaderFileLimitProducesStableError()
     {
         var bytes = GameEventScriptProgramWriter.ToArray(Compile(GameEventScriptDebugInfoOptions.None));
@@ -256,6 +279,17 @@ public sealed class GameEventScriptProgramFormatTests
         => new(program.FormatVersion, program.ModuleName, program.ProgramVersion, program.RequiredRegisterCount, program.RequiredCallStackDepth,
             program.StringConstants, program.UInt16IndexLists, program.Bindings, program.Code, program.DebugSymbols, program.SourceMap,
             program.SourceArchive, metadata, program.OpaqueSections);
+
+    private static GameEventScriptProgram CopyWithBindings(GameEventScriptProgram program, IReadOnlyList<GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry> entries)
+        => new(program.FormatVersion, program.ModuleName, program.ProgramVersion, program.RequiredRegisterCount, program.RequiredCallStackDepth,
+            program.StringConstants, program.UInt16IndexLists, new GameEventScriptBindingSegment(entries), program.Code, program.DebugSymbols, program.SourceMap,
+            program.SourceArchive, program.BuildMetadata, program.OpaqueSections);
+
+    private static GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry CopyBinding(
+        GameEventScriptBindingSegment.GameEventScriptBinaryBindEntry source,
+        GameEventScriptBinaryBindKind? kind = null,
+        IReadOnlyList<ushort>? argumentNames = null)
+        => new(kind ?? source.Kind, source.Name, argumentNames ?? source.ArgumentNames, source.EntryAddress, source.Id, source.RequiredTags, source.ExcludedTags, source.RequiredRegisterCount, source.RequiredCallStackDepth);
 
     private static byte[] ReadRequiredSections(byte[] bytes)
         => SplitSections(bytes)

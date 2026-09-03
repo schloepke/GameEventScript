@@ -57,18 +57,19 @@ Top-level declarations are:
 - `predicate name(...) be expression`
 - `function name(...) be expression`
 - `on Message(...) { ... }`
-- `on Message as message { ... }`
+- `on Message as localName { ... }`
 - `on initialization { ... }`
-- `on undeliverable as message { ... }`
+- `on undeliverable as localName { ... }`
 
 The module declaration is metadata and does not create a namespace. Definitions
-from every source in one compilation unit share one global namespace and may
-refer to one another independent of source order. A type, function, or predicate
-name may be defined only once across that unit; a function and predicate may not
-share a name. Multiple handlers for the same endpoint are allowed and retain
-their source registration order. When no non-empty module name is supplied, the
-compiler derives a deterministic anonymous Program name from the complete
-compiler output. Module identity does not change expression semantics.
+from every source in one compilation unit share compilation-unit scope and may
+refer to one another independent of source order. Functions and predicates share
+one callable namespace. Records use a separate type namespace because their
+source references are prefixed with `:`. Multiple handlers for the same endpoint
+are allowed and retain their source registration order. When no non-empty module
+name is supplied, the compiler derives a deterministic anonymous Program name
+from the complete compiler output. Module identity does not change expression
+semantics.
 
 There are no global variables or mutable script storage. Each handler or callable
 invocation receives fresh parameters and locals. State that outlives a handler
@@ -83,20 +84,49 @@ function damage(base, bonus as :number) be base + bonus
 predicate alive(_ unit) be unit.hp > 0
 ```
 
+Callable identity is the callable name plus its ordered external argument
+labels. Functions may therefore overload a name when at least one label or the
+arity differs:
+
+```ges
+function takeDamage(unit, enemy) be unit.hp - enemy.damage
+function takeDamage(unit, collision) be unit.hp - collision.force
+```
+
+The calls `takeDamage(unit: hero, enemy: attacker)` and
+`takeDamage(unit: hero, collision: impact)` select those two signatures
+respectively. Parameter local names and declared types are not part of identity,
+and there is no overload resolution by type. In particular, two `_` parameters
+with different local names or types still have the same external label `_`.
+
+Functions and predicates share one name namespace: if any function named
+`takeDamage` exists, no predicate named `takeDamage` may exist, regardless of
+either declaration's signature. Within one kind, duplicate signatures are
+static errors.
+
+Record identity is likewise the custom type name alone. A record cannot be
+overloaded by changing its fields or constructor labels, and a script record
+cannot use the name of a configured external type. The type namespace is
+separate from the callable namespace, so `record :damage ...` and `function
+damage(...) ...` may coexist.
+
 A parameter written `label` has both the external argument label and local name
 `label`. `_ localName` declares an unlabeled argument with the indicated local
 name. Parameters are evaluated and bound left to right. A declared parameter
 type casts the supplied value before evaluation of the body; a failed cast binds
-`nothing`. Calls must supply exactly the declared argument count and must either
-use the declaration's ordered labels or use the positional form accepted for
-that callable. Duplicate local parameter names and duplicate non-`_` labels are
-static errors.
+`nothing`. Calls must match the declaration's ordered external labels exactly.
+Thus `function f(x) ...` is called as `f(x: 10)`, while `function f(_ x) ...` is
+called positionally as `f(10)`. Duplicate local parameter names and duplicate
+non-`_` labels are static errors.
 
 A function may return any value. A predicate must statically produce a boolean
 or `nothing`; predicate results are normalized to that three-state result.
-`value is predicateName` is shorthand for invoking a unary predicate whose only
-argument is unlabeled. Every call receives a fresh frame. The synchronous call
-graph must be acyclic: direct and indirect recursion are not part of the
+`value is predicateName` is shorthand for invoking the unique unary overload of
+that predicate name. The shorthand has no argument label with which to select
+between multiple unary overloads, so such a family is ambiguous and rejected;
+an explicit ordinary call selects a predicate by its full signature. Every call
+receives a fresh frame. The synchronous call graph must be acyclic: direct and
+indirect recursion are not part of the
 language.
 
 ## Lexical Rules
@@ -146,11 +176,24 @@ Text literals may contain logical newlines. Backslash has no escape meaning.
 Tokens and keywords are case-sensitive. `of` is a reserved keyword token; it is
 valid only in the grammar phrases that use it, including `min of`, `max of`,
 extension argument lists, `in values of`, and dice patterns. It does not start a
-list literal. Numeric literals contain an integer part and an optional fractional
-part, use `.` as decimal separator, and have no sign or exponent syntax; unary
-minus supplies a negative sign. Single underscores may separate adjacent digits
-but may not lead, trail, or repeat. A following `%`, `m`, `s`, or `°` forms a
-percentage or unit literal without intervening whitespace.
+list literal.
+
+Numeric literals contain an integer part and an optional fractional part, use
+`.` as decimal separator, and have no sign or exponent syntax; unary minus
+supplies a negative sign. Single underscores may separate adjacent digits but
+may not lead, trail, or repeat. A following `%`, `m`, `s`, or `°` forms a
+percentage or unit literal without intervening whitespace:
+
+```ges
+let integer be 42
+let groupedInteger be 1_000_000
+let fraction be 12.5
+let negative be -7             // unary minus followed by an integer literal
+let probability be 25%         // percentage literal
+let distance be 3.5m           // meter quantity
+let duration be 2s             // second quantity
+let angle be 90°               // degree quantity
+```
 
 ## Messages and Dispatch
 
@@ -190,12 +233,14 @@ on Move(unit, speed as :quantity(m)) {
 }
 ```
 
-Message-name handlers match by message name and tags, but receive one
-`:message` value instead of normal message arguments:
+Message-name handlers match every signature having the declared message name,
+subject to their tag filters. They receive one `:message` value instead of the
+message's individual arguments. The identifier following `as` is a freely chosen
+local binding name; the word `message` is not required:
 
 ```ges
-on Hit as message matching #enemy {
-  emit Heard(name: message.name, tags: message.tags)
+on Hit as incoming matching #enemy without #silent {
+  emit Heard(name: incoming.name, tags: incoming.tags)
 }
 ```
 
@@ -216,25 +261,38 @@ on initialization {
 }
 ```
 
+`undeliverable` is the fallback endpoint for a message that has no matching
+ordinary handler after signature, name, and tag filters have been evaluated. It
+must use the message-name binding form. The chosen local receives the original
+message as a `:message` value, and filters on the fallback handler inspect the
+original message's tags:
+
 ```ges
-on undeliverable as message {
-  emit Unknown(message: message)
+on undeliverable as rejectedMessage without #ignored {
+  emit Unknown(message: rejectedMessage)
 }
 ```
 
-Handlers can filter tags:
+Both exact-signature handlers and message-name handlers can filter tags:
 
 ```ges
-on Radio as message matching #open, #enemy without #encrypted {
-  emit Intercepted(message: message)
+on Radio(channel, payload) matching #open, #enemy without #encrypted {
+  emit ExactIntercept(channel: channel, payload: payload)
+}
+
+on Radio as incoming matching #open, #enemy without #encrypted {
+  emit AnyRadioMessage(message: incoming)
 }
 ```
 
 `matching` requires all listed tags. `without` rejects messages containing any
-listed tag. Repeating a tag in one filter has the same meaning as listing it
-once. The message still contains all original tags. Exact-signature and
-message-name handlers are both eligible for the same message; dispatch ordering
-and undeliverable selection are defined by [Host runtime](HostRuntime.md).
+listed tag. The clauses may appear in either order and may be repeated; all
+`matching` tags are combined into one required set and all `without` tags into
+one excluded set. Repeating a tag has the same meaning as listing it once. The
+message still contains all original tags. `initialization` is the exception and
+cannot use tag filters. Exact-signature and message-name handlers are both
+eligible for the same message; dispatch ordering and undeliverable selection are
+defined by [Host runtime](HostRuntime.md).
 
 ## Statements
 
@@ -273,9 +331,12 @@ let percent as :percentage be 25%
 
 The optional declared type casts the value.
 
-A name may be declared only once in one lexical scope. A braced statement body
-creates a child scope and may shadow a parent binding. Parameters occupy the
-routine's outer scope. A loop variable occupies its own loop scope. There is no
+A name may be declared only once in one lexical scope, and a binding may not
+reuse a name that is visible from an enclosing lexical scope. This no-shadowing
+rule applies uniformly to locals, loop variables, generated-collection
+identifiers, and selector identifiers. Parameters occupy the routine's outer
+scope. The `if` and `else` blocks are sibling child scopes, so both may declare
+the same name when that name does not exist in their common parent. There is no
 assignment statement and a binding never changes after initialization.
 
 ### `if`
@@ -800,7 +861,7 @@ unit. Finite numeric results that are exactly integral are represented as
 integer values.
 
 ### Quantities
-
+,
 Quantities attach a numeric unit to an integer or float:
 
 ```ges

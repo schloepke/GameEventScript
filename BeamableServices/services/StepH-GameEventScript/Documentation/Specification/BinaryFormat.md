@@ -125,6 +125,10 @@ repeat EntryCount:
 entry address; non-executable binds use the sentinel. The program-level resource
 values equal the maxima of the handler metadata. IDs are globally unique per kind,
 except handler IDs, which are overload ordinals scoped to their message name.
+Function and predicate binding identity is the binding name plus its ordered
+argument-name list. Duplicate signatures are invalid. Function and predicate
+names may not overlap even when their argument-name lists differ; declared
+source types and local parameter names are not encoded identity components.
 
 CodeSegment:
 

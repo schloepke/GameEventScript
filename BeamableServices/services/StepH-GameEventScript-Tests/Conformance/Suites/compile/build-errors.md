@@ -822,7 +822,7 @@ predicate wounded(_ unit) be unit.hp < unit.maxHp
 
 ```ges
 module B
-function wounded(_ unit) be unit.hp < unit.maxHp
+function wounded(unit, amount) be amount
 ```
 
 ### Expectation
@@ -1053,6 +1053,194 @@ gesBlock: expect
 error:
   phase: "parse"
   code: "parse.syntax"
+```
+
+---
+
+## Test: duplicate callable signatures ignore local names and types
+
+This negative compiler case verifies that callable overload identity consists only of the callable name and ordered external labels; local parameter names and declared types cannot create a distinct overload.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0049
+kind: compileError
+level: atomic
+sources:
+  - name: "duplicate callable signatures ignore local names and types.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+function convert(_ numberValue as :number) be numberValue
+function convert(_ textValue as :text) be textValue
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.duplicateFunction"
+  symbol: "convert"
+```
+
+---
+
+## Test: predicate shorthand rejects ambiguous unary overloads
+
+This negative compiler case verifies that `value is predicateName` cannot choose between multiple unary predicate signatures because the shorthand supplies no external argument label.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0050
+kind: compileError
+level: atomic
+sources:
+  - name: "predicate shorthand rejects ambiguous unary overloads.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+predicate acceptable(value) be value > 0
+predicate acceptable(amount) be amount < 100
+
+on Start(value) {
+  let result be value is acceptable
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.invalidPredicate"
+  symbol: "acceptable"
+```
+
+---
+
+## Test: nested local bindings cannot shadow enclosing locals
+
+This negative compiler case verifies that a local declared in a nested block cannot reuse the name of a still-visible local from an enclosing lexical scope.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0051
+kind: compileError
+level: atomic
+sources:
+  - name: "nested local bindings cannot shadow enclosing locals.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let result be 10
+  if true {
+    let result be 20
+  }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.shadowedVariable"
+  symbol: "result"
+```
+
+---
+
+## Test: loop variables cannot shadow routine parameters
+
+This negative compiler case verifies that loop binders cannot hide a parameter that remains visible in the enclosing routine scope.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0052
+kind: compileError
+level: atomic
+sources:
+  - name: "loop variables cannot shadow routine parameters.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(item, items) {
+  for item in items {
+    emit Seen(value: item)
+  }
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.shadowedVariable"
+  symbol: "item"
+```
+
+---
+
+## Test: collection binders cannot shadow visible locals
+
+This negative compiler case verifies that identifiers introduced by collection selectors follow the same no-shadowing rule as statement-level bindings.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0053
+kind: compileError
+level: atomic
+sources:
+  - name: "collection binders cannot shadow visible locals.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start(values) {
+  let item be 10
+  let selected be values[:filter item where item > 0]
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "validate"
+  code: "validate.shadowedVariable"
+  symbol: "item"
 ```
 
 ---

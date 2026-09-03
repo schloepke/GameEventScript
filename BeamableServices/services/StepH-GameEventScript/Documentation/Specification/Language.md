@@ -143,12 +143,14 @@ let b be "say ""hello"""
 ```
 
 Text literals may contain logical newlines. Backslash has no escape meaning.
-Tokens and keywords are case-sensitive. Numeric literals contain an integer part
-and an optional fractional part, use `.` as decimal separator, and have no sign
-or exponent syntax; unary minus supplies a negative sign. Single underscores may
-separate adjacent digits but may not lead, trail, or repeat. A following `%`,
-`m`, `s`, or `°` forms a percentage or unit literal without intervening
-whitespace.
+Tokens and keywords are case-sensitive. `of` is a reserved keyword token; it is
+valid only in the grammar phrases that use it, including `min of`, `max of`,
+extension argument lists, `in values of`, and dice patterns. It does not start a
+list literal. Numeric literals contain an integer part and an optional fractional
+part, use `.` as decimal separator, and have no sign or exponent syntax; unary
+minus supplies a negative sign. Single underscores may separate adjacent digits
+but may not lead, trail, or repeat. A following `%`, `m`, `s`, or `°` forms a
+percentage or unit literal without intervening whitespace.
 
 ## Messages and Dispatch
 
@@ -959,7 +961,6 @@ Lists preserve order and can contain mixed values:
 
 ```ges
 let values be [10, 'hello', [1, 2, 3]]
-let alsoValues be of 1 and 2 and 3
 ```
 
 Generated lists use a selector-like form:
@@ -1569,7 +1570,7 @@ variadic_expression ::= ('min' | 'max') 'of' expression ('and' expression)*
 postfix_expression ::= primary_expression postfix_suffix*
 postfix_suffix ::= '.' IDENTIFIER | '[' collection_selector ']'
 primary_expression ::= literal | call_expression | uppercase_call_expression |
-                       type_constructor_expression | IDENTIFIER | of_list_literal |
+                       type_constructor_expression | IDENTIFIER |
                        '(' expression ')' | bracket_literal | generated_list_expression |
                        range_expression | random_expression | seeded_random_expression | dice_expression
 call_expression ::= IDENTIFIER parenthesized_arguments
@@ -1585,7 +1586,6 @@ bracket_literal ::= list_literal | map_literal
 list_literal ::= '[' [expression (',' expression)*] ']'
 map_literal ::= '[' ':' ']' | '[' map_entry (',' map_entry)* ']'
 map_entry ::= IDENTIFIER ':' [expression]
-of_list_literal ::= 'of' expression ('and' expression)*
 generated_list_expression ::= ':list' '[' ':select' IDENTIFIER (range_source | 'in' expression) ['where' expression] projection_arrow expression ']'
 range_expression ::= range_source
 range_source ::= 'from' expression 'to' expression ['step' expression]

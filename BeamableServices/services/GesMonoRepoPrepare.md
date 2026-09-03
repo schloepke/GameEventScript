@@ -836,8 +836,8 @@ Abnahme:
 All Documentation links resolve
 All Markdown code fences are balanced
 Record type-name grammar has executable Markdown conformance coverage
-1030/1030 Markdown conformance cases passed
-1129/1129 non-performance test executions passed
+1031/1031 Markdown conformance cases passed
+1130/1130 non-performance test executions passed
 ```
 
 ### 6.6 Öffentliche portable API spezifizieren

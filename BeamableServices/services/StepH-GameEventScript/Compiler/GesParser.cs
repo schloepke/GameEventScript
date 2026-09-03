@@ -623,7 +623,7 @@ internal sealed class GesParser
     private ArgumentListNode ParseOfArgumentList()
     {
         var arguments = new List<ArgumentNode>();
-        ExpectWord("of");
+        Expect(Of);
         SkipNewLines();
         arguments.Add(new ArgumentNode(null, ParseEqualityExpression()));
         while (Match(OperatorAnd))
@@ -922,7 +922,7 @@ internal sealed class GesParser
                 {
                     ExpectWord("values");
                     SkipNewLines();
-                    ExpectWord("of");
+                    Expect(Of);
                     SkipNewLines();
                     var container = ParseTypeOperationExpression();
                     expression = WithRange(new BinaryExpressionNode(expression, GesBinaryOperator.ContainsValue, container), expression, container);
@@ -978,7 +978,7 @@ internal sealed class GesParser
         }
 
         var second = _reader.PeekSignificant(1);
-        return second.Kind == Identifier && string.Equals(second.Text, "of", StringComparison.Ordinal);
+        return second.Kind == Of;
     }
 
     private DicePatternNode ParseDicePattern()
@@ -987,7 +987,7 @@ internal sealed class GesParser
         {
             var startToken = Previous;
             SkipNewLines();
-            if (MatchWord("of"))
+            if (Match(Of))
             {
                 SkipNewLines();
                 return WithRange(new DiceCountPatternNode(2, ParsePatternFace()), startToken);
@@ -1042,7 +1042,7 @@ internal sealed class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        ExpectWord("of");
+        Expect(Of);
         SkipNewLines();
 
         if (MatchWord("a"))
@@ -1371,13 +1371,13 @@ internal sealed class GesParser
             return ParseClampExpression();
         }
 
-        if (Is(Min) && IsNextSignificantWord("of"))
+        if (Is(Min) && IsNextSignificantToken(Of))
         {
             Advance();
             return ParseVariadicTaggedExpression("min");
         }
 
-        if (Is(Max) && IsNextSignificantWord("of"))
+        if (Is(Max) && IsNextSignificantToken(Of))
         {
             Advance();
             return ParseVariadicTaggedExpression("max");
@@ -1983,11 +1983,6 @@ internal sealed class GesParser
             return ParseTypeConstructorExpression();
         }
 
-        if (MatchWord("of"))
-        {
-            return ParseListLiteralExpressionCore(Previous);
-        }
-
         if (MatchWord("from"))
         {
             return ParseRangeExpressionCore();
@@ -2510,7 +2505,7 @@ internal sealed class GesParser
         {
             arguments = ParseArgumentListAfterLeftParen();
         }
-        else if (Current.Kind == Identifier && string.Equals(Current.Text, "of", StringComparison.Ordinal))
+        else if (Current.Kind == Of)
         {
             arguments = ParseOfArgumentList();
         }
@@ -2540,19 +2535,6 @@ internal sealed class GesParser
         return WithRange(new TypeConstructorExpressionNode(typeName, arguments), startToken);
     }
 
-    private ListLiteralExpressionNode ParseListLiteralExpressionCore(GesToken startToken)
-    {
-        SkipNewLines();
-        var items = new List<ExpressionNode> { ParseEqualityExpression() };
-        while (Match(OperatorAnd))
-        {
-            SkipNewLines();
-            items.Add(ParseEqualityExpression());
-        }
-
-        return WithRange(new ListLiteralExpressionNode(items), startToken);
-    }
-
     private ExpressionNode ParseClampExpression()
     {
         var startToken = Previous;
@@ -2573,7 +2555,7 @@ internal sealed class GesParser
     {
         var startToken = Previous;
         SkipNewLines();
-        ExpectWord("of");
+        Expect(Of);
         SkipNewLines();
         var arguments = new List<ExpressionNode> { ParseEqualityExpression() };
         while (Match(OperatorAnd))

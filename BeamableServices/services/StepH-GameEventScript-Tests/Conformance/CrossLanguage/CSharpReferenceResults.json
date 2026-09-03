@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "corpus": {
     "markdownFormatVersion": 1,
-    "sha256": "208A5ACA277FD78047763F500EC4AECA775416F744AD78B552A499D0107A3EA2",
+    "sha256": "9BD22ED09D22A33688A4126048D0A712E2F263B7AE46889078B873207325A240",
     "documentCount": 74,
-    "caseCount": 1030
+    "caseCount": 1031
   },
   "cases": [
     {
@@ -2275,6 +2275,19 @@
     },
     {
       "id": "compile.syntax-errors/case-0040",
+      "kind": "compileError",
+      "level": "atomic",
+      "requires": {
+        "core": [
+          "compiler"
+        ],
+        "optional": []
+      },
+      "status": "passed",
+      "code": "conformance.passed"
+    },
+    {
+      "id": "compile.syntax-errors/case-0041",
       "kind": "compileError",
       "level": "atomic",
       "requires": {

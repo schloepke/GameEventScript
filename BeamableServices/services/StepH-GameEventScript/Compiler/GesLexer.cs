@@ -82,6 +82,7 @@ internal enum GesTokenKind
     Else,
     For,
     In,
+    Of,
     NotIn,
     Starts,
     Ends,
@@ -323,6 +324,7 @@ internal sealed class GesLexer
         if (IsWordAt(start, length, "else")) return new GesToken(GesTokenKind.Else, "else", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "for")) return new GesToken(GesTokenKind.For, "for", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "in")) return new GesToken(GesTokenKind.In, "in", line, column, endLine, endColumn);
+        if (IsWordAt(start, length, "of")) return new GesToken(GesTokenKind.Of, "of", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "starts")) return new GesToken(GesTokenKind.Starts, "starts", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "ends")) return new GesToken(GesTokenKind.Ends, "ends", line, column, endLine, endColumn);
         if (IsWordAt(start, length, "with")) return new GesToken(GesTokenKind.With, "with", line, column, endLine, endColumn);

@@ -93,12 +93,16 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - The former root `GameEventScript.md` and divergent `GameEventScript.bnf` were
   removed. A new Markdown conformance case fixes the no-numeric-suffix rule for
   declared custom type names in the portable corpus.
+- Bracket literals are the only list-literal syntax. The awkward bare
+  `of value and value` form was removed from parser, grammar, examples, and
+  positive fixtures. `of` is a reserved lexer token used by `min`/`max`,
+  extension argument lists, value-membership phrases, and dice patterns.
 
 Verification after this change:
 
 ```text
-1030/1030 Markdown conformance cases passed
-1129/1129 non-performance test executions passed
+1031/1031 Markdown conformance cases passed
+1131/1131 non-performance test executions passed
 All Documentation links resolve and all Markdown code fences are balanced
 ```
 

@@ -1429,3 +1429,40 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: bare of list syntax is rejected
+
+This negative compiler case verifies that list literals use the single
+canonical bracket syntax and that `of … and …` is not accepted as an expression.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0041
+kind: compileError
+level: atomic
+sources:
+  - name: "bare of list syntax is rejected.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+on Start {
+  let values be of 1 and 2
+  emit Done(values: values)
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

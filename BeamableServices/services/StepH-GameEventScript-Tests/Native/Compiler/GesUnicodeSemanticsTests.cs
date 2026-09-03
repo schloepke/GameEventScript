@@ -22,6 +22,15 @@ public sealed class GesUnicodeSemanticsTests
     }
 
     [TestMethod]
+    public void LexerRecognizesOfAsReservedToken()
+    {
+        var lexer = new GesLexer("of of_2");
+
+        AssertToken(lexer.ReadNextToken(), GesTokenKind.Of, "of", 1, 1, 1, 3);
+        AssertToken(lexer.ReadNextToken(), GesTokenKind.Identifier, "of_2", 1, 4, 1, 8);
+    }
+
+    [TestMethod]
     public void BuilderRejectsInvalidUnicodeScalarSequences()
     {
         var exception = Assert.ThrowsExactly<ArgumentException>(() =>

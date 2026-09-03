@@ -42,7 +42,7 @@ sources:
 
 ```ges
 on Start(value, heading, target) {
-  let values be of 10 and 20 and 30
+  let values be [10, 20, 30]
   let floored be floor value
   let flooredCall be floor(value)
   let floorPredicate be nothing
@@ -52,7 +52,7 @@ on Start(value, heading, target) {
   let northA be heading is :nav.isNorth
   let northB be :nav.isNorth heading
   let vectorTotal be :test.vectorSum :vector(1m, 2m, 3m)
-  let asList as :list be of 10 and 20 and 30
+  let asList as :list be [10, 20, 30]
   emit Done(floored: floored, flooredCall: flooredCall, floorPredicate: floorPredicate, maxed: maxed, turnA: turnA, turnB: turnB, northA: northA, northB: northB, vectorTotal: vectorTotal, valuesIsList: values is :list, valuesLen: values[:count], list_2: asList[2])
 }
 ```

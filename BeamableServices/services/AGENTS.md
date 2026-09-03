@@ -17,6 +17,7 @@ dotnet test StepH-GameEventScript-Tests/StepH-GameEventScript-Tests.csproj --fil
 ## Collaboration Rules
 
 - The user often wants analysis first when explicitly saying "nur analysieren", "nichts ändern", or similar. Otherwise implementation is usually expected.
+- Handwritten C# in `StepH-GameEventScript` and `StepH-GameEventScript-Tests` follows `StepH-GameEventScript/CodeStyle.md` and the scoped `.editorconfig`. The maximum line length is 250 characters; do not wrap a declaration or call merely because it has several arguments when it fits and remains readable.
 - Do not preserve legacy compatibility unless the user explicitly asks for it. The API and DSL are still in development.
 - Prefer portability toward Swift, Kotlin, C++, and similar targets.
 - Keep C#-specific code in `StepH-GameEventScript/CSharpBridge`.

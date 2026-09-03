@@ -702,26 +702,105 @@ Corpus-Fingerprint BB8FFCBBD98EBF330D6ADBBBFFA7DACFEF885CD9B40DAB44231D329DCE98B
 6/6 Performance-/Allokationstests im Bestätigungslauf bestanden
 ```
 
-## 6. Öffentliche sprachneutrale API spezifizieren
+## 6. Normative Dokumentation und öffentliche sprachneutrale API
 
-Der C# API-Snapshot reicht nicht als Vorlage für andere Sprachen.
+Vor der eigentlichen API-Spezifikation werden Sourcecode und Dokumentation auf eine eindeutige, für die Sprachports geeignete Grundlage gebracht. Die neue normative Dokumentation beschreibt ausschließlich den gültigen Ist- und Sollvertrag; Entwicklungshistorie, Migrationen und ersetzte Architekturen gehören nicht hinein. `GameEventScript.Memory.md` bleibt außerhalb der normativen Dokumentation als historische Wissensquelle erhalten.
 
-Benötigt wird ein normatives API-Dokument für:
+### 6.1 Formatierungsvertrag festlegen - DONE
 
-- Program
-- Host
-- Context
-- Instance
-- Subscription
-- Message
-- Value
-- RuntimeLimits
-- ExecutionResult
-- PublishResult
-- PublishSink
-- Observer
+Erledigt:
+
+- Die gemeinsame `.editorconfig` enthält ausschließlich Sections für `StepH-GameEventScript` und `StepH-GameEventScript-Tests`; andere Services im Workspace bleiben unbeeinflusst.
+- `CodeStyle.md` definiert den verbindlichen Entwicklungsvertrag für handgeschriebenen C#-Source.
+- Die maximale Zeilenlänge beträgt 250 Zeichen. Deklarationen, Aufrufe und Konstruktoren bleiben einzeilig, solange sie vollständig hineinpassen und lesbar bleiben; eine feste Argumentanzahl erzwingt keinen Umbruch.
+- Notwendige mehrzeilige Parameter-, Argument-, Initializer- und Fluent-Chain-Formen sowie typische C#-Einrückungs-, Klammer-, Spacing- und `using`-Regeln sind festgelegt.
+- Der Vertrag unterscheidet ausdrücklich zwischen Editor-/Roslyn-Regeln und der zusätzlich mechanisch zu prüfenden Zeilenlänge.
+- `AGENTS.md` verweist auf diesen Vertrag, damit spätere Änderungen und Sprachport-Arbeiten dieselben Regeln verwenden.
+
+Die vorhandenen C#-Dateien wurden in diesem Schritt bewusst noch nicht verändert; ihre mechanische Reformattierung ist Gegenstand von 6.2.
+
+Abnahme:
+
+```text
+EditorConfig wurde von dotnet format für eine isolierte Produktionsdatei fehlerfrei geladen.
+Ausgangsbestand für 6.2: 76 Produktions- und 10 Testzeilen sind länger als 250 Zeichen.
+```
+
+### 6.2 Sourcecode mechanisch reformattieren
+
+- Alle handgeschriebenen `.cs`-Dateien in `StepH-GameEventScript` und `StepH-GameEventScript-Tests` nach dem Vertrag aus 6.1 formatieren.
+- Unnötig fragmentierte Deklarationen und Aufrufe wieder zusammenziehen, sofern sie in 250 Zeichen passen.
+- Zeilen über 250 Zeichen kontrolliert und semantisch sinnvoll umbrechen; Strings, Kommentare und komplexe Expressions nicht durch semantische Änderungen verkürzen.
+- Generierte Ausgaben, Golden Files, Markdown-Snapshots und Binärfixtures nicht als C#-Source formatieren.
+- Diesen Schritt als rein mechanische Änderung behandeln und getrennt von API- oder Laufzeitänderungen abnehmen.
+- API-Snapshot, vollständige Nicht-Performance-Suite sowie Performance-/Allokationsreferenzen anschließend prüfen.
+
+### 6.3 Normative Dokumentationsstruktur anlegen
+
+Unter `StepH-GameEventScript/Documentation` eine eindeutige Struktur anlegen:
+
+```text
+Documentation/
+  README.md
+  Specification/
+    Language.md
+    PublicApi.md
+    HostRuntime.md
+    ProgramModel.md
+    Bytecode.md
+    BinaryFormat.md
+    AssemblerFormat.md
+    Diagnostics.md
+    Semantics/
+      Text.md
+      Numbers.md
+      Determinism.md
+    Conformance/
+      MarkdownFormat.md
+      Runner.md
+      Environment.md
+      CrossLanguageAcceptance.md
+  Guide/
+```
+
+- `Documentation/README.md` ist der zentrale Einstieg und ordnet jeden Vertragsbereich genau einem normativen Dokument zu.
+- Normative Dokumente dürfen Regeln anderer Bereiche nur verlinken, nicht in leicht abweichender Form duplizieren.
+- Lernmaterial liegt getrennt unter `Guide` und ist nicht normativ.
+- Arbeitsdokumente, Testinventare, Backlogs, Handoffs und Memory-Dateien bleiben außerhalb der normativen Struktur.
+- Physische Dateinamen und Verzeichnisse bereits so wählen, dass sie ohne konzeptionelle Umbenennung in das Monorepo übernommen werden können.
+
+### 6.4 Bestehende technische Spezifikationen überführen
+
+- Wissen aus den bestehenden Dokumenten in die neue Struktur überführen oder anhand von Code und Conformance neu formulieren.
+- `BytecodeSpec.md` und `BytecodeOpcodeShape.md` zu einer lückenlosen `Specification/Bytecode.md` zusammenführen: Instruction-Layout, Opcode-IDs, Operanden, Flags, Units, Kontrollfluss, Calls, Validierung und Ausführungssemantik.
+- `.gesb`-Container, Sections und Byte-Encoding ausschließlich in `Specification/BinaryFormat.md` beschreiben.
+- Das menschenlesbare `.gesa`-Format einschließlich Segments, Regions, Source-Zeilen und symbolischer Register ausschließlich in `Specification/AssemblerFormat.md` beschreiben.
+- Host-State-Machine und Laufzeitverantwortlichkeiten nach `HostRuntime.md`, Program-Ownership und Serialisierbarkeit nach `ProgramModel.md`, Diagnostics nach `Diagnostics.md` und die portablen Detailsemantiken unter `Semantics` überführen.
+- Conformance-Autorenformat, Runner, feste Umgebung und Cross-Language-Abnahme in die vier Conformance-Spezifikationen überführen.
+- Überführte alte normative Root-Dokumente entfernen, sobald ihr Inhalt vollständig abgedeckt ist; keine Redirect-, Legacy- oder Historienkapitel behalten.
+- Punkt 7 bleibt verantwortlich für die spätere maschinenlesbare Opcode-Quelle. Die in 6.4 zusammengeführte Bytecode-Spezifikation darf zunächst eine manuelle Tabelle enthalten, die unter Punkt 7 durch generierte Inhalte ersetzt wird.
+
+### 6.5 Vollständige Sprachspezifikation erstellen
+
+- `Specification/Language.md` als exakte, lückenlose Definition der Sprache neu erstellen; das bisherige `GameEventScript.md` dient nur als eine Wissensquelle neben Parser, Compiler und Conformance-Corpus.
+- Lexikalische Regeln, Unicode, Kommentare, Namen, Literale, Grammatik, Scopes, Typen, Werte, Expressions, Operatoren, Statements, Handler, Funktionen, Prädikate, Collections, Pipelines, Randomness, Emit/Publish sowie statische und Laufzeitfehler vollständig festlegen.
+- Wo Detailregeln bereits in `Semantics` normativ definiert sind, ausschließlich eindeutig dorthin verweisen.
+- Grammatik und Prosa müssen denselben Sprachumfang beschreiben; Parser-/Compiler-Verhalten, das nicht Teil der Sprache sein soll, darf nicht versehentlich normativ werden.
+- Beispiele dienen nur der Präzisierung und ersetzen keine Regel.
+- Das bisherige `GameEventScript.md` nach vollständiger Überführung entfernen. Eine separate lernorientierte Einführung unter `Guide` wird später unabhängig von der Sprachspezifikation erstellt.
+
+### 6.6 Öffentliche portable API spezifizieren
+
+Der C# API-Snapshot reicht nicht als Vorlage für andere Sprachen. `Specification/PublicApi.md` definiert die konzeptionell gemeinsame öffentliche API für:
+
+- Program, Compiler und Builder
+- Host, Context, Instance und Subscription
+- Message, Signature, Arguments und Value
+- RuntimeLimits, ExecutionResult und PublishResult
+- PublishSink und Observer
 - Extension Registry
 - External Type Catalog und Runtime Bindings
+- Program Reader, Writer, Validator und Dumper
 - ConformanceDocument, Suite und Case
 - ConformanceParser, ParseResult, ParserLimits und ConformanceDiagnostic
 - ConformanceRunner und ConformanceEnvironment
@@ -731,50 +810,43 @@ Benötigt wird ein normatives API-Dokument für:
 - ReceivedWriter für Performance-Baselines und Bytecode-Snapshots
 - CorpusIdentity und kompakter CrossLanguageResultWriter
 
-Die Conformance-Oberfläche gehört zunächst zum Namespace
-`StepH.GameEventScript.Conformance` im bestehenden Core-Projekt. Ihre API muss
-aber bereits so geschnitten sein, dass sie im Monorepo ohne konzeptionelle
-Änderung in ein eigenes optionales Modul verschoben werden kann. Core-Host, VM,
-Compiler und Programmodell dürfen nicht von Conformance abhängen; ausschließlich
-Conformance hängt von den öffentlichen Core-APIs ab.
+Für jeden Typ und jede Operation ausdrücklich festhalten:
 
-Dabei ausdrücklich festhalten:
+- Verantwortung, Ownership und Lebensdauer
+- Copy- versus Reference-Semantik und Immutability
+- Nullability sowie gültige und ungültige Argumente
+- synchrone Ausführung, Threading, Serialisierung und Reentrancy
+- Idempotenz und Lifecycle-Übergänge
+- Callback- und Dispatch-Reihenfolge
+- Fehler, Diagnostics und Verhalten bei Observer- oder Sink-Exceptions
+- Hot-Path- und Allokationsanforderungen, sofern sie Teil des portablen Vertrags sind
 
-- Ownership und Lebensdauer
-- Copy- versus Reference-Semantik
-- Immutability
-- Nullability
-- Threading und Serialisierung
-- Reentrancy
-- Idempotenz
-- Callback-Reihenfolge
-- Fehlerbehandlung
-- Verhalten bei Observer- oder Sink-Exceptions
+Die Conformance-Oberfläche bleibt zunächst im Namespace `StepH.GameEventScript.Conformance`, muss aber ohne konzeptionelle Änderung in ein eigenes optionales Monorepo-Modul verschiebbar sein. Core-Host, VM, Compiler und Programmodell dürfen nicht von Conformance abhängen; ausschließlich Conformance hängt von den öffentlichen Core-APIs ab.
 
-Für die Conformance-API zusätzlich ausdrücklich festhalten:
+Für die Conformance-API zusätzlich festhalten:
 
-- Parser und Runner sind synchron, threadlos und besitzen keine File-, Netzwerk-
-  oder Testframework-Abhängigkeit.
-- Der Parser nimmt UTF-8-Bytes beziehungsweise Text entgegen und liefert nur ein
-  vollständig validiertes immutable Dokument oder strukturierte Diagnostics.
-- Markdown-/YAML-Zwischenbäume sind Implementierungsdetails und nicht Teil der
-  öffentlichen API.
-- ResourceResolver liefert externe Fixture-Bytes explizit und unter
-  konfigurierbaren Limits; der Runner öffnet niemals selbst Pfade oder URLs.
-- RunCase, RunDocument und RunCorpus sind getrennte Operationen. Ein
-  Testframework kann jeden Case einzeln registrieren, während dieselben
-  Ergebnisse zusätzlich zu einem Gesamtreport aggregiert werden können.
-- ResultWriter und MarkdownReportWriter schreiben ausschließlich in vom
-  Aufrufer bereitgestellte Ziele beziehungsweise Buffer.
-- ReceivedWriter erzeugt nur einen Approval-Vorschlag und überschreibt niemals
-  selbst das ursprüngliche Markdown-Dokument.
-- Performanceprofile und Baselines dürfen sprach-/plattformbezogen sein;
-  Workload, Korrektheit, Einheiten und Vergleichsregeln bleiben konzeptionell
-  gleich.
-- Öffentliche Modelle und Ergebnisse dürfen keine MSTest-, XCTest-, JUnit- oder
-  sonstigen Framework-Typen enthalten.
+- Parser und Runner sind synchron, threadlos und besitzen keine File-, Netzwerk- oder Testframework-Abhängigkeit.
+- Der Parser nimmt UTF-8-Bytes beziehungsweise Text entgegen und liefert nur ein vollständig validiertes immutable Dokument oder strukturierte Diagnostics.
+- Markdown-/YAML-Zwischenbäume sind Implementierungsdetails und nicht Teil der öffentlichen API.
+- ResourceResolver liefert externe Fixture-Bytes explizit unter konfigurierbaren Limits; der Runner öffnet niemals selbst Pfade oder URLs.
+- RunCase, RunDocument und RunCorpus sind getrennte Operationen. Testframeworks dürfen Cases einzeln registrieren und dieselben Ergebnisse ohne erneute Corpus-Ausführung aggregieren.
+- ResultWriter und MarkdownReportWriter schreiben nur in vom Aufrufer bereitgestellte Buffer beziehungsweise geben Bytes oder Text zurück.
+- ReceivedWriter erzeugt ausschließlich einen Approval-Vorschlag und überschreibt niemals selbst das ursprüngliche Markdown-Dokument.
+- Performanceprofile und Baselines dürfen sprach- und plattformbezogen sein; Workload, Korrektheit, Einheiten und Vergleichsregeln bleiben gemeinsam.
+- Öffentliche Modelle und Ergebnisse enthalten keine MSTest-, XCTest-, JUnit- oder sonstigen Framework-Typen.
 
-Danach bekommt jede Sprache eine idiomatische Abbildung. Die APIs müssen konzeptionell gleich sein, nicht Zeichen für Zeichen.
+Jede Sprache erhält anschließend eine idiomatische Abbildung. Die APIs müssen konzeptionell und semantisch gleich sein, nicht zeichengetreu dieselben Typ- oder Methodennamen verwenden.
+
+### 6.7 Gesamtkonsistenz und Vollständigkeit prüfen
+
+- Von `Documentation/README.md` aus müssen alle normativen Dokumente erreichbar sein; interne Links und Zuständigkeitsverweise werden vollständig validiert.
+- Jeder öffentliche API-Typ und jede öffentliche Operation aus dem freigegebenen API-Snapshot muss genau einer Stelle in `PublicApi.md` zugeordnet sein.
+- Jeder Opcode und jede zulässige Operandenform muss in `Bytecode.md` erscheinen; numerische Tabellen werden gegen die aktuelle Implementierung geprüft, bis Punkt 7 die maschinenlesbare Quelle übernimmt.
+- Sprachsyntax und Grammatik werden gegen Parser-, Compiler- und Conformance-Fälle geprüft.
+- `.gesb`-Golden-Fixtures, GESA-Snapshots, Diagnostics und portable Semantikfälle werden gegen ihre jeweils zuständige Spezifikation geprüft.
+- Widersprüche werden durch Korrektur der zuständigen normativen Quelle beseitigt, nicht durch zusätzliche Ausnahmen oder duplizierte Erklärungen.
+- Nach erfolgreicher Überführung verbleiben außerhalb von `Documentation` nur ausdrücklich nichtnormative Arbeits-, Test-, Editor-, Memory- und Handoff-Dokumente.
+- Abschließend API-Snapshot, vollständige Nicht-Performance-Suite, Markdown-Conformance, Cross-Language-Referenz sowie Performance-/Allokationstests ausführen.
 
 ## 7. Opcode- und Formatdefinition zentralisieren
 

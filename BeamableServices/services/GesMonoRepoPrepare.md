@@ -819,14 +819,26 @@ All documentation code fences are balanced
 1128/1128 non-performance test executions passed
 ```
 
-### 6.5 Vollständige Sprachspezifikation erstellen
+### 6.5 Vollständige Sprachspezifikation erstellen - DONE
 
-- `Specification/Language.md` als exakte, lückenlose Definition der Sprache neu erstellen; das bisherige `GameEventScript.md` dient nur als eine Wissensquelle neben Parser, Compiler und Conformance-Corpus.
-- Lexikalische Regeln, Unicode, Kommentare, Namen, Literale, Grammatik, Scopes, Typen, Werte, Expressions, Operatoren, Statements, Handler, Funktionen, Prädikate, Collections, Pipelines, Randomness, Emit/Publish sowie statische und Laufzeitfehler vollständig festlegen.
-- Wo Detailregeln bereits in `Semantics` normativ definiert sind, ausschließlich eindeutig dorthin verweisen.
-- Grammatik und Prosa müssen denselben Sprachumfang beschreiben; Parser-/Compiler-Verhalten, das nicht Teil der Sprache sein soll, darf nicht versehentlich normativ werden.
-- Beispiele dienen nur der Präzisierung und ersetzen keine Regel.
-- Das bisherige `GameEventScript.md` nach vollständiger Überführung entfernen. Eine separate lernorientierte Einführung unter `Guide` wird später unabhängig von der Sprachspezifikation erstellt.
+Erledigt:
+
+- `Documentation/Specification/Language.md` definiert den aktuellen Sprachumfang normativ und ohne Implementierungs- oder Migrationshistorie. Parser, Compiler, Runtime-Semantik, alter Sprachtext und Markdown-Conformance wurden dafür gemeinsam abgeglichen.
+- Die Spezifikation umfasst Compilation Units, Deklarationen, portable Lexik und Unicode-Verweise, Literale, Scopes, Callables, azyklische Calls, Handler und Dispatch, Statements, vollständige Operatorpräzedenz, Typen, Casts, Truth-Semantik, Werte, Records, Collections und Pipelines, Randomness, Dice, Series, Extensions sowie Fehler- und Limitverhalten.
+- Detailverträge für Unicode, Zahlen, deterministische Reihenfolge und PRNG bleiben ausschließlich in den zuständigen Semantikdokumenten; Host-, Program-, Bytecode- und Binary-Verantwortlichkeiten sind klar abgegrenzt und verlinkt.
+- Die korrigierte normative Grammatik steht direkt im Sprachdokument. Sie verwendet die von JetBrains Grammar-Kit verstandene erweiterte BNF-Ausdruckssyntax für korrektes IntelliJ-Highlighting, ohne Parsergenerierung oder PEG-Konfliktregeln zum Sprachvertrag zu machen. Sie beschreibt denselben Umfang wie die Prosa, einschließlich Intrinsics, Selectorformen und kontextabhängiger Message-/Handler-Literale.
+- Die bereits lexikalisch erzwungene portable Typnamensyntax besitzt nun eine explizite Markdown-Conformance-Abdeckung für die Abgrenzung gegenüber Identifiern mit numerischem Suffix.
+- Das frühere `GameEventScript.md` und die separate, abweichende `GameEventScript.bnf` wurden nach der Überführung entfernt. Lernmaterial bleibt ausdrücklich Aufgabe des getrennten `Guide`-Bereichs.
+
+Abnahme:
+
+```text
+All Documentation links resolve
+All Markdown code fences are balanced
+Record type-name grammar has executable Markdown conformance coverage
+1030/1030 Markdown conformance cases passed
+1129/1129 non-performance test executions passed
+```
 
 ### 6.6 Öffentliche portable API spezifizieren
 

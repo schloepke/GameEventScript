@@ -11,7 +11,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 
 | Contract area | Owning document | Responsibility | Status |
 | --- | --- | --- | --- |
-| Language | [Language](Specification/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Structural draft |
+| Language | [Language](Specification/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Normative |
 | Public API | [Public API](Specification/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Structural draft |
 | Host runtime | [Host runtime](Specification/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |
 | Program model | [Program model](Specification/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Normative |
@@ -27,7 +27,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Conformance environment | [Environment](Specification/Conformance/Environment.md) | Fixed extensions, external types, sinks, observers, and resources | Normative |
 | Cross-language acceptance | [Cross-language acceptance](Specification/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Normative |
 
-The language and public API documents remain structural drafts until their dedicated completion steps. All other specification documents in the table are normative.
+The public API document remains a structural draft until its dedicated completion step. All other specification documents in the table are normative.
 
 ## Non-normative guides
 

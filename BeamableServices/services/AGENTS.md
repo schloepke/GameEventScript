@@ -71,10 +71,36 @@ The project has a portable Game Event Script host/VM architecture with a compact
   seeded PRNG, script/structural equality, stable ordering, iteration/ranges,
   and equal-priority host dispatch.
 - `StepH-GameEventScript/Documentation/README.md` is the canonical documentation
-  entry point. `Language.md` and `PublicApi.md` remain structural drafts for their
-  dedicated completion steps; every other listed specification is normative.
+  entry point. `Language.md` and every other listed specification except
+  `PublicApi.md` are normative; the public API remains the sole structural draft.
 
 ## Recent Completed Work
+
+### Normative Language Specification
+
+- `Documentation/Specification/Language.md` now owns the complete current GES
+  language contract: source structure, portable lexing, declarations, scopes,
+  callables, acyclic calls, handlers, statements, precedence, values, casts,
+  Records, collection pipelines, randomness, extensions, and error behavior.
+- Cross-cutting Unicode, numeric, deterministic/PRNG, Host, Program, Bytecode,
+  binary, and diagnostic rules are linked to their single owning specifications
+  instead of being repeated as implementation documentation.
+- The corrected grammar is embedded in the language specification using the
+  extended BNF expression syntax understood by JetBrains Grammar-Kit. It
+  includes the complete intrinsic and selector surface plus the contextual
+  distinction between message and handler values without adopting parser
+  generation or PEG conflict resolution as language semantics.
+- The former root `GameEventScript.md` and divergent `GameEventScript.bnf` were
+  removed. A new Markdown conformance case fixes the no-numeric-suffix rule for
+  declared custom type names in the portable corpus.
+
+Verification after this change:
+
+```text
+1030/1030 Markdown conformance cases passed
+1129/1129 non-performance test executions passed
+All Documentation links resolve and all Markdown code fences are balanced
+```
 
 ### Technical Specification Migration
 
@@ -88,10 +114,9 @@ The project has a portable Game Event Script host/VM architecture with a compact
   `AssemblerFormat.md` now normatively defines the complete human-readable
   `.gesa` output emitted by the Program dumper.
 - Migrated technical root specifications were removed after their links were
-  redirected. `GameEventScript.md` remains as input for the dedicated language
-  work, and `GameEventScript.Memory.md` remains untouched as history.
-- `Language.md` and `PublicApi.md` are the only remaining structural drafts.
-  Non-normative guides retain a separate documentation root.
+  redirected. `GameEventScript.Memory.md` remains untouched as history.
+- `PublicApi.md` is the only remaining structural draft. Non-normative guides
+  retain a separate documentation root.
 
 Verification after this change:
 

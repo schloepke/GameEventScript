@@ -1389,3 +1389,43 @@ error:
   phase: "parse"
   code: "parse.syntax"
 ```
+
+---
+
+## Test: record type names reject numeric suffixes
+
+This negative compiler case verifies that declared custom type names use the
+portable type-name grammar rather than the wider identifier and tag grammar.
+
+### Case description
+
+```yaml
+gesBlock: case
+id: case-0040
+kind: compileError
+level: atomic
+sources:
+  - name: "record type names reject numeric suffixes.ges"
+    program: main
+```
+
+### Source code under test
+
+```ges
+record :unit_2 as {
+  value: :number
+}
+
+on Start {
+  emit Done
+}
+```
+
+### Expectation
+
+```yaml
+gesBlock: expect
+error:
+  phase: "parse"
+  code: "parse.syntax"
+```

@@ -13,40 +13,21 @@ Every contract area has exactly one owning document. Other documents link to tha
 | --- | --- | --- | --- |
 | Language | [Language](Specification/Language.md) | Lexical grammar, syntax, static semantics, and language constructs | Structural draft |
 | Public API | [Public API](Specification/PublicApi.md) | Language-neutral API responsibilities and per-language mappings | Structural draft |
-| Host runtime | [Host runtime](Specification/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Structural draft |
-| Program model | [Program model](Specification/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Structural draft |
-| Bytecode | [Bytecode](Specification/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Structural draft |
-| Binary format | [Binary format](Specification/BinaryFormat.md) | `.gesb` container, segments, encoding, retention, and decoding | Structural draft |
-| Assembler format | [Assembler format](Specification/AssemblerFormat.md) | Human-readable `.gesa` dump syntax and presentation metadata | Structural draft |
-| Diagnostics | [Diagnostics](Specification/Diagnostics.md) | Stable phases, codes, locations, and propagation rules | Structural draft |
-| Text semantics | [Text](Specification/Semantics/Text.md) | Unicode, source text, names, ordering, and scalar operations | Structural draft |
-| Number semantics | [Numbers](Specification/Semantics/Numbers.md) | Integer, Binary64, units, arithmetic, conversion, and equality | Structural draft |
-| Determinism | [Determinism](Specification/Semantics/Determinism.md) | Randomness, iteration, stable ordering, and deterministic dispatch | Structural draft |
-| Conformance Markdown | [Markdown format](Specification/Conformance/MarkdownFormat.md) | Portable suite authoring syntax and normalized test model | Structural draft |
-| Conformance runner | [Runner](Specification/Conformance/Runner.md) | Capabilities, execution, results, reports, and received updates | Structural draft |
-| Conformance environment | [Environment](Specification/Conformance/Environment.md) | Fixed extensions, external types, sinks, observers, and resources | Structural draft |
-| Cross-language acceptance | [Cross-language acceptance](Specification/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Structural draft |
+| Host runtime | [Host runtime](Specification/HostRuntime.md) | Host lifecycle, dispatch, execution, context, and outbound behavior | Normative |
+| Program model | [Program model](Specification/ProgramModel.md) | Immutable transport data, ownership, validation, and linking boundary | Normative |
+| Bytecode | [Bytecode](Specification/Bytecode.md) | Instruction model, opcode semantics, operands, and control flow | Normative |
+| Binary format | [Binary format](Specification/BinaryFormat.md) | `.gesb` container, segments, encoding, retention, and decoding | Normative |
+| Assembler format | [Assembler format](Specification/AssemblerFormat.md) | Human-readable `.gesa` dump syntax and presentation metadata | Normative |
+| Diagnostics | [Diagnostics](Specification/Diagnostics.md) | Stable phases, codes, locations, and propagation rules | Normative |
+| Text semantics | [Text](Specification/Semantics/Text.md) | Unicode, source text, names, ordering, and scalar operations | Normative |
+| Number semantics | [Numbers](Specification/Semantics/Numbers.md) | Integer, Binary64, units, arithmetic, conversion, and equality | Normative |
+| Determinism | [Determinism](Specification/Semantics/Determinism.md) | Randomness, iteration, stable ordering, and deterministic dispatch | Normative |
+| Conformance Markdown | [Markdown format](Specification/Conformance/MarkdownFormat.md) | Portable suite authoring syntax and normalized test model | Normative |
+| Conformance runner | [Runner](Specification/Conformance/Runner.md) | Capabilities, execution, results, reports, and received updates | Normative |
+| Conformance environment | [Environment](Specification/Conformance/Environment.md) | Fixed extensions, external types, sinks, observers, and resources | Normative |
+| Cross-language acceptance | [Cross-language acceptance](Specification/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Normative |
 
-## Current normative sources
-
-Until a target specification above is complete and marked **Normative**, the following existing contracts remain authoritative:
-
-| Contract area | Current source |
-| --- | --- |
-| Host runtime | [Host architecture](../HostArchitecture.md) |
-| Program model | [Portable program model](../PortableProgramModel.md) |
-| Bytecode | [Bytecode specification](../BytecodeSpec.md) and [opcode instruction shape](../BytecodeOpcodeShape.md) |
-| Binary format | [`.gesb` V1](../GesbFormatV1.md) |
-| Diagnostics | [Portable diagnostics](../PortableDiagnostics.md) |
-| Text semantics | [Portable text semantics](../PortableTextSemantics.md) |
-| Number semantics | [Portable number semantics](../PortableNumberSemantics.md) |
-| Determinism | [Portable determinism semantics](../PortableDeterminismSemantics.md) |
-| Conformance Markdown | [Conformance Markdown V1](../ConformanceMarkdownV1.md) |
-| Conformance runner | [Conformance Runner V1](../ConformanceRunnerV1.md) |
-| Conformance environment | [Conformance Environment V1](../ConformanceEnvironmentV1.md) |
-| Cross-language acceptance | [Cross-Language Conformance V1](../CrossLanguageConformanceV1.md) |
-
-The language does not yet have a complete normative specification. Existing language-oriented material is source material for the structural draft, not a substitute for its eventual complete contract.
+The language and public API documents remain structural drafts until their dedicated completion steps. All other specification documents in the table are normative.
 
 ## Non-normative guides
 

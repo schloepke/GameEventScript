@@ -53,7 +53,7 @@ errors, bounded resource resolution, rewrite identity, and runtime execution.
 
 Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
 and the compact C# reference result are defined in
-`CrossLanguageConformanceV1.md`. The comparison is keyed exclusively by the
+`Documentation/Specification/Conformance/CrossLanguageAcceptance.md`. The comparison is keyed exclusively by the
 stable IDs in this coverage index and the executable corpus.
 
 ## Intentionally language-specific coverage

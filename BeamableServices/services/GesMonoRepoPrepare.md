@@ -7,10 +7,9 @@ Wichtig: Der physische Umzug ins Monorepo muss nicht warten, bis alle Punkte fer
 ## 1. `.gesb`-Binary vollständig definieren - DONE
 
 `.gesb` V1 ist spezifiziert und implementiert. Das normative Containerformat steht
-in [GesbFormatV1.md](StepH-GameEventScript/GesbFormatV1.md); Opcode-Semantik und
+in [BinaryFormat.md](StepH-GameEventScript/Documentation/Specification/BinaryFormat.md); Opcode-Semantik und
 Operandenformen stehen weiterhin in
-[BytecodeSpec.md](StepH-GameEventScript/BytecodeSpec.md) und
-[BytecodeOpcodeShape.md](StepH-GameEventScript/BytecodeOpcodeShape.md).
+[Bytecode.md](StepH-GameEventScript/Documentation/Specification/Bytecode.md).
 
 Abgeschlossen sind:
 
@@ -48,7 +47,7 @@ Mehrere aktuelle Verhaltensweisen hängen implizit an .NET.
 ### 2.1 Text und Unicode - DONE
 
 Der sprachneutrale Vertrag ist in
-[PortableTextSemantics.md](StepH-GameEventScript/PortableTextSemantics.md)
+[Text.md](StepH-GameEventScript/Documentation/Specification/Semantics/Text.md)
 festgeschrieben und in Compiler, Runtime, Host-API und `.gesb`-Validator
 umgesetzt:
 
@@ -67,7 +66,7 @@ umgesetzt:
 ### 2.2 Zahlen - DONE
 
 Der sprachneutrale Vertrag ist in
-[PortableNumberSemantics.md](StepH-GameEventScript/PortableNumberSemantics.md)
+[Numbers.md](StepH-GameEventScript/Documentation/Specification/Semantics/Numbers.md)
 festgeschrieben und in Compiler, VM, Value-Modell sowie JSON-Conformance
 umgesetzt:
 
@@ -88,7 +87,7 @@ umgesetzt:
 ### 2.3 Determinismus - DONE
 
 Der sprachneutrale Vertrag ist in
-[PortableDeterminismSemantics.md](StepH-GameEventScript/PortableDeterminismSemantics.md)
+[Determinism.md](StepH-GameEventScript/Documentation/Specification/Semantics/Determinism.md)
 festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 
 - `:sort` und `:order by` sind aufsteigend wie absteigend stabil; gleiche
@@ -107,7 +106,7 @@ festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 ### 2.4 Random - DONE
 
 Der sprachneutrale Random-Vertrag ist ebenfalls in
-[PortableDeterminismSemantics.md](StepH-GameEventScript/PortableDeterminismSemantics.md)
+[Determinism.md](StepH-GameEventScript/Documentation/Specification/Semantics/Determinism.md)
 festgeschrieben und durch Low-Level- sowie JSON-Conformance-Tests abgesichert:
 
 - SplitMix64 initialisiert den xoshiro256**-Zustand aus dem vollständigen
@@ -208,7 +207,7 @@ Compilerbeschreibung und ausführbare Runtime-Bindings sind getrennt:
 - JSON-Conformance verwendet ausschließlich Phase plus Code und optionale
   strukturierte Felder. `messageContains` wurde aus portablen Fehlererwartungen
   entfernt; Runtime-Diagnosen sind als geordnete Observer-Ereignisse prüfbar.
-- Der normative Vertrag steht in `StepH-GameEventScript/PortableDiagnostics.md`.
+- Der normative Vertrag steht in `StepH-GameEventScript/Documentation/Specification/Diagnostics.md`.
 
 ## 4. `GameEventScriptProgram` als wirklich portables Datenmodell härten - DONE
 
@@ -231,7 +230,7 @@ Regressionstests statt eines weiteren großen Umbaus.
 - Linked Strings, Imports, ID-Indizes und andere Beschleunigungsstrukturen bleiben
   in `GesLinkedProgram` und werden nicht in das Program zurückgeschrieben.
 - Der normative Daten-, Ownership- und Immutability-Vertrag steht in
-  `StepH-GameEventScript/PortableProgramModel.md`.
+  `StepH-GameEventScript/Documentation/Specification/ProgramModel.md`.
 
 ### 4.2 Konstruktions- und Validierungsgrenzen absichern - DONE
 
@@ -245,7 +244,7 @@ Regressionstests statt eines weiteren großen Umbaus.
   VM-Speicher vorbereitet, Handler registriert oder Initialisierung eingereiht
   werden. Ein Fehler lässt den Host unverändert.
 - Die absichtlich wiederholten Trust-Boundary-Prüfungen sind normativ in
-  `PortableProgramModel.md` und `GesbFormatV1.md` festgehalten.
+  `Documentation/Specification/ProgramModel.md` und `Documentation/Specification/BinaryFormat.md` festgehalten.
 
 ### 4.3 Encoding-Unabhängigkeit absichern - DONE
 
@@ -262,8 +261,8 @@ Regressionstests statt eines weiteren großen Umbaus.
   IDs; Deklarationsreihenfolge und Sprach-Ordinals sind ohne Bedeutung.
 - Das Program enthält keine Plattform-Hashwerte. Die einzige persistierte
   Hashart ist das normativ definierte SHA-256 der SourceMap.
-- Der Vertrag ist in `PortableProgramModel.md`, `GesbFormatV1.md` und
-  `BytecodeOpcodeShape.md` festgehalten.
+- Der Vertrag ist in `Documentation/Specification/ProgramModel.md`, `Documentation/Specification/BinaryFormat.md` und
+  `Documentation/Specification/Bytecode.md` festgehalten.
 
 ### 4.4 Regressionstests und Abschluss - DONE
 
@@ -278,7 +277,7 @@ Regressionstests statt eines weiteren großen Umbaus.
   Binary64-Bits und die kompakte 16-Byte-C#-Instruction sind explizit getestet.
 - Golden Fixtures und der Public-API-Snapshot schützen zusätzlich sämtliche
   kanonischen Bytes und expliziten Enum-/Opcode-IDs.
-- Der Abschluss ist in `PortableProgramModel.md` und `AGENTS.md` festgehalten.
+- Der Abschluss ist in `Documentation/Specification/ProgramModel.md` und `AGENTS.md` festgehalten.
 
 ## 5. Portable Conformance ausbauen
 
@@ -327,9 +326,9 @@ neue Format überführt; Erweiterungen folgen erst nach nachgewiesener Parität.
 ### 5.1 Markdown- und Runner-Vertrag normativ spezifizieren - DONE
 
 Der Autorenvertrag steht normativ in
-[ConformanceMarkdownV1.md](StepH-GameEventScript/ConformanceMarkdownV1.md), der
+[MarkdownFormat.md](StepH-GameEventScript/Documentation/Specification/Conformance/MarkdownFormat.md), der
 Ausführungs-, Capability-, Ergebnis-, Report- und Received-Vertrag in
-[ConformanceRunnerV1.md](StepH-GameEventScript/ConformanceRunnerV1.md).
+[Runner.md](StepH-GameEventScript/Documentation/Specification/Conformance/Runner.md).
 
 Festgelegt sind insbesondere der bewusst kleine Markdown-Strukturscanner, das
 strikte YAML-Subset, stabile Suite-/Case-IDs, Vererbung, Source-/Programmgruppierung,
@@ -344,7 +343,7 @@ und Received-Ausgabe werden aus strukturierten Ergebnissen erzeugt; Received dar
 nur Performance-Referenzen und `gesa`-Payloads ersetzen und überschreibt nie die
 Quelldatei.
 
-- `ConformanceMarkdownV1.md` als normative Beschreibung des Autorenformats
+- `Documentation/Specification/Conformance/MarkdownFormat.md` als normative Beschreibung des Autorenformats
   anlegen.
 - UTF-8, Newlines, YAML-Frontmatter, Heading-, Codeblock- und Tabellengrammatik
   exakt festlegen, ohne einen vollständigen Markdown-AST zum Teil der Semantik
@@ -373,7 +372,7 @@ Quelldatei.
   `KiB` angegeben; ein `KiB` entspricht exakt 1024 Bytes.
 - `bytecodeSnapshot` als eigene Testart mit normalem `ges`-Source und einem
   erwarteten `gesa`-Block im Format „Game Event Script Assembler“ definieren.
-- `ConformanceRunnerV1.md` für Testarten, Capabilities, Skip-Regeln,
+- `Documentation/Specification/Conformance/Runner.md` für Testarten, Capabilities, Skip-Regeln,
   Ausführungsreihenfolge, Einzel-/Gesamtausführung, Reports und Ergebnisformat
   anlegen.
 - Ungültige Daten, unbekannte Testarten und fehlende Core-Capabilities als
@@ -675,7 +674,7 @@ Abnahme:
 
 Erledigt:
 
-- `CrossLanguageConformanceV1.md` definiert den bytegenauen Corpus-Fingerprint,
+- `Documentation/Specification/Conformance/CrossLanguageAcceptance.md` definiert den bytegenauen Corpus-Fingerprint,
   die Cross-Language-Vergleichsregeln und die vollständige Capability-Policy.
 - `ConformanceCrossLanguageResultJsonWriter` erzeugt aus einem vollständigen
   Corpus-Report eine kleine kanonische Projektion. Sie enthält ausschließlich
@@ -794,16 +793,31 @@ All internal Documentation links resolve
 All pre-existing source documents remain available for 6.4/6.5
 ```
 
-### 6.4 Bestehende technische Spezifikationen überführen
+### 6.4 Bestehende technische Spezifikationen überführen - DONE
 
-- Wissen aus den bestehenden Dokumenten in die neue Struktur überführen oder anhand von Code und Conformance neu formulieren.
-- `BytecodeSpec.md` und `BytecodeOpcodeShape.md` zu einer lückenlosen `Specification/Bytecode.md` zusammenführen: Instruction-Layout, Opcode-IDs, Operanden, Flags, Units, Kontrollfluss, Calls, Validierung und Ausführungssemantik.
-- `.gesb`-Container, Sections und Byte-Encoding ausschließlich in `Specification/BinaryFormat.md` beschreiben.
-- Das menschenlesbare `.gesa`-Format einschließlich Segments, Regions, Source-Zeilen und symbolischer Register ausschließlich in `Specification/AssemblerFormat.md` beschreiben.
-- Host-State-Machine und Laufzeitverantwortlichkeiten nach `HostRuntime.md`, Program-Ownership und Serialisierbarkeit nach `ProgramModel.md`, Diagnostics nach `Diagnostics.md` und die portablen Detailsemantiken unter `Semantics` überführen.
-- Conformance-Autorenformat, Runner, feste Umgebung und Cross-Language-Abnahme in die vier Conformance-Spezifikationen überführen.
-- Überführte alte normative Root-Dokumente entfernen, sobald ihr Inhalt vollständig abgedeckt ist; keine Redirect-, Legacy- oder Historienkapitel behalten.
-- Punkt 7 bleibt verantwortlich für die spätere maschinenlesbare Opcode-Quelle. Die in 6.4 zusammengeführte Bytecode-Spezifikation darf zunächst eine manuelle Tabelle enthalten, die unter Punkt 7 durch generierte Inhalte ersetzt wird.
+Erledigt:
+
+- Die technischen Verträge wurden an ihre endgültigen Orte unter `Documentation/Specification` überführt und dort als normativ markiert. `Language.md` und `PublicApi.md` bleiben bis 6.5 beziehungsweise 6.6 die einzigen strukturellen Entwürfe.
+- Die bisherigen Bytecode-Dokumente wurden in `Specification/Bytecode.md` zusammengeführt. Das Dokument definiert Instruction-Layout, vollständige Opcode-IDs und Operandenformen, Flags, Units, Kontrollfluss, Calls, Validierung und Ausführungssemantik.
+- `.gesb`-Container, Sections, Little-Endian-Encoding, Reader-Retention und Formatvalidierung liegen ausschließlich in `Specification/BinaryFormat.md`.
+- `Specification/AssemblerFormat.md` wurde anhand des Dumpers und der Conformance-Snapshots als vollständiger Vertrag für das menschenlesbare `.gesa`-Format erstellt. Er umfasst Dokumentdirektiven, Segmente, Regions, Source-Zeilen, Labels, symbolische Register und sämtliche Operandformen.
+- Host-State-Machine und Laufzeitverantwortlichkeiten liegen in `HostRuntime.md`, Program-Ownership und Serialisierbarkeit in `ProgramModel.md`, Diagnostics in `Diagnostics.md` und die portablen Detailsemantiken unter `Semantics`.
+- Conformance-Autorenformat, Runner, feste Umgebung und Cross-Language-Abnahme wurden in die vier Conformance-Spezifikationen überführt.
+- Alle aktiven Verweise wurden auf die endgültigen Pfade umgestellt. Die vollständig abgelösten technischen Root-Dokumente wurden entfernt; es gibt keine Redirect-, Legacy- oder Historienkapitel in den normativen Zieldokumenten.
+- `GameEventScript.md` bleibt ausschließlich als Wissensquelle für 6.5 bestehen. `GameEventScript.Memory.md` bleibt als historische Aufzeichnung unverändert außerhalb der normativen Struktur.
+- Punkt 7 bleibt für die spätere maschinenlesbare Opcode-Quelle verantwortlich. Die aktuelle manuelle Opcode-Tabelle ist vollständig und wurde mechanisch gegen den öffentlichen Enum geprüft.
+
+Abnahme:
+
+```text
+17/17 documentation entry/specification/guide files present
+All Documentation and active Markdown links resolve
+199/199 opcode IDs match the public opcode enum
+9/9 concrete .gesb runtime/debug/build section IDs match the public section enum
+All GESA forms emitted by GameEventScriptProgramDumper are specified
+All documentation code fences are balanced
+1128/1128 non-performance test executions passed
+```
 
 ### 6.5 Vollständige Sprachspezifikation erstellen
 
@@ -899,7 +913,7 @@ Jede Sprache erhält anschließend eine idiomatische Abbildung. Die APIs müssen
 
 ## 7. Opcode- und Formatdefinition zentralisieren
 
-[BytecodeOpcodeShape.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/BytecodeOpcodeShape.md) und die C#-Enums duplizieren momentan Informationen manuell.
+[Bytecode.md](/Users/stephan/Projects/BattleClub/BeamableServices/services/StepH-GameEventScript/Documentation/Specification/Bytecode.md) und die C#-Enums duplizieren momentan Informationen manuell.
 
 Für das Monorepo sollte es eine zentrale maschinenlesbare Definition geben, etwa YAML oder JSON:
 

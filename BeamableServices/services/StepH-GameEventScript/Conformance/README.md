@@ -1,7 +1,7 @@
 # Portable Conformance package
 
 `StepH.GameEventScript.Conformance` implements the authoring side of
-`ConformanceMarkdownV1.md`. It is currently compiled into the Core project so
+`../Documentation/Specification/Conformance/MarkdownFormat.md`. It is currently compiled into the Core project so
 that users can parse the same suites for self-tests, but it is deliberately an
 isolated package boundary for later extraction into its own monorepo module.
 
@@ -55,7 +55,7 @@ writes `ConformanceResults.json` plus `ConformanceReport.md` after a complete
 corpus run. Report generation does not execute the corpus a second time; the
 separate identity test only validates suite and case counts and stable IDs.
 
-`ConformanceEnvironmentV1.md` defines the fixed extension and external-type
+`../Documentation/Specification/Conformance/Environment.md` defines the fixed extension and external-type
 catalog that each language runner implements. `ConformanceCoverage.md` maps
 portable behavior to stable case IDs and gates the reduction of
 language-specific tests. Script cases can configure all four publish-sink

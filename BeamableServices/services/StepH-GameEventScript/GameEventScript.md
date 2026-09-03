@@ -87,7 +87,7 @@ All of these name grammars use ASCII letters and digits; they do not depend on
 platform Unicode classification. Source is strict UTF-8, an optional initial BOM
 is removed, and only ASCII space/tab plus `LF`, `CRLF`, or `CR` are portable
 whitespace/newlines. The complete normative contract is in
-[PortableTextSemantics.md](PortableTextSemantics.md).
+[portable text semantics](Documentation/Specification/Semantics/Text.md).
 
 Text literals can use single or double quotes. The quote character is escaped by
 doubling it:
@@ -256,7 +256,7 @@ the scaled result equal the upper bound.
 
 The portable seeded PRNG algorithm, bounded sampling rules, and known-answer
 vectors are specified in
-[PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).
+[portable determinism semantics](Documentation/Specification/Semantics/Determinism.md).
 
 ## Expressions and Operators
 
@@ -465,7 +465,7 @@ record :unit as {
 The normative cross-language rules for Int64 overflow, binary64 special values,
 rounding, negative division/modulo, ULP comparison, transcendental functions,
 and canonical conformance JSON are defined in
-[`PortableNumberSemantics.md`](PortableNumberSemantics.md). Implementations must
+[portable number semantics](Documentation/Specification/Semantics/Numbers.md). Implementations must
 not inherit these semantics from host-language overflow or formatting defaults.
 
 `:number` is the source-level numeric type. Runtime values are represented as
@@ -569,7 +569,7 @@ and maps/records/custom map-like values compare their key/value pairs. Records
 also require the same declared record type. Nested collection, record, and
 message values use strict structural equality without top-level numeric
 coercion; the complete contract is in
-[PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).
+[portable determinism semantics](Documentation/Specification/Semantics/Determinism.md).
 
 `abs` preserves the operand's numeric family for percentages and quantities:
 absolute percentages remain `:percentage`, and absolute quantities keep their
@@ -636,7 +636,7 @@ length, positional indexing, iteration, text-to-list conversion, and terminal
 operations count or return Unicode scalar values rather than UTF-8 bytes,
 UTF-16 code units, or grapheme clusters. Indexes remain 1-based. Equality is
 exact and ordering is lexicographic by Unicode scalar value; see
-[PortableTextSemantics.md](PortableTextSemantics.md).
+[portable text semantics](Documentation/Specification/Semantics/Text.md).
 
 ### Vector and Point
 
@@ -668,7 +668,7 @@ let fractional be from 1.5 to 3.5 step 0.5
 Both bounds are inclusive. A zero step or a step pointing away from the end
 produces an empty range. Integer boundary handling is overflow-safe, and
 floating iterators emit exactly their precomputed finite range length; see
-[PortableDeterminismSemantics.md](PortableDeterminismSemantics.md).
+[portable determinism semantics](Documentation/Specification/Semantics/Determinism.md).
 
 ### Series
 
@@ -1125,13 +1125,13 @@ Custom type checks use `is :typeName`.
 The host compiles scripts through `GameEventScriptBuilder` or
 `GameEventScriptManager`, loads immutable programs additively, receives messages,
 and pumps them synchronously. The complete portable contract and state machine
-are specified in [HostArchitecture.md](HostArchitecture.md).
+are specified in [Host runtime](Documentation/Specification/HostRuntime.md).
 
 Core host concepts:
 
 - `GameEventScriptProgram`: immutable parsed `.gesb` representation containing
   only losslessly serializable language-neutral data. See
-  [GesbFormatV1.md](GesbFormatV1.md).
+  [Binary format](Documentation/Specification/BinaryFormat.md).
 - `GameEventScriptHost`: autonomous serial dispatch and execution unit.
 - `GameEventScriptInstance`: detachable host-specific link returned by `Load`.
 - `GameEventScriptSubscription`: detachable native handler registration.

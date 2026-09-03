@@ -1,4 +1,4 @@
-#pragma warning disable CS1591 // Public architecture is documented in HostArchitecture.md.
+#pragma warning disable CS1591 // Public architecture is documented in Documentation/Specification/HostRuntime.md.
 
 namespace StepH.GameEventScript.Api;
 

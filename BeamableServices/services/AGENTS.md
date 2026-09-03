@@ -42,7 +42,7 @@ The project has a portable Game Event Script host/VM architecture with a compact
 - Series now use direct VM concepts and `CreateSeries`.
 - `GameEventScriptProgram` is the immutable reusable compiler result.
 - `GameEventScriptProgram` is the portable parsed representation of the `.gesb` V1 binary. It may contain only data that can be serialized to `.gesb` and deserialized again losslessly and language-neutrally. Host bindings, registries, delegates, reflection objects, runtime caches, and VM state belong outside the program.
-- `StepH-GameEventScript/PortableProgramModel.md` is the normative ownership and
+- `StepH-GameEventScript/Documentation/Specification/ProgramModel.md` is the normative ownership and
   permitted-data contract for the immutable program object graph.
 - Bytecode instructions store numeric words and payload bits; semantic aliases
   use casts, shifts, masks, and Binary64 bit conversion rather than overlapping
@@ -66,36 +66,42 @@ The project has a portable Game Event Script host/VM architecture with a compact
   `CSharpBridge`, and dictionary binding requires a known signature.
 - Core is synchronous, threadless, and unsynchronized. Optional C# automatic execution lives in `CSharpBridge/GameEventScriptCSharpHostRunner.cs`.
 - There is no Session, isolated Run, module interface, or module-owned VM compatibility API.
-- `StepH-GameEventScript/HostArchitecture.md` is the normative portable responsibility/state-machine document.
-- `StepH-GameEventScript/PortableDeterminismSemantics.md` is normative for the
+- `StepH-GameEventScript/Documentation/Specification/HostRuntime.md` is the normative portable responsibility/state-machine document.
+- `StepH-GameEventScript/Documentation/Specification/Semantics/Determinism.md` is normative for the
   seeded PRNG, script/structural equality, stable ordering, iteration/ranges,
   and equal-priority host dispatch.
 - `StepH-GameEventScript/Documentation/README.md` is the canonical documentation
-  entry point. Its specification files currently define ownership boundaries as
-  structural drafts; existing root documents that define normative contracts
-  remain authoritative until their content is migrated and the target documents
-  are explicitly marked normative.
+  entry point. `Language.md` and `PublicApi.md` remain structural drafts for their
+  dedicated completion steps; every other listed specification is normative.
 
 ## Recent Completed Work
 
-### Normative Documentation Structure
+### Technical Specification Migration
 
-- Added the complete monorepo-ready `Documentation/Specification` hierarchy for
-  language, API, host runtime, Program, bytecode, `.gesb`, `.gesa`, diagnostics,
+- The monorepo-ready `Documentation/Specification` hierarchy now owns the
+  normative host runtime, Program, bytecode, `.gesb`, `.gesa`, diagnostics,
   portable semantics, and conformance contracts.
-- The central documentation index assigns every contract area to exactly one
-  owner and links every target document. Each target currently states only its
-  scope and boundaries and is marked as a structural draft.
-- Non-normative learning material has a separate `Guide` root. Work plans,
-  history, editor material, test inventories, and existing normative source
-  documents remain outside the new tree until their dedicated migration steps.
+- The former bytecode specification and opcode-shape document were merged into
+  one bytecode contract. Its complete numeric opcode and operand table matches
+  all 199 public opcode values.
+- `BinaryFormat.md` exclusively owns `.gesb` framing and encoding.
+  `AssemblerFormat.md` now normatively defines the complete human-readable
+  `.gesa` output emitted by the Program dumper.
+- Migrated technical root specifications were removed after their links were
+  redirected. `GameEventScript.md` remains as input for the dedicated language
+  work, and `GameEventScript.Memory.md` remains untouched as history.
+- `Language.md` and `PublicApi.md` are the only remaining structural drafts.
+  Non-normative guides retain a separate documentation root.
 
 Verification after this change:
 
 ```text
 17/17 documentation files present
-All internal Documentation links resolve
-All pre-existing source documents remain available for migration
+All Documentation and active Markdown links resolve
+199/199 opcode IDs match the public opcode enum
+9/9 concrete .gesb runtime/debug/build section IDs match the public section enum
+All GESA forms emitted by GameEventScriptProgramDumper are specified
+1128/1128 non-performance test executions passed
 ```
 
 ### Repository-wide C# Formatting Baseline
@@ -119,7 +125,7 @@ Verification after this change:
 
 ### Cross-Language Conformance Acceptance Preparation
 
-- `CrossLanguageConformanceV1.md` defines an exact authored-corpus SHA-256,
+- `Documentation/Specification/Conformance/CrossLanguageAcceptance.md` defines an exact authored-corpus SHA-256,
   stable-ID comparison, optional-capability skips, and complete-port acceptance.
 - `ConformanceCrossLanguageResultJsonWriter` emits a framework- and
   implementation-neutral compact result without rerunning the corpus.
@@ -165,7 +171,7 @@ Verification after this change:
 
 ### Portable Conformance Environment and Host Semantics
 
-- `ConformanceEnvironmentV1.md` defines the fixed portable extension operations
+- `Documentation/Specification/Conformance/Environment.md` defines the fixed portable extension operations
   and manual `aim` external type used by language runners. Test documents cannot
   embed arbitrary native code or reflection targets.
 - Script cases support `publishSink: absent|accept|reject|throw` and optional
@@ -204,7 +210,7 @@ Verification after this change:
   in the root; `Native` contains the remaining C#-specific tests grouped by
   purpose.
 - Every normative suite uses the canonical readable layout documented in
-  `ConformanceMarkdownV1.md`: caution callout, suite prose, a thematic break and
+  `Documentation/Specification/Conformance/MarkdownFormat.md`: caution callout, suite prose, a thematic break and
   prose for every test, and named H3 sections for case metadata, source, steps,
   expectations, and assembler snapshots.
 - Large matrices are split into logically named sub-suites below matching
@@ -251,14 +257,14 @@ Verification after the writer implementation:
 
 ### Portable Conformance V1 Contracts
 
-- `ConformanceMarkdownV1.md` normatively defines the strict UTF-8 Markdown
+- `Documentation/Specification/Conformance/MarkdownFormat.md` normatively defines the strict UTF-8 Markdown
   authoring structure, limited YAML subset, stable suite/case IDs, inheritance,
   source/program grouping, ordered step tables, expectations, test kinds,
   Binary64 comparison, performance profiles, and bytecode snapshots.
 - Semantic case and expectation data uses plain `yaml` fences for standard
   syntax highlighting. The required root discriminator is `gesBlock: case` or
   `gesBlock: expect`; trailing custom YAML fence info is not supported.
-- `ConformanceRunnerV1.md` normatively separates parsing from synchronous,
+- `Documentation/Specification/Conformance/Runner.md` normatively separates parsing from synchronous,
   threadless execution and defines capabilities, skip/error rules, case and
   corpus execution, canonical result JSON, aggregate Markdown reports, and
   source-range-based received updates.
@@ -303,7 +309,7 @@ Verification after the parser/runner implementation:
 
 - Audited the complete `GameEventScriptProgram` graph and documented its
   permitted transport-only data, ownership, construction, validation, and
-  representation rules in `PortableProgramModel.md`.
+  representation rules in `Documentation/Specification/ProgramModel.md`.
 - Removed internal mutable backing-array exposure. All nested program sequences
   are defensively copied and Core bulk reads receive only read-only spans or
   immutable slices.
@@ -335,7 +341,7 @@ Verification after this change:
 - Runtime handler diagnostics flow through the observer and execution result
   without adding successful hot-path allocations. JSON conformance no longer
   matches English error text.
-- `StepH-GameEventScript/PortableDiagnostics.md` is normative.
+- `StepH-GameEventScript/Documentation/Specification/Diagnostics.md` is normative.
 
 Verification after this change:
 
@@ -455,7 +461,7 @@ Verification after this change:
 - Conformance JSON now writes shortest roundtrip binary64 decimals with canonical
   exponents and compares finite floats with configurable `maxFloatUlps` (default
   4096; zero is exact).
-- The normative contract is `StepH-GameEventScript/PortableNumberSemantics.md`.
+- The normative contract is `StepH-GameEventScript/Documentation/Specification/Semantics/Numbers.md`.
 
 Verification after this change:
 
@@ -475,7 +481,7 @@ Verification after this change:
   operate on Unicode scalar values. Ordering is scalar ordinal.
 - Compiler columns are 1-based Unicode-scalar columns while `.gesb` SourceMap
   ranges remain UTF-8 byte offsets. The normative contract is
-  `StepH-GameEventScript/PortableTextSemantics.md`.
+  `StepH-GameEventScript/Documentation/Specification/Semantics/Text.md`.
 - Linked programs precompute scalar counts for string constants so the portable
   contract does not add per-load or per-count hot-path work.
 
@@ -499,7 +505,7 @@ Verification after this change:
   `GameEventScriptProgramDumper` consumes embedded source data and interleaves
   source-line comments. It has no legacy API for separately supplied source text.
 - Golden, invalid, retention, Unicode, runtime roundtrip, and JSON binary-roundtrip
-  tests cover the portable boundary. `StepH-GameEventScript/GesbFormatV1.md` is
+  tests cover the portable boundary. `StepH-GameEventScript/Documentation/Specification/BinaryFormat.md` is
   the normative container specification.
 
 Verification after this change:
@@ -599,8 +605,8 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/Runtime/VM/GameEventScriptVirtualMachine.cs`
 - `StepH-GameEventScript/Runtime/VM/GesVmState.cs`
 - `StepH-GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
-- `StepH-GameEventScript/HostArchitecture.md`
-- `StepH-GameEventScript/GesbFormatV1.md`
+- `StepH-GameEventScript/Documentation/Specification/HostRuntime.md`
+- `StepH-GameEventScript/Documentation/Specification/BinaryFormat.md`
 
 ## Known Warnings
 

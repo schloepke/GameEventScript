@@ -95,6 +95,34 @@ The project has a portable Game Event Script host/VM architecture with a compact
 
 ## Recent Completed Work
 
+### Normative Documentation Consistency Gate
+
+- `Documentation/README.md` indexes all 16 normative specification documents;
+  local documentation links are mechanically required to resolve.
+- The normative behavior-to-case map now lives at
+  `Documentation/Specification/Conformance/Coverage.md`. Documents outside the
+  specification tree are explicitly project, licensing, development, test,
+  editor, generated, or historical material.
+- `PublicApi.md` assigns every exported reference type and all operations of its
+  declaring type to exactly one completeness-map family. The approved API
+  snapshot, allowed public namespaces, XML build gate, and that ownership map
+  are reviewed together.
+- Mechanical documentation tests compare all 199 opcode IDs, 11 public section
+  IDs, 38 `.gesb` format errors, public stable diagnostic constants, and lexer
+  word tokens with their owning specifications.
+- Runtime and Conformance diagnostic specifications now enumerate all stable
+  public codes instead of relying on C# constants or abbreviated prefixes.
+
+Verification after this change:
+
+```text
+5/5 documentation consistency tests passed
+1040/1040 Markdown conformance cases and the corpus/cross-language audit passed
+1157/1157 non-performance test executions passed
+6/6 performance/allocation tests passed
+dotnet format --verify-no-changes passed for production and tests
+```
+
 ### Apache-2.0 Licensing and Reproducible Headers
 
 - Game Event Script is licensed under Apache-2.0 with the stable notice
@@ -372,7 +400,8 @@ Verification after this change:
   closed set of Load/Detach/Subscribe/Unsubscribe actions. Deferred programs,
   native-only Hosts and `hostCount` scenarios cover lifecycle snapshots and
   reuse of one immutable Program across independent Hosts.
-- `ConformanceCoverage.md` maps portable semantics to stable Markdown case IDs.
+- `StepH-GameEventScript/Documentation/Specification/Conformance/Coverage.md`
+  maps portable semantics to stable Markdown case IDs.
 
 Verification after this change:
 
@@ -386,16 +415,16 @@ Verification after this change:
 
 - The normative corpus lives in
   `StepH-GameEventScript-Tests/Conformance/Suites` and contains 74 suites and
-  1,022 semantic cases.
+  1,033 semantic cases.
 - Every case has an explicit stable ID, kind, and atomic/scenario
   level. The five performance cases contain profile-local KiB/ms baselines and
   five separately executable GESA bytecode snapshots.
-- The active Markdown adapter exposes 1,029 independent cases, including seven
+- The active Markdown adapter exposes 1,040 independent cases, including seven
   bytecode snapshots, plus a whole-corpus
   identity test. Their results are collected into canonical
   `ConformanceResults.json` and `ConformanceReport.md` artifacts without a
   second corpus execution.
-- `StepH-GameEventScript/NativeTestRetention.md` classifies all 84 C# methods.
+- `StepH-GameEventScript/NativeTestRetention.md` classifies all 105 C# methods.
 - The test tree now has exactly two semantic roots: `Conformance` contains
   Markdown suites, fixtures, reports, and its C# runner/parser adapters directly
   in the root; `Native` contains the remaining C#-specific tests grouped by
@@ -798,6 +827,8 @@ Remaining `Try...` outside `CSharpBridge` should only be standard-library style 
 - `StepH-GameEventScript/CSharpBridge/GameEventScriptCSharpHostRunner.cs`
 - `StepH-GameEventScript/Documentation/Specification/HostRuntime.md`
 - `StepH-GameEventScript/Documentation/Specification/BinaryFormat.md`
+- `StepH-GameEventScript/Documentation/Specification/PublicApi.md`
+- `StepH-GameEventScript/Documentation/Specification/Conformance/Coverage.md`
 
 ## Architecture Backlog
 

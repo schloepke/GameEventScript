@@ -836,10 +836,14 @@ not become hidden scheduling inside portable Host operations.
 
 ## Completeness map
 
-The following map assigns every conceptual public family to its owning section.
-Numeric enum members and individual normalized Conformance fields are owned by
-their linked format specifications rather than duplicated as a second source of
-truth here.
+The following map assigns every exported C# reference type to exactly one
+conceptual public family and owning section. Every public constructor, method,
+property, field, and event inherits the assignment of its declaring type. The
+approved C# API snapshot fixes the concrete reference-binding spellings and
+members; reviewing a snapshot change therefore also requires reviewing the
+corresponding row below. Numeric enum members and individual normalized
+Conformance fields are owned by their linked format specifications rather than
+duplicated as a second source of truth here.
 
 | Public family | Owning section |
 | --- | --- |

@@ -60,7 +60,7 @@ errors, bounded resource resolution, rewrite identity, and runtime execution.
 
 Cross-language acceptance, corpus identity, shared parser bootstrap fixtures,
 and the compact C# reference result are defined in
-`Documentation/Specification/Conformance/CrossLanguageAcceptance.md`. The comparison is keyed exclusively by the
+[Cross-language acceptance](CrossLanguageAcceptance.md). The comparison is keyed exclusively by the
 stable IDs in this coverage index and the executable corpus.
 
 ## Intentionally language-specific coverage
@@ -77,4 +77,5 @@ semantics also has a portable case:
 
 These tests must not become required behavior for Swift, Kotlin or C++ ports.
 The complete file-level inventory and the reason every remaining native C# test
-still exists are maintained in `NativeTestRetention.md`.
+still exists are maintained in
+[Native Test Retention](../../../NativeTestRetention.md).

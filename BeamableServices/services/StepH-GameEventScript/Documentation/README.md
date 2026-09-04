@@ -30,6 +30,7 @@ Every contract area has exactly one owning document. Other documents link to tha
 | Conformance Markdown | [Markdown format](Specification/Conformance/MarkdownFormat.md) | Portable suite authoring syntax and normalized test model | Normative |
 | Conformance runner | [Runner](Specification/Conformance/Runner.md) | Capabilities, execution, results, reports, and received updates | Normative |
 | Conformance environment | [Environment](Specification/Conformance/Environment.md) | Fixed extensions, external types, sinks, observers, and resources | Normative |
+| Conformance coverage | [Coverage](Specification/Conformance/Coverage.md) | Stable mapping from portable behavior to executable case IDs | Normative |
 | Cross-language acceptance | [Cross-language acceptance](Specification/Conformance/CrossLanguageAcceptance.md) | Corpus identity and acceptance criteria for language ports | Normative |
 
 All specification documents in the table are normative.

@@ -906,14 +906,21 @@ violations are errors. The parser returns no executable partial document.
 Diagnostics have stable codes, original UTF-8 byte ranges, and line/column
 locations. At minimum, implementations distinguish:
 
-- `conformance.markdown.invalidUtf8`, `.missingFrontmatter`,
-  `.unterminatedFrontmatter`, `.invalidTestHeading`, `.unterminatedFence`,
-  `.unknownSemanticFence`, and `.invalidStepsTable`;
-- `conformance.yaml.syntax`, `.unsupportedFeature`, `.duplicateKey`,
-  `.invalidScalar`, and `.limitExceeded`;
-- `conformance.schema.unknownField`, `.missingField`, `.invalidValue`,
-  `.duplicateId`, `.unknownReference`, `.invalidCardinality`,
-  `.unknownKind`, and `.unsupportedVersion`.
+- `conformance.markdown.invalidUtf8`,
+  `conformance.markdown.missingFrontmatter`,
+  `conformance.markdown.unterminatedFrontmatter`,
+  `conformance.markdown.invalidTestHeading`,
+  `conformance.markdown.unterminatedFence`,
+  `conformance.markdown.unknownSemanticFence`, and
+  `conformance.markdown.invalidStepsTable`;
+- `conformance.yaml.syntax`, `conformance.yaml.unsupportedFeature`,
+  `conformance.yaml.duplicateKey`, `conformance.yaml.invalidScalar`, and
+  `conformance.yaml.limitExceeded`;
+- `conformance.schema.unknownField`, `conformance.schema.missingField`,
+  `conformance.schema.invalidValue`, `conformance.schema.duplicateId`,
+  `conformance.schema.unknownReference`,
+  `conformance.schema.invalidCardinality`, `conformance.schema.unknownKind`,
+  and `conformance.schema.unsupportedVersion`.
 
 Format version 1 is closed. A parser that does not support the declared version
 must reject the document. New fields or semantics require an explicitly

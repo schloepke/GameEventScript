@@ -54,9 +54,10 @@ retention mode. All remaining flag bits are invalid in V1.
 | `0x0021` | SourceMapSegment | zero or one | no |
 | `0x0022` | SourceArchiveSegment | zero or one | no |
 | `0x0030` | BuildMetadataSegment | zero or one | no |
-| `0x0040`–`0x004F` | future security/signature sections | reserved | undefined |
+| `0x0040` | ReservedSignatureSegment | reserved | undefined |
+| `0x0041`–`0x004F` | future security sections | reserved | undefined |
 | `0x8000`–`0xFFFD` | private/experimental | any | no |
-| `0xFFFE` | future named custom section | reserved | no |
+| `0xFFFE` | NamedCustomSection | reserved | no |
 
 Types `0x0000` and `0xFFFF` are invalid. V1 has one linear code address space and
 therefore exactly one CodeSegment. Multiple programs are combined by separate

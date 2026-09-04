@@ -59,7 +59,8 @@ corpus run. Report generation does not execute the corpus a second time; the
 separate identity test only validates suite and case counts and stable IDs.
 
 `../Documentation/Specification/Conformance/Environment.md` defines the fixed extension and external-type
-catalog that each language runner implements. `ConformanceCoverage.md` maps
+catalog that each language runner implements. The normative
+[Conformance Coverage](../Documentation/Specification/Conformance/Coverage.md) maps
 portable behavior to stable case IDs and gates the reduction of
 language-specific tests. Script cases can configure all four publish-sink
 modes, exact observer traces, native-only Hosts, repeated independent Hosts and

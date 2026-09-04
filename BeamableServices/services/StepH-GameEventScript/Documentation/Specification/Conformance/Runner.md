@@ -290,16 +290,21 @@ Every selected valid case produces exactly one of:
 | `skipped` | one or more declared optional capabilities were absent |
 | `error` | invalid environment/model, missing core support, or runner/implementation failure prevented a valid comparison |
 
-A status has a stable code. Common codes include:
+A status has one of the following stable codes:
 
 - `conformance.passed`;
-- `conformance.assertion.mismatch` and more specific channel/kind mismatch
-  codes;
+- `conformance.assertion.mismatch`;
 - `conformance.runner.missingOptionalCapability`;
 - `conformance.runner.missingCoreCapability`,
-  `.invalidEnvironment`, `.invalidModel`, `.unhandledException`, and
-  `.missingPerformanceProfile`;
-- `conformance.performance.regression`.
+  `conformance.runner.invalidEnvironment`, `conformance.runner.invalidModel`,
+  `conformance.runner.unhandledException`, and
+  `conformance.runner.missingPerformanceProfile`;
+- `conformance.compile.expectedError` and
+  `conformance.load.expectedError`;
+- `conformance.performance.regression`;
+- `conformance.resource.unavailable`,
+  `conformance.resource.limitExceeded`, and
+  `conformance.resource.integrityMismatch`.
 
 `failed` means the test reached its intended assertion boundary. Infrastructure
 or malformed-input problems are `error`. Adapters must preserve this distinction
@@ -471,10 +476,13 @@ The portable writer updates every performance measurement and actual assembler
 present in the selected report results for the source suite. A report may be a
 whole-corpus report, but matching full/local IDs, title, kind, level, performance
 profile, metric set, old reference, and unit must agree with the parsed source.
-It reports stable `conformance.received.*` errors for incompatible reports,
-missing ranges, stale range contents, or overlaps. A mixed-line-ending source
-has no unambiguous document style; inserted multiline GESA then uses `LF` while
-all existing bytes remain untouched.
+It reports `conformance.received.invalidReport`,
+`conformance.received.missingCase`, `conformance.received.missingRange`,
+`conformance.received.staleRange`, or
+`conformance.received.overlappingRange` for incompatible reports, missing
+ranges, stale range contents, or overlaps. A mixed-line-ending source has no
+unambiguous document style; inserted multiline GESA then uses `LF` while all
+existing bytes remain untouched.
 
 ## Adapter responsibilities
 

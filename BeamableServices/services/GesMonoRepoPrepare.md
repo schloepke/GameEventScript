@@ -637,7 +637,8 @@ API-Verträge sind jetzt ausdrückbar und getestet:
 - Umfangreiche Matrizen sind in fachlich benannte Unter-Suites zerlegt. Keine
   einzelne normative Suite überschreitet 3.000 Zeilen; ein H2-Testblock wird
   dabei niemals zwischen Dateien geteilt.
-- `ConformanceCoverage.md` ordnet das portable Verhalten stabilen Case-IDs zu.
+- `Documentation/Specification/Conformance/Coverage.md` ordnet das portable
+  Verhalten stabilen Case-IDs zu.
 
 ### 5.9 `.gesb`-Fixtures und Manifest ergänzen - DONE
 
@@ -713,7 +714,7 @@ Corpus-Fingerprint BB8FFCBBD98EBF330D6ADBBBFFA7DACFEF885CD9B40DAB44231D329DCE98B
 6/6 Performance-/Allokationstests im Bestätigungslauf bestanden
 ```
 
-## 6. Normative Dokumentation und öffentliche sprachneutrale API
+## 6. Normative Dokumentation und öffentliche sprachneutrale API - DONE
 
 Vor der eigentlichen API-Spezifikation werden Sourcecode und Dokumentation auf eine eindeutige, für die Sprachports geeignete Grundlage gebracht. Die neue normative Dokumentation beschreibt ausschließlich den gültigen Ist- und Sollvertrag; Entwicklungshistorie, Migrationen und ersetzte Architekturen gehören nicht hinein. `GameEventScript.Memory.md` bleibt außerhalb der normativen Dokumentation als historische Wissensquelle erhalten.
 
@@ -923,18 +924,52 @@ All XML TextMate assets pass plutil validation
 dotnet format --verify-no-changes passed for production and tests
 ```
 
-### 6.9 Gesamtkonsistenz und Vollständigkeit prüfen
+### 6.9 Gesamtkonsistenz und Vollständigkeit prüfen - DONE
 
-- Von `Documentation/README.md` aus müssen alle normativen Dokumente erreichbar sein; interne Links und Zuständigkeitsverweise werden vollständig validiert.
-- Jeder öffentliche API-Typ und jede öffentliche Operation aus dem freigegebenen API-Snapshot muss genau einer Stelle in `PublicApi.md` zugeordnet sein.
-- Jeder Opcode und jede zulässige Operandenform muss in `Bytecode.md` erscheinen; numerische Tabellen werden gegen die aktuelle Implementierung geprüft, bis Punkt 7 die maschinenlesbare Quelle übernimmt.
-- Sprachsyntax und Grammatik werden gegen Parser-, Compiler- und Conformance-Fälle geprüft.
-- `.gesb`-Golden-Fixtures, GESA-Snapshots, Diagnostics und portable Semantikfälle werden gegen ihre jeweils zuständige Spezifikation geprüft.
-- Öffentliche C#-API und XML-Dokumentation werden vollständig gegen `PublicApi.md` geprüft; der Build enthält keine Dokumentationswarnungen und handgeschriebene C#-Quellen keine `#pragma`-Direktiven.
-- Lizenztext, Paketmetadaten, Copyright-/SPDX-Header, definierte Ausnahmen und gegebenenfalls Drittanbieterhinweise werden als ein zusammenhängender Lizenzvertrag geprüft.
-- Widersprüche werden durch Korrektur der zuständigen normativen Quelle beseitigt, nicht durch zusätzliche Ausnahmen oder duplizierte Erklärungen.
-- Nach erfolgreicher Überführung verbleiben außerhalb von `Documentation` nur ausdrücklich nichtnormative Arbeits-, Test-, Editor-, Memory- und Handoff-Dokumente.
-- Abschließend API-Snapshot, vollständige Nicht-Performance-Suite, Markdown-Conformance, Cross-Language-Referenz sowie Performance-/Allokationstests ausführen.
+Erledigt:
+
+- `Documentation/README.md` indiziert alle 16 normativen
+  Spezifikationsdokumente genau einmal. Sämtliche lokalen Links innerhalb der
+  Dokumentationshierarchie werden mechanisch auf ein vorhandenes Ziel geprüft.
+- Der bisher außerhalb liegende normative `ConformanceCoverage.md` wurde nach
+  `Documentation/Specification/Conformance/Coverage.md` verschoben. Außerhalb
+  der Dokumentationshierarchie verbleiben nur Projekt-/Lizenz-Einstiege,
+  Entwicklungsregeln, Implementierungs- und Testinventare, Editorunterlagen,
+  ausführbare Testdokumente, generierte Reports und die historische Memory-Datei.
+- `PublicApi.md` legt nun ausdrücklich fest, dass jeder exportierte C#-Typ genau
+  einer Completeness-Map-Zeile gehört und alle deklarierten Operationen die
+  Zuordnung ihres Typs erben. API-Snapshot, erlaubte öffentliche Namespaces,
+  Completeness Map und vollständige XML-Dokumentation bilden gemeinsam das
+  dauerhafte Gate.
+- Die kanonische Opcode-Tabelle wurde vollständig gegen alle 199 öffentlichen
+  Opcode-Namen und -IDs geprüft. Die Section-Registry benennt nun auch die
+  reservierten IDs `0x0040` und `0xFFFE` eindeutig und stimmt für alle 11
+  öffentlichen Section-Werte mit der Implementierung überein. Alle 38
+  `.gesb`-Formatfehler sind ebenfalls mechanisch abgeglichen.
+- Sämtliche stabilen Parse-, Validate-, Compile-, Decode-, Link- und
+  Runtime-Diagnostic-Codes sind in `Diagnostics.md` normativ auffindbar. Die
+  zuvor nur verkürzt beschriebenen Conformance-Parser-, Runner-, Resource- und
+  Received-Writer-Codes sind nun vollständig ausgeschrieben und werden gegen
+  die öffentlichen Konstanten geprüft.
+- Jedes vom Lexer erkannte reservierte ASCII-Wort muss als Terminal in der
+  normativen BNF erscheinen. Parser/Compiler-Verhalten, `.gesb`-Fixtures,
+  GESA-Snapshots, portable Semantik und Cross-Language-Projektion bleiben durch
+  den vollständigen Markdown-Corpus ausführbar abgesichert.
+- Fünf neue Dokumentations-Konsistenztests halten Index/Links, API-Ownership,
+  Opcode-/Binary-Tabellen, Diagnostic-Codes und Lexer-/Grammatik-Vokabular
+  dauerhaft synchron. Lizenz- und Headervertrag bleiben durch die drei Tests
+  aus 6.8 Bestandteil derselben vollständigen Abnahme.
+
+Abnahme:
+
+```text
+5/5 documentation consistency tests passed
+1040/1040 Markdown conformance cases and the corpus/cross-language audit passed
+1157/1157 non-performance test executions passed
+6/6 performance/allocation tests passed
+0 handwritten C# pragmas and 0 C# source lines over 250 characters
+dotnet format --verify-no-changes passed for production and tests
+```
 
 ## 7. Opcode- und Formatdefinition zentralisieren
 
